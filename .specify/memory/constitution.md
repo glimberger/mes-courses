@@ -102,6 +102,28 @@ The application is offline first: it MUST be fully usable without a network conn
 Rationale: shopping happens in stores where the connection is often poor; a list that cannot
 be read or ticked off there fails its core purpose.
 
+### VIII. Observability and Error Tracking
+
+The application reports its errors to an error tracking tool, so that failures in users' hands
+are seen and fixed rather than discovered by chance.
+
+- **No silent failure**: every unexpected error (uncaught exception, unhandled rejection,
+  failed adapter operation) is captured and reported. An error caught in code is either
+  recovered from with an outcome the user can see, or reported; it MUST NOT be swallowed.
+- **Actionable reports**: each report carries the stack trace, readable for the deployed build
+  (symbolicated), the application version, the platform and the environment.
+- **Behind a port**: error reporting is a driven port (Principle VI). Domain and application
+  code MUST NOT import the tool's SDK. Tests assert what is reported through an in-memory
+  test double, and no test or local development run sends data to the real service.
+- **Offline-safe**: reports raised offline are kept in a bounded local queue and sent when
+  connectivity returns (Principle VII). Reporting never blocks the user, and a failure of the
+  tracking tool never breaks the application.
+- **Privacy**: reports MUST NOT contain the content of the user's lists or any personal data.
+  Any user identifier is pseudonymous.
+
+Rationale: an offline application runs far from any server log; without error tracking, its
+failures stay invisible to the maintainer.
+
 ## Quality Gates
 
 Before any commit:
@@ -156,4 +178,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 1.3.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
+**Version**: 1.4.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
