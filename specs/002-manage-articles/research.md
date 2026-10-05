@@ -157,6 +157,9 @@ constitution v2.0.0, which makes a remote server the source of truth.
 
 ## R7. Synchronization deferred (Principle VII)
 
+> **Resolved by [003-server-sync](../003-server-sync/research.md)**, which answers each open
+> question below (research R6 to R13 there).
+
 - **Decision**: this feature does not synchronize with the Raspberry Pi server. Constitution
   v2.0.0 makes the server's database the source of truth, but neither this spec nor 001's
   defines synchronization or reconciliation, and 001 has no server port. A dedicated sync feature
