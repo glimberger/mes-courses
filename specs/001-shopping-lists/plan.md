@@ -14,7 +14,7 @@ This is the project's first feature, so the plan also sets up the stack and the 
 foundations: React Native with Expo (Android and iOS, TypeScript), React Native Paper for
 Material 3 themed from `design/material-theme.json`, SQLite on the device as the only source of
 truth, a hexagonal layout (domain → application → adapters) enforced by an architecture test,
-Sentry behind an error reporting port, and a blocking GitHub Actions CI with branch protection.
+Sentry behind an error reporting port, and a blocking GitHub Actions CI.
 The decisions and their alternatives are in [research.md](research.md).
 
 ## Technical Context
@@ -66,7 +66,7 @@ and every other unknown is resolved in [research.md](research.md).
 | VIII | Observability | `ErrorReporter` port; Sentry adapter with global handlers, offline cache, source maps through EAS Build, `sendDefaultPii: false`, content-free context; console reporter when no DSN; `RecordingErrorReporter` in tests. | ✅ |
 | IX | Explicit screen states | One `ScreenState` union per data region, rendered by shared `LoadingState` / `EmptyState` / `ErrorState`; each state tested ([contracts/ui-screens.md](contracts/ui-screens.md)). No synchronized data, so no sync status yet. | ✅ |
 | X | French interface, no i18n | French text only in `src/adapters/ui/`; domain and use cases return tagged errors; seed names passed in from the UI adapter; tests assert French text; `Intl` formats quantities with a decimal comma. | ✅ |
-| QG | Quality gates and CI | `typecheck`, `lint` (+ Prettier check), `test` (+ architecture), `build` (`expo export`) on every PR and push to `main`; set as required checks with `enforce_admins` before the first application code is merged. | ✅ |
+| QG | Quality gates and CI | `typecheck`, `lint` (+ Prettier check), `test` (+ architecture), `build` (`expo export`) on every PR and push to `main`, in place before the first application code is merged; no PR merged until `gh pr checks` shows every job green (constitution v1.7.0, no branch protection on this plan). | ✅ |
 
 **Gate result before research**: no violation.
 
@@ -151,9 +151,8 @@ outside `src/` is the `node:sqlite` wrapper, which must stay out of the app bund
   `initializeStore`, Sentry adapter.
 - **Then stories in priority order**: US1 and US2 (P1) together make the MVP; US3 (P2);
   US4 (P3). Each story goes domain → use case → SQLite contract tests → screen tests.
-- Branch protection on `main` and the Sentry project are in place (done by the maintainer).
-  The CI job names must match the required checks. The Sentry DSN and build credential live in
-  EAS environment variables, set by the maintainer, and are never committed.
+- The Sentry project is in place (done by the maintainer). The Sentry DSN and build credential
+  live in EAS environment variables, set by the maintainer, and are never committed.
 
 ## Complexity Tracking
 

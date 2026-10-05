@@ -86,6 +86,5 @@ after reconnection.
 
 ## 5. Continuous integration
 
-Open a pull request: the `typecheck`, `lint`, `test` and `build` jobs run and are required by the
-branch protection on `main` (`gh api repos/{owner}/{repo}/branches/main/protection` shows them,
-with `enforce_admins` enabled).
+Open a pull request: the `typecheck`, `lint`, `test` and `build` jobs run, and `gh pr checks <pr>`
+shows them all green before the pull request is merged (constitution v1.7.0).

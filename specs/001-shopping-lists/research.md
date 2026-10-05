@@ -235,17 +235,17 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
   hygiene), Prettier 3 with `eslint-config-prettier`. Scripts: `lint`, `format`, `format:check`,
   `typecheck` (`tsc --noEmit`).
 
-## R17. Continuous integration and branch protection (Quality Gates)
+## R17. Continuous integration and merge discipline (Quality Gates)
 
 - **Decision**: GitHub Actions workflow `.github/workflows/ci.yml`, triggered on every pull
   request and every push to `main`, on `ubuntu-latest` with the Node version in `.nvmrc`
   (Node 24 LTS). Jobs: `typecheck`, `lint` (ESLint + `prettier --check`), `test` (Jest,
   including the architecture test and the offline scenario), `build`
   (`npx expo export --platform android --platform ios`, which bundles the JS for both
-  platforms). Branch protection on `main`, set with `gh api`, makes these four jobs required
-  status checks with `enforce_admins: true` and no bypass.
-- **Rationale**: the constitution requires CI and branch protection before the first
-  application code is merged. `expo export` checks that the app bundles without the cost of a
+  platforms). The repository is private on a GitHub plan without branch protection, so the
+  merge rule of constitution v1.7.0 applies: no pull request is merged until `gh pr checks`
+  shows all four jobs green.
+- **Rationale**: the constitution requires CI before the first application code is merged. `expo export` checks that the app bundles without the cost of a
   native build on every pull request; native builds go through EAS Build when releasing.
 - **Alternatives considered**: EAS Build on every pull request (slow, uses build credits).
 
