@@ -155,6 +155,24 @@ automated test, and the feature spec's acceptance scenarios cover every state of
 Rationale: loading, empty and failure are the moments users judge an application by; handling
 them through shared components keeps them consistent and impossible to forget.
 
+### X. French Interface, No Internationalization
+
+The application targets French-speaking users only, and its interface is written in French.
+
+- All user-facing text is in French: labels, messages, the texts of every screen state
+  (Principle IX), notifications and accessibility labels. Numbers, quantities and dates follow
+  French conventions (for example a decimal comma).
+- There is no internationalization system: no translation library, message catalog,
+  translation keys or language switch. Text is written directly where the UI adapter uses it.
+- User-facing text exists only in the user interface adapter (Principle VI). Domain and
+  application code never produce display text; they return typed results and errors that the
+  adapter turns into French messages.
+- Tests assert the French text as the user reads it (Principle II).
+
+Rationale: a single audience needs a single language; an internationalization layer would be
+untested speculative infrastructure (Principle IV). Keeping text out of the domain keeps a
+later change of language confined to one adapter.
+
 ## Quality Gates
 
 Before any commit:
@@ -193,7 +211,8 @@ Continuous integration is blocking for every pull request:
 - Work happens in small increments: one behavior per Red-Green-Refactor cycle, committed often.
 - Branching, commit message format (Conventional Commits), secret scanning and README rules
   follow the workspace `AGENTS.md`.
-- Code, comments, commits and documentation are written in English.
+- Code, comments, commits and documentation are written in English; only user-facing
+  interface text is in French (Principle X).
 
 ## Governance
 
@@ -209,4 +228,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 1.5.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
+**Version**: 1.6.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
