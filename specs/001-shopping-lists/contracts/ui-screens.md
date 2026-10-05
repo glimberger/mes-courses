@@ -8,7 +8,10 @@ change together.
 Every screen is built only from React Native Paper components and the shared components in
 `src/adapters/ui/components/` (Principle V). Every data region renders one `ScreenState`
 (`loading | empty | error | success`) through the shared `LoadingState`, `EmptyState` and
-`ErrorState` components (Principle IX).
+`ErrorState` components (Principle IX). Screens read and change data through the application
+store (Zustand, [research.md](../research.md) R10,
+[002 ui-state contract](../../002-manage-articles/contracts/ui-state.md)); snackbars are rendered
+once at the app root from the store.
 
 ## Navigation
 
@@ -34,6 +37,7 @@ CreateCategoryDialog.
 | `QuantityFields` | Two `TextInput`s ("Quantité", "Unité") with `HelperText` errors; numeric keyboard with decimal separator. |
 | `NameField` | `TextInput` with 60-character limit and `HelperText` error. |
 | `ScreenStateView` | Renders a `ScreenState` with the three components above. |
+| `UndoSnackbar`, `NoticeSnackbar` | App-wide snackbars rendered from the store's `pendingUndo` and `notice`. |
 | `formatQuantity(q)` | `Intl.NumberFormat('fr-FR')` amount + optional unit, for example "1,5 kg". |
 
 ## CurrentList
@@ -82,7 +86,8 @@ Appbar title "Ajouter des articles", `Searchbar` with placeholder "Rechercher un
 | "Nouvel article" (Appbar action) or empty-state action | Opens CreateArticle, name prefilled with the query if any. |
 
 The screen stays open after adding, so several articles can be added in a row; a snackbar
-confirms "« {name} » ajouté". Back returns to CurrentList, which reloads on focus.
+confirms "« {name} » ajouté". Back returns to CurrentList, already reloaded by the store after the
+write.
 
 ## QuantityDialog
 

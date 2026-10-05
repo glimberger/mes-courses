@@ -146,6 +146,10 @@ Current list
 
 ## SQLite schema (migration 1)
 
+This schema is the device's local replica (constitution v2.0.0, Principle VII). It has no
+synchronization column or table: those come with the sync feature's own migration
+([research.md](research.md#r19-synchronization-deferred-principle-vii) R19).
+
 ```sql
 PRAGMA foreign_keys = ON;
 
@@ -193,4 +197,5 @@ CREATE TABLE app_state (
   the constraints are the safety net, and a constraint failure is an unexpected error (reported).
 - The `app_state` single row enforces "exactly one current list" (FR-002).
 - Foreign keys use the default `NO ACTION`; deleting articles is specified in
-  [002-manage-articles](../002-manage-articles/spec.md) and will add its own migration.
+  [002-manage-articles](../002-manage-articles/spec.md), which removes list items explicitly
+  before the article and needs no migration.
