@@ -32,14 +32,15 @@ the plan: clocks (R6), deletion records (R7) and the first pairing code (R11).
 **Language/Version**:
 
 - App: TypeScript 5.x (strict), Expo SDK 57, unchanged from 001.
-- Server: TypeScript 5.x (strict) on Node.js 24 LTS (arm64 on the Pi).
+- Server: TypeScript 5.x (strict) on Node.js 24 LTS (arm64 on the Pi), from the Nix flake.
 - `sync-core`: TypeScript with no runtime dependency.
 
 **Primary Dependencies**:
 
 - App: 001's dependencies plus `expo-secure-store`.
 - Server: `fastify` 5 and `@sentry/node`.
-- Pi: Caddy 2 (system package).
+- Pi: Caddy 2 (system package) and Nix, which provides the server's Node from the project's flake
+  (001 research R21).
 
 The justification is in [research.md](research.md#new-dependencies-principle-iv).
 
@@ -56,14 +57,16 @@ The justification is in [research.md](research.md#new-dependencies-principle-iv)
 - Server routes through Fastify `inject`.
 - The app's HTTP adapter runs against an in-process server on `127.0.0.1`.
 - Two-device scenario tests run on fakes plus one in-process server.
+- Both live in the test-only `tests/sync/` workspace, so neither the app nor the server depends
+  on the other (Principle XI, [research.md](research.md) R1).
 - Fake `Clock` and `IdGenerator` everywhere (Principle III).
 - dependency-cruiser covers app, server and `sync-core`.
 
 **Target Platform**: Android and iOS phones and tablets; the server on a Raspberry Pi 4 or 5 with
 Raspberry Pi OS Lite 64-bit, behind a Freebox with a full-stack IPv4 address.
 
-**Project Type**: mobile app plus web service, as npm workspaces in one repository: the root
-(app), `server/` and `packages/sync-core/`.
+**Project Type**: mobile app plus web service, in the Yarn workspaces monorepo set up by 001:
+`apps/mobile/` (app), `apps/server/`, `packages/sync-core/` and the test-only `tests/sync/`.
 
 **Performance Goals**:
 
@@ -107,6 +110,7 @@ resolved in research.
 | VIII | Observability | The app reports sync failures (three in a row) and untrusted servers, but never being offline. The server reports through `@sentry/node` behind its own `ErrorReporter` port, with the same privacy rules (R15). | ✅ |
 | IX | Explicit screen states | `SyncStatusBar` gives every data screen its synchronization state, from one store slice. Settings' device list has loading, error, offline and success states, each tested. | ✅ |
 | X | French interface, no i18n | French text only in the app's UI adapter. The server returns error codes. The one French string outside the app is the Pi command's output, read by the maintainer. | ✅ |
+| XI | Single repository (monorepo) | The server joins as `apps/server/` (`@mes-courses/server`) and the shared rules as `packages/sync-core/` (`@mes-courses/sync-core`), both under 001's workspaces root, with the same lockfile, configs and CI. `sync-core` is pure and depends on nothing. The app and the server never import each other: the tests that need both (HTTP adapter, cross-stack scenarios) live in the `tests/sync/` workspace and use each side's `./testing` entry point. dependency-cruiser enforces it. | ✅ |
 | QG | Quality gates and CI | CI runs typecheck, lint, tests and the architecture test across the workspaces, plus the app build. There is no deployment from CI, and no test reaches the Pi. | ✅ |
 | WF | Development workflow | The spec states offline behavior, synchronization and reconciliation (US2, FR-009 to FR-015). | ✅ |
 
@@ -144,59 +148,77 @@ specs/003-server-sync/
 ### Source Code (repository root)
 
 ```text
-package.json                         # + "workspaces": ["server", "packages/*"]
-packages/
-└── sync-core/
-    ├── package.json                 # @mes-courses/sync-core, no dependencies
+package.json                           # + "tests/*" in "workspaces" (001 has "apps/*", "packages/*")
+.dependency-cruiser.cjs                # + apps/server/ rules, sync-core purity, sync-core allowed in both
+                                       #   domains, tests/* the only importer of the ./testing entries
+.github/workflows/ci.yml               # unchanged jobs, now covering the new workspaces
+apps/
+├── mobile/                            # the app (001 layout), additions:
+│   ├── package.json                   # + expo-secure-store, @mes-courses/sync-core;
+│   │                                  #   "exports": { "./testing": "./test/index.ts" }
+│   ├── src/
+│   │   ├── domain/name.ts             # re-exports normalizedName from sync-core
+│   │   ├── application/
+│   │   │   ├── ports/                 # + change-recorder, sync-state, pulled-rows, clock, sync-server, credential-store
+│   │   │   ├── use-cases/             # + connect-to-server, synchronize, get-sync-info, create-pairing-code,
+│   │   │   │                          #   list-devices, rename-device, revoke-device, disconnect, release-held-changes
+│   │   │   └── testing/               # + fakes and contract suites for the new ports
+│   │   ├── adapters/
+│   │   │   ├── sqlite/                # + migration 2, change-recorder, sync-state, pulled-rows applier
+│   │   │   ├── sync-http/             # SyncServer over fetch (tested in tests/sync/)
+│   │   │   ├── secure-store/          # CredentialStore over expo-secure-store
+│   │   │   ├── clock/                 # Date.now()
+│   │   │   └── ui/
+│   │   │       ├── state/             # + sync slice, SyncScheduler (AppState, debounce, 5 s poll, backoff)
+│   │   │       ├── components/        # + SyncStatusBar
+│   │   │       └── screens/           # + Settings, ConnectServer, PairingCodeDialog, device dialogs
+│   │   └── composition/               # wires the sync adapters and starts the scheduler
+│   └── test/
+│       ├── sqlite/                    # node:sqlite wrapper (001)
+│       └── index.ts                   # ./testing entry: node:sqlite wrapper, buildTestAppStack(), SyncServer adapter
+└── server/                            # @mes-courses/server
+    ├── package.json                   # fastify, @sentry/node, @mes-courses/sync-core; scripts dev, build,
+    │                                  #   start, pairing-code; "exports": { "./testing": "./src/testing/index.ts" }
+    ├── tsconfig.json, jest.config.js  # extend the root base; node environment
     └── src/
-        ├── hlc.ts                   # Hlc, compare, next, receive, clamp (R6)
-        ├── merge.ts                 # mergeField, pickSurvivor, compareCategories (R5, R8)
-        ├── name.ts                  # normalizedName (moved from 001's src/domain/name.ts)
-        ├── protocol.ts              # Change, ServerRow, request/response types (contracts/sync-api.md)
+        ├── domain/                    # applyChange, merge by name, pairing rules, authorization
+        ├── application/
+        │   ├── ports/                 # ServerStore (UnitOfWork + repos), Clock, IdGenerator, ErrorReporter, Random
+        │   ├── use-cases/             # sync, claimPairingCode, createPairingCode, listDevices, renameDevice, revokeDevice
+        │   └── testing/               # in-memory fakes, contract suites
+        ├── adapters/
+        │   ├── http/                  # Fastify app, routes, JSON schemas, auth hook, error mapping
+        │   ├── sqlite/                # node:sqlite store, migrations
+        │   ├── crypto/                # credential and code generation, SHA-256
+        │   └── error-reporting/       # Sentry and console reporters
+        ├── composition/               # main.ts (server), pairing-code.ts (CLI)
+        └── testing/                   # ./testing entry: startTestServer()
+packages/
+└── sync-core/                         # @mes-courses/sync-core
+    ├── package.json                   # no dependencies
+    └── src/
+        ├── index.ts                   # public entry point
+        ├── hlc.ts                     # Hlc, compare, next, receive, clamp (R6)
+        ├── merge.ts                   # mergeField, pickSurvivor, compareCategories (R5, R8)
+        ├── name.ts                    # normalizedName (moved from 001's apps/mobile/src/domain/name.ts)
+        ├── protocol.ts                # Change, ServerRow, request/response types (contracts/sync-api.md)
         └── *.test.ts
-server/
-├── package.json                     # fastify, @sentry/node; scripts dev, build, start, pairing-code
-├── src/
-│   ├── domain/                      # applyChange, merge by name, pairing rules, authorization
-│   ├── application/
-│   │   ├── ports/                   # ServerStore (UnitOfWork + repos), Clock, IdGenerator, ErrorReporter, Random
-│   │   ├── use-cases/               # sync, claimPairingCode, createPairingCode, listDevices, renameDevice, revokeDevice
-│   │   └── testing/                 # in-memory fakes, contract suites
-│   ├── adapters/
-│   │   ├── http/                    # Fastify app, routes, JSON schemas, auth hook, error mapping
-│   │   ├── sqlite/                  # node:sqlite store, migrations
-│   │   ├── crypto/                  # credential and code generation, SHA-256
-│   │   └── error-reporting/         # Sentry and console reporters
-│   ├── composition/                 # main.ts (server), pairing-code.ts (CLI)
-│   └── testing/                     # startTestServer() for the app's adapter tests
+tests/
+└── sync/                              # @mes-courses/sync-tests, private, test-only
+    ├── package.json                   # devDependencies: @mes-courses/mobile, @mes-courses/server
+    ├── sync-server-adapter.test.ts    # the app's SyncServer adapter against startTestServer()
+    └── *.test.ts                      # cross-stack scenarios: single device, two devices, reset, revocation
 deploy/
-├── Caddyfile                        # {$MES_COURSES_DOMAIN} → reverse_proxy 127.0.0.1:3000
-├── mes-courses.service              # systemd unit
-└── mes-courses.env.example          # SENTRY_DSN=, NODE_ENV=production (no values)
-src/                                 # the app (001 layout), additions:
-├── domain/name.ts                   # re-exports normalizedName from sync-core
-├── application/
-│   ├── ports/                       # + change-recorder, sync-state, pulled-rows, clock, sync-server, credential-store
-│   ├── use-cases/                   # + connect-to-server, synchronize, get-sync-info, create-pairing-code,
-│   │                                #   list-devices, rename-device, revoke-device, disconnect, release-held-changes
-│   └── testing/                     # + fakes and contract suites for the new ports
-├── adapters/
-│   ├── sqlite/                      # + migration 2, change-recorder, sync-state, pulled-rows applier
-│   ├── sync-http/                   # SyncServer over fetch + tests against server/src/testing
-│   ├── secure-store/                # CredentialStore over expo-secure-store
-│   ├── clock/                       # Date.now()
-│   └── ui/
-│       ├── state/                   # + sync slice, SyncScheduler (AppState, debounce, 5 s poll, backoff)
-│       ├── components/              # + SyncStatusBar
-│       └── screens/                 # + Settings, ConnectServer, PairingCodeDialog, device dialogs
-└── composition/                     # wires the sync adapters and starts the scheduler
-.dependency-cruiser.cjs              # + server/ rules, sync-core purity, sync-core allowed in both domains
-.github/workflows/ci.yml             # jobs run across workspaces
+├── Caddyfile                          # {$MES_COURSES_DOMAIN} → reverse_proxy 127.0.0.1:3000
+├── mes-courses.service                # systemd unit
+└── mes-courses.env.example            # SENTRY_DSN=, NODE_ENV=production (no values)
 ```
 
-**Structure Decision**: one repository with npm workspaces. The app stays at the root (001's
-layout), the server lives in `server/`, and the rules both must share live in
-`packages/sync-core/`. The server follows the same hexagonal layout as the app, so one set of
+**Structure Decision**: the Yarn workspaces monorepo of 001 (Principle XI). The app stays in
+`apps/mobile/`, the server joins as `apps/server/`, and the rules both must share live in
+`packages/sync-core/`. Tests that need the app and the server together live in the test-only
+`tests/sync/` workspace, so the app and the server never depend on each other; each exposes a
+`./testing` entry point that only `tests/*` may import. The server follows the same hexagonal layout as the app, so one set of
 architecture rules and habits covers both. Deployment files are in `deploy/` and are used by hand
 on the Pi, never by CI.
 
@@ -210,10 +232,10 @@ on the Pi, never by CI.
   4. `changes.record` in each 001/002 use case, one task per use case, with each existing test
      kept green and one new test for its recorded change;
   5. `synchronize` and `connectToServer`;
-  6. the HTTP adapter against `startTestServer`;
+  6. the HTTP adapter, tested from `tests/sync/` against `startTestServer`;
   7. the sync slice and scheduler;
   8. the UI;
-  9. the two-device scenario tests;
+  9. the two-device scenario tests in `tests/sync/`;
   10. deployment files and the quickstart on the Pi.
 - **Story mapping**: US1 (P1) is the server, the outbox and the single-device sync. US2 (P1) is
   the merge rules and the two-device scenarios. US3 (P2) is the status bar. US4 (P2) is pairing,

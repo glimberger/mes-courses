@@ -1,8 +1,8 @@
 # Contract: Driven Ports
 
 Interfaces the application layer requires from the outside, declared in
-`src/application/ports/` (Principle VI). Each has an in-memory fake under
-`src/application/testing/` used by domain and use-case tests, and a production adapter
+`apps/mobile/src/application/ports/` (Principle VI). Each has an in-memory fake under
+`apps/mobile/src/application/testing/` used by domain and use-case tests, and a production adapter
 tested against the real technology.
 
 ## `UnitOfWork`
@@ -65,7 +65,7 @@ interface AppStateRepository {
 }
 ```
 
-- Production adapter: `src/adapters/sqlite/`, written against the `SqlDatabase` interface
+- Production adapter: `apps/mobile/src/adapters/sqlite/`, written against the `SqlDatabase` interface
   (`execAsync`, `runAsync`, `getAllAsync`, `getFirstAsync`, `withTransactionAsync`). It is the
   expo-sqlite database in the app and a `node:sqlite` wrapper in adapter tests
   ([../research.md](../research.md) R4).
@@ -91,7 +91,7 @@ interface ErrorReporter {
 - `context` holds only fixed technical identifiers (for example `{ operation: 'toggleItemInCart',
   screen: 'CurrentList' }`), never names, quantities or other list content (Principle VIII).
 - `report` never throws and never blocks.
-- Production: Sentry adapter (`src/adapters/error-reporting/sentry-error-reporter.ts`), or a
+- Production: Sentry adapter (`apps/mobile/src/adapters/error-reporting/sentry-error-reporter.ts`), or a
   console reporter when `EXPO_PUBLIC_SENTRY_DSN` is unset. Tests: `RecordingErrorReporter`, which
   keeps reports in memory so tests can assert them.
 - It is used by the UI adapter, which catches unexpected errors. Uncaught errors are captured by

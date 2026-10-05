@@ -9,24 +9,37 @@ gives the decision, why it was made, and what else was considered. It also settl
 points the clarification deferred to the plan: clock skew (R6), how long deletion records are
 kept (R7) and the first pairing code (R11).
 
-## R1. Repository layout: npm workspaces
+## R1. Repository layout: Yarn workspaces
 
-- **Decision**: the repository stays one Git repository, with npm workspaces:
-  - the Expo app stays at the root (001's layout, unchanged);
-  - `server/` is the Node.js server;
-  - `packages/sync-core/` is a pure TypeScript package shared by both. It holds the sync
-    protocol types, the hybrid logical clock (R6), the field merge rule (R5) and
-    `normalizedName`.
+- **Decision**: the server and the shared rules join the Yarn workspaces monorepo set up by 001
+  ([001 research R20](../001-shopping-lists/research.md#r20-monorepo-layout-principle-xi),
+  constitution Principle XI):
+  - the Expo app stays in `apps/mobile/` (`@mes-courses/mobile`, 001's layout);
+  - `apps/server/` (`@mes-courses/server`) is the Node.js server;
+  - `packages/sync-core/` (`@mes-courses/sync-core`) is a pure TypeScript package shared by
+    both. It holds the sync protocol types, the hybrid logical clock (R6), the field merge rule
+    (R5) and `normalizedName`;
+  - local dependencies use the `workspace:*` protocol (001 R20);
+  - `tests/sync/` (`@mes-courses/sync-tests`, private, test-only) holds the tests that need the
+    app and the server together: the app's `SyncServer` adapter against a real in-process
+    server, and the cross-stack scenarios. The root `"workspaces"` gains `"tests/*"`.
 
   `sync-core` has no dependency and no side effect. The app's domain and application layers,
   and the server's, may import it; dependency-cruiser allows `@mes-courses/sync-core` there and
-  nothing else (R16).
+  nothing else (R16). The app and the server never import each other. Each exposes a
+  `./testing` entry point in its `package.json` `exports` (the app: the `node:sqlite` wrapper, a
+  `buildTestAppStack()` helper and its `SyncServer` adapter; the server: `startTestServer()`),
+  and only `tests/*` may import those entries.
 - **Rationale**: the app and the server must apply the same rules to the same data. One copy of
   those rules, tested once, avoids a drift that would break the "same data on every device"
-  guarantee (SC-003). Workspaces keep one `npm ci`, one CI and one lockfile.
-- **Alternatives considered**: a separate server repository (two copies of the rules, two CIs);
-  moving the app into `app/` (churn in 001's layout and tasks for no gain); copying the shared
-  files (drift).
+  guarantee (SC-003). Workspaces keep one `yarn install --immutable`, one CI and one lockfile. A separate test
+  workspace keeps Principle XI's "the app and the server must not depend on each other" true
+  even for tests, while Principle VII still gets its adapter tests against a real server.
+- **Alternatives considered**: a separate server repository (two copies of the rules, two CIs;
+  ruled out by Principle XI); copying the shared files (drift); the app's adapter tests
+  importing the server's test helper directly (a dev dependency from the app on the server,
+  which Principle XI forbids); starting the server as a child process from the app's tests (no
+  import, but the cross-stack scenarios need a shared or skewed fake clock in-process).
 
 ## R2. Server runtime and framework
 
@@ -253,7 +266,7 @@ kept (R7) and the first pairing code (R11).
 - **Decision**:
   - **Pairing code**: 8 characters from an unambiguous alphabet (no 0/O, 1/I/L), shown as
     `XXXX-XXXX`, single use, valid 10 minutes. The server stores only its SHA-256 hash.
-  - **First code**: the maintainer runs `npm run pairing-code -w server` in a shell on the Pi.
+  - **First code**: the maintainer runs `yarn workspace @mes-courses/server pairing-code` in a shell on the Pi.
     This command talks to the database directly and works even while no device exists.
   - **Next codes**: an authorized device calls `POST /v1/pairing-codes` ("Ajouter un
     appareil").
@@ -354,15 +367,16 @@ kept (R7) and the first pairing code (R11).
 ## R16. Architecture, tests and CI
 
 - **Server layers**: the server follows the same hexagonal layout as the app (Principle VI):
-  - `server/src/domain` (apply a change, merge, authorize) imports only `sync-core`;
-  - `server/src/application` (use cases `sync`, `claimPairingCode`, `createPairingCode`,
+  - `apps/server/src/domain` (apply a change, merge, authorize) imports only `sync-core`;
+  - `apps/server/src/application` (use cases `sync`, `claimPairingCode`, `createPairingCode`,
     `listDevices`, `renameDevice`, `revokeDevice`) imports only domain, `sync-core` and its own
     ports;
-  - `server/src/adapters` holds `http` (Fastify), `sqlite`, `error-reporting` and `crypto`;
-  - `server/src/composition` wires them.
+  - `apps/server/src/adapters` holds `http` (Fastify), `sqlite`, `error-reporting` and `crypto`;
+  - `apps/server/src/composition` wires them.
 
-  dependency-cruiser gains the same rules for `server/`, plus a rule that `packages/sync-core`
-  imports nothing.
+  dependency-cruiser gains the same rules for `apps/server/`, a rule that `packages/sync-core`
+  imports nothing, and a rule that only `tests/*` imports `@mes-courses/mobile/testing` or
+  `@mes-courses/server/testing` (Principle XI).
 - **Tests**:
   - `sync-core`: Jest unit tests for the HLC, the field merge and `normalizedName`, including
     property-style tests that apply the same changes in every order and check the result is
@@ -370,31 +384,48 @@ kept (R7) and the first pairing code (R11).
   - server domain and use cases: in-memory fakes;
   - server SQLite adapter: shared contract suites on `node:sqlite`;
   - server HTTP adapter: Fastify `inject`;
-  - the app's `SyncServer` HTTP adapter: tested against a real in-process server on a random
-    local port with an in-memory database (Principle VII: the real technology, never the
-    production server);
-  - two-device scenarios: two app stacks on fakes, sharing one in-process server, with the
-    acceptance scenarios of US2.
-- **CI**: the existing jobs run across the workspaces (`npm test --workspaces`, typecheck and
-  lint for each). There is no deployment from CI: the maintainer deploys to the Pi by hand
+  - the app's `SyncServer` HTTP adapter: tested in `tests/sync/` against a real in-process
+    server on a random local port with an in-memory database (Principle VII: the real
+    technology, never the production server);
+  - two-device scenarios: in `tests/sync/`, two app stacks on fakes, sharing one in-process
+    server, with the acceptance scenarios of US2.
+- **CI**: the existing jobs of 001 already run across every workspace from the root
+  (`yarn workspaces foreach`), so they cover the server, `sync-core` and `tests/sync/` with
+  no new job; the `build` job now also compiles the server. There is no deployment from CI: the maintainer deploys to the Pi by hand
   (quickstart), and the Pi is never reached from CI.
 
 ## R17. Deployment on the Pi
 
 - **Decision**:
-  - Raspberry Pi OS Lite 64-bit, with Node 24 from the NodeSource arm64 repository and Caddy
-    from its Debian repository;
+  - Raspberry Pi OS Lite 64-bit with Nix (multi-user install, flakes enabled), and Caddy from
+    its Debian repository;
+  - Node comes from the project's flake ([001 R21](../001-shopping-lists/research.md#r21-development-environment-nix-flake)),
+    so the Pi runs the exact Node of `flake.lock`, like developers and CI. The flake exposes
+    `packages.aarch64-linux.node` (the same `nodejs_24` as the dev shell); deploying builds it
+    into `/opt/mes-courses/runtime`, a symlink that is also a Nix garbage-collection root;
   - a system user `mes-courses` owns `/var/lib/mes-courses/` and `/opt/mes-courses/`;
-  - a systemd unit `mes-courses.service` runs `node server/dist/main.js` with `Restart=always`
-    and `NODE_ENV=production`;
+  - a systemd unit `mes-courses.service` runs
+    `/opt/mes-courses/runtime/bin/node /opt/mes-courses/apps/server/dist/composition/main.js`
+    (the server's `start` script) with `Restart=always` and `NODE_ENV=production`;
   - the Sentry DSN sits in `/etc/mes-courses.env`, readable only by that user;
-  - deploying means `git pull && npm ci -w server && npm run build -w server`, then
-    `systemctl restart mes-courses`. Server migrations run at startup in one transaction.
+  - deploying means `git pull`, then, inside the flake's dev shell (`nix develop --command …`,
+    which brings Yarn through Corepack): `yarn workspaces focus @mes-courses/server` (installs
+    only the server and `sync-core`, not the app's React Native dependencies) and
+    `yarn workspace @mes-courses/server build`; then `nix build .#node --out-link
+    /opt/mes-courses/runtime` and `systemctl restart mes-courses`. Server migrations run at
+    startup in one transaction.
 
   The files are `deploy/mes-courses.service`, `deploy/Caddyfile` and
   `deploy/mes-courses.env.example` (with no values).
 - **Rationale**: plain systemd and Caddy are the least moving parts on a Pi. Containers would
-  add a runtime and an image registry for one process.
+  add a runtime and an image registry for one process. Taking Node from the flake removes the
+  last place where the Node version was chosen outside `flake.lock`.
+- **Alternatives considered**: NodeSource's Debian repository (a second, unpinned source of
+  Node); NixOS on the Pi (would also manage Caddy and the unit declaratively, but replaces the
+  whole operating system for one service); a full Nix package of the server built from
+  `yarn.lock` (Yarn 4 support in nixpkgs' builders is young, and `git pull` plus a build is
+  enough here); Caddy from nixpkgs (it would need its own systemd unit, while the Debian package
+  ships one and updates with the system).
 
 ## New dependencies (Principle IV)
 
@@ -404,7 +435,8 @@ kept (R7) and the first pairing code (R11).
 | `@sentry/node` | server | Server error tracking (R15, FR-022a). |
 | `expo-secure-store` | app | Keeps the device credential in the operating system's secure storage (R11). |
 | Caddy 2 (system package, not npm) | Pi | TLS with automatic Let's Encrypt certificates and reverse proxy (R4, FR-019). |
-| npm workspaces (npm feature) | repo | App, server and `sync-core` in one repository (R1). |
+| Nix (on the Pi) | Pi | Provides the server's Node from the project's flake (R17, 001 R21). |
+| Yarn 4 workspaces (through Corepack) | repo | Already set up by 001 (Principle XI); the server, `sync-core` and `tests/sync` join it (R1). |
 
 No new dependency is needed for HTTP in the app (`fetch`), connectivity (a failed request means
 offline, R14) or SQLite on the server (`node:sqlite`, R3).

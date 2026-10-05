@@ -2,7 +2,7 @@
 
 Changes to [001's screens](../../001-shopping-lists/contracts/ui-screens.md) for this feature.
 UI tests assert this text exactly (Principles II and X). Every component comes from React Native
-Paper or the shared module `src/adapters/ui/components/` (Principle V); data comes from the store
+Paper or the shared module `apps/mobile/src/adapters/ui/components/` (Principle V); data comes from the store
 ([ui-state.md](ui-state.md)).
 
 ## Navigation

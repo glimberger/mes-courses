@@ -9,9 +9,9 @@ screens and text in [contracts/ui-screens.md](contracts/ui-screens.md); store ru
 ## 1. Automated checks
 
 ```sh
-npm run typecheck && npm run lint && npm run format:check
-npm test                   # includes store tests, the new use cases, SQLite contract tests
-npm run test:architecture  # zustand imported only under src/adapters/ui
+yarn typecheck && yarn lint && yarn format:check
+yarn test                   # includes store tests, the new use cases, SQLite contract tests
+yarn test:architecture  # zustand imported only under apps/mobile/src/adapters/ui
 ```
 
 Expected: everything passes. Every acceptance scenario has a test named after it (search for

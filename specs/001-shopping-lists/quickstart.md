@@ -6,34 +6,41 @@ Behavior is defined in [spec.md](spec.md); screens and text in
 
 ## Prerequisites
 
-- Node.js 24 LTS (`.nvmrc`) and npm.
+- Nix with flakes enabled. The flake's dev shell provides Node.js 24, Yarn 4 (through Corepack,
+  version from `packageManager`) and watchman ([research.md](research.md) R21). Enter it with
+  `direnv allow` once (if `direnv` and `nix-direnv` are installed) or `nix develop`; every
+  command below runs inside it.
 - For device checks: Android Studio with an emulator, or Xcode with an iOS simulator (macOS), or a
   phone with a development build.
 - Optional: a Sentry project. Without `EXPO_PUBLIC_SENTRY_DSN`, errors go to the console only.
 
+Commands run from the repository root unless stated otherwise: one `yarn install` installs every
+workspace ([research.md](research.md) R20).
+
 ```sh
-npm ci
+yarn install
 ```
 
 ## 1. Automated checks (same as CI)
 
 ```sh
-npm run typecheck          # tsc --noEmit
-npm run lint               # ESLint (includes style-token rules)
-npm run format:check       # Prettier
-npm test                   # Jest: domain, use cases, SQLite adapter, UI, offline scenario
-npm run test:architecture  # dependency-cruiser layer rules
-npx expo export --platform android --platform ios   # bundles the app
+yarn typecheck          # tsc --noEmit in every workspace
+yarn lint               # ESLint (includes style-token rules)
+yarn format:check       # Prettier
+yarn test                   # Jest in every workspace: domain, use cases, SQLite adapter, UI, offline scenario
+yarn test:architecture  # dependency-cruiser layer and cross-workspace rules
+yarn build              # every workspace; for the app: expo export for Android and iOS
 ```
 
-Expected: everything passes. `npm test` finishes in seconds and needs no device or network.
+Expected: everything passes. `yarn test` finishes in seconds and needs no device or network.
 Every acceptance scenario of the spec has a test whose name states it (search the test names for
 "US1-", "US2-", ...).
 
 ## 2. Run the app
 
 ```sh
-npx expo run:android   # or: npx expo run:ios
+cd apps/mobile
+yarn expo run:android   # or: yarn expo run:ios
 ```
 
 A development build is used (not Expo Go) because of the Sentry native module.
@@ -74,7 +81,7 @@ Run on a fresh install (uninstall first). Each step names the spec scenarios it 
 11. **Long list** (SC-008): start a development build with `EXPO_PUBLIC_DEV_SEED_ITEMS=200`
     (the composition root then fills an empty current list with 200 articles through the use
     cases; ignored in release builds), then scroll and tick; no visible lag.
-12. **Start time** (SC-001): on a release build (`npx expo run:android --variant release`),
+12. **Start time** (SC-001): on a release build (`yarn expo run:android --variant release`, from `apps/mobile/`),
     from tapping the icon to a tickable list takes under 2 seconds.
 
 ## 4. Error tracking (Principle VIII)

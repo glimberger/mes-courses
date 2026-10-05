@@ -5,7 +5,8 @@
 This is the project's first feature plan, so it chooses the technology stack as well as the
 feature design. Each entry gives the decision, why it was made, and what else was considered.
 Versions are those current on 2026-10-05; the scaffold pins the exact versions in
-`package.json`.
+`apps/mobile/package.json` and the single root `yarn.lock`. R20 was added on 2026-10-06
+for constitution v2.1.0 (Principle XI, monorepo).
 
 ## R1. Platform and framework
 
@@ -29,8 +30,9 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
   onto `MD3LightTheme` / `MD3DarkTheme`. It provides every component this feature needs:
   `Appbar`, `List.Item`, `Checkbox`, `FAB`, `Searchbar`, `Dialog`, `Portal`, `Snackbar`,
   `TextInput`, `HelperText`, `ActivityIndicator`, `Banner`, `Chip`, `Menu`.
-- **Theme mapping**: `src/adapters/ui/theme/` imports the JSON at build time and builds the
-  light and dark Paper themes from `schemes.light` and `schemes.dark`. The scheme follows the
+- **Theme mapping**: `apps/mobile/src/adapters/ui/theme/` imports the JSON at build time (it stays
+  at the repository root in `design/`, which Metro watches in a workspaces setup, R20) and builds
+  the light and dark Paper themes from `schemes.light` and `schemes.dark`. The scheme follows the
   system (`useColorScheme`). Paper's `elevation.level0..5` colors are not in the export; they
   are derived from `surfaceContainerLowest..Highest`, as Material 3 defines surface
   containers. A unit test checks every role in the Paper theme against the JSON, so the file
@@ -49,7 +51,7 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
 
 - **Decision**: React Navigation 7, native stack, configured in code inside the UI adapter.
 - **Rationale**: the feature has four screens and a few dialogs. Configuring navigation in code
-  keeps every screen inside `src/adapters/ui/`, where Principle VI puts it. Expo Router's
+  keeps every screen inside `apps/mobile/src/adapters/ui/`, where Principle VI puts it. Expo Router's
   file-based routes would add an `app/` directory outside the adapter and deep-linking features
   this feature does not need.
 - **Alternatives considered**: Expo Router (built on React Navigation; file-based routing not
@@ -143,7 +145,7 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
 ## R10. Application state and screen state type (Principle IX)
 
 - **Decision**: the application state is managed with **Zustand**, in one store of the UI
-  adapter (`src/adapters/ui/state/`), as decided in
+  adapter (`apps/mobile/src/adapters/ui/state/`), as decided in
   [002's research](../002-manage-articles/research.md) R1 and specified in
   [002's ui-state contract](../002-manage-articles/contracts/ui-state.md). Each data-displaying
   region is one union in the store:
@@ -235,14 +237,18 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
 
 ## R15. Architecture test (Principle VI)
 
-- **Decision**: `dependency-cruiser` with rules that fail when:
-  - `src/domain/**` imports anything outside `src/domain/` (including any npm package);
-  - `src/application/**` imports anything other than `src/domain/` and `src/application/`;
-  - anything outside `src/adapters/**` and `src/composition/**` imports from `src/adapters/**`;
-  - anything outside `src/adapters/ui/**` imports `zustand` (R10);
+- **Decision**: `dependency-cruiser`, configured once at the repository root for every workspace
+  (R20), with rules that fail when:
+  - a file imports another workspace through a relative path instead of its package name, or an
+    app workspace (`apps/*`) imports another app workspace (Principle XI);
+  - `apps/mobile/src/domain/**` imports anything outside `apps/mobile/src/domain/` (including any npm package);
+  - `apps/mobile/src/application/**` imports anything other than `apps/mobile/src/domain/` and `apps/mobile/src/application/`;
+  - anything outside `apps/mobile/src/adapters/**` and `apps/mobile/src/composition/**` imports from `apps/mobile/src/adapters/**`;
+  - anything outside `apps/mobile/src/adapters/ui/**` imports `zustand` (R10);
   - anything imports `zustand/middleware` or `immer` (R10, [002 research](../002-manage-articles/research.md#r1b-no-zustand-middleware) R1b);
   - any circular dependency exists.
-  It runs as `npm run test:architecture` and in CI.
+  It runs from the root as `yarn test:architecture` and in CI. Later workspaces (the server,
+  shared packages) add their own layer rules to the same file.
 - **Rationale**: path-based rules over the real import graph enforce the inward-only dependency
   rule without depending on folder conventions being respected by hand.
 - **Alternatives considered**: `eslint-plugin-boundaries` (works, but a lint warning is easier
@@ -250,19 +256,25 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
 
 ## R16. Lint and format
 
-- **Decision**: ESLint 9 flat config (`eslint-config-expo`, `typescript-eslint` strict,
+- **Decision**: one ESLint 9 flat config and one Prettier config at the repository root, shared by
+  every workspace, with the Expo and React Native rules scoped to `apps/mobile/**` (R20). ESLint
+  9 flat config (`eslint-config-expo`, `typescript-eslint` strict,
   `eslint-plugin-react-native` for the style rules of R2, `no-restricted-imports` for layer
   hygiene), Prettier 3 with `eslint-config-prettier`. Scripts: `lint`, `format`, `format:check`,
-  `typecheck` (`tsc --noEmit`).
+  `typecheck` (`tsc --noEmit` against each workspace's `tsconfig.json`, which extends the root
+  `tsconfig.base.json`).
 
 ## R17. Continuous integration and merge discipline (Quality Gates)
 
 - **Decision**: GitHub Actions workflow `.github/workflows/ci.yml`, triggered on every pull
-  request and every push to `main`, on `ubuntu-latest` with the Node version in `.nvmrc`
-  (Node 24 LTS). Jobs: `typecheck`, `lint` (ESLint + `prettier --check`), `test` (Jest,
-  including the architecture test and the offline scenario), `build`
-  (`npx expo export --platform android --platform ios`, which bundles the JS for both
-  platforms). The repository is private on a GitHub plan without branch protection, so the
+  request and every push to `main`, on `ubuntu-latest`. Each job installs Nix and runs its commands in the flake's dev shell
+  (`nix develop --command …`, R21), so CI uses the same Node 24 and Yarn as every developer. It
+  runs `yarn install --immutable` once at the root (failing if `yarn.lock` is out of date), then
+  a root script that runs in every workspace (`yarn workspaces foreach`, R20). The Nix store is
+  cached by `magic-nix-cache-action`. Jobs: `typecheck`, `lint` (ESLint +
+  `prettier --check`), `test` (Jest, including the architecture test and the offline scenario),
+  `build` (`yarn build`; for the app this is
+  `expo export --platform android --platform ios`, which bundles the JS for both platforms). The repository is private on a GitHub plan without branch protection, so the
   merge rule of constitution v1.7.0 applies: no pull request is merged until `gh pr checks`
   shows all four jobs green.
 - **Rationale**: the constitution requires CI before the first application code is merged. `expo export` checks that the app bundles without the cost of a
@@ -274,7 +286,7 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
 - **Decision**: an `initializeStore(seed)` use case runs at startup. When the store holds no
   list, it creates the default categories in order, the list "Ma liste" and marks it current, in
   one transaction; otherwise it does nothing. The French names are passed in by the UI adapter
-  (`src/adapters/ui/seed.ts`), so the application layer holds no display text (Principle X).
+  (`apps/mobile/src/adapters/ui/seed.ts`), so the application layer holds no display text (Principle X).
 - **Rationale**: the "only on an empty store" rule is tested with in-memory fakes, and running it
   in one transaction means an interrupted first launch never leaves half a seed.
 
@@ -312,10 +324,84 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
   undecided); add an outbox or sync metadata columns now (code and schema no test requires while
   nothing reads them, and the sync feature's migration can add them).
 
+## R20. Monorepo layout (Principle XI)
+
+- **Decision**: one Git repository organized as **Yarn workspaces**, managed by **Yarn 4**
+  (chosen by the maintainer), set up by this first feature:
+  - Yarn is pinned in the root `package.json` `"packageManager": "yarn@4.x"` field and run
+    through the Corepack shims of the Nix dev shell (R21), so every machine and CI use the same
+    Yarn version and no Yarn binary is committed;
+  - `.yarnrc.yml` sets `nodeLinker: node-modules`. React Native and Expo do not support Yarn's
+    default Plug'n'Play mode, so dependencies are installed into `node_modules/` as usual;
+  - the root `package.json` is private (name `mes-courses`), declares
+    `"workspaces": ["apps/*", "packages/*"]`, holds only the shared dev tools (TypeScript,
+    ESLint, Prettier, dependency-cruiser) and scripts that run in every other workspace
+    (`yarn workspaces foreach --all --exclude mes-courses run <script>`; `--exclude` keeps the
+    root script from calling itself, and workspaces without the script are skipped);
+  - workspaces reference each other with the `workspace:*` protocol, so a dependency on a local
+    package can never resolve to the npm registry;
+  - one `yarn.lock` at the root and one `yarn install` (`--immutable` in CI);
+  - shared configs at the root: `tsconfig.base.json` (strict options), `eslint.config.mjs`,
+    `.prettierrc`, `.dependency-cruiser.cjs`, `flake.nix`, `.github/workflows/ci.yml`;
+  - the Expo app is the workspace `@mes-courses/mobile` in `apps/mobile/`, with its own
+    `package.json`, `tsconfig.json` (extends the base), `jest.config.js` (`jest-expo`),
+    `app.config.ts` and `eas.json`. Expo's Metro config detects Yarn workspaces on its own (SDK 52
+    and later, with the `node-modules` linker), so no custom `metro.config.js` is needed; EAS Build runs from `apps/mobile/`;
+  - the server ([003](../003-server-sync/research.md#r1-repository-layout-yarn-workspaces)) will
+    be `apps/server/`, and shared code `packages/<name>/`. No shared package exists in this
+    feature, so `packages/` is not created yet (Principle IV).
+  Workspaces depend on each other only through package names and public entry points; the
+  architecture test enforces it (R15).
+- **Rationale**: the constitution requires a monorepo (Principle XI), and 003 already needs one
+  for the server and the shared sync rules. Setting the workspace layout up now, before any code
+  exists, costs a few config files; moving the app into a workspace later would touch every path
+  in 001 and 002. Keeping the app out of the root also keeps its Jest, TypeScript and Metro
+  configs from picking up the server's files.
+- **Alternatives considered**: the app at the root as both app and workspaces root (simpler
+  today, but the root's configs then cover nested workspaces and need exclusions); npm
+  workspaces (no extra tool, but the maintainer chose Yarn, which also brings `workspace:*`,
+  `workspaces foreach` and `workspaces focus` for the Pi deployment in 003); pnpm (its symlinked
+  layout needs extra Metro configuration for React Native); Yarn Plug'n'Play (unsupported by
+  React Native); Turborepo or Nx on top (build caching and task graphs a two-app repository does not need, Principle IV).
+
+## R21. Development environment: Nix flake
+
+- **Decision**: the project's tools come from a **Nix flake** at the repository root, chosen by
+  the maintainer:
+  - `flake.nix` defines `devShells.default` for `aarch64-darwin`, `x86_64-darwin`,
+    `x86_64-linux` and `aarch64-linux` (the Pi), with Node.js 24 (`nodejs_24`), Corepack shims
+    for Yarn (`corepack_24`, so Yarn's version still comes from `packageManager`, R20) and
+    `watchman` for Metro. It pins `nixpkgs` to a stable release branch;
+  - `flake.lock` pins the exact `nixpkgs` revision, so every machine, CI and the Pi run the same
+    Node. It replaces `.nvmrc`; `"engines": { "node": ">=24" }` stays in `package.json` as a
+    guard for anyone running outside the shell;
+  - `.envrc` contains `use flake`, so `direnv` (with `nix-direnv`) loads the shell when entering
+    the folder; `nix develop` does the same by hand. `.direnv/` is ignored by Git;
+  - `flake.lock` gets the Talisman entry required by the workspace `AGENTS.md` (content hashes
+    and git revisions, not secrets);
+  - CI installs Nix (`DeterminateSystems/nix-installer-action`, with the
+    `DeterminateSystems/magic-nix-cache-action` cache) and runs every step through
+    `nix develop --command …` (R17);
+  - **out of Nix**: Xcode (macOS only, from Apple) and Android Studio with its SDK and emulator.
+    Native device builds use them; Nix provides everything the automated checks and CI need.
+  - the Pi uses the same flake for its Node runtime ([003 R17](../003-server-sync/research.md#r17-deployment-on-the-pi)).
+- **Rationale**: one declared, locked toolchain for the maintainer's Mac, CI and the Pi, so "it
+  works on my machine" cannot drift between them, and a new machine needs only Nix and `direnv
+  allow`. Corepack keeps a single Yarn pin in `package.json` instead of a second one in the
+  flake.
+- **Alternatives considered**: `.nvmrc` with nvm or `setup-node` (the Node version is pinned
+  only loosely and the Pi installs Node another way); `yarn-berry` from nixpkgs instead of
+  Corepack (a second Yarn version to keep in step with `packageManager`); Android SDK through
+  Nix (`androidenv`: large, slow to evaluate and duplicates Android Studio, which the emulator
+  needs anyway; can be added later if a headless Android build is needed); devenv or Devbox on
+  top of Nix (another tool for what a plain flake does, Principle IV).
+
 ## New dependencies (Principle IV)
 
 | Dependency | Why it is needed |
 |---|---|
+| Nix flake: `nodejs_24`, `corepack_24`, `watchman` (dev environment only, R21) | One locked toolchain for developers, CI and the Pi, chosen by the maintainer. |
+| Yarn 4 (through Corepack, pinned by `packageManager`; not an app dependency) | Package manager and workspaces for the monorepo (R20, Principle XI), chosen by the maintainer. |
 | `expo`, `react-native`, `react` | Chosen platform (R1). |
 | `react-native-paper`, `react-native-safe-area-context`, `@expo/vector-icons` | Material 3 design system (R2, Principle V). |
 | `@react-navigation/native`, `@react-navigation/native-stack`, `react-native-screens` | Navigation between screens (R3). |

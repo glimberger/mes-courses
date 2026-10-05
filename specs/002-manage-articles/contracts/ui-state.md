@@ -2,7 +2,7 @@
 
 The UI adapter's application state, shared by every screen ([../research.md](../research.md)
 R1). It applies to the whole app: 001's screens use it too. Code lives in
-`src/adapters/ui/state/`; `zustand` is imported nowhere else.
+`apps/mobile/src/adapters/ui/state/`; `zustand` is imported nowhere else.
 
 ## Creation and access
 
@@ -13,7 +13,7 @@ useAppStore<T>(selector: (state: AppState) => T): T                             
 ```
 
 - The composition root builds one store with the production use cases. Tests build one per test
-  with use cases on in-memory fakes (`renderWithStore` helper in `src/adapters/ui/testing/`).
+  with use cases on in-memory fakes (`renderWithStore` helper in `apps/mobile/src/adapters/ui/testing/`).
 - The store is a plain vanilla store with no middleware (no `persist`, `devtools`, `immer`, ...);
   each one is ruled out in [../research.md](../research.md#r1b-no-zustand-middleware) R1b.
 - Screens select the smallest slice they render, so a change to one region does not re-render

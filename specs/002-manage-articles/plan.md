@@ -38,7 +38,7 @@ and Jest fake timers
 
 **Target Platform**: Android and iOS phones
 
-**Project Type**: mobile app (single Expo project)
+**Project Type**: mobile app, the `apps/mobile/` workspace of the monorepo set up by 001
 
 **Performance Goals**: rename or recategorize under 10 s of user time (SC-001, SC-007); delete in
 3 taps (SC-002); a refresh after a write reloads local read models in milliseconds
@@ -64,11 +64,12 @@ No NEEDS CLARIFICATION remains.
 | III | Fast, deterministic, isolated | Vanilla store built per test from a factory (no singleton); in-memory fakes; Jest fake timers for the 5 s undo; no network. | ✅ |
 | IV | Simplicity (YAGNI) | One new dependency, `zustand`, justified in [research.md](research.md) R1 (cross-screen undo and refresh, maintainer's choice for the whole app); no middleware, each one ruled out in [research.md](research.md#r1b-no-zustand-middleware) R1b; no migration; refresh-everything instead of fine-grained invalidation. | ✅ |
 | V | Single design system | Paper `Menu`, `Dialog`, `Snackbar`; `CategoryPicker` extracted into the shared module; `UndoSnackbar` and `NoticeSnackbar` are shared components. | ✅ |
-| VI | Hexagonal architecture | Use cases and port methods in `src/application`; SQLite methods in the adapter; the store lives in `src/adapters/ui/state` and depends on use cases, never the reverse. New dependency-cruiser rules: `zustand` only under `src/adapters/ui/`; `zustand/middleware` and `immer` nowhere (R1b). | ✅ |
+| VI | Hexagonal architecture | Use cases and port methods in `apps/mobile/src/application`; SQLite methods in the adapter; the store lives in `apps/mobile/src/adapters/ui/state` and depends on use cases, never the reverse. New dependency-cruiser rules: `zustand` only under `apps/mobile/src/adapters/ui/`; `zustand/middleware` and `immer` nowhere (R1b). | ✅ |
 | VII | Remote source of truth, offline first | Local first and offline: every write goes to SQLite in one transaction, the offline UI scenario covers edit, delete and undo with `fetch` throwing, quickstart checks airplane mode. **Not met**: no synchronization with the Pi server and no reconciliation rule; deferred to a dedicated sync feature (R7), justified in Complexity Tracking. Choices kept sync-compatible: device-generated UUIDs, ids never change, each change is one transaction. | ⚠️ deviation |
 | VIII | Observability | Store catches unexpected failures, reports them with `{ operation, screen }` only, and shows a French notice; no silent catch. | ✅ |
 | IX | Explicit screen states | Store regions are `ScreenState` unions rendered by the shared state components; `EditArticle` reads already-loaded data, and its save outcomes are tested. No synchronization status yet: no data is synchronized until the sync feature (R7), which adds it to every data screen. | ✅ (sync status deferred with VII) |
 | X | French interface, no i18n | Text only in UI components ([contracts/ui-screens.md](contracts/ui-screens.md)); store and use cases return typed results and notices. | ✅ |
+| XI | Single repository (monorepo) | Everything stays in the `apps/mobile/` workspace of 001; no new workspace or shared package. The new dependency-cruiser rules go in the root config. | ✅ |
 | QG | Quality gates and CI | Same CI jobs as 001; architecture test gains the `zustand` rules. "Works with the server unreachable" holds trivially: no code path reaches a server. | ✅ |
 | WF | Development workflow | The spec states offline behavior (FR-010) but not synchronization or reconciliation; deferred with VII (R7). | ⚠️ deviation |
 
@@ -112,7 +113,7 @@ specs/002-manage-articles/
 Additions to [001's layout](../001-shopping-lists/plan.md#source-code-repository-root):
 
 ```text
-src/
+apps/mobile/src/
 ├── domain/
 │   └── article.ts                    # + edit rule (uniqueness among other articles)
 ├── application/
@@ -127,10 +128,11 @@ src/
 │       ├── components/               # CategoryPicker, UndoSnackbar, NoticeSnackbar; ArticleRow menu
 │       └── screens/                  # EditArticle, DeleteArticleDialog; AddArticles row menu
 └── composition/                      # builds the store once and wraps the app in AppStoreProvider
-.dependency-cruiser.cjs               # + zustand only under src/adapters/ui; no zustand/middleware or immer
+.dependency-cruiser.cjs (root)        # + zustand only under apps/mobile/src/adapters/ui; no zustand/middleware or immer
 ```
 
-**Structure Decision**: same single Expo project and hexagonal layout as 001. The store is part of
+**Structure Decision**: same `apps/mobile/` workspace and hexagonal layout as 001, with no new
+workspace (Principle XI). The store is part of
 the UI adapter because it exists only to feed screens; the composition root creates it, like
 every other adapter.
 
