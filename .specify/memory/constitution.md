@@ -81,6 +81,27 @@ technology.
 Rationale: keeping business rules free of technology makes them fast to test first
 (Principles I and III) and lets the storage or user interface change without touching them.
 
+### VII. Offline First
+
+The application is offline first: it MUST be fully usable without a network connection.
+
+- **Local source of truth**: user data is stored on the device, and every read and write goes
+  to local storage first. A user action completes and its result is shown without waiting for
+  the network.
+- **Network off the critical path**: no feature may block, fail or lose data because the
+  network is missing, slow or drops mid-operation. Network access only enriches or shares data
+  that the application can already use locally.
+- **Synchronization as an adapter**: when a feature needs remote data or sharing, it goes
+  through a driven port (Principle VI). Changes made offline are kept and sent when
+  connectivity returns; the feature spec defines how concurrent changes are reconciled, and
+  that rule is deterministic and tested in the domain or application layer.
+- **Offline is tested**: each feature has tests that run with no network available, and any
+  synchronization has tests for connectivity loss and recovery, using test doubles of the
+  driven ports (Principle III).
+
+Rationale: shopping happens in stores where the connection is often poor; a list that cannot
+be read or ticked off there fails its core purpose.
+
 ## Quality Gates
 
 Before any commit:
@@ -88,6 +109,7 @@ Before any commit:
 - The whole test suite is green; no test is skipped or disabled without a linked, documented reason.
 - The project's linter and formatter run clean.
 - New or changed behavior is covered by tests written before the code (Principle I).
+- New or changed behavior works with no network available (Principle VII).
 
 Before merging a pull request:
 
@@ -100,6 +122,8 @@ Before merging a pull request:
 - Features go through Spec Kit: `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` →
   `/speckit-implement`. Generated task lists MUST order each test task before the
   implementation task it drives.
+- Each feature spec states the feature's behavior while offline and, when it shares data,
+  how offline changes are synchronized and reconciled (Principle VII).
 - Work happens in small increments: one behavior per Red-Green-Refactor cycle, committed often.
 - Branching, commit message format (Conventional Commits), secret scanning and README rules
   follow the workspace `AGENTS.md`.
@@ -119,4 +143,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
+**Version**: 1.2.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
