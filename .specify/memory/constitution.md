@@ -82,7 +82,7 @@ The application follows a hexagonal architecture (ports and adapters), with thre
 
 Dependencies point inward only: adapters → application → domain. A source file in the domain
 or application layer MUST NOT import from an adapter or a framework; an automated architecture
-test enforces this rule once the stack is chosen. Domain and use-case tests run against
+test enforces this rule in every workspace (Principle XI). Domain and use-case tests run against
 in-memory test doubles of the driven ports; each adapter has its own tests against the real
 technology.
 
@@ -181,6 +181,33 @@ Rationale: a single audience needs a single language; an internationalization la
 untested speculative infrastructure (Principle IV). Keeping text out of the domain keeps a
 later change of language confined to one adapter.
 
+### XI. Single Repository (Monorepo)
+
+All the project's code lives in one Git repository, organized as workspaces: the mobile
+application, the synchronization server and the packages they share. The workspace tool and the
+directory layout are chosen in the feature plans.
+
+- **One repository, one toolchain**: no part of the project lives in a separate repository.
+  The repository has one lockfile, one install command and one CI pipeline covering every
+  workspace, and shares one linter, formatter and TypeScript configuration base.
+- **Each workspace is hexagonal**: every application workspace (the app, the server) follows
+  Principle VI on its own, and the architecture test covers every workspace.
+- **Explicit dependencies between workspaces**: a workspace uses another only through its
+  declared package name and public entry point, never through a relative path into its source
+  files. The app and the server MUST NOT depend on each other; what they share lives in a
+  shared package.
+- **Pure shared packages**: a shared package imported by a domain or application layer holds
+  only framework-free, side-effect-free code (for example the synchronization protocol and its
+  merge rules), so it fits the inner layers of both workspaces. Shared packages MUST NOT depend
+  on the app or the server.
+- **Atomic changes**: a change that spans workspaces (for example a protocol change used by both
+  the app and the server) lands in a single pull request, with every affected workspace's tests
+  green in it.
+
+Rationale: the app and the server must agree on the synchronization protocol and its merge
+rules; one repository lets them share that code, change it in one atomic step and test it in one
+CI run, without the version skew of separate repositories.
+
 ## Quality Gates
 
 Before any commit:
@@ -201,7 +228,8 @@ Continuous integration is blocking for every pull request:
 
 - CI runs on every pull request and on every push to the default branch. It runs at least the
   full test suite (including the architecture test of Principle VI and the offline tests of
-  Principle VII), the linter, a formatter check and the build.
+  Principle VII), the linter, a formatter check and the build, for every workspace of the
+  monorepo (Principle XI).
 - Every change to the default branch goes through a pull request; no one pushes to it
   directly.
 - A pull request MUST NOT be merged while any CI job is failing, pending or skipped. The
@@ -245,4 +273,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 2.0.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
+**Version**: 2.1.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-06
