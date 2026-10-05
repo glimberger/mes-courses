@@ -113,9 +113,22 @@ Before any commit:
 
 Before merging a pull request:
 
-- The gates above pass in continuous integration once it exists.
+- Every gate above passes in continuous integration (CI).
 - The commit history or PR description shows the test-first progression for each behavior
   (failing test, then implementation, then refactoring).
+
+Continuous integration is blocking for every pull request:
+
+- CI runs on every pull request and on every push to the default branch. It runs at least the
+  full test suite (including the architecture test of Principle VI and the offline tests of
+  Principle VII), the linter, a formatter check and the build.
+- The default branch is protected: its CI jobs are required status checks, and a pull request
+  MUST NOT be merged while any of them is failing, pending or skipped. No one bypasses this
+  protection, administrators included.
+- A red CI is fixed in the pull request itself, never by disabling, skipping or weakening a
+  check. Changing the set of required checks is itself a reviewed pull request.
+- CI and branch protection are in place before the first application code is merged: the
+  first feature plan includes them.
 
 ## Development Workflow
 
@@ -143,4 +156,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 1.2.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
+**Version**: 1.3.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
