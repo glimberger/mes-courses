@@ -152,3 +152,10 @@ every other adapter.
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
 | Principle VII and its workflow rule: no synchronization with the Pi server, no reconciliation rule in the spec | Constitution v2.0.0 was adopted after 001 and 002 were specified; neither spec defines synchronization, and 001, which 002 builds on, has none. A dedicated sync feature (next `/speckit-specify`) defines the server port, the queue of offline changes, reconciliation and the synchronization status for 001 and 002 together. | Adding sync to 002 alone would invent reconciliation rules the spec does not state, sync articles while lists, items and categories (001) stay local, and need the server's technology and API, still undecided. Pausing 002 until sync exists blocks a local-only feature that sync does not change: its use cases, transactions and screens stay as designed. |
+
+**Migration note** (constitution Governance): [003-server-sync](../003-server-sync/plan.md) closes
+this deviation. Once 003 is implemented, every command use case of this feature records its
+changes through the `ChangeRecorder` port, inside its existing transaction
+([003 app-ports contract](../003-server-sync/contracts/app-ports.md#changes-to-existing-use-cases-001-and-002)).
+Undoable changes are held until the undo offer ends (article deletion, R5). If this feature is already
+implemented by then, 003's tasks add these calls, keeping its existing tests green.

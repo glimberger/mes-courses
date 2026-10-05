@@ -280,6 +280,9 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
 
 ## R19. Synchronization deferred (Principle VII)
 
+> **Resolved by [003-server-sync](../003-server-sync/research.md)**, which answers each open
+> question below (research R6 to R13 there).
+
 - **Decision**: this feature does not synchronize with the Raspberry Pi server. Constitution
   v2.0.0 makes the server's database the source of truth, but this spec defines a single-device
   app and excludes synchronization (FR-027, Assumptions). A dedicated sync feature brings 001 and

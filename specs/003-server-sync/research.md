@@ -1,0 +1,410 @@
+# Research: Server Synchronization
+
+**Feature**: [spec.md](spec.md) | **Plan**: [plan.md](plan.md) | **Date**: 2026-10-05
+
+This feature adds a server to the project and a sync layer to the app built by
+[001](../001-shopping-lists/research.md) and [002](../002-manage-articles/research.md). The
+maintainer chose a Node.js server on the Raspberry Pi, which sits behind a Freebox. Each entry
+gives the decision, why it was made, and what else was considered. It also settles the three
+points the clarification deferred to the plan: clock skew (R6), how long deletion records are
+kept (R7) and the first pairing code (R11).
+
+## R1. Repository layout: npm workspaces
+
+- **Decision**: the repository stays one Git repository, with npm workspaces:
+  - the Expo app stays at the root (001's layout, unchanged);
+  - `server/` is the Node.js server;
+  - `packages/sync-core/` is a pure TypeScript package shared by both. It holds the sync
+    protocol types, the hybrid logical clock (R6), the field merge rule (R5) and
+    `normalizedName`.
+
+  `sync-core` has no dependency and no side effect. The app's domain and application layers,
+  and the server's, may import it; dependency-cruiser allows `@mes-courses/sync-core` there and
+  nothing else (R16).
+- **Rationale**: the app and the server must apply the same rules to the same data. One copy of
+  those rules, tested once, avoids a drift that would break the "same data on every device"
+  guarantee (SC-003). Workspaces keep one `npm ci`, one CI and one lockfile.
+- **Alternatives considered**: a separate server repository (two copies of the rules, two CIs);
+  moving the app into `app/` (churn in 001's layout and tasks for no gain); copying the shared
+  files (drift).
+
+## R2. Server runtime and framework
+
+- **Decision**: Node.js 24 LTS (arm64) with TypeScript in strict mode, compiled with `tsc`. HTTP
+  is served by Fastify 5 with JSON schemas on every route.
+- **Rationale**: the maintainer chose Node. The server shares TypeScript and `sync-core` with the
+  app. Fastify validates requests against schemas before they reach the code, has
+  `app.inject()` for fast in-process tests with no open port (Principle III), and is light enough
+  for a Pi.
+- **Alternatives considered**: `node:http` alone (hand-written routing and validation, more
+  untested surface); Express 5 (no built-in validation, slower); Hono (fine, but Fastify's
+  `inject` and schema tooling fit the test-first workflow better).
+
+## R3. Server storage
+
+- **Decision**: SQLite on the Pi through Node's built-in `node:sqlite` (`DatabaseSync`), in WAL
+  mode with `synchronous = FULL`. The database lives in `/var/lib/mes-courses/` and is migrated
+  by `PRAGMA user_version`, like the app's.
+- **Rationale**: one user, a few devices and hundreds of rows. An embedded database has no
+  extra service to run on the Pi. `node:sqlite` is the same engine 001 already tests with, and
+  needs no native build on arm64. With WAL and `synchronous = FULL`, a committed sync survives
+  a power cut (FR-005, FR-006).
+- **Pi storage**: an SD card wears out with frequent writes. The quickstart recommends a USB SSD
+  for `/var/lib/mes-courses/`. Losing the card is covered by FR-018a: the devices repopulate the
+  server.
+- **Fallback**: if `node:sqlite` is still flagged experimental on the Node version used, the
+  server uses `better-sqlite3` behind the same `SqlDatabase` interface (as in 001 R4).
+- **Alternatives considered**: PostgreSQL (a service to run and back up, for one user);
+  plain JSON files (no transactions, so FR-006 would be hand-built).
+
+## R4. Network: Freebox, domain name and TLS
+
+- **Decision**:
+  - **Reverse proxy**: Caddy 2 runs on the Pi and terminates TLS. It obtains and renews a
+    Let's Encrypt certificate on its own (HTTP-01 challenge on port 80) and proxies
+    `https://<domain>` to the Node server on `127.0.0.1:3000`. The Node server never listens
+    on a public interface.
+  - **Freebox**:
+    - a static DHCP lease gives the Pi a fixed LAN address;
+    - Freebox OS forwards TCP 80 and 443 to it ("Gestion des ports");
+    - the Freebox's own remote access must not use ports 80 or 443.
+  - **IPv4 address**: Free gives each line a fixed public IPv4 address. On lines where Free
+    shares the IPv4 address between subscribers (only a port range is reachable, so 80 and 443
+    are not), the maintainer requests a full-stack IPv4 address, free of charge, in the Free
+    subscriber area.
+  - **Domain**: an A record of the maintainer's domain (for example `courses.<domain>`) points
+    to that fixed address. A dynamic DNS name works the same way if the address ever changes.
+    The domain is configuration (`MES_COURSES_DOMAIN` for Caddy, the address typed in the
+    app), not code.
+  - **IPv6**: the Freebox provides IPv6, but its IPv6 firewall would need its own opening. IPv4
+    only, with no AAAA record, keeps one path to test. It can be added later.
+- **Rationale**: the spec requires a publicly trusted, automatically renewed certificate under
+  the maintainer's domain (FR-019). Caddy does issuance, renewal, HTTP→HTTPS redirect and
+  modern TLS settings with a three-line configuration, so the Node code has no TLS logic to get
+  wrong. Phones verify the certificate like any website, so the app needs no pinning code.
+- **Home Wi-Fi**: a device on the home Wi-Fi reaches the server through the public address
+  (NAT loopback on the Freebox), so the app always uses one address. The quickstart checks it.
+  If loopback ever fails, a local DNS override is the fix; the app keeps one address.
+- **Alternatives considered**:
+  - TLS in Node with an ACME library (more code, and renewal failures would be ours to handle);
+  - Nginx with certbot (two tools and a renewal timer instead of one);
+  - Cloudflare Tunnel (rejected in the spec's clarification);
+  - the Freebox's own `freeboxos.fr` name (it belongs to the box's admin interface, and its
+    certificate is managed by the box).
+
+## R5. Sync model: server-authoritative, field-level last-writer-wins
+
+- **Decision**:
+  - **The server's state is authoritative.** Devices send changes; the server applies them,
+    resolves conflicts and returns its canonical state. Devices then replace their local data
+    with it. Determinism across devices (FR-010, SC-003) follows from there being a single
+    place that decides.
+  - **Changes are field-level.** A change is
+    `{ changeId, hlc, entity, id, fields: { field: value } }`. Every field the spec reconciles
+    is a last-writer-wins register on the server, holding `(value, hlc)`:
+    - category: `name`, `position`;
+    - article: `name`, `categoryId`;
+    - list: `name`;
+    - list item: `present`, `inCart`, `quantity`.
+
+    A field is overwritten only by a change with a greater HLC (R6), compared as
+    `(hlc, deviceId)`, so ties break the same way everywhere. Changes to different fields never
+    conflict (FR-009).
+  - **List items carry a `present` flag** instead of being deleted:
+    - removing an item sets `present = false` (FR-011);
+    - a concurrent tick or quantity change does not touch `present`, so the removal wins;
+    - adding the article to the list again later sets `present = true` with a newer HLC.
+
+    Only the server and the sync payloads see the flag. Locally, 001's `list_item` rows are
+    deleted as before.
+  - **Article deletion is final on the server**: a tombstone (`deletedHlc`) that no later
+    change undoes, so the deletion wins over any concurrent edit (FR-011). Changes to a deleted
+    article are acknowledged and ignored. Its name is free again (002 FR-007). A new article
+    with that name gets a new id.
+  - **"Terminer les courses"** is sent as `inCart = false` changes for the items ticked at that
+    moment, stamped with the finish's HLC. A tick made later has a greater HLC and wins
+    (FR-013).
+- **Rationale**: per-field registers give exactly the spec's rules with one small, pure merge
+  function in `sync-core`, testable without I/O. A server-authoritative design avoids
+  replicating merge state on every device.
+- **Alternatives considered**:
+  - a CRDT library such as Automerge or Yjs (heavy, generic, and the name merge of FR-012 is not
+    a CRDT operation);
+  - operation transforms (needless for registers);
+  - whole-row last-writer-wins (loses the concurrent edits that FR-009 keeps).
+
+## R6. Ordering changes: hybrid logical clock with a server bound (deferred question 1)
+
+- **Decision**: every change carries a hybrid logical clock (HLC) stamp
+  `{ wallMs, counter, deviceId }`, generated through a `Clock` driven port and the `Hlc` helper
+  in `sync-core`.
+  - Each device advances its HLC on every local change, and on every sync it merges in the
+    server's highest HLC, so a device with a slow clock moves forward as soon as it syncs.
+  - The server never stores a stamp whose `wallMs` is more than 60 s ahead of its own clock: it
+    clamps such stamps to `serverNow + 60 s`. A device whose clock is set in the future therefore
+    wins only within that minute, never "forever" (spec edge case).
+  - "Most recently made" (spec Assumptions) means the greatest stamp, compared as
+    `(wallMs, counter, deviceId)`.
+- **Rationale**: an HLC follows the wall clock when clocks are right, which is what a user
+  expects from "the change made last", and it stays ordered and deterministic when they are
+  not. The server bound handles the one case an HLC alone cannot: a clock in the future.
+- **Alternatives considered**:
+  - server arrival time (an offline device's old change would win on arrival, against the
+    spec);
+  - pure Lamport clocks (they ignore real time, so a change made in the morning could lose to
+    one made the day before);
+  - plain device wall clocks (no protection against wrong clocks).
+
+## R7. Deletion records and long-offline devices (deferred question 2)
+
+- **Decision**: the server keeps tombstones (deleted articles, merged entities, `present =
+  false` items) **forever**. Every server row carries a `seq`, the server's global change
+  counter at its last change. A device pulls every row with `seq > lastSeq`, tombstones
+  included. So a device offline for weeks gets exactly what changed, and its old changes are
+  merged by the same HLC rule. No change is dropped for being old (spec edge case).
+- **Rationale**: one user's data is hundreds of rows; keeping every tombstone costs kilobytes
+  and removes the "device offline longer than the retention period" failure mode altogether.
+- **Alternatives considered**: purging tombstones after N days, with a full resync for older
+  devices (more code and a new failure mode, for no measurable saving).
+
+## R8. Same-name merge (FR-012)
+
+- **Decision**: when a create or a rename on the server gives a category, an article or a list
+  a `normalizedName` (001 R6) equal to another live entity of the same kind:
+  - the **survivor** is the one with the smaller `(createdHlc, id)`;
+  - the other is tombstoned with `mergedInto = survivor.id`;
+  - for articles, the loser's list items move to the survivor. When the survivor is already on
+    that list, the two items merge field by field (R5);
+  - for categories, the loser's articles move to the survivor;
+  - for lists, the loser's items move to the survivor.
+
+  Later changes that target a merged id are redirected to its survivor. The merge runs on the
+  server in the same transaction as the change that caused it. Devices receive the result:
+  the loser as a tombstone with `mergedInto`, and the moved rows.
+- **Rationale**: the earliest-created entity survives, so default categories and "Ma liste"
+  keep the identity they got on the first device (FR-017, SC-007), and the rule does not
+  depend on arrival order.
+- **Locally**, a device keeps 001's `UNIQUE (normalized_name)`. Rows pulled while the device
+  still has a pending local change on a same-named entity are applied on the next cycle, after
+  the push has let the server merge them (R9).
+
+## R9. Sync cycle and protocol
+
+- **Decision**: one authenticated endpoint, `POST /v1/sync`, pushes and pulls in a single
+  round trip ([contracts/sync-api.md](contracts/sync-api.md)).
+  1. **Push**: the device sends the released entries of its outbox in order, each with its
+     `changeId` (a UUID).
+  2. **Server transaction**: the server applies each change unless its `changeId` is already
+     in `applied_change`, which makes the push idempotent (FR-006). It resolves merges (R8),
+     bumps `seq` on every row it touches, and records the device's `lastSyncAt`.
+  3. **Pull**: the response carries the ids of the changes that were applied or already
+     known, every row with `seq > lastSeq` (including the effects of the device's own
+     changes), the new `seq`, the server's highest HLC and its `serverId`.
+  4. **Device transaction**: the device removes the acknowledged entries from its outbox,
+     upserts or deletes the pulled rows (skipping the fields of changes still pending, R8),
+     stores `lastSeq` and merges the HLC.
+
+  Pushes are capped at 500 changes per request; the device loops until its outbox is empty.
+- **When a cycle runs**, through a `SyncScheduler` in the UI adapter:
+  - when the app opens and when it comes back to the foreground;
+  - 1 s after a local write (debounced);
+  - every 5 s while the app is in the foreground and connected (SC-001: under 10 s between
+    devices);
+  - on "Synchroniser maintenant".
+
+  After a failure, cycles back off exponentially (5 s up to 5 min). There is no background
+  sync when the app is closed: FR-004 and FR-007 only require sync while the app is open or
+  being opened.
+- **Rationale**: one request per cycle keeps the protocol small, and sending the full state of
+  changed rows (not deltas) makes applying a pull a plain upsert. Polling every 5 s in the
+  foreground is a few bytes when nothing changed, simpler than a WebSocket for one user.
+- **Alternatives considered**:
+  - a WebSocket or server-sent events (live updates under 1 s, but a connection to keep alive
+    on mobile networks, for a 10 s target);
+  - separate push and pull endpoints (two round trips per cycle).
+
+## R10. Outbox, and undo that never reaches the server (FR-005, FR-008)
+
+- **Decision**:
+  - **The outbox is a local SQLite table.** Every command use case of 001 and 002 records its
+    changes in it inside the same `UnitOfWork` transaction as the data. It does so through a
+    new `ChangeRecorder` port (`changes.record(entity, id, fields)`), which stamps each change
+    with the HLC. A crash therefore never leaves data without its change, or a change without
+    its data (001 R19, FR-005).
+  - **Undoable changes are held.** The changes of a removal (001 `removeItemFromList`) or of a
+    deletion (002 `deleteArticle`) are recorded `held = true` under the undo's id, and a sync
+    never sends held entries:
+    - `restoreRemovedItem` and `restoreDeletedArticle` delete the held entries, so the server
+      never sees the change (FR-008, US1-7);
+    - when the offer ends (5 s, the next write, or dismissal), the store calls a new
+      `releaseHeldChanges(undoId)` use case;
+    - at startup, `initializeStore` releases every held entry left by a killed app, because
+      the deletion is then final (002 edge case).
+- **Rationale**: recording in the same transaction is the promise 001 R19 and 002 R7 made.
+  Holding entries reuses the undo slot that already exists in the store, instead of adding a
+  timer to the sync layer.
+- **Alternatives considered**:
+  - SQLite triggers filling the outbox (they cannot compute the HLC or know about undo);
+  - diffing local state against the last pulled state (loses the field-level intent and the
+    HLC of each change).
+
+## R11. Device pairing and authorization (FR-019a to FR-019c; deferred question 3)
+
+- **Decision**:
+  - **Pairing code**: 8 characters from an unambiguous alphabet (no 0/O, 1/I/L), shown as
+    `XXXX-XXXX`, single use, valid 10 minutes. The server stores only its SHA-256 hash.
+  - **First code**: the maintainer runs `npm run pairing-code -w server` in a shell on the Pi.
+    This command talks to the database directly and works even while no device exists.
+  - **Next codes**: an authorized device calls `POST /v1/pairing-codes` ("Ajouter un
+    appareil").
+  - **Claiming**: `POST /v1/pairing/claim { code, deviceName }` returns a `deviceId` and a
+    random 256-bit device credential. The server stores only the credential's SHA-256 hash.
+    The app keeps the credential in the operating system's secure storage through
+    `expo-secure-store`, never in SQLite or in logs.
+  - **Every other request** sends the credential in the HTTP `Authorization` header with the
+    `Bearer` scheme. Requests from unknown or revoked devices get `401` and read or change
+    nothing (FR-019a, SC-008).
+  - **Rate limit**: at most 5 failed claims in any rolling 10-minute window, counted globally
+    since there is one user. Beyond that the server answers `429` with `Retry-After`
+    (FR-019b, US4-12). Failed claims are recorded in the database, so a restart does not reset
+    the count.
+  - **Revocation**: `DELETE /v1/devices/:id` sets `revokedAt`, and the next request from that
+    device gets `401` (SC-009). Disconnecting a device revokes itself.
+- **Rationale**: 2^40 possible codes, with 5 tries per 10 minutes and a 10-minute lifetime,
+  make guessing hopeless. Long random credentials stored hashed give revocable,
+  per-device access without user accounts (spec: one user, no accounts). The first code needs
+  physical or SSH access to the Pi, which only the maintainer has.
+- **Alternatives considered**:
+  - one shared server password (no per-device revocation);
+  - OAuth or user accounts (needless for a single user);
+  - QR codes (a convenience that can come later; typing 8 characters is under a minute,
+    SC-006).
+
+## R12. Detecting a reset server and app versions (FR-018a, spec edge cases)
+
+- **Decision**:
+  - **Server id**: the server creates a random `serverId` when it creates its database, and
+    returns it on every response. The device stores the `serverId` it paired with.
+  - **Reset or revoked**: a different `serverId`, or a `401` for its `deviceId`, means the
+    server no longer knows the device. The device then:
+    - keeps its local data and its outbox;
+    - shows "Cet appareil n'est plus connecté au serveur." with "Se reconnecter" (US4-10);
+    - after pairing again, starts a full upload (R13).
+  - **Versions**: every response also carries `apiVersion` and `minAppVersion`. An app older
+    than `minAppVersion` stops syncing and shows "Mettez à jour l'application pour
+    synchroniser." Every request carries the app's version, so the server can refuse with
+    `426` before touching any data. Newer fields sent by a newer server are ignored, never
+    deleted.
+- **Rationale**: a server id is the simplest way to tell "this is not the server I paired with",
+  and it covers a reinstalled Pi without any backup machinery.
+
+## R13. Joining a server with existing local data (FR-017, FR-018, FR-018a)
+
+- **Decision**: on its first sync with a server (`lastSeq = 0`), the device pushes a snapshot:
+  one change per local row and field, stamped with the **minimum HLC**
+  `{ wallMs: 0, counter: 0, deviceId }`. The outbox then follows with its real-HLC changes.
+  - On an empty server (FR-018), the snapshot becomes the server's data.
+  - On a server with data (FR-017), the snapshot loses every field conflict, because the
+    server's values have a greater HLC. Same-named defaults and "Ma liste" merge into the
+    server's ones (R8), so nothing is duplicated (SC-007). Data that exists only on the device
+    is added.
+  - Several devices re-pairing with a reset server (FR-018a) merge their snapshots by the same
+    rules, with ties broken by `deviceId`.
+- **Rationale**: no special "first sync" path on the server; the ordinary merge rules give the
+  behavior the spec asks for. The device keeps seeding at first launch (001 R18), so it works
+  offline before it is ever connected (US4-1).
+
+## R14. Sync status (US3, FR-020 to FR-022, Principle IX)
+
+- **Decision**: the store gains a `sync` slice:
+  - `connection`: `'notConnected' | 'connected' | 'disconnectedByServer' | 'updateRequired'`;
+  - `status`: `'saved' | 'waiting' | 'sending' | 'failed'`;
+  - `pendingCount`;
+  - `lastSyncAt`.
+
+  Status rules:
+  - a network error, a timeout or a server that cannot be reached means `waiting`. It is never
+    reported (FR-022);
+  - a `5xx`, an unexpected response, or a certificate that cannot be verified, three times in a
+    row, means `failed`, reported once per failure streak with `{ operation: 'sync' }`;
+  - a success resets the streak.
+
+  A shared `SyncStatusBar` component, from the shared UI module (Principle V), renders the slice
+  under the Appbar of every data screen: CurrentList, AddArticles, Lists, EditArticle and
+  Settings. It announces changes through an accessibility live region (FR-023).
+- **Rationale**: one component and one slice keep the status identical everywhere, and the
+  thresholds match the spec ("several times in a row").
+
+## R15. Server error tracking (FR-022a)
+
+- **Decision**: `@sentry/node`, behind an `ErrorReporter` port in the server, mirrors the app's
+  (001 R13):
+  - `sendDefaultPii: false`;
+  - a `beforeSend` that drops request bodies and headers;
+  - contexts limited to `{ operation, route }`;
+  - release = the server's version, environment from configuration.
+
+  It reports uncaught exceptions, failed transactions, and 5xx responses. Caddy's renewal
+  failures appear in Caddy's log, and the app reports a certificate it cannot verify (R14), so
+  a failed renewal is still seen. Refused claims and `401`s are expected and not reported.
+  Without `SENTRY_DSN`, the server logs to the console.
+- **Rationale**: one error tracking tool for the whole project, with the same privacy rules
+  (Principle VIII).
+
+## R16. Architecture, tests and CI
+
+- **Server layers**: the server follows the same hexagonal layout as the app (Principle VI):
+  - `server/src/domain` (apply a change, merge, authorize) imports only `sync-core`;
+  - `server/src/application` (use cases `sync`, `claimPairingCode`, `createPairingCode`,
+    `listDevices`, `renameDevice`, `revokeDevice`) imports only domain, `sync-core` and its own
+    ports;
+  - `server/src/adapters` holds `http` (Fastify), `sqlite`, `error-reporting` and `crypto`;
+  - `server/src/composition` wires them.
+
+  dependency-cruiser gains the same rules for `server/`, plus a rule that `packages/sync-core`
+  imports nothing.
+- **Tests**:
+  - `sync-core`: Jest unit tests for the HLC, the field merge and `normalizedName`, including
+    property-style tests that apply the same changes in every order and check the result is
+    identical (SC-003);
+  - server domain and use cases: in-memory fakes;
+  - server SQLite adapter: shared contract suites on `node:sqlite`;
+  - server HTTP adapter: Fastify `inject`;
+  - the app's `SyncServer` HTTP adapter: tested against a real in-process server on a random
+    local port with an in-memory database (Principle VII: the real technology, never the
+    production server);
+  - two-device scenarios: two app stacks on fakes, sharing one in-process server, with the
+    acceptance scenarios of US2.
+- **CI**: the existing jobs run across the workspaces (`npm test --workspaces`, typecheck and
+  lint for each). There is no deployment from CI: the maintainer deploys to the Pi by hand
+  (quickstart), and the Pi is never reached from CI.
+
+## R17. Deployment on the Pi
+
+- **Decision**:
+  - Raspberry Pi OS Lite 64-bit, with Node 24 from the NodeSource arm64 repository and Caddy
+    from its Debian repository;
+  - a system user `mes-courses` owns `/var/lib/mes-courses/` and `/opt/mes-courses/`;
+  - a systemd unit `mes-courses.service` runs `node server/dist/main.js` with `Restart=always`
+    and `NODE_ENV=production`;
+  - the Sentry DSN sits in `/etc/mes-courses.env`, readable only by that user;
+  - deploying means `git pull && npm ci -w server && npm run build -w server`, then
+    `systemctl restart mes-courses`. Server migrations run at startup in one transaction.
+
+  The files are `deploy/mes-courses.service`, `deploy/Caddyfile` and
+  `deploy/mes-courses.env.example` (with no values).
+- **Rationale**: plain systemd and Caddy are the least moving parts on a Pi. Containers would
+  add a runtime and an image registry for one process.
+
+## New dependencies (Principle IV)
+
+| Dependency | Where | Why it is needed |
+|---|---|---|
+| `fastify` (5.x) | server | HTTP routing and schema validation, `inject` for tests (R2). |
+| `@sentry/node` | server | Server error tracking (R15, FR-022a). |
+| `expo-secure-store` | app | Keeps the device credential in the operating system's secure storage (R11). |
+| Caddy 2 (system package, not npm) | Pi | TLS with automatic Let's Encrypt certificates and reverse proxy (R4, FR-019). |
+| npm workspaces (npm feature) | repo | App, server and `sync-core` in one repository (R1). |
+
+No new dependency is needed for HTTP in the app (`fetch`), connectivity (a failed request means
+offline, R14) or SQLite on the server (`node:sqlite`, R3).
