@@ -1,3 +1,6 @@
+# SQL "PRIMARY KEY" declarations trip the pattern detector; they are not secrets.
+allowed_patterns:
+  - 'PRIMARY KEY'
 fileignoreconfig:
   # Spec Kit manifests record SHA-256 content hashes of generated files, not secrets.
   - filename: .specify/integrations/speckit.manifest.json
