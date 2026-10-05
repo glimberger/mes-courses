@@ -72,8 +72,12 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
   SQL, constraints and migrations in seconds, with no device and no new dependency. If Jest
   cannot load `node:sqlite`, `better-sqlite3` (dev dependency only) replaces it behind the same
   helper.
+- **Since constitution v2.0.0** this database is the device's local replica of the server's
+  data: the application still reads and writes it first, and synchronization is added by a later
+  feature (R19).
 - **Alternatives considered**: Drizzle ORM (extra dependency and code generation for five
-  tables); WatermelonDB (built for sync, which this feature does not have); AsyncStorage / MMKV
+  tables); WatermelonDB (built for sync, which this feature does not have; the sync feature
+  compares it with a hand-written outbox, R19); AsyncStorage / MMKV
   (simple stores with no transactions or uniqueness constraints, so integrity would have to be
   hand-coded).
 
@@ -120,33 +124,45 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
 ## R8. Undo after removing an item (FR-010)
 
 - **Decision**: `removeItemFromList` deletes the row and returns a `RemovedItem` snapshot
-  (list, article, ticked state, quantity). The current list screen keeps the snapshot while a
-  Paper `Snackbar` shows "Article retiré" with an "Annuler" action for 5 seconds;
-  `restoreRemovedItem(snapshot)` re-inserts it as it was.
+  (list, article, ticked state, quantity). The application store (R10) keeps the snapshot in its
+  single `pendingUndo` slot while the app-wide undo snackbar shows "« {name} » retiré de la liste"
+  with an "Annuler" action for 5 seconds; `restoreRemovedItem(snapshot)` re-inserts it as it was.
+  Any other write ends the offer, and a new undoable change replaces it (the same rule as
+  [002's deleted articles](../002-manage-articles/research.md) R5).
 - **Rationale**: removal is real and immediate, so a killed app never resurrects an item, and
   undo reuses ordinary persistence. Tests control the snackbar timeout with Jest fake timers.
 
 ## R9. Ticks shown within 100 ms (SC-002, edge case "storage fails")
 
-- **Decision**: the current list screen updates the tick in its state immediately, then calls
-  `toggleItemInCart`. If the write fails, it reverts the item, shows a French snackbar
+- **Decision**: the store's `toggleItem` action (R10) updates the tick in the current list region
+  immediately, then calls `toggleItemInCart`. If the write fails, it reverts the item, shows a French snackbar
   ("La modification n'a pas pu être enregistrée.") and reports the error.
 - **Rationale**: an expo-sqlite write takes a few milliseconds, but the optimistic update keeps
   the tap feedback independent of storage speed and still never shows a failed change as saved.
 
-## R10. Screen state type (Principle IX)
+## R10. Application state and screen state type (Principle IX)
 
-- **Decision**: one union type per data-displaying screen region:
+- **Decision**: the application state is managed with **Zustand**, in one store of the UI
+  adapter (`src/adapters/ui/state/`), as decided in
+  [002's research](../002-manage-articles/research.md) R1 and specified in
+  [002's ui-state contract](../002-manage-articles/contracts/ui-state.md). Each data-displaying
+  region is one union in the store:
   `{ status: 'loading' } | { status: 'error'; error: unknown } | { status: 'empty'; ... } |
-  { status: 'success'; data: T }`, produced by a shared `useScreenData` hook that runs a query
-  use case and reloads when the screen gains focus. The shared UI module provides
-  `LoadingState`, `EmptyState` and `ErrorState` components. No screen in this feature shows
-  synchronized data, so no synchronization status component is needed yet.
+  { status: 'success'; data: T }` (plus an internal `idle` before the first request). Store
+  actions run the query use cases, call the command use cases and reload every loaded region
+  after each successful write, so the current list is up to date when the user comes back from
+  the add and lists screens. The shared UI module provides `LoadingState`, `EmptyState` and
+  `ErrorState` components. No screen in this feature shows synchronized data, so no
+  synchronization status component is needed yet; the sync feature adds it (R19).
 - **Rationale**: the union makes undefined combinations impossible, and a screen renders one
-  `switch` over it. Reloading on focus keeps the current list up to date after the add and lists
-  screens, with no global store (Principle IV).
-- **Alternatives considered**: Redux Toolkit / Zustand / TanStack Query (extra dependencies for
-  four screens that read local data).
+  `switch` over it. The maintainer chose Zustand for the whole app: 002 needs state that
+  outlives a screen (an undo offer that ends at the next change anywhere, views reloaded after
+  article changes), and building 001 on the same store avoids two state styles. The store is
+  created by a factory and provided through React context, so every test gets a fresh one. It
+  uses no middleware ([002 research](../002-manage-articles/research.md#r1b-no-zustand-middleware) R1b).
+- **Alternatives considered**: a per-screen `useScreenData` hook reloading on focus (cannot hold
+  an undo offer across screens); Redux Toolkit (more ceremony); TanStack Query (made for remote
+  server state).
 
 ## R11. Long lists (SC-008)
 
@@ -201,7 +217,9 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
   - Domain and application tests are plain TypeScript tests against in-memory fakes of the driven
     ports (`InMemoryCatalogRepository`, ...). They run in milliseconds.
   - SQLite adapter tests run the real SQL through `node:sqlite` (R4).
-  - UI adapter tests use React Native Testing Library and its built-in Jest matchers, rendering screens with use cases backed by in-memory fakes, and assert the French
+  - Store tests build the vanilla Zustand store (R10) with use cases on in-memory fakes and
+    assert state and reports, without rendering.
+  - UI adapter tests use React Native Testing Library and its built-in Jest matchers, rendering screens with a fresh store whose use cases are backed by in-memory fakes, and assert the French
     text the user reads.
   - Offline (Principle VII): no driven port in this feature uses the network. An "offline"
     UI test runs a full scenario (open, tick, add, create, change quantity, remove and undo,
@@ -221,6 +239,8 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
   - `src/domain/**` imports anything outside `src/domain/` (including any npm package);
   - `src/application/**` imports anything other than `src/domain/` and `src/application/`;
   - anything outside `src/adapters/**` and `src/composition/**` imports from `src/adapters/**`;
+  - anything outside `src/adapters/ui/**` imports `zustand` (R10);
+  - anything imports `zustand/middleware` or `immer` (R10, [002 research](../002-manage-articles/research.md#r1b-no-zustand-middleware) R1b);
   - any circular dependency exists.
   It runs as `npm run test:architecture` and in CI.
 - **Rationale**: path-based rules over the real import graph enforce the inward-only dependency
@@ -258,6 +278,37 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
 - **Rationale**: the "only on an empty store" rule is tested with in-memory fakes, and running it
   in one transaction means an interrupted first launch never leaves half a seed.
 
+## R19. Synchronization deferred (Principle VII)
+
+- **Decision**: this feature does not synchronize with the Raspberry Pi server. Constitution
+  v2.0.0 makes the server's database the source of truth, but this spec defines a single-device
+  app and excludes synchronization (FR-027, Assumptions). A dedicated sync feature brings 001 and
+  [002](../002-manage-articles/research.md#r7-synchronization-deferred-principle-vii) in line
+  together. The deviation is justified in the plan's Complexity Tracking.
+- **Kept compatible with sync** (no extra code, Principle IV):
+  - ids are UUIDs generated on the device (R5) and never change, so a server can match records
+    across devices;
+  - each change is one `UnitOfWork` transaction, so a later outbox of pending changes can be
+    written in the same transaction and never diverge from the data;
+  - writes commit locally before the UI shows them (FR-028), which stays true with a replica;
+  - read models and screens never assume the device holds the only copy.
+- **Open questions for the sync feature's spec**, raised by this design:
+  - *First-launch seed* (R18): each device seeds the default categories and "Ma liste" with its
+    own UUIDs, so a second device would hold duplicates with the same names. The sync feature
+    decides whether a new device pulls from the server before seeding, or how seeded records
+    merge by name.
+  - *Name uniqueness* (R6): two devices can create a category, an article or a list with the
+    same normalized name offline.
+  - *Concurrent ticks and quantities*: the same item ticked on one device and unticked, or its
+    quantity changed, on another; "Terminer les courses" on one device while the other ticks.
+  - *Current list*: whether the current list is shared or chosen per device.
+  - *Deletions and undo* (R8): a removed item leaves no trace to send, and its undo re-inserts it;
+    the same questions as 002's article deletion.
+  - *Category order*: positions assigned on two devices can collide.
+- **Alternatives considered**: synchronize in this feature (rules not in the spec, server API
+  undecided); add an outbox or sync metadata columns now (code and schema no test requires while
+  nothing reads them, and the sync feature's migration can add them).
+
 ## New dependencies (Principle IV)
 
 | Dependency | Why it is needed |
@@ -265,6 +316,7 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
 | `expo`, `react-native`, `react` | Chosen platform (R1). |
 | `react-native-paper`, `react-native-safe-area-context`, `@expo/vector-icons` | Material 3 design system (R2, Principle V). |
 | `@react-navigation/native`, `@react-navigation/native-stack`, `react-native-screens` | Navigation between screens (R3). |
+| `zustand` | Application state shared by every screen (R10), chosen by the maintainer. |
 | `expo-sqlite` | On-device storage (R4, Principle VII). |
 | `expo-crypto` | UUIDs for `IdGenerator` (R5). |
 | `@sentry/react-native` | Error tracking (R13, Principle VIII). |
