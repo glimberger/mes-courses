@@ -89,26 +89,33 @@ technology.
 Rationale: keeping business rules free of technology makes them fast to test first
 (Principles I and III) and lets the storage or user interface change without touching them.
 
-### VII. Offline First
+### VII. Remote Source of Truth, Offline First
 
-The application is offline first: it MUST be fully usable without a network connection.
+The source of truth for user data is a remote database hosted on the maintainer's Raspberry Pi
+server. The application MUST stay fully usable without a network connection or while that server
+is unreachable.
 
-- **Local source of truth**: user data is stored on the device, and every read and write goes
-  to local storage first. A user action completes and its result is shown without waiting for
-  the network.
+- **Remote source of truth**: the server database holds the authoritative state of user data.
+  The device keeps a local replica of it. When the replica and the server disagree after
+  synchronization, the server's reconciled state wins and the replica is updated to match.
+- **Local replica first**: every read and write goes to the local replica first. A user action
+  completes and its result is shown without waiting for the network or the server.
 - **Network off the critical path**: no feature may block, fail or lose data because the
-  network is missing, slow or drops mid-operation. Network access only enriches or shares data
-  that the application can already use locally.
-- **Synchronization as an adapter**: when a feature needs remote data or sharing, it goes
-  through a driven port (Principle VI). Changes made offline are kept and sent when
-  connectivity returns; the feature spec defines how concurrent changes are reconciled, and
-  that rule is deterministic and tested in the domain or application layer.
-- **Offline is tested**: each feature has tests that run with no network available, and any
-  synchronization has tests for connectivity loss and recovery, using test doubles of the
-  driven ports (Principle III).
+  network is missing, slow or drops mid-operation, or because the server is down. An
+  unreachable server is handled exactly like being offline.
+- **Synchronization as an adapter**: the server is reached only through driven ports
+  (Principle VI); domain and application code do not know the server's technology or address.
+  Changes made offline are kept in the replica and queued, and a queued change is removed only
+  after the server has acknowledged it. The feature spec defines how concurrent changes are
+  reconciled into the server state; that rule is deterministic and tested.
+- **Offline is tested**: each feature has tests that run with no network available and with the
+  server unreachable, and synchronization has tests for connectivity loss and recovery, using
+  test doubles of the driven ports (Principle III). The adapter that talks to the server has its
+  own tests against a real instance of the server's technology, never the production server.
 
-Rationale: shopping happens in stores where the connection is often poor; a list that cannot
-be read or ticked off there fails its core purpose.
+Rationale: one authoritative copy on a server the maintainer controls survives the loss of a
+device and gives every device the same data; shopping happens in stores where the connection is
+often poor, so the device still has to work on its own.
 
 ### VIII. Observability and Error Tracking
 
@@ -144,9 +151,10 @@ and each state is rendered by its dedicated component from the shared UI module 
 - **Error**: data could not be obtained; the error component says what failed in plain words and
   offers a recovery action when one exists. The error is reported (Principle VIII).
 - **Success**: the data is shown.
-- **Synchronization**: when the screen shows data that is synchronized (Principle VII), a
-  synchronization status component shows whether local changes are pending, in progress, done
-  or failed. Being offline is a normal status, not an error.
+- **Synchronization**: when the screen shows user data, which is synchronized with the server
+  (Principle VII), a synchronization status component shows whether local changes are pending,
+  in progress, done or failed. Being offline or unable to reach the server is a normal status,
+  not an error.
 
 The UI adapter models a screen's state as one explicit type in which these states are mutually
 exclusive, so a screen cannot render an undefined combination. Each state has at least one
@@ -180,7 +188,8 @@ Before any commit:
 - The whole test suite is green; no test is skipped or disabled without a linked, documented reason.
 - The project's linter and formatter run clean.
 - New or changed behavior is covered by tests written before the code (Principle I).
-- New or changed behavior works with no network available (Principle VII).
+- New or changed behavior works with no network available and with the server unreachable
+  (Principle VII).
 
 Before merging a pull request:
 
@@ -213,8 +222,9 @@ Continuous integration is blocking for every pull request:
 - Features go through Spec Kit: `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` →
   `/speckit-implement`. Generated task lists MUST order each test task before the
   implementation task it drives.
-- Each feature spec states the feature's behavior while offline and, when it shares data,
-  how offline changes are synchronized and reconciled (Principle VII).
+- Each feature spec states the feature's behavior while offline or with the server
+  unreachable, how its data is synchronized with the server, and how concurrent changes are
+  reconciled (Principle VII).
 - Work happens in small increments: one behavior per Red-Green-Refactor cycle, committed often.
 - Branching, commit message format (Conventional Commits), secret scanning and README rules
   follow the workspace `AGENTS.md`.
@@ -235,4 +245,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 1.7.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
+**Version**: 2.0.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
