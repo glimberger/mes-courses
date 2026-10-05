@@ -51,14 +51,22 @@ follow this principle.
 
 Rationale: in TDD the design emerges from tests; anticipating needs adds untested code paths.
 
-### V. Consistent Design System
+### V. Single Design System
 
-The user interface uses the Material 3 theme exported in `design/material-theme.json` as the
-single source of truth for colors (light and dark schemes, including contrast variants).
-Components MUST reference theme tokens instead of hard-coded color values. Both light and dark
-schemes MUST be supported.
+The whole user interface is built with one design system: Material 3, themed with the export in
+`design/material-theme.json`.
 
-Rationale: one token source keeps the interface coherent and makes theme changes a single edit.
+- Screens are composed only of Material 3 components from the library chosen in the plan, or of
+  project components built from them and kept in one shared UI component module. A screen MUST
+  NOT define its own one-off visual component or style, and no second UI library is added.
+- Colors, typography, shapes, spacing and elevation reference design system tokens; hard-coded
+  values are forbidden. `design/material-theme.json` is the single source of truth for colors
+  (light and dark schemes, including contrast variants), and both schemes MUST be supported.
+- A need the design system does not cover is met by adding a component to the shared module,
+  reviewed in its pull request, never by styling a screen ad hoc.
+
+Rationale: one design system keeps the interface coherent, and one token source makes a theme
+change a single edit.
 
 ### VI. Hexagonal Architecture
 
@@ -124,6 +132,29 @@ are seen and fixed rather than discovered by chance.
 Rationale: an offline application runs far from any server log; without error tracking, its
 failures stay invisible to the maintainer.
 
+### IX. Explicit Screen States
+
+Every screen, or screen region, that displays data implements each of its states explicitly,
+and each state is rendered by its dedicated component from the shared UI module (Principle V):
+
+- **Loading**: data is not available yet; a loading component is shown, never a blank screen or
+  stale content presented as current.
+- **Empty**: there is no data; the empty component says so and offers the next useful action
+  (for example, adding a first item).
+- **Error**: data could not be obtained; the error component says what failed in plain words and
+  offers a recovery action when one exists. The error is reported (Principle VIII).
+- **Success**: the data is shown.
+- **Synchronization**: when the screen shows data that is synchronized (Principle VII), a
+  synchronization status component shows whether local changes are pending, in progress, done
+  or failed. Being offline is a normal status, not an error.
+
+The UI adapter models a screen's state as one explicit type in which these states are mutually
+exclusive, so a screen cannot render an undefined combination. Each state has at least one
+automated test, and the feature spec's acceptance scenarios cover every state of each screen.
+
+Rationale: loading, empty and failure are the moments users judge an application by; handling
+them through shared components keeps them consistent and impossible to forget.
+
 ## Quality Gates
 
 Before any commit:
@@ -178,4 +209,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 1.4.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
+**Version**: 1.5.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
