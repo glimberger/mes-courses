@@ -193,13 +193,20 @@ Continuous integration is blocking for every pull request:
 - CI runs on every pull request and on every push to the default branch. It runs at least the
   full test suite (including the architecture test of Principle VI and the offline tests of
   Principle VII), the linter, a formatter check and the build.
-- The default branch is protected: its CI jobs are required status checks, and a pull request
-  MUST NOT be merged while any of them is failing, pending or skipped. No one bypasses this
-  protection, administrators included.
+- Every change to the default branch goes through a pull request; no one pushes to it
+  directly.
+- A pull request MUST NOT be merged while any CI job is failing, pending or skipped. The
+  repository is private on a GitHub plan without branch protection, so GitHub cannot enforce
+  this rule: whoever merges (the maintainer or an agent) checks the CI status of the pull
+  request (for example with `gh pr checks`) right before merging, and no one makes an
+  exception.
+- If the repository gains branch protection (a paid plan or a public repository), the CI jobs
+  become required status checks on the default branch, with no exception, administrators
+  included.
 - A red CI is fixed in the pull request itself, never by disabling, skipping or weakening a
-  check. Changing the set of required checks is itself a reviewed pull request.
-- CI and branch protection are in place before the first application code is merged: the
-  first feature plan includes them.
+  check. Changing the set of CI jobs is itself a reviewed pull request.
+- CI is in place before the first application code is merged: the first feature plan
+  includes it.
 
 ## Development Workflow
 
@@ -228,4 +235,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 1.6.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
+**Version**: 1.7.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-05
