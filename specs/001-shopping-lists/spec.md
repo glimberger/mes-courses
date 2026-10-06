@@ -99,6 +99,33 @@
 - Q: Can a storage error report include the error's own text, which may quote the value being
   saved? → A: No: storage error reports keep the error type, error code, stack trace,
   operation and screen; the error's text is removed before sending.
+- Q: Must a saved change survive a device restart or a sudden power loss, not only the
+  application being killed? → A: Yes: once a change is shown as saved, it survives application
+  restarts, device restarts and sudden power loss (FR-028, SC-007).
+- Q: Is every user action saved all or nothing, including actions that change several things,
+  such as creating an article and adding it to the list? → A: Yes: a failed save keeps none of
+  the action's changes; the article is neither created nor added (FR-028).
+- Q: Which changes does SC-007 protect: does it include undoing a removal, creating a category
+  and finishing shopping? → A: Every kind of change the spec allows, each named in SC-007,
+  undo of a removal, category creation and finishing shopping included.
+- Q: When a save fails because the device storage is full, does the user get the usual
+  failed-save message or a message of its own? → A: A message of its own: "Espace de stockage
+  insuffisant. Libérez de la place sur votre téléphone."; the change is handled like any failed
+  save, and the error is not reported because it is expected (FR-030).
+- Q: Why is exactly one list always current? → A: The first launch makes "Ma liste" current,
+  choosing another list replaces it, and lists cannot be deleted in this feature; FR-002 now
+  states these three rules together.
+- Q: What counts as a first launch, and what if it is interrupted? → A: First launch means no
+  list is stored yet, so reinstalling or clearing the application's data sets up again and
+  existing data is never set up twice; the default categories and "Ma liste" are set up all or
+  nothing, and an interrupted first launch is redone at the next launch (FR-023).
+- Q: Which actions do SC-006 (airplane mode) and SC-009 (screen reader, 200% text) cover? → A:
+  One shared list of the 12 actions of this spec, written under the Success Criteria.
+- Q: Does the spec record that keeping all data on the device departs from constitution
+  Principle VII? → A: Yes: FR-027 names the deviation and points to the plan's Complexity
+  Tracking and to 003-server-sync, which closes it.
+- Q: What data size must the application handle? → A: Up to 1 000 articles in the catalog, 20
+  lists and 200 items per list, with SC-001 and SC-008 holding at that size (Assumptions).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -315,6 +342,9 @@ the new heading.
   showing what is stored. A failed "Annuler" leaves the item removed and ends the undo offer,
   with the same message and report (FR-010). A failed "Terminer les courses" changes no item:
   the dialog closes, with the same message and report, and the action stays offered (FR-007).
+- The device storage is full when saving a change: the save fails as above, but the message is
+  "Espace de stockage insuffisant. Libérez de la place sur votre téléphone." instead of the
+  usual failed-save message, and the error is not reported (FR-030).
 
 ## Requirements *(mandatory)*
 
@@ -323,7 +353,9 @@ the new heading.
 **Current list and cart**
 
 - **FR-001**: The application MUST open on the current shopping list and display its name.
-- **FR-002**: Exactly one list MUST be current at any time.
+- **FR-002**: Exactly one list MUST be current at any time: the first launch makes "Ma liste"
+  current (FR-023), choosing another list replaces it (FR-025), and lists cannot be deleted in
+  this feature (Assumptions).
 - **FR-003**: A list MUST show its items grouped under their category headings, hiding
   categories that hold no item of the list.
 - **FR-004**: Users MUST be able to tick an item (in the cart) and untick it (not in the
@@ -392,7 +424,10 @@ the new heading.
 **Named lists**
 
 - **FR-023**: On first launch, the application MUST create one empty list named "Ma liste" and
-  make it current.
+  make it current. First launch means no list is stored yet (after installing, reinstalling or
+  clearing the application's data); when a list already exists, nothing is created again.
+  Setting up the default categories (FR-020) and "Ma liste" MUST be all or nothing: an
+  interrupted first launch leaves nothing set up, and the next launch sets everything up again.
 - **FR-024**: Users MUST be able to create further lists, each with a unique name (same
   uniqueness rule as FR-021).
 - **FR-025**: Users MUST be able to see all their lists and choose which one is current; the
@@ -404,9 +439,15 @@ the new heading.
 
 - **FR-027**: All data MUST be stored on the device, and every feature of this spec MUST work
   without a network connection. No data is shared or synchronized with other devices or
-  people in this feature.
+  people in this feature. This departs from constitution Principle VII (remote source of
+  truth): the deviation is justified in [plan.md](plan.md) (Complexity Tracking) and closed by
+  [003-server-sync](../003-server-sync/spec.md).
 - **FR-028**: Every change MUST be saved on the device as soon as it is made, with no explicit
-  save action, and kept across application restarts.
+  save action, and kept across application restarts, device restarts and sudden power loss
+  (for example an empty battery): once a change is shown as saved, it is never lost. Every user
+  action MUST be saved all or nothing: when an action changes several things (for example
+  creating an article and adding it to the current list, or finishing shopping), a failed save
+  keeps none of its changes.
 - **FR-029**: Each screen showing data (current list, catalog by category, search results,
   lists) MUST implement explicit loading, empty, error and success states. Search results
   filter the catalog already loaded on the add screen: they share its loading and error
@@ -415,7 +456,9 @@ the new heading.
   them, and reported to error tracking without any list content or personal data. Reports of
   storage errors MUST keep only the error type, the error code, the stack trace, the operation
   and the screen: the error's own text, which the storage may fill with the value being saved,
-  MUST be removed before sending.
+  MUST be removed before sending. A save that fails because the device storage is full is an
+  expected situation, not an unexpected error: it MUST show "Espace de stockage insuffisant.
+  Libérez de la place sur votre téléphone." and MUST NOT be reported.
 - **FR-031**: All user-facing text MUST be in French.
 - **FR-032**: Every screen MUST be usable with the system screen reader: each interactive
   element has a French label, and each list item announces its name, its quantity when it has
@@ -475,17 +518,34 @@ the new heading.
 - **SC-004**: Creating a new article and adding it to a list with a quantity takes under 20
   seconds.
 - **SC-005**: Switching the current list takes at most 2 taps from the current list screen.
-- **SC-006**: 100% of the actions in this spec complete successfully with the device in
-  airplane mode.
-- **SC-007**: No change (tick, addition, removal, quantity, creation, current list choice) is
-  lost after the application is closed, killed or the device restarted.
+- **SC-006**: 100% of the actions of this spec (listed below) complete successfully with the
+  device in airplane mode.
+- **SC-007**: No change (tick or untick, addition, removal, undo of a removal, quantity set,
+  changed or cleared, creation of an article, a category or a list, finishing shopping, current
+  list choice) is lost after the application is closed, killed, the device restarted or its power suddenly
+  lost.
 - **SC-008**: On a list of 200 items, scrolling and ticking stay at 55 frames per second or
   more, and each tick is shown within 100 ms.
-- **SC-009**: Every action in this spec can be completed with the screen reader alone, and
+- **SC-009**: Every action of this spec (listed below) can be completed with the screen reader alone, and
   with the system text size at 200%.
 
 SC-001, SC-002 and SC-008 are measured on a release build, on two reference phones: an
 entry-level Android phone about five years old, and the maintainer's iPhone.
+
+The actions of this spec, checked one by one by SC-006 and SC-009:
+
+1. Open the application on the current list.
+2. Tick and untick an item.
+3. Finish shopping ("Terminer les courses").
+4. Add an existing article to the current list, by browsing categories and by searching.
+5. Create an article and add it to the current list.
+6. Set, change and clear the quantity of an item.
+7. Remove an item from the current list.
+8. Undo a removal ("Annuler").
+9. See all lists.
+10. Create a list.
+11. Choose the current list.
+12. Create a category.
 
 ## Assumptions
 
@@ -500,6 +560,8 @@ entry-level Android phone about five years old, and the maintainer's iPhone.
   Boulangerie, Épicerie salée, Épicerie sucrée, Surgelés, Boissons, Hygiène et beauté,
   Entretien, Divers.
 - The catalog starts empty: no default articles are provided, only default categories.
+- Expected data size: up to 1 000 articles in the catalog, 20 lists and 200 items per list;
+  SC-001 and SC-008 must hold at that size.
 - The unit is free text (for example "g", "kg", "L", "paquets"); no unit conversion and no
   merging of quantities is done. Items carry no price or note in this feature.
 - Renaming or deleting articles, categories and lists, and reordering categories, are out of

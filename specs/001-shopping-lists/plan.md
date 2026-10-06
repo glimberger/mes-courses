@@ -64,7 +64,8 @@ committed to storage before it is shown as saved (FR-028); French-only UI with n
 (Principle VIII); stored data never deleted or reset to recover from a startup failure
 (FR-039); data kept across updates and never opened by an older version (FR-040); data kept
 in the system backup, not encrypted beyond the system's own (Assumptions); no storage error
-text in reports (FR-030)
+text in reports (FR-030); sync compatibility kept for 003: ids are generated on the device and
+never change (R5), and each user action is one `UnitOfWork` transaction (FR-028)
 
 **Scale/Scope**: one user, one device; 4 screens and 4 dialogs; hundreds of articles at most,
 around 200 items per list at most; 5 tables
