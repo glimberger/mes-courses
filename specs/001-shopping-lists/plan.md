@@ -348,7 +348,14 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
   - CreateArticle preselects the category of the empty state it was opened from (FR-018, T092,
     T093, T103);
   - a created list is not made current and the user stays on Lists (FR-024, T112); user
-    categories stay after "Divers" (`max(position) + 1`, unchanged).
+    categories stay after "Divers" (`max(position) + 1`, unchanged);
+  - one `compareNames` (French collator, `numeric: true`) sorts items, the catalog and the
+    lists (R6, T020, T066, T085, T109);
+  - the optimistic tick also updates `remainingCount` and `hasItemsInCart`, so "Terminer les
+    courses" follows the ticks shown (FR-007, T069);
+  - tapping the current list on Lists saves nothing and keeps the undo offer (FR-025, T111);
+  - changing a quantity keeps the tick and the lists count all items: already in the data
+    model and contract, now cited by FR-015 and US3-8.
 - No task touches the network or the server: synchronization belongs to the sync feature (R19).
 - The Sentry project is in place (done by the maintainer). The Sentry DSN and build credential
   live in EAS environment variables, set by the maintainer, and are never committed.

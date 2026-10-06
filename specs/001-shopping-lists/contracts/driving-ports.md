@@ -67,7 +67,7 @@ their `listId` parameter, which their tests use to check that each list keeps it
 
 | Use case | Signature | Behavior |
 |---|---|---|
-| `getLists` | `() => Promise<ListSummary[]>` | All lists, sorted by name with the French collator, each with its item count and current mark (US3-8). |
+| `getLists` | `() => Promise<ListSummary[]>` | All lists, sorted by name with `compareNames` (numbers by value), each with its item count (all items, ticked or not) and current mark (US3-8). |
 | `createList` | `(name: string) => Promise<Result<{ listId }, NameError \| NameAlreadyUsed>>` | Creates an empty list; does not make it current (US3-2, US3-5, US3-6). |
 | `setCurrentList` | `(listId) => Promise<Result<void, ListNotFound>>` | Changes the current list (FR-025, US3-3). |
 

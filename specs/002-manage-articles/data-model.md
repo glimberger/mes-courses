@@ -40,7 +40,7 @@ What the delete confirmation shows (FR-006, US2-3).
 ```text
 ArticleUsage = {
   article: { id, name }
-  lists: Array<{ id, name }>    // lists holding the article, sorted by name (French collator)
+  lists: Array<{ id, name }>    // lists holding the article, sorted by name with 001's `compareNames` (numbers by value)
 }
 ```
 

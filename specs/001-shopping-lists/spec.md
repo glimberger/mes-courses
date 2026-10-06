@@ -310,6 +310,17 @@
   line break counts as a space; invisible characters (zero-width space, zero-width non-joiner,
   zero-width joiner, word joiner, byte order mark) are removed, so a name left empty is refused
   as blank (FR-022).
+- Q: Does an item stay ticked when its quantity is changed or cleared? → A: Yes: only the
+  quantity changes, the ticked state is kept (FR-015).
+- Q: What happens when the user chooses the list that is already current? → A: Nothing is
+  saved: the user returns to the current list screen and the "Annuler" offer stays (FR-025).
+- Q: Does each list's count on the screen of my lists show all its items or only those left to
+  buy? → A: All its items, ticked or not (US3-8).
+- Q: Does "Terminer les courses" follow the ticks shown or the ticks saved? → A: The ticks
+  shown: it appears as soon as an item is shown ticked, and hides again if the last ticked item
+  returns to unticked after a failed save (FR-007).
+- Q: Are numbers in names sorted by value or character by character? → A: By value: "Lait 2 L"
+  comes before "Lait 10 L", wherever names are sorted (Assumptions).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -480,7 +491,7 @@ application and check "Barbecue" is shown if it was current.
    appears, **Then** a loading state is shown; if they cannot be read, an error state offers
    to retry and the error is reported.
 8. **Given** several lists exist, **When** I open the screen of my lists, **Then** each list
-   shows its name, its number of items, and which one is current, and the lists are sorted
+   shows its name, its number of items (all of them, ticked or not), and which one is current, and the lists are sorted
    alphabetically by name (French collation), the current one included.
 
 ---
@@ -584,7 +595,8 @@ the new heading.
 - **FR-007**: Users MUST be able to finish shopping on a list: after a confirmation, every item
   of that list is unticked and kept with its quantity, all or nothing: if saving fails, no item
   changes. The action MUST be offered only while
-  at least one item of the list is ticked.
+  at least one item of the list is shown ticked, including a tick whose save has not finished;
+  it hides again when a failed save returns the last ticked item to unticked (FR-004).
 
 **Editing a list**
 
@@ -630,7 +642,8 @@ the new heading.
   on a given list.
 - **FR-014**: When adding an article to a list, users MUST be able to give an optional
   quantity: a positive number (decimals allowed) with an optional free-text unit.
-- **FR-015**: Users MUST be able to change or clear the quantity of an item already on a list.
+- **FR-015**: Users MUST be able to change or clear the quantity of an item already on a list;
+  the item keeps its ticked state.
 - **FR-016**: A unit MUST NOT be accepted without a quantity; a quantity of zero, a negative
   quantity or a non-numeric quantity MUST be refused with a French message. A quantity MUST be
   written with digits and at most one decimal comma or point, with digits on both sides of it,
@@ -675,7 +688,9 @@ the new heading.
   uniqueness rule as FR-021). Creating a list MUST NOT make it current: the user stays on the
   screen of their lists and chooses it to make it current (FR-025).
 - **FR-025**: Users MUST be able to see all their lists and choose which one is current; the
-  choice MUST be kept across application restarts.
+  choice MUST be kept across application restarts. Choosing the list that is already current
+  is not a change: nothing is saved, the user returns to the current list screen, and the
+  "Annuler" offer (FR-010) stays.
 - **FR-026**: Each list MUST keep its own items, quantities and ticked states, independent of
   other lists.
 
@@ -903,4 +918,5 @@ The actions of this spec, checked one by one by SC-006 and SC-009:
   category are sorted alphabetically (French collation) inside the unticked and ticked groups.
   On the add screen, articles within a category are sorted alphabetically (French collation),
   when browsing and when searching. Lists on the screen of my lists are sorted alphabetically by
-  name (French collation).
+  name (French collation). Wherever names are sorted, numbers in them are compared by value:
+  "Lait 2 L" comes before "Lait 10 L".

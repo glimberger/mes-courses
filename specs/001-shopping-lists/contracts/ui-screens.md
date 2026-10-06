@@ -88,7 +88,7 @@ CreateCategoryDialog.
 | Tap a row | Tick or untick immediately (optimistic); the save joins the store's single write queue, so every change is saved in the order it was made, and "Terminer les courses" or a removal is saved after the taps made before it (FR-004). On a failed save: the item's later queued toggles are dropped (other writes still run), the list is reloaded so the item shows its stored state, snackbar "La modification n'a pas pu être enregistrée.", report with `{ operation: 'toggleItemInCart', screen: 'CurrentList' }`. (US1-2, US1-3, FR-004, [research.md](../research.md) R9) |
 | Row action "Modifier la quantité" | Opens QuantityDialog prefilled. |
 | Row action "Retirer de la liste" | Removes at once; snackbar "« {name} » retiré de la liste" with action "Annuler" (US2-6, US2-16), offered per [Undo offer](#undo-offer). |
-| Appbar action "Terminer les courses" | Shown only when `hasItemsInCart`. Opens FinishShoppingDialog (US1-8, US1-9). |
+| Appbar action "Terminer les courses" | Shown only when `hasItemsInCart`, which follows the ticks shown, including an optimistic tick not saved yet, and turns false again when a failed save reloads the last ticked item as unticked (FR-007). Opens FinishShoppingDialog (US1-8, US1-9). |
 | Appbar action "Mes listes" | Opens Lists (SC-005: 2 taps with the list choice). |
 | FAB "Ajouter" | Opens AddArticles. |
 
@@ -185,7 +185,7 @@ At least one list always exists, so there is no empty state.
 
 | Action | Behavior |
 |---|---|
-| Tap a list | Makes it current and returns to CurrentList (US3-3). |
+| Tap a list | Makes it current and returns to CurrentList (US3-3). Tapping the list that is already current saves nothing (no `setCurrentList` call) and returns to CurrentList; a pending "Annuler" offer stays (FR-025). |
 | FAB "Nouvelle liste" | Opens CreateListDialog. On success the dialog closes and the user stays on Lists, where the new list appears in its alphabetical place, not current (FR-024, US3-2). |
 
 Row accessibility: "{name}, {n} articles[, liste actuelle]".

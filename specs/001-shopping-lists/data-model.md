@@ -110,7 +110,7 @@ CurrentListView = {
   list: { id, name }
   remainingCount: number                    // items with inCart = false (FR-006)
   totalCount: number
-  hasItemsInCart: boolean                   // shows "Terminer les courses"
+  hasItemsInCart: boolean                   // shows "Terminer les courses"; the store updates it with each optimistic tick (FR-007)
   sections: Array<{
     category: { id, name }
     items: Array<{ articleId, name, inCart, quantity }>
@@ -121,7 +121,9 @@ CurrentListView = {
 - Sections only for categories holding at least one item of the list (FR-003, US4-5), ordered by
   `position`.
 - Within a section: items with `inCart = false` first, then `inCart = true` (FR-005); each group
-  sorted by `name` with the French collator (Assumptions).
+  sorted by `name` with `compareNames`, the French collator comparing numbers by value, so
+  "Lait 2 L" comes before "Lait 10 L" (Assumptions, [research.md](research.md) R6). Every other
+  name sort (catalog, lists) uses the same function.
 
 ```text
 CatalogView = {

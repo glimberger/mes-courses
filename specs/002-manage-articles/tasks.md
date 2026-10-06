@@ -161,7 +161,7 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
 
 - [ ] T023 [US2] Write the failing journey `tests/e2e/journeys/delete-article.e2e.ts`: on a fresh install, create "Lait" and put it on "Ma liste" (ticked, "2" "L") and on "Barbecue"; from the catalog, "Plus d'actions pour « Lait »" → "Supprimer": the dialog reads "Il est dans les listes « Barbecue » et « Ma liste » et en sera retiré." (in the order the use case returns); confirm; the lists no longer show it; on the current list tap "Annuler" in "« Lait » supprimé": it is back on both lists, ticked with "2 L" on "Ma liste" (002 US2-1, US2-3, US2-5). Confirm it fails.
 - [ ] T024 [P] [US2] Write failing use case tests in `apps/mobile/src/application/use-cases/get-article-usage.test.ts`:
-  - it returns `ArticleUsage = { article: { id, name }, lists: Array<{ id, name }> }`, with the lists holding the article "sorted by name (French collator)" (FR-006, 002 US2-3);
+  - it returns `ArticleUsage = { article: { id, name }, lists: Array<{ id, name }> }`, with the lists holding the article "sorted by name with 001's `compareNames` (numbers by value)" (FR-006, 002 US2-3);
   - an article on no list gives an empty `lists`;
   - `ArticleNotFound`.
 - [ ] T025 [P] [US2] Write failing use case tests in `apps/mobile/src/application/use-cases/delete-article.test.ts`:

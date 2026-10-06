@@ -156,12 +156,13 @@ story depends on them.
 - [ ] T020 [P] Write failing tests for name rules in `apps/mobile/src/domain/name.test.ts`, per [data-model.md](data-model.md#name-articles-categories-lists):
   - `cleanName(text) = text.normalize('NFC').trim().replace(/\s+/gu, ' ')`: "  Pommes \t de   terre " → "Pommes de terre", and "e" followed by U+0301 (combining acute accent) becomes the single character "é" (FR-021, FR-022);
   - `validateName` returns the clean name;
+  - `compareNames` orders with `Intl.Collator('fr', { sensitivity: 'base', numeric: true })`: "Lait 2 L" before "Lait 10 L", "Éclairs" between "Eau" and "Farine" (Assumptions);
   - `NameRequired` for empty or blank text (US2-11, US3-6, US4-4), including text made only of zero-width spaces, joiners or a byte order mark (FR-022);
   - a non-breaking space (U+00A0), a narrow non-breaking space (U+202F), a tab and a line break each count as a space: "Pommes\u00A0de\nterre" → "Pommes de terre", and "Pâte\u200Bs" → "Pâtes" (FR-022);
   - `NameTooLong` above "At most 60 characters after cleaning, counted in Unicode code points", and 60 characters accepted; the length is `[...name].length`, so 60 emoji are accepted (120 UTF-16 units) and 30 decomposed "é" count as 30 after cleaning;
   - `normalizedName(name)` is `cleanName(name).toLocaleLowerCase('fr')` with "œ" → "oe", "æ" → "ae" and "’" → "'", accents kept, so "Pâte" ≠ "Pâté", while " beurre ", "BEURRE", "Pommes  de terre" and a decomposed "Crème" each equal the normalized form of "Beurre", "Pommes de terre" and "Crème", "Oeufs" equals "Œufs", "Caesar" equals "Cæsar" and "Pâte d'amande" equals "Pâte d’amande" (FR-021);
   - `searchForm` removes diacritics (`NFD`, combining marks removed) from the normalized name, so "Épicerie" → "epicerie", "Œufs" → "oeufs", "Cæsar" → "caesar" and "d’amande" → "d'amande" (FR-009).
-- [ ] T021 Implement `cleanName`, `validateName`, `normalizedName`, `searchForm` and the `NameError` union (`NameRequired | NameTooLong`) in `apps/mobile/src/domain/name.ts` to turn T020 green.
+- [ ] T021 Implement `cleanName`, `validateName`, `normalizedName`, `searchForm`, `compareNames` and the `NameError` union (`NameRequired | NameTooLong`) in `apps/mobile/src/domain/name.ts` to turn T020 green.
 - [ ] T022 [P] Write failing tests for `parseQuantity(amountText, unitText)` in `apps/mobile/src/domain/quantity.test.ts`, per [data-model.md](data-model.md#quantity-value-object):
   - both blank → `null` (no quantity);
   - "1,5" and "1.5" → amount 1.5; "6", "0,125" and "9999" accepted; "007" → amount 7;
@@ -317,7 +318,7 @@ finish shopping and check every item is unticked and still present.
 - [ ] T065 [US1] Write the failing journey `tests/e2e/journeys/first-launch.e2e.ts` ([contracts/ui-validation.md](contracts/ui-validation.md#end-to-end-journeys)): on a fresh install (`device.launchApp({ delete: true, newInstance: true })`), the app opens on "Ma liste" with "Votre liste est vide" and "Ajouter des articles" (US3-1, US1-10), found by text only. Delete `launch.e2e.ts` (T014), whose check this one includes. Run `yarn test:e2e:android` and confirm it fails on the placeholder screen.
 - [ ] T066 [P] [US1] Write failing domain tests for the current list view in `apps/mobile/src/domain/current-list-view.test.ts`:
   - sections only for categories holding an item of the list, ordered by `position` (FR-003, US4-5);
-  - within a section, unticked items first, then ticked, each group sorted with `Intl.Collator('fr', { sensitivity: 'base' })` (US1-6, FR-005);
+  - within a section, unticked items first, then ticked, each group sorted with `compareNames` (`Intl.Collator('fr', { sensitivity: 'base', numeric: true })`), so "Lait 2 L" comes before "Lait 10 L" (US1-6, FR-005, Assumptions);
   - `remainingCount` = unticked items (US1-7, FR-006: 5 items with 2 ticked → 3);
   - `totalCount`, and `hasItemsInCart`.
 - [ ] T067 [P] [US1] Write failing domain tests for the list item transitions in `apps/mobile/src/domain/list-item.test.ts`:
@@ -330,7 +331,7 @@ finish shopping and check every item is unticked and still present.
   - `apps/mobile/src/application/use-cases/finish-shopping.test.ts`: it unticks all and keeps quantities (US1-8), and returns `NothingInCart` with no change.
 - [ ] T069 [P] [US1] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.current-list.test.ts`:
   - `loadCurrentList()` goes `loading` → `success` / `empty`, and on a throw goes `error` and reports `{ operation: 'getCurrentList', screen: 'CurrentList' }` (US1-12);
-  - `toggleItem` updates the region immediately (optimistic) before the use case resolves, then keeps it (US1-2, US1-3);
+  - `toggleItem` updates the region immediately (optimistic) before the use case resolves, then keeps it (US1-2, US1-3), with `remainingCount` and `hasItemsInCart` updated at once too: the first tick on a list with none sets `hasItemsInCart` before its save resolves, and a failed save of the only tick sets it back to `false` (FR-007);
   - quick toggles on one item are saved one after the other in tap order: with the use case held pending, three taps show ticked, unticked, ticked at once, and `toggleItemInCart` is called a second time only after the first call resolves; toggles on other items and other writes join the same queue behind them (FR-004, [research.md](research.md) R9);
   - a failed toggle drops the toggles still queued for that item, reloads the region so the item shows the state stored on the device, sets `notice = writeFailed` and reports `{ operation: 'toggleItemInCart' }` (edge case "storage fails"): after taps 1 (saved), 2 (fails) and 3 (queued), the item shows the state after tap 1 and the use case was called twice; a toggle of another item queued behind the failure is still saved;
   - a queued toggle that throws `StorageFull` is handled the same way, except that it sets `notice = storageFull` and reports nothing (FR-030, R12a);
@@ -423,7 +424,7 @@ content matches.
   - "   " is treated as no query: every category is shown, empty ones included (US2-10, FR-009);
   - "pommes  de" (double space) finds "Pommes de terre" (FR-009);
   - `onList` and the target-list `quantity` are set for articles already on the list (US2-8);
-  - articles are sorted by name with the French collator.
+  - articles are sorted by name with `compareNames`, numbers by value ("Pack 6" before "Pack 12", Assumptions).
 - [ ] T086 [P] [US2] Write failing domain tests for adding to a list in `apps/mobile/src/domain/list-item.test.ts`:
   - `add` creates an unticked item (FR-012) with the given quantity or none (US2-1, US2-2, FR-013, FR-014);
   - adding an article already on the list → `AlreadyOnList` carrying the current quantity (FR-011);
@@ -533,7 +534,7 @@ current.
 
   Confirm they fail.
 - [ ] T109 [P] [US3] Write failing use case tests on fakes in `apps/mobile/src/application/use-cases/`:
-  - `get-lists.test.ts`: lists sorted by name with the French collator, each with `itemCount` and `isCurrent` (US3-8);
+  - `get-lists.test.ts`: lists sorted by name with `compareNames` ("Liste 2" before "Liste 10"), each with `itemCount` counting ticked and unticked items alike and `isCurrent` (US3-8);
   - `create-list.test.ts`:
     - US3-2, FR-024: an empty list is created and is not made current;
     - US3-5: "barbecue" → `NameAlreadyUsed`;
@@ -551,6 +552,7 @@ current.
   - US3-8: rows show the name, "{n} articles" / "1 article", and "Liste actuelle" with a check icon and text;
   - row accessibility: "Barbecue, 0 articles, liste actuelle";
   - US3-3, FR-002: tapping a list makes it current and returns to CurrentList, which shows "Barbecue";
+  - FR-025: tapping the current list returns to CurrentList without calling `setCurrentList`, and a pending undo offer stays;
   - SC-005: two taps from CurrentList ("Mes listes", then the list).
 - [ ] T112 [US3] Write failing dialog tests in `apps/mobile/src/adapters/ui/screens/create-list-dialog.test.tsx`:
   - title "Nouvelle liste", buttons "Annuler" / "Créer";

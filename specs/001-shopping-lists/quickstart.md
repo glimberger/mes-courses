@@ -108,7 +108,8 @@ release. Steps 4, 10, 11, 12, 13 and 14, the timing of step 2 and the background
    existing (FR-021); search "xyz" and check the "no match" state; create "Pâte", search
    "pâté", and from "Nouvel article" create "pâté" with its name prefilled (FR-008); try to
    create " lait " with "1" "L", choose "Ajouter « Lait »": the "already on the list" dialog
-   opens (US2-20). Count the gestures (SC-003):
+   opens (US2-20); create "Lait 10 L" and "Lait 2 L" in Crèmerie: "Lait 2 L" is listed first
+   (Assumptions). Count the gestures (SC-003):
    adding "Pommes" by browsing takes at most 3 taps, and by searching at most 3 taps and 3
    letters, tapping the search field and "Ajouter" included.
 4. **Airplane mode** (US1-2 to US1-7, US1-5, SC-002, SC-006): turn on airplane mode, go

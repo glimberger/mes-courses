@@ -149,8 +149,12 @@ FR-030a, FR-039a).
     the rule in tested domain code. That size is a measurement size, not a limit: nothing is
     refused beyond it (clarified 2026-10-06).
   - *Sorting*: categories by `position`; items within a category unticked first, then ticked,
-    each group sorted by name with `Intl.Collator('fr', { sensitivity: 'base' })` (supported by
-    Hermes).
+    each group sorted by name with one shared `compareNames`, built on
+    `Intl.Collator('fr', { sensitivity: 'base', numeric: true })` (supported by Hermes); the
+    same function sorts the catalog and the lists. `numeric: true` compares digit runs by value,
+    so "Lait 2 L" comes before "Lait 10 L" (clarified 2026-10-06). The domain tests pin the
+    order under Node, and quickstart step 3 checks it once on each reference phone, since Hermes
+    builds its `Intl` on the platform's own collation.
 - **Rationale**: these are business rules from the spec, so they live in the domain as pure
   functions; the database constraint is the safety net. Cleaning before storing, not only before
   comparing, keeps what the user sees in line with the uniqueness rule: two names that look the
