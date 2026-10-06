@@ -208,6 +208,10 @@ CREATE TABLE app_state (
   startup before `initializeStore`. A failed migration rolls back and leaves the earlier schema
   and data untouched; the database file is never deleted or recreated to recover (FR-039,
   [research.md](research.md) R18a).
+- Later migrations (002, 003) keep every stored list, item, tick, quantity, article, category
+  and the current list; each is tested on a database filled with the previous schema (FR-040).
+  A `user_version` above the highest known migration means the data comes from a newer version:
+  nothing runs and the app asks to be updated ([research.md](research.md) R18c).
 - `length()` counts characters, matching the domain's 60 / 15 limits. The domain validates first;
   the constraints are the safety net, and a constraint failure is an unexpected error (reported).
 - The `app_state` single row enforces "exactly one current list" (FR-002).

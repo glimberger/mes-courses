@@ -83,6 +83,22 @@
 - Q: What limits and format apply to a quantity's number? → A: Digits with at most one decimal
   comma or point, at most 3 decimals and at most 9 999; spaces, signs and exponents are
   refused; shown without trailing zeros ("1,50" → "1,5").
+- Q: If saving fails when the user taps "Annuler" to bring back a removed item, what happens?
+  → A: The item stays removed, the undo offer ends, the usual failed-save message is shown and
+  the error is reported.
+- Q: If saving fails after the user confirms "Terminer les courses", what does the user see?
+  → A: No item changes (all or nothing); the dialog closes, the usual failed-save message is
+  shown, the error is reported, and "Terminer les courses" stays available.
+- Q: When the same item is tapped several times before earlier saves finish and one save fails,
+  which state does it return to? → A: Every tap is shown at once and saved in tap order; on a
+  failure the item shows the state last saved on the device, with the usual message and report.
+- Q: What must happen to stored data when the application is updated, and when an older
+  version opens data saved by a newer one? → A: Every update keeps all data, upgrading the
+  storage in place (a failure shows the FR-039 error); an older version leaves newer data
+  untouched and asks in French to update the application.
+- Q: Can a storage error report include the error's own text, which may quote the value being
+  saved? → A: No: storage error reports keep the error type, error code, stack trace,
+  operation and screen; the error's text is removed before sending.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -288,10 +304,17 @@ the new heading.
 - The application cannot open, update or set up its storage at startup: a full-screen error
   state says "L'application n'a pas pu démarrer." and offers "Réessayer", the error is
   reported, and stored data is never deleted or reset automatically (FR-039).
+- An older version of the application finds data saved by a newer one (a developer install or
+  a restored backup): it leaves the data untouched and shows a full-screen message "Cette
+  version de l'application est trop ancienne pour vos données. Mettez-la à jour." (FR-040).
 - Device storage fails while saving a change: the change is not shown as saved, a French
   error message is shown, and the error is reported. A tick or untick is the exception: it is
-  shown at once (FR-004), then returns to its previous state when the save fails, with the
-  same message and report.
+  shown at once (FR-004), then returns to the state last saved on the device when the save
+  fails, with the same message and report. Repeated taps on one item are each shown at once
+  and saved in tap order, so a failure in the middle of quick taps still leaves the item
+  showing what is stored. A failed "Annuler" leaves the item removed and ends the undo offer,
+  with the same message and report (FR-010). A failed "Terminer les courses" changes no item:
+  the dialog closes, with the same message and report, and the action stays offered (FR-007).
 
 ## Requirements *(mandatory)*
 
@@ -304,11 +327,14 @@ the new heading.
 - **FR-003**: A list MUST show its items grouped under their category headings, hiding
   categories that hold no item of the list.
 - **FR-004**: Users MUST be able to tick an item (in the cart) and untick it (not in the
-  cart) with a single tap, and the new state MUST be shown immediately.
+  cart) with a single tap, and the new state MUST be shown immediately. Taps MUST be saved in
+  the order they were made; when a save fails, the item MUST show the state last saved on the
+  device.
 - **FR-005**: Within a category, unticked items MUST be shown before ticked items.
 - **FR-006**: A list MUST show how many of its items are left to put in the cart.
 - **FR-007**: Users MUST be able to finish shopping on a list: after a confirmation, every item
-  of that list is unticked and kept with its quantity. The action MUST be offered only while
+  of that list is unticked and kept with its quantity, all or nothing: if saving fails, no item
+  changes. The action MUST be offered only while
   at least one item of the list is ticked.
 
 **Editing a list**
@@ -326,7 +352,8 @@ the new heading.
   reader is on, it MUST stay offered until the user dismisses it or makes another change.
   Only the last removal can be undone: any other change (including a new removal or switching
   the current list) and closing the application end the offer, while moving between screens
-  does not. A removal whose offer has ended is final.
+  does not. A removal whose offer has ended is final. If restoring the item fails, it stays
+  removed and the offer ends; the failed save is handled as in Edge Cases.
 - **FR-011**: An article MUST appear at most once on a given list; it may appear on several
   lists. When browsing or searching the catalog to add articles, articles already on the list
   MUST stay visible with an "already on the list" mark; choosing one MUST NOT duplicate or
@@ -385,7 +412,10 @@ the new heading.
   filter the catalog already loaded on the add screen: they share its loading and error
   states and have only their own empty and success states.
 - **FR-030**: Every unexpected error MUST be shown to the user in plain French when it affects
-  them, and reported to error tracking without any list content or personal data.
+  them, and reported to error tracking without any list content or personal data. Reports of
+  storage errors MUST keep only the error type, the error code, the stack trace, the operation
+  and the screen: the error's own text, which the storage may fill with the value being saved,
+  MUST be removed before sending.
 - **FR-031**: All user-facing text MUST be in French.
 - **FR-032**: Every screen MUST be usable with the system screen reader: each interactive
   element has a French label, and each list item announces its name, its quantity when it has
@@ -411,6 +441,12 @@ the new heading.
 - **FR-039**: When the application cannot open, update or set up its storage at startup, it
   MUST show a full-screen error state in French with a "Réessayer" action and report the
   error. It MUST NOT delete, reset or overwrite stored data to recover.
+- **FR-040**: Every update of the application MUST keep all stored data (lists, items, ticks,
+  quantities, articles, categories, current list), upgrading how it is stored in place when
+  needed; a failed upgrade is handled by FR-039. When an older version finds data saved by a
+  newer one, it MUST NOT read, change or delete it, and MUST show a full-screen French message:
+  "Cette version de l'application est trop ancienne pour vos données. Mettez-la à jour." This
+  is an expected situation, not an error, and is not reported.
 
 ### Key Entities
 

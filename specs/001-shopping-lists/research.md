@@ -165,16 +165,44 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
   `screenReaderChanged` event), the snackbar has no timeout: it stays until dismissed or the
   next write (FR-010), because 5 seconds is too short to reach "Annuler" with TalkBack or
   VoiceOver.
+- **Failed restore** (FR-010, clarified 2026-10-06): if `restoreRemovedItem` throws, the store
+  clears `pendingUndo` (the offer ends and the removal is final), leaves the list as stored
+  (the item stays removed), sets the usual `notice` "La modification n'a pas pu être
+  enregistrée." and reports `{ operation: 'restoreRemovedItem' }`. Nothing is shown before the
+  write succeeds, so there is nothing to revert.
 - **Rationale**: removal is real and immediate, so a killed app never resurrects an item, and
   undo reuses ordinary persistence. Tests control the snackbar timeout with Jest fake timers.
 
 ## R9. Ticks shown within 100 ms (SC-002, edge case "storage fails")
 
 - **Decision**: the store's `toggleItem` action (R10) updates the tick in the current list region
-  immediately, then calls `toggleItemInCart`. If the write fails, it reverts the item, shows a French snackbar
-  ("La modification n'a pas pu être enregistrée.") and reports the error.
+  immediately, then queues a call to `toggleItemInCart` (FR-004, clarified 2026-10-06):
+  - each item has its own queue in the store (a promise chain keyed by list and article), so
+    quick taps on one item are saved one after the other, in tap order; taps on different items
+    do not wait for each other;
+  - if a save fails, the store drops the toggles still queued for that item, reloads the current
+    list region from storage, so the item shows the state last saved, sets the usual `notice`
+    ("La modification n'a pas pu être enregistrée.") and reports
+    `{ operation: 'toggleItemInCart' }`.
 - **Rationale**: an expo-sqlite write takes a few milliseconds, but the optimistic update keeps
   the tap feedback independent of storage speed and still never shows a failed change as saved.
+  Saving in order makes the stored state after n successful toggles equal to the shown one.
+  Reloading rather than flipping back is what makes a failure in the middle of quick taps
+  correct: "the previous state" is ambiguous with several taps in flight, the stored state is
+  not. Dropping the later toggles keeps the reloaded screen and storage equal.
+- **Alternatives considered**: ignoring taps while a save is pending (rejected in the spec's
+  clarification); a `setItemInCart(value)` use case instead of a toggle (would also be correct
+  with the queue, but changes a use case that 003 already extends, for no gain).
+
+## R9a. Finishing shopping when the save fails (FR-007)
+
+- **Decision**: `finishShopping` runs in one `UnitOfWork` transaction, so a failure changes no
+  item. The store's `finishShopping` action shows nothing before the write succeeds. On failure
+  the FinishShoppingDialog closes, focus goes back to "Terminer les courses" (still offered,
+  since items are still ticked, FR-037), the usual `notice` is shown and
+  `{ operation: 'finishShopping' }` is reported.
+- **Rationale**: the all-or-nothing rule is already given by the transaction; closing the
+  dialog matches every other failed write, and the action stays one tap away.
 
 ## R10. Application state and screen state type (Principle IX)
 
@@ -257,6 +285,15 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
   - The DSN comes from `EXPO_PUBLIC_SENTRY_DSN`. When it is absent (tests, local development),
     the composition root uses a console reporter, so nothing reaches the real service.
     Tests use an in-memory `RecordingErrorReporter`.
+- **No storage error text in reports** (FR-030, clarified 2026-10-06): the SQLite adapter catches
+  every error thrown by the database (in `openDatabase`, `migrate`, the repositories and
+  `SqliteUnitOfWork`) and rethrows a `StorageError` whose message is fixed and content-free
+  ("Storage operation failed"), carrying only the SQLite result code when the original error has
+  one. Its stack trace is its own, captured where the adapter rethrows, which points at the
+  failing repository call; the original stack is not copied, because a JavaScript stack string
+  starts with the original message. The original error is not attached as `cause` either, so
+  its text never reaches a report. Every storage failure the UI adapter or the global handlers report is
+  therefore already clean, and the reporter needs no filtering of its own.
 - **Rationale**: Sentry has first-party React Native and Expo support covering every Principle
   VIII requirement (offline cache, symbolication, release tagging) and a free tier fitting a
   personal app.
@@ -351,7 +388,8 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
 
 - **Decision**: the composition root (open the database, run the migrations, build the use
   cases, `initializeStore`) runs once when `App.tsx` mounts. While it runs, the app shows
-  `LoadingState`. If any step throws, the app shows a full-screen `StartupError` view built on
+  `LoadingState`. If any step throws (other than `DataFromNewerVersion`, R18c), the app shows a
+  full-screen `StartupError` view built on
   the shared `ErrorState`: "L'application n'a pas pu démarrer." and "Réessayer"; the error is
   reported with `{ operation: 'startup' }`. "Réessayer" closes the database if it was opened
   and runs the composition root again from the start; each failure is reported. The root
@@ -368,6 +406,26 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
 - **Alternatives considered**: offering to reset storage after a failure (rejected in the
   spec's clarification: a permanent loss to fix what may be temporary); restarting the app
   instead of retrying in place (React Native cannot restart itself without a native module).
+
+## R18c. Updates and older versions (FR-040)
+
+- **Decision**:
+  - *Updates keep the data*: migrations only add (tables, columns, rows) or transform rows in
+    place; a migration never drops a table or a column holding user data without first copying
+    it. Each new migration (002, 003) gets a test that fills the previous schema with fixtures,
+    runs it, and checks every list, item, tick, quantity, article, category and the current list
+    are still there. A failed migration rolls back and shows the startup error (FR-039, R18a).
+  - *Older versions*: `migrate` first reads `PRAGMA user_version`. When it is greater than the
+    highest migration the app knows, it runs nothing and throws `DataFromNewerVersion`, before
+    any read or write. `App.tsx` shows the full-screen `UpdateRequired` view: "Cette version de
+    l'application est trop ancienne pour vos données. Mettez-la à jour.", with no action (a
+    retry cannot help) and no report (FR-040: an expected situation). The database is closed
+    untouched.
+- **Rationale**: `user_version` already records the schema, so the check costs one read. Refusing
+  before any query is the only way to be sure an older app neither misreads nor damages a newer
+  layout.
+- **Alternatives considered**: opening read-only (older code may still misread a newer layout);
+  a "Réessayer" button (nothing changes until the app is updated).
 
 ## R18b. Backup and data protection (Assumptions)
 

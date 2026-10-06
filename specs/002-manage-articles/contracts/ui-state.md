@@ -73,7 +73,8 @@ Rules shared by every write action:
 2. **Refreshes after success**: `refresh()` runs, so every loaded region shows the change
    (FR-003, FR-008a, US2-4).
 3. **Unexpected failures**: the thrown error is reported with `{ operation, screen }` only, state
-   is left as it was (or reverted for optimistic updates), `notice = writeFailed`, and the action
+   is left as it was (for an optimistic tick, the item's queued saves are dropped and the region
+   is reloaded from storage, 001 R9), `notice = writeFailed`, and the action
    resolves to `{ ok: false, error: { type: 'WriteFailed' } }` so a form stays open.
 4. **Business errors** (`Result` errors) are returned to the caller unchanged and are not
    reported.

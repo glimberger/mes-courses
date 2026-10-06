@@ -34,8 +34,9 @@ constitution v2.0.0, which makes a remote server the source of truth.
     few hundred rows take milliseconds, so reloading everything is simpler than tracking which
     view a change touches, and it covers FR-003, FR-008a and the edge case "the list shows the new
     name on its next display" without per-screen focus listeners.
-  - Optimistic updates (001 R9) are store actions: update the region, call the use case, revert
-    and set a `writeFailed` notice on failure.
+  - Optimistic updates (001 R9) are store actions: update the region, queue the use case call
+    per item, and on failure drop the queued calls, reload the region from storage and set a
+    `writeFailed` notice.
   - No middleware ([R1b](#r1b-no-zustand-middleware)).
 - **Where Zustand may be imported**: only under `apps/mobile/src/adapters/ui/`. The domain and application
   layers already cannot import npm packages (001 R15); a new dependency-cruiser rule also keeps

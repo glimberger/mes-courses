@@ -13,17 +13,19 @@ store (Zustand, [research.md](../research.md) R10,
 [002 ui-state contract](../../002-manage-articles/contracts/ui-state.md)); snackbars are rendered
 once at the app root from the store.
 
-## App startup (FR-039)
+## App startup (FR-039, FR-040)
 
 | State | Shown |
 |---|---|
 | starting | `LoadingState` while the composition root opens the database, migrates and seeds |
 | failed | Full-screen `StartupError`: "L'application n'a pas pu démarrer." + "Réessayer"; error reported with `{ operation: 'startup' }` |
+| too old | Full-screen `UpdateRequired`: "Cette version de l'application est trop ancienne pour vos données. Mettez-la à jour.", no action, nothing reported; the composition root threw `DataFromNewerVersion` before any read or write ([research.md](../research.md) R18c) |
 | ready | Navigation, on CurrentList |
 
 "Réessayer" runs the composition root again from the start; each failure is reported again.
 Nothing is deleted or reset to recover ([research.md](../research.md) R18a). `StartupError` is
-rendered outside the store and navigation, which do not exist yet when it shows.
+rendered outside the store and navigation, which do not exist yet when it shows; so is
+`UpdateRequired`.
 
 ## Navigation
 
@@ -63,7 +65,7 @@ CreateCategoryDialog.
 
 | Action | Behavior |
 |---|---|
-| Tap a row | Tick or untick immediately (optimistic); on save failure revert, snackbar "La modification n'a pas pu être enregistrée.", report. (US1-2, US1-3) |
+| Tap a row | Tick or untick immediately (optimistic); saves are queued per item, in tap order. On a failed save: the item's later queued saves are dropped, the list is reloaded so the item shows its stored state, snackbar "La modification n'a pas pu être enregistrée.", report. (US1-2, US1-3, FR-004, [research.md](../research.md) R9) |
 | Row action "Modifier la quantité" | Opens QuantityDialog prefilled. |
 | Row action "Retirer de la liste" | Removes at once; snackbar "« {name} » retiré de la liste" with action "Annuler" (US2-6, US2-16), offered per [Undo offer](#undo-offer). |
 | Appbar action "Terminer les courses" | Shown only when `hasItemsInCart`. Opens FinishShoppingDialog (US1-8, US1-9). |
@@ -78,6 +80,11 @@ Row accessibility (FR-032): role `checkbox`, `checked` state, label
 
 "Terminer les courses ?" / "Tous les articles seront décochés et resteront dans la liste." /
 buttons "Annuler" and "Terminer".
+
+If saving fails after "Terminer": no item changes (one transaction), the dialog closes, focus
+goes back to "Terminer les courses" (still offered), and the usual snackbar "La modification
+n'a pas pu être enregistrée." is shown and the error reported (FR-007,
+[research.md](../research.md) R9a).
 
 ## AddArticles
 
@@ -175,7 +182,9 @@ between screens does not end the offer (FR-010):
   first, so only the last removal can be undone;
 - it is never stored, so closing the app ends it.
 
-A removal whose offer has ended is final.
+A removal whose offer has ended is final. If "Annuler" fails to save, the item stays removed,
+the offer ends, and the usual snackbar "La modification n'a pas pu être enregistrée." is shown
+and the error reported (FR-010, [research.md](../research.md) R8).
 
 ## Focus and announcements (FR-037, FR-038)
 

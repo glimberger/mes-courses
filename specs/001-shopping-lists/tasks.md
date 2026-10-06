@@ -56,8 +56,8 @@ next to the component they show as `*.stories.tsx`; Storybook's config is in
 - **Every write** runs inside `UnitOfWork.run` and is committed before its promise resolves
   (FR-028).
 - **Stories** get their data from `createStoryStore` (real use cases on fakes), never from a
-  hand-built `ScreenState`. The one exception is `Screens/Startup/Error`, which renders before
-  any store exists (T062). Their text is French, their titles English
+  hand-built `ScreenState`. The exceptions are `Screens/Startup/Error` and
+  `Screens/Startup/UpdateRequired`, which render before any store exists (T062). Their text is French, their titles English
   ([research.md](research.md) R22).
 - **Journeys** start from a fresh install, find elements by French text and accessibility label
   (no `testID`), use no `sleep` and no retries, and each production fix they force starts with its
@@ -190,12 +190,13 @@ story depends on them.
   - migration 1 creates the tables `category`, `article`, `shopping_list`, `list_item` and `app_state`, and the index `list_item_article`, exactly as in [data-model.md](data-model.md#sqlite-schema-migration-1);
   - `PRAGMA user_version` becomes 1, and running the migrations again is a no-op;
   - the migration runs in one transaction: a migration that throws (a test migration 2 that fails halfway) leaves `user_version` at 1 and the rows already stored unchanged, and nothing deletes or recreates the database (FR-039);
+  - a database whose `user_version` is above the highest known migration (set it to 99) makes `migrate` throw `DataFromNewerVersion` before any other statement: no table is created or changed and `user_version` stays 99 (FR-040, [research.md](research.md) R18c);
   - foreign constraints are enforced on open;
   - the constraints reject a 61-character name, a duplicate `normalized_name`, `quantity_amount <= 0`, `quantity_amount > 9999`, a unit without an amount, and a second `app_state` row.
-- [ ] T032 Implement `migrate(db)` and migration 1 in `apps/mobile/src/adapters/sqlite/migrations.ts` to turn T031 green.
-- [ ] T033 Write `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`, which runs every T026 suite against the SQLite repositories on a migrated `node:sqlite` database. Confirm it fails.
-- [ ] T034 Implement the SQLite repositories in `apps/mobile/src/adapters/sqlite/`: `category-repository.ts`, `article-repository.ts`, `shopping-list-repository.ts`, `list-item-repository.ts` (`quantity_amount` / `quantity_unit` ↔ `Quantity | null`, `in_cart` 0/1 ↔ boolean) and `app-state-repository.ts`. Implement `SqliteUnitOfWork` (`withTransactionAsync`) in `apps/mobile/src/adapters/sqlite/unit-of-work.ts`. All of them turn T033 green.
-- [ ] T035 Add `openDatabase()` in `apps/mobile/src/adapters/sqlite/open-database.ts`: it opens the expo-sqlite database `mes-courses.db`, enforces foreign constraints and runs `migrate`. It is thin wiring over expo-sqlite, which does not load in Jest: the composition test (T064) covers the same steps on `node:sqlite`, and quickstart step 5 covers the real binding on a device.
+- [ ] T032 Implement `migrate(db)`, the `DataFromNewerVersion` error and migration 1 in `apps/mobile/src/adapters/sqlite/migrations.ts` to turn T031 green.
+- [ ] T033 Write `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`, which runs every T026 suite against the SQLite repositories on a migrated `node:sqlite` database, plus adapter-only tests for `StorageError` (FR-030, [research.md](research.md) R13): a repository write rejected by a constraint while saving the article name "Houmous maison" (a duplicate `normalized_name` inserted directly) and a `UnitOfWork.run` on a closed database both reject with a `StorageError` whose `message` is "Storage operation failed", whose `stack` does not contain "Houmous" or the SQL text, which carries the SQLite result code when there is one, and which has no `cause`. Confirm it fails.
+- [ ] T034 Implement the SQLite repositories in `apps/mobile/src/adapters/sqlite/`: `category-repository.ts`, `article-repository.ts`, `shopping-list-repository.ts`, `list-item-repository.ts` (`quantity_amount` / `quantity_unit` ↔ `Quantity | null`, `in_cart` 0/1 ↔ boolean) and `app-state-repository.ts`. Implement `SqliteUnitOfWork` (`withTransactionAsync`) in `apps/mobile/src/adapters/sqlite/unit-of-work.ts`. Add `StorageError` and a `toStorageError(error)` helper in `apps/mobile/src/adapters/sqlite/storage-error.ts`, and wrap every database call of the repositories, the unit of work and `migrate` with it (`DataFromNewerVersion` passes through unchanged). All of them turn T033 green.
+- [ ] T035 Add `openDatabase()` in `apps/mobile/src/adapters/sqlite/open-database.ts`: it opens the expo-sqlite database `mes-courses.db`, enforces foreign constraints and runs `migrate`. It is thin wiring over expo-sqlite, which does not load in Jest: the composition test (T064) covers the same steps on `node:sqlite`, and quickstart step 5 covers the real binding on a device. Wrap its database calls with `toStorageError` (T034).
 
 ### Startup seed
 
@@ -267,7 +268,7 @@ story depends on them.
   - `composeApp(reporter)`: `openDatabase()`, then the SQLite `UnitOfWork` and `CryptoIdGenerator`; build the use cases, run `initializeStore(seed)`, then `createAppStore`. If a step after `openDatabase()` throws, it closes the database and rethrows. It never deletes, recreates or overwrites the database file.
 
   It is the only module that knows every adapter.
-- [ ] T062 Write a failing test in `App.test.tsx` with `composeApp` mocked ([contracts/ui-screens.md](contracts/ui-screens.md#app-startup-fr-039)): `LoadingState` while it initializes, then CurrentList; when it throws, the full-screen `StartupError` with "L'application n'a pas pu démarrer." and "Réessayer", and one report with `{ operation: 'startup' }`; "Réessayer" shows `LoadingState` and calls `composeApp` again, reaching CurrentList when it succeeds, or `StartupError` and a second report when it throws again (FR-039). Then write `StartupError` in `apps/mobile/src/adapters/ui/screens/StartupError.tsx` on the shared `ErrorState` (it needs no store or navigation, which do not exist yet), and wire `apps/mobile/App.tsx`: build the reporter, call `composeApp` and render `ThemeProvider` → `AppStoreProvider` → `SafeAreaProvider` → navigation, with `LoadingState` while it runs and `StartupError` if it throws. Finally add `Screens/Startup/Error` to `required-stories.ts`, see the story test fail, and write `apps/mobile/src/adapters/ui/screens/StartupError.stories.tsx`, which renders `StartupError` with a no-op retry (no store scenario: the app has no store when it shows), to turn it green.
+- [ ] T062 Write a failing test in `App.test.tsx` with `composeApp` mocked ([contracts/ui-screens.md](contracts/ui-screens.md#app-startup-fr-039)): `LoadingState` while it initializes, then CurrentList; when it throws, the full-screen `StartupError` with "L'application n'a pas pu démarrer." and "Réessayer", and one report with `{ operation: 'startup' }`; "Réessayer" shows `LoadingState` and calls `composeApp` again, reaching CurrentList when it succeeds, or `StartupError` and a second report when it throws again (FR-039); when it throws `DataFromNewerVersion`, the full-screen `UpdateRequired` with "Cette version de l'application est trop ancienne pour vos données. Mettez-la à jour.", no button, and no report (FR-040). Then write `StartupError` in `apps/mobile/src/adapters/ui/screens/StartupError.tsx` on the shared `ErrorState`, and `UpdateRequired` in `apps/mobile/src/adapters/ui/screens/UpdateRequired.tsx` on the shared `EmptyState` without action (it needs no store or navigation, which do not exist yet), and wire `apps/mobile/App.tsx`: build the reporter, call `composeApp` and render `ThemeProvider` → `AppStoreProvider` → `SafeAreaProvider` → navigation, with `LoadingState` while it runs, `UpdateRequired` if it throws `DataFromNewerVersion`, and `StartupError` if it throws anything else. Finally add `Screens/Startup/Error` and `Screens/Startup/UpdateRequired` to `required-stories.ts`, see the story test fail, and write `apps/mobile/src/adapters/ui/screens/StartupError.stories.tsx` (`StartupError` with a no-op retry) and `UpdateRequired.stories.tsx` (no store scenario: the app has no store when they show), to turn it green.
 - [ ] T063 [P] Add the `apps/mobile/jest.setup.ts` global mocks needed by `jest-expo` (`@sentry/react-native`, `expo-sqlite` never loaded in UI tests), referenced from `apps/mobile/jest.config.js`.
 - [ ] T064 Write a composition test in `apps/mobile/src/composition/composition-root.test.ts` with `openDatabase` replaced by a `node:sqlite` database: a fresh start seeds 11 categories and "Ma liste" as current, and a second start does not seed again; when `initializeStore` throws, `composeApp` closes the database and rethrows, and a later `composeApp` on the same file finds the earlier data intact (FR-039).
 
@@ -304,8 +305,9 @@ finish shopping and check every item is unticked and still present.
 - [ ] T069 [P] [US1] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.current-list.test.ts`:
   - `loadCurrentList()` goes `loading` → `success` / `empty`, and on a throw goes `error` and reports `{ operation: 'getCurrentList', screen: 'CurrentList' }` (US1-12);
   - `toggleItem` updates the region immediately (optimistic) before the use case resolves, then keeps it (US1-2, US1-3);
-  - a failed toggle reverts the item, sets `notice = writeFailed` and reports (edge case "storage fails");
-  - `finishShopping` refreshes the list.
+  - quick toggles on one item are saved one after the other in tap order: with the use case held pending, three taps show ticked, unticked, ticked at once, and `toggleItemInCart` is called a second time only after the first call resolves; toggles on two different items do not wait for each other (FR-004, [research.md](research.md) R9);
+  - a failed toggle drops the toggles still queued for that item, reloads the region so the item shows the state stored on the device, sets `notice = writeFailed` and reports `{ operation: 'toggleItemInCart' }` (edge case "storage fails"): after taps 1 (saved), 2 (fails) and 3 (queued), the item shows the state after tap 1 and the use case was called twice;
+  - `finishShopping` refreshes the list; when it throws, no item changes in the region, `notice = writeFailed` and `{ operation: 'finishShopping' }` is reported (FR-007, R9a).
 - [ ] T070 [P] [US1] Write failing component tests for `ListItemRow` in `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx`:
   - role `checkbox` with the `checked` state;
   - the label "Lait, 2 L, dans le caddie" or "Pommes, pas dans le caddie" (FR-032);
@@ -329,6 +331,7 @@ finish shopping and check every item is unticked and still present.
   - the dialog text is "Terminer les courses ?" / "Tous les articles seront décochés et resteront dans la liste.";
   - US1-8: "Terminer" unticks all, and items and quantities stay;
   - US1-9: "Annuler" changes nothing;
+  - FR-007: when `finishShopping` fails, every item stays as it was, the dialog closes, focus goes back to "Terminer les courses" (still shown), and the snackbar "La modification n'a pas pu être enregistrée." appears;
   - FR-037: opening moves focus to the dialog title; "Annuler" gives it back to "Terminer les courses", and "Terminer", which hides that action, gives it to the Appbar title.
 - [ ] T073 [US1] Write a failing offline test for US1-5 in `apps/mobile/src/adapters/ui/screens/current-list-offline.test.tsx`: with `global.fetch` replaced by a function that throws, open the app and tick items. Everything works and no error is shown or reported.
 
@@ -337,7 +340,7 @@ finish shopping and check every item is unticked and still present.
 - [ ] T074 [P] [US1] Implement `buildCurrentListView` in `apps/mobile/src/domain/current-list-view.ts` to turn T066 green.
 - [ ] T075 [P] [US1] Implement `toggle` and `finish` with the `ItemNotOnList` and `NothingInCart` errors in `apps/mobile/src/domain/list-item.ts` to turn T067 green.
 - [ ] T076 [US1] Implement `getCurrentList`, `toggleItemInCart` and `finishShopping` in `apps/mobile/src/application/use-cases/get-current-list.ts`, `toggle-item-in-cart.ts` and `finish-shopping.ts`, per [contracts/driving-ports.md](contracts/driving-ports.md#current-list-user-story-1), to turn T068 green. Add them to `UseCases` (`apps/mobile/src/adapters/ui/use-cases.ts`) and to the composition root.
-- [ ] T077 [US1] Add the `currentList` region and the `loadCurrentList`, `toggleItem` (optimistic, revert on failure) and `finishShopping` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T069 green.
+- [ ] T077 [US1] Add the `currentList` region and the `loadCurrentList`, `toggleItem` (optimistic, saved through a queue per item, and on failure the item's queued toggles dropped and the region reloaded, [research.md](research.md) R9) and `finishShopping` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T069 green.
 - [ ] T078 [P] [US1] Implement `ListItemRow.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T070 green. Leave the trailing action slots empty for now; US2 fills them.
 - [ ] T079 [US1] Implement `CurrentListScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`:
   - a `SectionList` with one section per category, memoized rows identified by article id ([research.md](research.md) R11);
@@ -406,7 +409,7 @@ content matches.
   - `addArticleToList` and `createArticleAndAddToList` return their `Result`, refresh, and set `notice = { type: 'articleAdded', name }` on success;
   - `changeItemQuantity` refreshes;
   - `removeItem` sets `pendingUndo = { kind: 'removedItem', removed, name }`;
-  - `undo()` clears `pendingUndo`, restores and refreshes; on failure the item stays removed, `notice = writeFailed`, and the error is reported;
+  - `undo()` clears `pendingUndo`, restores and refreshes; on failure the item stays removed, the offer stays ended (`pendingUndo` is not set again), `notice = writeFailed`, and `{ operation: 'restoreRemovedItem' }` is reported (FR-010, [research.md](research.md) R8);
   - `dismissUndo()` clears the offer;
   - any write clears a pending offer first;
   - a new removal replaces the previous offer;

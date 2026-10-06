@@ -139,8 +139,9 @@ release. Steps 4, 10, 11, 12 and 13 need a person.
     release: on Android, with lists created, run `adb shell bmgr backupnow <package>` (the
     `android.package` of `app.config.ts`), uninstall, reinstall from the same build and
     check the lists come back. On iOS, back up the phone (Finder or iCloud), restore it and
-    check the lists come back. The startup error state (FR-039) cannot be caused by hand; its
-    story and `App.test.tsx` cover it.
+    check the lists come back. The startup error state (FR-039) and the "update required"
+    state (FR-040) cannot be caused by hand on a normal build; their stories and `App.test.tsx`
+    cover them.
 
 Steps 4, 11 and 12 (SC-001, SC-002, SC-008) are run on the two reference phones of the spec:
 an entry-level Android phone about five years old, and the maintainer's iPhone.
