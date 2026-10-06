@@ -202,6 +202,19 @@ kept (R7) and the first pairing code (R11).
   still has a pending local change on a same-named entity are applied on the next cycle, after
   the push has let the server merge them (R9).
 
+## R8a. The current list after a merge (FR-015, US2-10)
+
+- **Decision**: when `PulledRowsApplier` applies a list tombstone whose `mergedInto` is set, and
+  `app_state.current_list_id` is that list, it sets `current_list_id` to the survivor (following
+  the `mergedInto` chain) in the same transaction. The store reloads the current list after a
+  pull as after any write, so the screen shows the survivor's name and the items of both, with
+  no notice (spec clarification 2026-10-06).
+- **Rationale**: 001 FR-002 needs exactly one existing current list at all times; doing it in
+  the transaction that removes the loser means no read ever sees a current list that no longer
+  exists. The current list stays per device: nothing is sent (FR-015).
+- **Alternatives considered**: a notice "Votre liste a été fusionnée" (rejected in the spec's
+  clarification); falling back to the first list by name (loses the user's place).
+
 ## R9. Sync cycle and protocol
 
 - **Decision**: one authenticated endpoint, `POST /v1/sync`, pushes and pulls in a single
@@ -262,6 +275,38 @@ kept (R7) and the first pairing code (R11).
   - diffing local state against the last pulled state (loses the field-level intent and the
     HLC of each change).
 
+## R10a. What a pull removed: open forms and the undo offer (FR-020a, FR-008)
+
+- **Decision**: `PulledRowsApplier.apply` returns, next to `deferred`, the `RemoteEffects` of the
+  rows it applied: the articles deleted, the list items removed (`present = false`), and the
+  merges (`loser id → survivor id`, any kind). `synchronize` returns them with its outcome, and
+  the store's sync slice applies them after each cycle:
+  - **Open forms** (QuantityDialog and EditArticle, the two forms that edit a synced item or
+    article; creation dialogs have nothing a pull can remove): every form
+    keeps its fields in local component state (001 T058's `…Form` convention), so a reload of
+    the store's regions after a pull never resets what the user typed. On save, the store
+    action first maps the form's target id through the merges seen during this session (a
+    `redirects` map kept in the sync slice, never stored), then calls the use case as usual;
+    the save is an ordinary local change, merged on the server by the HLC rules. When the
+    form's article was deleted, or its item removed, by the pull, the form closes and the
+    store sets `notice` to "Cet article a été supprimé sur un autre appareil." or "Cet article
+    a été retiré de la liste sur un autre appareil." (the form subscribes to the effects of the
+    next cycle through a `useRemoteRemoval(target)` hook).
+  - **The undo offer**: when `pendingUndo` concerns an article the pull deleted (a removed item
+    of that article, or 002's deleted article itself), the store clears `pendingUndo` (the
+    snackbar disappears), calls `releaseHeldChanges(undoId)` (the server acknowledges and
+    ignores changes to a deleted article, R9), and remembers that `undoId` as ended remotely.
+    An `undo(undoId)` that arrives afterwards (a tap racing the snackbar's removal) restores
+    nothing and sets the notice "Cet article a été supprimé sur un autre appareil."; so does a
+    `restoreRemovedItem` that returns `ArticleNotFound` because the deletion was applied first.
+- **Rationale**: the applier is the only place that knows what a pull removed, and returning it
+  as data keeps the UI reaction in the store, where the undo slot already lives. Local form
+  state is the existing convention, so FR-020a's "keep what the user typed" needs no new
+  mechanism.
+- **Alternatives considered**: re-reading each open form's entity after every cycle (a query
+  per open form every 5 s, and it still cannot tell a deletion from a merge); holding pulled
+  deletions until the undo offer ends (rejected in the spec's clarification).
+
 ## R11. Device pairing and authorization (FR-019a to FR-019c; deferred question 3)
 
 - **Decision**:
@@ -312,6 +357,37 @@ kept (R7) and the first pairing code (R11).
 - **Rationale**: a server id is the simplest way to tell "this is not the server I paired with",
   and it covers a reinstalled Pi without any backup machinery.
 
+## R12a. A phone restored from a system backup (FR-018b)
+
+- **Decision**:
+  - **The credential is never restored onto another device.** On iOS, `CredentialStore` writes with
+    the `WHEN_UNLOCKED_THIS_DEVICE_ONLY` accessibility option, so the stored item never moves to
+    another device through a backup. On Android, the `expo-secure-store` config plugin runs
+    with `configureAndroidBackup: true`, which excludes its data from Auto Backup; 001's
+    database stays included (001 R18b). A value that cannot be decrypted after a restore is
+    read as `null`.
+  - **Detection**: `synchronize` (and `getSyncInfo` at startup) treats `serverUrl` set with no
+    credential as `disconnectedByServer`: the local copy and the outbox are kept, and the
+    status bar shows "Cet appareil n'est plus connecté au serveur." with "Se reconnecter"
+    (FR-018b, the same message as US4-10).
+  - **Pairing again** goes through `connectToServer` with a new code: a new `deviceId`,
+    `lastSeq = 0` and `snapshotDone = false`, so the restored copy is sent as a snapshot with
+    the minimum HLC, then the restored outbox with its real, older HLCs (R13). Changes made
+    since on other devices carry greater HLCs and win; data only on the restored phone is
+    added. The old `deviceId` stays authorized until the user revokes it (FR-018b).
+- **Same phone**: an iOS phone restored from its own backup onto the same hardware gets its
+  stored credential back (Apple restores "this device only" items to the same device). That phone
+  is the very device the server authorized, so no other device gains access; it syncs at once
+  with its restored outbox, merged by the same rules. FR-018b allows this: the credential is never
+  restored onto another device.
+- **Rationale**: the platform's own backup rules keep the credential off any new device, with
+  no code of ours in the backup path; the existing reset-server path (R12) already handles a
+  device that holds data but no valid credential.
+- **Alternatives considered**: storing an install marker outside the backup to detect any
+  restore (no such location exists on iOS that also survives app updates); revoking the old
+  `deviceId` automatically on re-pairing (the server cannot tell a restored phone from a second
+  phone, and FR-018b leaves the old authorization as it is).
+
 ## R13. Joining a server with existing local data (FR-017, FR-018, FR-018a)
 
 - **Decision**: on its first sync with a server (`lastSeq = 0`), the device pushes a snapshot:
@@ -345,7 +421,20 @@ kept (R7) and the first pairing code (R11).
 
   A shared `SyncStatusBar` component, from the shared UI module (Principle V), renders the slice
   under the Appbar of every data screen: CurrentList, AddArticles, Lists, EditArticle and
-  Settings. It announces changes through an accessibility live region (FR-023).
+  Settings.
+- **Screen reader** (FR-023, clarified 2026-10-06): the bar is **not** a live region, because a
+  cycle runs every 5 s and a live region would read "Synchronisation…" then "Synchronisé" each
+  time. The sync slice calls `AccessibilityInfo.announceForAccessibility` only on two
+  transitions: into `failed` ("Échec de la synchronisation") and from a failure streak back to
+  `saved` ("Synchronisé"). The waiting count and the rows a pull changes are never announced;
+  the bar stays readable when focused.
+- **Focus after a pull** (FR-023, 001 FR-037): React Native has no cross-platform event telling
+  which element has screen reader focus. The CurrentList screen therefore treats the row the
+  user last activated, or last received focus through 001's own focus moves, as the focused
+  row. When a pull removes that row, the screen moves focus as after a local removal (next row,
+  previous one, or the empty state). Rows the user only swiped past are left to TalkBack and
+  VoiceOver, which move focus off a removed element themselves. Quickstart step 15 checks both
+  platforms.
 - **Rationale**: one component and one slice keep the status identical everywhere, and the
   thresholds match the spec ("several times in a row").
 
@@ -434,7 +523,7 @@ kept (R7) and the first pairing code (R11).
 |---|---|---|
 | `fastify` (5.x) | server | HTTP routing and schema validation, `inject` for tests (R2). |
 | `@sentry/node` | server | Server error tracking (R15, FR-022a). |
-| `expo-secure-store` | app | Keeps the device credential in the operating system's secure storage (R11). |
+| `expo-secure-store` | app | Keeps the device credential in the operating system's secure storage (R11), out of system backups (R12a). |
 | Caddy 2 (system package, not npm) | Pi | TLS with automatic Let's Encrypt certificates and reverse proxy (R4, FR-019). |
 | Nix (on the Pi) | Pi | Provides the server's Node from the project's flake (R17, 001 R21). |
 | Yarn 4 workspaces (through Corepack) | repo | Already set up by 001 (Principle XI); the server, `sync-core` and `tests/sync` join it (R1). |

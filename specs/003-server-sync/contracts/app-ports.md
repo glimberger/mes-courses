@@ -27,7 +27,8 @@ interface SyncStateRepository {                // part of Repositories
 }
 
 interface PulledRowsApplier {                  // part of Repositories; applies ServerRow[] to local tables
-  apply(rows: ServerRow[], pendingFields: Set<string>): Promise<{ deferred: number }>;
+  apply(rows: ServerRow[], pendingFields: Set<string>): Promise<{ deferred: number; effects: RemoteEffects }>;
+  // also moves app_state.current_list_id to the survivor when the current list is merged (research R8a)
 }
 
 interface Clock {                              // replaces wall-clock reads; fake in tests (Principle III)
@@ -48,6 +49,8 @@ interface SyncServer {                         // HTTP adapter; never the produc
 // UntrustedServer = TLS verification failed (FR-019): never retried insecurely.
 
 interface CredentialStore {                    // expo-secure-store adapter; in-memory fake in tests
+  // iOS: accessibility option WHEN_UNLOCKED_THIS_DEVICE_ONLY; Android: excluded from Auto Backup
+  // (research R12a). A value that cannot be decrypted after a restore reads as null.
   read(): Promise<string | null>;
   write(credential: string): Promise<void>;
   clear(): Promise<void>;
@@ -62,8 +65,8 @@ interface CredentialStore {                    // expo-secure-store adapter; in-
 | Use case | Signature | Behavior |
 |---|---|---|
 | `connectToServer` | `(url, code, deviceName) => Promise<Result<void, InvalidUrl \| ServerUnreachable \| UntrustedServer \| InvalidCode \| TooManyAttempts>>` | Normalizes the URL (`https://` only), calls `health` and then `claim`, stores the credential, and saves `serverUrl`, `serverId` and `deviceId` with `lastSeq = 0` and `snapshotDone = false`. The first sync is left to the scheduler (US4-4, US4-5, US4-6). |
-| `synchronize` | `() => Promise<SyncOutcome>` | One cycle (research R9). Steps: the snapshot if `!snapshotDone` (R13); push `pending(500)` until empty; apply the pulled rows; acknowledge; save `lastSeq` and `maxHlc`. Returns `saved \| waiting \| failed(reason) \| disconnectedByServer \| updateRequired \| notConnected`. A different `serverId` or a `401` gives `disconnectedByServer` and keeps every local row and pending change (FR-018a). |
-| `getSyncInfo` | `() => Promise<SyncInfo>` | Read model for the status bar and Settings. |
+| `synchronize` | `() => Promise<{ outcome: SyncOutcome; effects: RemoteEffects }>` | One cycle (research R9). Steps: the snapshot if `!snapshotDone` (R13); push `pending(500)` until empty; apply the pulled rows; acknowledge; save `lastSeq` and `maxHlc`. `outcome` is `saved \| waiting \| failed(reason) \| disconnectedByServer \| updateRequired \| notConnected`; `effects` lists what the pull deleted, removed or merged (research R10a), empty when nothing was pulled. A different `serverId`, a `401`, or `serverUrl` set with no stored credential (a restored phone, FR-018b) gives `disconnectedByServer` and keeps every local row and pending change (FR-018a). |
+| `getSyncInfo` | `() => Promise<SyncInfo>` | Read model for the status bar and Settings. Reports `disconnectedByServer` when `serverUrl` is set and no credential is stored (FR-018b). |
 | `createPairingCode` | `() => Promise<Result<{ code; expiresAt }, SyncFailure>>` | "Ajouter un appareil" (US4-3). |
 | `listDevices` | `() => Promise<Result<DeviceSummary[], SyncFailure>>` | US4-8; marks `isThisDevice`. |
 | `renameDevice` | `(id, name) => Promise<Result<void, NameError \| SyncFailure \| NotFound>>` | Uses 001's `validateName` (FR-019c). |

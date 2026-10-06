@@ -218,7 +218,7 @@ Every story needs a device that can pair with a running server.
 
   Run them on fakes in `apps/mobile/src/application/testing/in-memory-repositories.test.ts` and on SQLite in `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`, and confirm they fail.
 - [ ] T032 Implement the fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts` and `FakeClock` in `apps/mobile/src/application/testing/fake-clock.ts`. Implement the SQLite versions in `apps/mobile/src/adapters/sqlite/change-recorder.ts` and `apps/mobile/src/adapters/sqlite/sync-state-repository.ts`. Together they turn T031 green. Wrap every database call with `toStorageError` (001 R13), so no stored value reaches a report (001 FR-030).
-- [ ] T033 [P] Implement `SystemClock` (`Date.now()`) in `apps/mobile/src/adapters/clock/system-clock.ts`. Implement `CredentialStore` over `expo-secure-store` in `apps/mobile/src/adapters/secure-store/credential-store.ts`, test-first with the module mocked, plus `InMemoryCredentialStore` in `apps/mobile/src/application/testing/`. Install `expo-secure-store` with `yarn expo install`.
+- [ ] T033 [P] Implement `SystemClock` (`Date.now()`) in `apps/mobile/src/adapters/clock/system-clock.ts`. Implement `CredentialStore` over `expo-secure-store` in `apps/mobile/src/adapters/secure-store/credential-store.ts`, test-first with the module mocked: it writes with the `WHEN_UNLOCKED_THIS_DEVICE_ONLY` accessibility option, and `read()` returns `null` when the module throws while decrypting (a value restored without the means to decrypt it, [research.md](research.md) R12a). Register the `expo-secure-store` config plugin with `configureAndroidBackup: true` in `apps/mobile/app.config.ts`, keeping 001's `android.allowBackup: true` and the database in the backup. Add `InMemoryCredentialStore` in `apps/mobile/src/application/testing/`. Install `expo-secure-store` with `yarn expo install`.
 - [ ] T034 Add the app's `./testing` entry: `apps/mobile/test/index.ts`, declared in `apps/mobile/package.json` `"exports"`, re-exporting 001's `node:sqlite` wrapper and the `SyncServer` adapter factory. Then write failing tests for the `SyncServer` HTTP adapter in `tests/sync/sync-server-adapter.test.ts`, importing the adapter from `@mes-courses/mobile/testing` and `startTestServer()` from `@mes-courses/server/testing` (the app never imports the server, Principle XI):
   - `health` returns `HealthInfo`;
   - `claim` maps `200` / `400` / `429` to `Pairing` / `InvalidCode` / `TooManyAttempts` (with minutes to wait);
@@ -274,9 +274,12 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
   - a deleted or merged article deletes the local article and its items;
   - fields with a pending local change are skipped;
   - a row that would break `UNIQUE (normalized_name)` against a pending local create is deferred and counted, not failed (R8);
-  - `app_state.current_list_id` is never touched (FR-015).
+  - `app_state.current_list_id` is never sent and is left alone by every row except one: a list tombstone whose `mergedInto` is set and whose id is the current list moves `current_list_id` to the survivor, following the `mergedInto` chain, in the same transaction (FR-015, US2-10, [research.md](research.md) R8a);
+  - `apply` returns `effects`: the articles it deleted, the items it removed (`present = false`) and the merges (`kind`, `loserId`, `survivorId`), and empty lists when the rows changed nothing of the kind ([data-model.md](data-model.md#remote-effects-returned-by-pulledrowsapplierapply-research-r10a));
 - [ ] T043 [P] [US1] Write failing use case tests in `apps/mobile/src/application/use-cases/synchronize.test.ts`, with fakes and a fake `SyncServer`:
   - `notConnected` when there is no `serverUrl`;
+  - `disconnectedByServer` when `serverUrl` is set but `CredentialStore.read()` gives `null` (a phone restored from a backup), with no request sent and every row and pending change kept; `getSyncInfo` reports the same connection (FR-018b, [research.md](research.md) R12a);
+  - the result carries the applier's `effects` next to the outcome, and empty effects when nothing was pulled;
   - the first cycle pushes a snapshot of every local row and field stamped with `MIN(deviceId)` before the outbox, then sets `snapshotDone` (R13, US1-6);
   - outbox entries are pushed in order, in batches of at most 500, until empty (US1-3);
   - acknowledged entries are removed, rows applied, `lastSeq` saved, the HLC received;
@@ -293,7 +296,7 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
   - never two cycles at once;
   - after failures the delay backs off 5 s → 10 s → … → 5 min, and resets on success;
   - after a cycle that pulled rows, the store runs `refresh()`.
-- [ ] T046 [US1] Write failing tests in `apps/mobile/src/adapters/ui/state/app-store.undo-sync.test.ts`: when an undo offer ends (5 s, the next write, dismissal, or a new undo replacing it), the store calls `releaseHeldChanges(undoId)`; "Annuler" calls the restore, which discards the held entries.
+- [ ] T046 [US1] Write failing tests in `apps/mobile/src/adapters/ui/state/app-store.undo-sync.test.ts`: when an undo offer ends (5 s, the next write, dismissal, or a new undo replacing it), the store calls `releaseHeldChanges(undoId)`; "Annuler" calls the restore, which discards the held entries. When a cycle's `effects.deletedArticles` holds the article of the pending offer (a removed item of that article, or 002's deleted article), the store clears `pendingUndo`, calls `releaseHeldChanges(undoId)` and remembers that `undoId`; a later `undo(undoId)` restores nothing and sets the notice "Cet article a été supprimé sur un autre appareil.", and so does a restore that returns `ArticleNotFound` (FR-008, US1-8, [research.md](research.md) R10a).
 - [ ] T047 [US1] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/settings-screen.test.tsx` and `apps/mobile/src/adapters/ui/screens/connect-server-screen.test.tsx`, through `renderWithStore` and the texts of [contracts/ui-screens.md](contracts/ui-screens.md):
   - Appbar action "Réglages" on CurrentList;
   - not connected: "Synchronisez vos listes avec votre serveur pour les retrouver sur vos autres appareils." and "Connecter à un serveur";
@@ -336,7 +339,7 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
 - [ ] T066 [P] [US1] Test-first, record only the changed fields (`article.name` and/or `article.categoryId`) in `apps/mobile/src/application/use-cases/edit-article.ts` (002).
 - [ ] T067 [P] [US1] Test-first, record `article.deleted = true` **held** by a new `undoId`, returned in `DeletedArticle`, in `apps/mobile/src/application/use-cases/delete-article.ts` (002).
 - [ ] T068 [P] [US1] Test-first, call `changes.discard(deleted.undoId)` in `apps/mobile/src/application/use-cases/restore-deleted-article.ts` (002).
-- [ ] T069 [US1] Add the `sync` slice (`connection`, `status`, `pendingCount`, `lastSyncAt`, per [research.md](research.md) R14) and the `connectToServer` action to `apps/mobile/src/adapters/ui/state/app-store.ts`. Implement `apps/mobile/src/adapters/ui/state/sync-scheduler.ts`. Release held changes when an undo offer ends. Together these turn T045–T046 green. Start the scheduler from `apps/mobile/src/composition/composition-root.ts`.
+- [ ] T069 [US1] Add the `sync` slice (`connection`, `status`, `pendingCount`, `lastSyncAt`, per [research.md](research.md) R14) and the `connectToServer` action to `apps/mobile/src/adapters/ui/state/app-store.ts`. Implement `apps/mobile/src/adapters/ui/state/sync-scheduler.ts`. Release held changes when an undo offer ends, and end the offer on an article deleted elsewhere. Together these turn T045–T046 green. Start the scheduler from `apps/mobile/src/composition/composition-root.ts`.
 - [ ] T070 [US1] Extend `apps/mobile/src/adapters/ui/testing/story-store.ts` (001) test-first in `story-store.test.ts`: a scenario can start connected (the fake `CredentialStore` holds a credential) or not, and drives the in-memory `SyncServer` fake (reachable, unreachable, revoked, update required); `pending` and `failing` also apply to `synchronize` and `connectToServer`. Every existing story and test stays green.
 - [ ] T071 [US1] Implement `apps/mobile/src/adapters/ui/screens/SettingsScreen.tsx` (not-connected and server sections) and `apps/mobile/src/adapters/ui/screens/ConnectServerScreen.tsx`. Add the "Réglages" Appbar action (cog icon) to `CurrentListScreen.tsx`, and the routes to `apps/mobile/src/adapters/ui/navigation.tsx`. This turns T047 green.
 - [ ] T072 [US1] Add `Screens/Settings/NotConnected`, `Screens/Settings/Connected`, `Screens/ConnectServer/Default`, `.../ServerUnreachable`, `.../InvalidCode`, `.../UntrustedServer` and `.../TooManyAttempts` to `apps/mobile/src/adapters/ui/required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/screens/SettingsScreen.stories.tsx` (not connected; connected, with "Dernière synchronisation : …") and `ConnectServerScreen.stories.tsx` (the outcome stories render the screen's presentational form with each French message, 001's convention) to turn it green. Review them in Storybook on both platforms, light and dark.
@@ -390,7 +393,12 @@ offline at the same time, and check they end identical after syncing, per US2's 
 
 - [ ] T079 [US2] Implement `apps/server/src/domain/merge-by-name.ts` and call it from `apply-change.ts` on creates and renames, to turn T075 green.
 - [ ] T080 [US2] Add the HLC clamp and the server HLC state to `apps/server/src/application/use-cases/sync.ts` to turn T076 green.
-- [ ] T081 [US2] Make `tests/sync/two-devices.test.ts` (T077) and `tests/sync/reset-server.test.ts` (T078) green. Every production fix they force starts with its own failing unit test in the layer where it belongs: `sync-core`, server domain, `PulledRowsApplier` or `synchronize`.
+- [ ] T081 [US2] Write failing tests for open forms during a sync (FR-020a, [research.md](research.md) R10a, [contracts/ui-screens.md](contracts/ui-screens.md#changes-a-pull-makes-to-open-screens-fr-020a-fr-008-fr-015-fr-023)):
+  - in `apps/mobile/src/adapters/ui/state/app-store.remote-effects.test.ts`: a cycle's `effects.merges` fill the slice's `redirects` (kept in memory only); a store write action called with a merged id calls the use case with the survivor's id, following chains;
+  - in `apps/mobile/src/adapters/ui/state/use-remote-removal.test.tsx`: `useRemoteRemoval({ articleId })` calls its callback when a later cycle deletes that article, and `useRemoteRemoval({ listId, articleId })` when it removes that item; it ignores effects from cycles before it mounted;
+  - in `apps/mobile/src/adapters/ui/screens/quantity-dialog.test.tsx` (001) and `edit-article-screen.test.tsx` (002): with "3" typed, a cycle that changes the item's quantity on the server keeps "3" in the field, and saving records "3"; a cycle that removes the item closes QuantityDialog with the snackbar "Cet article a été retiré de la liste sur un autre appareil."; a cycle that deletes the article closes QuantityDialog or EditArticle with "Cet article a été supprimé sur un autre appareil.", and focus goes back as when the form closes (001 FR-037).
+- [ ] T082 [US2] Implement `redirects` and the redirect of write actions in `apps/mobile/src/adapters/ui/state/app-store.ts`, the `useRemoteRemoval` hook in `apps/mobile/src/adapters/ui/state/use-remote-removal.ts`, and its use in `QuantityDialog.tsx` and `EditArticleScreen.tsx`, the two forms that edit a synced item or article (creation dialogs have nothing a pull can remove, and device names are not synced data), to turn T081 green. Then add `Components/NoticeSnackbar/ArticleDeletedElsewhere` and `.../ItemRemovedElsewhere` to `required-stories.ts`, see the story test fail, and add both to `apps/mobile/src/adapters/ui/components/NoticeSnackbar.stories.tsx`, each reached through a scenario whose fake `SyncServer` pulls the deletion or removal while the form is open.
+- [ ] T083 [US2] Make `tests/sync/two-devices.test.ts` (T077) and `tests/sync/reset-server.test.ts` (T078) green. Every production fix they force starts with its own failing unit test in the layer where it belongs: `sync-core`, server domain, `PulledRowsApplier` or `synchronize`.
 
 **Checkpoint**: US1 and US2 together form the MVP. The server is the source of truth, and every
 device converges.
@@ -407,7 +415,7 @@ the server failing (failed, then "Réessayer").
 
 ### Tests for User Story 3 ⚠️ (write first, confirm they fail)
 
-- [ ] T082 [P] [US3] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.sync-status.test.ts`, following the transitions of [data-model.md](data-model.md#sync-status-ui-store-syncstatus-us3):
+- [ ] T084 [P] [US3] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.sync-status.test.ts`, following the transitions of [data-model.md](data-model.md#sync-status-ui-store-syncstatus-us3):
   - a local write → `waiting` with `pendingCount`;
   - a cycle → `sending`, then `saved` when the outbox is empty;
   - `Offline` → `waiting`, never reported (FR-022);
@@ -415,24 +423,27 @@ the server failing (failed, then "Réessayer").
   - a success resets the streak;
   - `syncNow()` starts a cycle at once (US3-5);
   - `retry()` from `failed` starts a cycle.
-- [ ] T083 [P] [US3] Write failing component tests in `apps/mobile/src/adapters/ui/components/sync-status-bar.test.tsx`, with the texts of [contracts/ui-screens.md](contracts/ui-screens.md#syncstatusbar-new-shared-component-fr-020):
+- [ ] T085 [P] [US3] Write failing component tests in `apps/mobile/src/adapters/ui/components/sync-status-bar.test.tsx`, with the texts of [contracts/ui-screens.md](contracts/ui-screens.md#syncstatusbar-new-shared-component-fr-020):
   - "Synchronisé" (US3-1);
   - "En attente de synchronisation (3)", with the accessibility label "3 modifications", and no error color (US3-2);
   - "Synchronisation…" (US3-3);
   - "Échec de la synchronisation" with "Réessayer" (US3-4);
   - hidden when `notConnected`;
   - "Mettez à jour l'application pour synchroniser." when `updateRequired`;
-  - `accessibilityLiveRegion="polite"` (US3-6);
+  - no `accessibilityLiveRegion`; with `AccessibilityInfo.announceForAccessibility` mocked, it announces "Échec de la synchronisation" on entering `failed` and "Synchronisé" on the first `saved` after a failure, and nothing for `waiting` ↔ `sending` ↔ `saved` cycles or a change of the waiting count (US3-6, FR-023, [research.md](research.md) R14);
+  - `DisconnectedByServer` also for a connection with a server address and no credential (FR-018b);
   - ≥ 48 dp with a button;
   - tapping it opens Settings.
-- [ ] T084 [US3] Write failing screen tests: CurrentList, AddArticles, Lists, EditArticle and Settings each render `SyncStatusBar` under their Appbar. Settings' server section shows "Synchroniser maintenant" (US3-5). Put them in the existing `*-screen.test.tsx` files.
+- [ ] T086 [US3] Write failing screen tests: CurrentList, AddArticles, Lists, EditArticle and Settings each render `SyncStatusBar` under their Appbar. Settings' server section shows "Synchroniser maintenant" (US3-5). Put them in the existing `*-screen.test.tsx` files.
+- [ ] T087 [US3] Write a failing test in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx` for focus after a pull (US3-7, [research.md](research.md) R14): with a screen reader on (mocked `AccessibilityInfo`), activate the row "Pain", then run a cycle that removes "Pain": `setAccessibilityFocus` targets the next row, or the previous one when "Pain" was last, or the `EmptyState` when the list becomes empty, and `announceForAccessibility` is not called; a cycle that removes a row the user did not activate moves no focus.
 
 ### Implementation for User Story 3
 
-- [ ] T085 [US3] Implement the status transitions, the failure streak, `syncNow()` and `retry()` in `apps/mobile/src/adapters/ui/state/app-store.ts` and `apps/mobile/src/adapters/ui/state/sync-scheduler.ts` to turn T082 green.
-- [ ] T086 [P] [US3] Implement `apps/mobile/src/adapters/ui/components/SyncStatusBar.tsx` (Paper only, theme tokens) to turn T083 green.
-- [ ] T087 [US3] Render `SyncStatusBar` in `CurrentListScreen.tsx`, `AddArticlesScreen.tsx`, `ListsScreen.tsx`, `EditArticleScreen.tsx` and `SettingsScreen.tsx`, and add "Synchroniser maintenant" to Settings, to turn T084 green.
-- [ ] T088 [US3] Add `Components/SyncStatusBar/Saved`, `.../Waiting`, `.../Sending`, `.../Failed`, `.../DisconnectedByServer`, `.../UpdateRequired` and `Screens/CurrentList/WithSyncStatus` to `required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/components/SyncStatusBar.stories.tsx`, each status reached through a scenario: a `prepare` that syncs once against a reachable fake (Saved), a change made with the fake unreachable (Waiting), `pending: ['synchronize']` (Sending), three failing syncs (Failed), a revoked device (DisconnectedByServer), a server asking for an update (UpdateRequired); and add `WithSyncStatus` to `CurrentListScreen.stories.tsx`. Turn the test green, then check in Storybook that `Waiting` uses no error color, in light and dark mode (003 US3-2).
+- [ ] T088 [US3] Implement the status transitions, the failure streak, `syncNow()` and `retry()` in `apps/mobile/src/adapters/ui/state/app-store.ts` and `apps/mobile/src/adapters/ui/state/sync-scheduler.ts` to turn T084 green.
+- [ ] T089 [P] [US3] Implement `apps/mobile/src/adapters/ui/components/SyncStatusBar.tsx` (Paper only, theme tokens, announcing only failure and recovery) to turn T085 green.
+- [ ] T090 [US3] Render `SyncStatusBar` in `CurrentListScreen.tsx`, `AddArticlesScreen.tsx`, `ListsScreen.tsx`, `EditArticleScreen.tsx` and `SettingsScreen.tsx`, and add "Synchroniser maintenant" to Settings, to turn T086 green.
+- [ ] T091 [US3] Track the last activated row in `apps/mobile/src/adapters/ui/screens/CurrentListScreen.tsx` (activation and 001's own focus moves), and move focus as after a local removal when a cycle's effects remove it, to turn T087 green.
+- [ ] T092 [US3] Add `Components/SyncStatusBar/Saved`, `.../Waiting`, `.../Sending`, `.../Failed`, `.../DisconnectedByServer`, `.../UpdateRequired` and `Screens/CurrentList/WithSyncStatus` to `required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/components/SyncStatusBar.stories.tsx`, each status reached through a scenario: a `prepare` that syncs once against a reachable fake (Saved), a change made with the fake unreachable (Waiting), `pending: ['synchronize']` (Sending), three failing syncs (Failed), a revoked device (DisconnectedByServer), plus a second `DisconnectedByServer` check in the story test from a scenario with a server address and no stored device credential (FR-018b), a server asking for an update (UpdateRequired); and add `WithSyncStatus` to `CurrentListScreen.stories.tsx`. Turn the test green, then check in Storybook that `Waiting` uses no error color, in light and dark mode (003 US3-2).
 
 **Checkpoint**: the user always sees whether changes are on the server.
 
@@ -454,27 +465,27 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
 
 ### Tests for User Story 4 ⚠️ (write first, confirm they fail)
 
-- [ ] T089 [P] [US4] Write failing server use case tests in `apps/server/src/application/use-cases/devices.test.ts`:
+- [ ] T093 [P] [US4] Write failing server use case tests in `apps/server/src/application/use-cases/devices.test.ts`:
   - `listDevices` excludes revoked ones and returns `{ id, name, createdAt, lastSyncAt }` (US4-8);
   - `renameDevice` trims to 1–60 characters, or `NotFound`;
   - `revokeDevice` sets `revokedAt`, and the next request from that device is refused (US4-9, SC-009);
   - a device may revoke itself (US4-11).
-- [ ] T090 [P] [US4] Write failing HTTP tests in `apps/server/src/adapters/http/devices-route.test.ts` for `GET /v1/devices`, `PATCH /v1/devices/:id` and `DELETE /v1/devices/:id` (`200`/`204`/`404`, auth required).
-- [ ] T091 [P] [US4] Write failing app use case tests in `apps/mobile/src/application/use-cases/`, one file each, on fakes and a fake `SyncServer`:
+- [ ] T094 [P] [US4] Write failing HTTP tests in `apps/server/src/adapters/http/devices-route.test.ts` for `GET /v1/devices`, `PATCH /v1/devices/:id` and `DELETE /v1/devices/:id` (`200`/`204`/`404`, auth required).
+- [ ] T095 [P] [US4] Write failing app use case tests in `apps/mobile/src/application/use-cases/`, one file each, on fakes and a fake `SyncServer`:
   - `create-pairing-code.test.ts`: US4-3, and `Offline`;
   - `list-devices.test.ts`: marks `isThisDevice`;
   - `rename-device.test.ts`: 001's `validateName` errors;
   - `revoke-device.test.ts`: US4-9;
   - `disconnect.test.ts` (US4-11): it revokes itself when the server is reachable, otherwise best effort; it clears the credential and the connection fields; it keeps the local data and the outbox; `connection` becomes `notConnected`.
-- [ ] T092 [US4] Extend `tests/sync/sync-server-adapter.test.ts` with failing tests for `createPairingCode`, `listDevices`, `renameDevice` and `revokeDevice` against `startTestServer()`.
-- [ ] T093 [US4] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/settings-screen.test.tsx`, with the texts of [contracts/ui-screens.md](contracts/ui-screens.md#settings-new-screen):
+- [ ] T096 [US4] Extend `tests/sync/sync-server-adapter.test.ts` with failing tests for `createPairingCode`, `listDevices`, `renameDevice` and `revokeDevice` against `startTestServer()`.
+- [ ] T097 [US4] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/settings-screen.test.tsx`, with the texts of [contracts/ui-screens.md](contracts/ui-screens.md#settings-new-screen):
   - the Appareils section: rows with the name, "Dernière synchronisation : …" and "Cet appareil"; loading; error "Impossible de charger les appareils." with "Réessayer"; offline "Liste des appareils indisponible hors connexion." (not reported);
   - "Renommer" dialog;
   - "Révoquer « … » ?" dialog with "Cet appareil ne pourra plus synchroniser. Ses données restent sur l'appareil.", not offered on this device;
   - "Déconnecter cet appareil ?" dialog;
   - `PairingCodeDialog` "Ajouter un appareil" showing "ABCD-EF23" and "Valable jusqu'à {heure}.", with the offline message "Connexion au serveur nécessaire pour ajouter un appareil.";
   - with `connection = disconnectedByServer`, the bar shows "Cet appareil n'est plus connecté au serveur." and "Se reconnecter" opens ConnectServer (US4-10).
-- [ ] T094 [US4] Write a failing scenario test in `tests/sync/revocation.test.ts`:
+- [ ] T098 [US4] Write a failing scenario test in `tests/sync/revocation.test.ts`:
   - A creates a code and B claims it (US4-3, US4-4);
   - A revokes B; B's next cycle → `disconnectedByServer`, with B's data and outbox kept (US4-10, SC-009);
   - B pairs again with a new code and its waiting changes are sent;
@@ -483,12 +494,12 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
 
 ### Implementation for User Story 4
 
-- [ ] T095 [US4] Implement `apps/server/src/application/use-cases/{list-devices,rename-device,revoke-device}.ts` and `apps/server/src/adapters/http/routes/devices.ts` to turn T089–T090 green.
-- [ ] T096 [US4] Add `createPairingCode`, `listDevices`, `renameDevice` and `revokeDevice` to `apps/mobile/src/adapters/sync-http/sync-server.ts` to turn T092 green.
-- [ ] T097 [US4] Implement `apps/mobile/src/application/use-cases/{create-pairing-code,list-devices,rename-device,revoke-device,disconnect}.ts` to turn T091 green. Add them to `UseCases`, to the composition root and to store actions in `apps/mobile/src/adapters/ui/state/app-store.ts`.
-- [ ] T098 [US4] Implement the Appareils and Actions sections of `SettingsScreen.tsx`, `apps/mobile/src/adapters/ui/screens/PairingCodeDialog.tsx`, `RenameDeviceDialog.tsx`, `RevokeDeviceDialog.tsx`, `DisconnectDialog.tsx`, and the "Se reconnecter" action of `SyncStatusBar`, to turn T093 green.
-- [ ] T099 [US4] Add `Screens/Settings/DevicesLoading`, `.../DevicesError`, `.../DevicesOffline`, `Dialogs/PairingCodeDialog/Code`, `.../Offline`, `Dialogs/RevokeDeviceDialog/Default`, `Dialogs/DisconnectDialog/Default` and `Dialogs/RenameDeviceDialog/Default` to `required-stories.ts` and see the story test fail. Then extend `SettingsScreen.stories.tsx` (`pending` and `failing` `listDevices`, and the fake unreachable) and write `PairingCodeDialog.stories.tsx`, `RevokeDeviceDialog.stories.tsx`, `DisconnectDialog.stories.tsx` and `RenameDeviceDialog.stories.tsx` in `apps/mobile/src/adapters/ui/screens/` to turn it green. Review them in Storybook on both platforms.
-- [ ] T100 [US4] Make `tests/sync/revocation.test.ts` (T094) green. Each fix it forces starts with its own failing unit test first.
+- [ ] T099 [US4] Implement `apps/server/src/application/use-cases/{list-devices,rename-device,revoke-device}.ts` and `apps/server/src/adapters/http/routes/devices.ts` to turn T093–T094 green.
+- [ ] T100 [US4] Add `createPairingCode`, `listDevices`, `renameDevice` and `revokeDevice` to `apps/mobile/src/adapters/sync-http/sync-server.ts` to turn T096 green.
+- [ ] T101 [US4] Implement `apps/mobile/src/application/use-cases/{create-pairing-code,list-devices,rename-device,revoke-device,disconnect}.ts` to turn T095 green. Add them to `UseCases`, to the composition root and to store actions in `apps/mobile/src/adapters/ui/state/app-store.ts`.
+- [ ] T102 [US4] Implement the Appareils and Actions sections of `SettingsScreen.tsx`, `apps/mobile/src/adapters/ui/screens/PairingCodeDialog.tsx`, `RenameDeviceDialog.tsx`, `RevokeDeviceDialog.tsx`, `DisconnectDialog.tsx`, and the "Se reconnecter" action of `SyncStatusBar`, to turn T097 green.
+- [ ] T103 [US4] Add `Screens/Settings/DevicesLoading`, `.../DevicesError`, `.../DevicesOffline`, `Dialogs/PairingCodeDialog/Code`, `.../Offline`, `Dialogs/RevokeDeviceDialog/Default`, `Dialogs/DisconnectDialog/Default` and `Dialogs/RenameDeviceDialog/Default` to `required-stories.ts` and see the story test fail. Then extend `SettingsScreen.stories.tsx` (`pending` and `failing` `listDevices`, and the fake unreachable) and write `PairingCodeDialog.stories.tsx`, `RevokeDeviceDialog.stories.tsx`, `DisconnectDialog.stories.tsx` and `RenameDeviceDialog.stories.tsx` in `apps/mobile/src/adapters/ui/screens/` to turn it green. Review them in Storybook on both platforms.
+- [ ] T104 [US4] Make `tests/sync/revocation.test.ts` (T098) green. Each fix it forces starts with its own failing unit test first.
 
 **Checkpoint**: all four stories work. Devices are paired, managed and revoked from the app.
 
@@ -496,20 +507,20 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T101 [P] Add `deploy/Caddyfile` (`{$MES_COURSES_DOMAIN}` → `reverse_proxy 127.0.0.1:3000`, with automatic HTTPS), `deploy/mes-courses.service` (user `mes-courses`, `ExecStart=/opt/mes-courses/runtime/bin/node /opt/mes-courses/apps/server/dist/composition/main.js`, `EnvironmentFile=/etc/mes-courses.env`, `Restart=always`, `NODE_ENV=production`). Add `packages.<system>.node` (the dev shell's `nodejs_24`) to `flake.nix`, so the Pi can build its runtime with `nix build .#node` and `deploy/mes-courses.env.example` (variable names only, no values) ([research.md](research.md) R17).
-- [ ] T102 [P] Extend `apps/mobile/src/adapters/ui/state/error-context.test.ts` (001) and add `apps/server/src/adapters/error-reporting/report-context.test.ts`. Every report raised in the 003 tests carries only the allowed fields. Scan the serialized reports for the test URL, device names, codes, credentials and article names, and fail if any is found (FR-022, FR-022a).
-- [ ] T103 [P] Extend `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx` (001) to Settings, ConnectServer, the device dialogs, `PairingCodeDialog` and `SyncStatusBar`: French labels on every interactive element and ≥ 48 dp targets (FR-023).
-- [ ] T104 Extend 001's offline scenario `apps/mobile/src/adapters/ui/offline.test.tsx` with a connected device whose `SyncServer` always returns `Offline`. Every 001 and 002 action still succeeds, the status is `waiting`, and nothing is reported (FR-003, SC-004).
-- [ ] T105 Add a test in `tests/sync/performance.test.ts`:
+- [ ] T105 [P] Add `deploy/Caddyfile` (`{$MES_COURSES_DOMAIN}` → `reverse_proxy 127.0.0.1:3000`, with automatic HTTPS), `deploy/mes-courses.service` (user `mes-courses`, `ExecStart=/opt/mes-courses/runtime/bin/node /opt/mes-courses/apps/server/dist/composition/main.js`, `EnvironmentFile=/etc/mes-courses.env`, `Restart=always`, `NODE_ENV=production`). Add `packages.<system>.node` (the dev shell's `nodejs_24`) to `flake.nix`, so the Pi can build its runtime with `nix build .#node` and `deploy/mes-courses.env.example` (variable names only, no values) ([research.md](research.md) R17).
+- [ ] T106 [P] Extend `apps/mobile/src/adapters/ui/state/error-context.test.ts` (001) and add `apps/server/src/adapters/error-reporting/report-context.test.ts`. Every report raised in the 003 tests carries only the allowed fields. Scan the serialized reports for the test URL, device names, codes, credentials and article names, and fail if any is found (FR-022, FR-022a).
+- [ ] T107 [P] Extend `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx` (001) to Settings, ConnectServer, the device dialogs, `PairingCodeDialog` and `SyncStatusBar`: French labels on every interactive element and ≥ 48 dp targets (FR-023).
+- [ ] T108 Extend 001's offline scenario `apps/mobile/src/adapters/ui/offline.test.tsx` with a connected device whose `SyncServer` always returns `Offline`. Every 001 and 002 action still succeeds, the status is `waiting`, and nothing is reported (FR-003, SC-004).
+- [ ] T109 Add a test in `tests/sync/performance.test.ts`:
   - a new device restores 500 articles, 5 lists and 300 items from `startTestServer()`, with the cycle loop finishing (asserted as at most 2 sync requests at the 5,000-row page size, SC-005);
   - a local tick's handler never awaits the scheduler (SC-004).
-- [ ] T106 Update `README.md`:
+- [ ] T110 Update `README.md`:
   - the workspaces (`apps/server/`, `packages/sync-core/`, `tests/sync/`);
   - running the server in development (`yarn workspace @mes-courses/server dev`, `yarn workspace @mes-courses/server pairing-code`);
   - the Pi and Freebox setup, referring to [quickstart.md](quickstart.md) §3;
   - the environment variables `SENTRY_DSN`, `MES_COURSES_DB`, `MES_COURSES_DOMAIN` and `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL` (development only).
-- [ ] T107 Run [quickstart.md](quickstart.md) §1–§2 locally, review every 003 story in Storybook on Android and iOS (light, dark, 200% text), and run `yarn test:e2e:android` and `yarn test:e2e:ios` green. With the maintainer, who does the Freebox, DNS and Pi actions of §3, deploy to the Pi and check `curl https://<domain>/v1/health` from mobile data and from the home Wi-Fi. Then run the 15 scenarios of §4 and §5 on a phone and a tablet. Record results, and anything not checked, in the pull request's test plan.
-- [ ] T108 Update `specs/001-shopping-lists/plan.md` and `specs/002-manage-articles/plan.md`: mark their Principle VII deviation in Complexity Tracking as closed by 003, now implemented.
+- [ ] T111 Run [quickstart.md](quickstart.md) §1–§2 locally, review every 003 story in Storybook on Android and iOS (light, dark, 200% text), and run `yarn test:e2e:android` and `yarn test:e2e:ios` green. With the maintainer, who does the Freebox, DNS and Pi actions of §3, deploy to the Pi and check `curl https://<domain>/v1/health` from mobile data and from the home Wi-Fi. Then run the 17 scenarios of §4 and §5 (§4 step 17, the restored phone, once on a test phone) on a phone and a tablet. Record results, and anything not checked, in the pull request's test plan.
+- [ ] T112 Update `specs/001-shopping-lists/plan.md` and `specs/002-manage-articles/plan.md`: mark their Principle VII deviation in Complexity Tracking as closed by 003, now implemented.
 
 ---
 
@@ -526,8 +537,8 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
 - **US1 (Phase 3)**: after Foundational.
 - **US2 (Phase 4)**: after US1, because its scenarios need a working single-device sync.
 - **US3 (Phase 5)**: after US1. It is independent of US2.
-- **US4 (Phase 6)**: after US1. It is independent of US2 and US3, except for the shared files `SettingsScreen.tsx` and `SyncStatusBar.tsx` (T098 after T086).
-- **Polish (Phase 7)**: after the stories it covers. T107 needs the maintainer's network setup.
+- **US4 (Phase 6)**: after US1. It is independent of US2 and US3, except for the shared files `SettingsScreen.tsx` and `SyncStatusBar.tsx` (T102 after T089).
+- **Polish (Phase 7)**: after the stories it covers. T111 needs the maintainer's network setup.
 
 ### Within Each User Story
 
@@ -545,9 +556,9 @@ green at the end; its required stories come after the screens they show.
   - the whole app track (T028–T033) beside the server track (T014–T027).
 - US1: T039–T045 are seven independent test files; T056–T068 are thirteen use cases in thirteen files.
 - US2: T075 and T076.
-- US3: T082 and T083; T086 beside T085.
-- US4: T089, T090 and T091.
-- Polish: T101, T102 and T103.
+- US3: T084 and T085; T089 beside T088.
+- US4: T093, T094 and T095.
+- Polish: T105, T106 and T107.
 
 ---
 
@@ -605,7 +616,7 @@ Each pull request is merged only when `gh pr checks` is all green (constitution,
 - [P] tasks touch different files and depend on no unfinished task.
 - Never delete, skip or weaken a test to make a change go green (Principle I).
 - The Freebox, DNS and Pi steps in [quickstart.md](quickstart.md) §3 are the maintainer's.
-  Tasks only check them (T107).
+  Tasks only check them (T111).
 - A deletion or removal that is undone never reaches the server (FR-008): held outbox entries
   are the only mechanism, so any new undoable change must record its changes held.
 - Test gates (constitution v2.1.1, Quality Gates): before each commit, `yarn test` (the fast

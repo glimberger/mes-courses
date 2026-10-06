@@ -88,13 +88,16 @@ pending --push acknowledged (changeId in response)--> (none)
 | `snapshotDone` | boolean | `false` until the first full upload to this server completed (research R13). |
 
 The device credential is **not** stored here. It lives in the operating system's secure
-storage (`expo-secure-store`, research R11).
+storage (`expo-secure-store`, research R11), which a system backup never carries to another
+device (research R12a). `serverUrl` set with no credential means a restored phone: the device
+is treated as `disconnectedByServer` (FR-018b).
 
 ### Connection state (UI store, `sync.connection`)
 
 ```text
 notConnected --claim succeeds--> connected
 connected --401 or different serverId--> disconnectedByServer    (US4-10, FR-018a)
+connected --serverUrl set but no credential (restored phone)--> disconnectedByServer   (FR-018b)
 connected --response minAppVersion > app version--> updateRequired
 connected --"Déconnecter" confirmed--> notConnected               (US4-11)
 disconnectedByServer --claim succeeds (new code)--> connected     (lastSeq = 0, snapshotDone = false)
@@ -146,7 +149,22 @@ CREATE TABLE sync_state (
 
 - `list_item` is unchanged: a pulled `present = false` deletes the local row; a pulled
   `present = true` upserts it. `app_state.current_list_id` stays local and is never sent
-  (FR-015).
+  (FR-015); when a pulled list tombstone merges the current list away, the applier sets
+  `current_list_id` to the survivor in the same transaction (research R8a).
+
+### Remote effects (returned by `PulledRowsApplier.apply`, research R10a)
+
+```text
+RemoteEffects = {
+  deletedArticles: ArticleId[]                       // tombstoned by this pull
+  removedItems: Array<{ listId, articleId }>         // present = false by this pull
+  merges: Array<{ kind, loserId, survivorId }>       // mergedInto set by this pull
+}
+```
+
+Used by the store to close open forms on what was removed (FR-020a), to redirect a form's save
+to a merge survivor, and to end an undo offer on an article deleted elsewhere (FR-008). Kept in
+memory only.
 
 ## Server database (Pi SQLite)
 

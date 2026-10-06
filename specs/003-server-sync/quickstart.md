@@ -120,8 +120,27 @@ freshly installed, and the server empty.
     - both devices show "Cet appareil n'est plus connecté au serveur.";
     - reconnect the phone with a code from the Pi: the server is repopulated;
     - reconnect the tablet: its data merges, with no duplicates.
-15. **Accessibility** (FR-023): with TalkBack/VoiceOver, status changes are announced, and
-    Settings and ConnectServer can be used with the screen reader alone and at 200% text.
+15. **Accessibility** (FR-023, US3-6, US3-7): with TalkBack/VoiceOver, let the app sync for
+    a minute: nothing is read out. Stop Caddy and make the server fail
+    (`MES_COURSES_FAIL_SYNC=1`): "Échec de la synchronisation" is read once; restore it:
+    "Synchronisé" is read once. Activate the row "Pain", then remove "Pain" on the tablet:
+    focus moves to the next row and nothing is read for the change. Settings and ConnectServer
+    can be used with the screen reader alone and at 200% text.
+16. **Changes from the other device on open screens** (FR-020a, FR-008, US2-10):
+    - open the quantity dialog of "Lait" on the phone and type "3"; change "Lait" to "2 L" on
+      the tablet; after the next sync the phone still shows "3"; save: both devices end with
+      "3" (the later change wins);
+    - open the quantity dialog of "Pain" on the phone; delete the article "Pain" on the
+      tablet: the dialog closes with "Cet article a été supprimé sur un autre appareil.";
+    - remove "Œufs" on the phone and, while "Annuler" is offered, delete "Œufs" on the tablet:
+      the snackbar disappears;
+    - offline, create a list "Barbecue" on both devices and make it current on the phone; sync
+      both: the phone shows one "Barbecue" holding the items of both, with no message.
+17. **Restored phone** (FR-018b), once before the first release, on a test phone: back it up
+    (Android: `adb shell bmgr backupnow <package>`; iOS: an encrypted Finder backup), restore
+    it onto another phone or emulator: the app opens on the restored lists and shows "Cet
+    appareil n'est plus connecté au serveur." Reconnect with a new code: changes made on the
+    tablet since the backup win, and lists only on the restored phone are added.
 
 ## 5. Error tracking (FR-022, FR-022a)
 
