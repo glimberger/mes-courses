@@ -17,12 +17,16 @@ text appears only in the UI adapter (Principle X).
 | At most 60 characters after cleaning, counted in Unicode code points | FR-022 | `NameTooLong` |
 | Unique within its kind, comparing `normalizedName` | FR-021, FR-024 | `NameAlreadyUsed` (carries the existing entity) |
 
-- `cleanName(text) = text.normalize('NFC').trim().replace(/\s+/gu, ' ')`.
-- `normalizedName(name) = cleanName(name).toLocaleLowerCase('fr')`: case, outer and repeated
-  inner spaces, and composed or decomposed accents are ignored; accents themselves are kept, so
-  "Pâte" ≠ "Pâté" ([research.md](research.md) R6).
+- `cleanName(text) = text.normalize('NFC').replace(/[\u200B-\u200D\u2060\uFEFF]/gu, '').trim().replace(/\s+/gu, ' ')`: invisible characters (zero-width space, non-joiner and
+  joiner, word joiner, byte order mark) are removed, and JavaScript's `trim()` and `\s` cover
+  every Unicode space, non-breaking ones included, tabs and line breaks (FR-022).
+- `normalizedName(name) = foldLetters(cleanName(name).toLocaleLowerCase('fr'))`, where
+  `foldLetters` replaces "œ" with "oe", "æ" with "ae" and the curly apostrophe "’" (U+2019) with
+  "'": case, outer and repeated inner spaces, composed or decomposed accents, these ligatures and
+  the apostrophe style are ignored, so "Oeufs" = "Œufs" and "Pâte d'amande" = "Pâte d’amande";
+  accents themselves are kept, so "Pâte" ≠ "Pâté" (FR-021, [research.md](research.md) R6).
 - `searchForm(text) = normalizedName(text)` without diacritics (`NFD`, combining marks removed),
-  with "œ" → "oe" and "æ" → "ae", so "oeuf" and "œuf" have the same search form (FR-009).
+  so "oeuf" and "œuf" have the same search form, and so do "d'amande" and "d’amande" (FR-009).
 - The name is stored cleaned ("Houmous"; "Pommes  de terre" is stored "Pommes de terre");
   `normalizedName` is stored next to it.
 - The length is counted as `[...name].length`, the unit SQLite's `length()` counts, so the
@@ -40,7 +44,7 @@ Quantity = { amount: number; unit: string | null }
 | `amount > 0` (a leading `-` or zero) | FR-016, US2-12 | `AmountNotPositive` |
 | At most 3 digits after the separator, as typed | FR-016 | `AmountTooPrecise` |
 | `amount <= 9999` | FR-016 | `AmountTooLarge` |
-| `unit` cleaned like a name (`cleanName`: NFC, trimmed, inner spaces reduced); a unit empty after cleaning becomes `null` | FR-014, FR-022 | – |
+| `unit` cleaned like a name (`cleanName`: NFC, invisible characters removed, trimmed, inner spaces reduced); a unit empty after cleaning becomes `null` | FR-014, FR-022 | – |
 | A unit requires an amount | FR-016, US2-13 | `UnitWithoutAmount` |
 | `unit` at most 15 characters | FR-022 | `UnitTooLong` |
 
@@ -106,7 +110,7 @@ CurrentListView = {
   list: { id, name }
   remainingCount: number                    // items with inCart = false (FR-006)
   totalCount: number
-  hasItemsInCart: boolean                   // shows "Terminer les courses"
+  hasItemsInCart: boolean                   // shows "Terminer les courses"; the store updates it with each optimistic tick (FR-007)
   sections: Array<{
     category: { id, name }
     items: Array<{ articleId, name, inCart, quantity }>
@@ -117,13 +121,15 @@ CurrentListView = {
 - Sections only for categories holding at least one item of the list (FR-003, US4-5), ordered by
   `position`.
 - Within a section: items with `inCart = false` first, then `inCart = true` (FR-005); each group
-  sorted by `name` with the French collator (Assumptions).
+  sorted by `name` with `compareNames`, the French collator comparing numbers by value, so
+  "Lait 2 L" comes before "Lait 10 L" (Assumptions, [research.md](research.md) R6). Every other
+  name sort (catalog, lists) uses the same function.
 
 ```text
 CatalogView = {
   sections: Array<{
     category: { id, name }
-    articles: Array<{ id, name, onList: boolean, quantity: Quantity | null }>   // quantity on the target list
+    articles: Array<{ id, name, searchText: string, onList: boolean, quantity: Quantity | null }>   // quantity on the target list; searchText = searchForm(name), computed once per view
   }>
 }
 ```
@@ -135,6 +141,11 @@ CatalogView = {
   still grouped by category, with empty categories omitted; no section at all means "no match"
   (US2-14).
 - `onList` marks articles already on the target list (FR-011, US2-8).
+- The query filter is the pure domain function `filterCatalog(view, query)`: it matches each
+  article's `searchText` against `searchForm(query)`, keeps the order of the full view and drops
+  empty sections. The add screen loads the full view once and
+  filters it in memory as the user types, without reading storage again (SC-011,
+  [research.md](research.md) R11a).
 
 ```text
 ListSummary = { id, name, itemCount: number, isCurrent: boolean }   // US3-8
@@ -157,8 +168,9 @@ Current list
   L1 --setCurrentList(L2)--> L2      (L2 must exist: ListNotFound otherwise)
 ```
 
-`finishShopping` on a list with no item in the cart returns `NothingInCart` and changes nothing
-(edge case); the UI does not offer the action in that case.
+`finishShopping` on a list with no item in the cart changes nothing and succeeds. The UI does
+not offer the action then, but a finish queued behind the only tick can meet that case when
+the tick's save fails (FR-007).
 
 ## SQLite schema (migration 1)
 

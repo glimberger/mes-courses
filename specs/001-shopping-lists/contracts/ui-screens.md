@@ -85,10 +85,10 @@ CreateCategoryDialog.
 
 | Action | Behavior |
 |---|---|
-| Tap a row | Tick or untick immediately (optimistic); saves are queued per item, in tap order. On a failed save: the item's later queued saves are dropped, the list is reloaded so the item shows its stored state, snackbar "La modification n'a pas pu être enregistrée.", report with `{ operation: 'toggleItemInCart', screen: 'CurrentList' }`. (US1-2, US1-3, FR-004, [research.md](../research.md) R9) |
+| Tap a row | Tick or untick immediately (optimistic); the save joins the store's single write queue, so every change is saved in the order it was made, and "Terminer les courses" or a removal is saved after the taps made before it (FR-004). On a failed save: the item's later queued toggles are dropped (other writes still run), the list is reloaded so the item shows its stored state, snackbar "La modification n'a pas pu être enregistrée.", report with `{ operation: 'toggleItemInCart', screen: 'CurrentList' }`. (US1-2, US1-3, FR-004, [research.md](../research.md) R9) |
 | Row action "Modifier la quantité" | Opens QuantityDialog prefilled. |
 | Row action "Retirer de la liste" | Removes at once; snackbar "« {name} » retiré de la liste" with action "Annuler" (US2-6, US2-16), offered per [Undo offer](#undo-offer). |
-| Appbar action "Terminer les courses" | Shown only when `hasItemsInCart`. Opens FinishShoppingDialog (US1-8, US1-9). |
+| Appbar action "Terminer les courses" | Shown only when `hasItemsInCart`, which follows the ticks shown, including an optimistic tick not saved yet, and turns false again when a failed save reloads the last ticked item as unticked (FR-007). Opens FinishShoppingDialog (US1-8, US1-9). |
 | Appbar action "Mes listes" | Opens Lists (SC-005: 2 taps with the list choice). |
 | FAB "Ajouter" | Opens AddArticles. |
 
@@ -120,13 +120,16 @@ Appbar title "Ajouter des articles", `Searchbar` with placeholder "Rechercher un
 | empty, query, no match | "Aucun article ne correspond à « {query} »" + "Créer « {query} »" (US2-14) |
 
 Search filters the catalog already loaded on this screen, so it has no loading or error state of
-its own (FR-029).
+its own (FR-029): each letter typed filters the loaded catalog in memory with `filterCatalog`,
+with no storage read and no debounce, so results update within 300 ms of each letter, and the
+articles show within 1 second of opening, with 1 000 articles (SC-011,
+[research.md](../research.md) R11a).
 
 | Action | Behavior |
 |---|---|
 | Tap an article not on the list | Opens QuantityDialog in "add" mode; "Ajouter" with empty fields adds without quantity (SC-003: tap + "Ajouter"). |
 | Tap an article marked "Déjà dans la liste" | QuantityDialog in "already on list" mode: message "« {name} » est déjà dans la liste.", fields prefilled, buttons "Fermer" and "Modifier la quantité" (US2-8). |
-| "Nouvel article" (Appbar action) or empty-state action | Opens CreateArticle, name prefilled with the query if any. |
+| "Nouvel article" (Appbar action, always shown, with or without matches) or empty-state action | Opens CreateArticle, name prefilled with the query cleaned like a name (trimmed, inner spaces reduced, FR-022), if any (FR-008, US2-19). |
 
 The screen stays open after adding, so several articles can be added in a row; a snackbar
 confirms "« {name} » ajouté". Back returns to CurrentList, already reloaded by the store after the
@@ -152,11 +155,15 @@ Appbar title "Nouvel article". `NameField` "Nom", category picker (radio list of
 "Nouvelle catégorie" opening CreateCategoryDialog, new category preselected on success),
 `QuantityFields` (optional), button "Créer et ajouter".
 
+Opened from a category's empty state ("Créer un article", US2-15), that category is
+preselected; opened from "Nouvel article" or from a search with no match, no category is
+preselected (FR-018).
+
 | Domain error | Text |
 |---|---|
 | `NameRequired` | "Indiquez un nom." (US2-11) |
 | `NameTooLong` | "Le nom ne peut pas dépasser 60 caractères." |
-| `NameAlreadyUsed` | "« {existing.name} » existe déjà." + button "Ajouter « {existing.name} »", which adds the existing article (US2-9) |
+| `NameAlreadyUsed` | "« {existing.name} » existe déjà." + button "Ajouter « {existing.name} »", which adds the existing article with the quantity typed in the form, if any (US2-9); when `addArticleToList` returns `AlreadyOnList`, it opens QuantityDialog in "already on list" mode instead, prefilled with the item's current quantity (US2-20, FR-011) |
 | No category chosen | "Choisissez une catégorie." |
 
 Success: back to AddArticles, snackbar "« {name} » ajouté" (US2-7).
@@ -181,8 +188,8 @@ At least one list always exists, so there is no empty state.
 
 | Action | Behavior |
 |---|---|
-| Tap a list | Makes it current and returns to CurrentList (US3-3). |
-| FAB "Nouvelle liste" | Opens CreateListDialog. |
+| Tap a list | Makes it current and returns to CurrentList (US3-3). Tapping the list that is already current saves nothing (no `setCurrentList` call) and returns to CurrentList; a pending "Annuler" offer stays (FR-025). |
+| FAB "Nouvelle liste" | Opens CreateListDialog. On success the dialog closes and the user stays on Lists, where the new list appears in its alphabetical place, not current (FR-024, US3-2). |
 
 Row accessibility: "{name}, {n} articles[, liste actuelle]".
 
@@ -205,8 +212,11 @@ between screens does not end the offer (FR-010):
 - it follows the current screen reader setting: turned on during an offer, the offer stays with
   no limit; turned off, the 5 s count from the removal again, so an offer older than 5 s is
   dismissed at once (FR-010);
-- any other write, including a new removal or a change of the current list, ends the offer
-  first, so only the last removal can be undone;
+- any other write that succeeds, including a toggle, a new removal or a change of the current
+  list, ends the offer, so only the last removal can be undone; a write that fails, or input
+  refused, leaves the offer as it was; an "Annuler" tapped while the offer shows is carried out
+  even if a write made just before it ends the offer while it waits in the write queue
+  ([research.md](../research.md) R8, R9);
 - it is never stored, so closing the app ends it.
 
 A removal whose offer has ended is final. If "Annuler" fails to save, the item stays removed,

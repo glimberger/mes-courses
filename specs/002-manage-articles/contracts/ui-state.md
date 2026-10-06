@@ -31,7 +31,11 @@ type ScreenState<T, E = never> =
 
 interface AppState {
   currentList: ScreenState<CurrentListView>;
-  catalog: { query: string; view: ScreenState<CatalogView, { query: string }> };
+  catalog: {
+    query: string;
+    full: ScreenState<CatalogView>;                          // loaded once, unfiltered (001 R11a)
+    view: ScreenState<CatalogView, { query: string }>;     // full filtered by query
+  };
   lists: ScreenState<ListSummary[]>;
   pendingUndo:
     | { kind: 'removedItem'; removed: RemovedItem; name: string }
@@ -59,7 +63,8 @@ type Notice =
 
 | Action | Behavior |
 |---|---|
-| `loadCurrentList()`, `loadLists()`, `searchCatalog(query)` | Run the query use case for the region; `error` state and report on failure (operation = use case name). Also used by "Réessayer". |
+| `loadCurrentList()`, `loadLists()`, `loadCatalog()` | Run the query use case for the region (`getCatalog` without a query for the catalog); `error` state and report on failure (operation = use case name). Also used by "Réessayer". |
+| `searchCatalog(query)` | Sets `catalog.query` and derives `catalog.view` from the loaded catalog with the domain's `filterCatalog`, synchronously: no storage read, no `loading` state, no report (001 SC-011, [001 research](../../001-shopping-lists/research.md) R11a). A refresh reloads the full catalog and applies the current query again. |
 | `refresh()` | Reloads every region not `idle`. Called after each successful write. |
 | Write actions from 001 (`toggleItem`, `finishShopping`, `addArticleToList`, `createArticleAndAddToList`, `changeItemQuantity`, `removeItem`, `createList`, `setCurrentList`, `createCategory`) | Call the matching use case. `toggleItem` is optimistic (001 R9). `removeItem` sets `pendingUndo` to the removed item. |
 | `editArticle(articleId, { name, categoryId })` | Calls `editArticle`; returns its `Result` so the screen can show field errors. |
@@ -71,22 +76,28 @@ type Notice =
 
 Rules shared by every write action:
 
-1. **Ends the undo offer first**: `pendingUndo` is cleared before the write starts (FR-006a "or
-   until their next change"). Reads, navigation and `undo()` itself do not clear it beforehand.
-2. **Refreshes after success**: `refresh()` runs, so every loaded region shows the change
+1. **One write queue**: every write action joins a single store-wide queue and runs in the
+   order it was called, so changes are saved in the order the user made them (001 FR-004,
+   001 R9). An optimistic tick is shown before its turn comes.
+2. **Ends the undo offer on success**: a write that succeeds clears `pendingUndo`, a toggle
+   included (FR-006a "or until their next change", 001 FR-010). A write that fails, or input
+   refused by a form or a use case, leaves the offer as it was. An `undo()` already queued is
+   carried out even if an earlier queued write ends the offer (001 R8). Reads and navigation
+   never clear it.
+3. **Refreshes after success**: `refresh()` runs, so every loaded region shows the change
    (FR-003, FR-008a, US2-4).
-3. **Unexpected failures**: the thrown error is reported with `{ operation, screen }` only, state
-   is left as it was (for an optimistic tick, the item's queued saves are dropped and the region
+4. **Unexpected failures**: the thrown error is reported with `{ operation, screen }` only, state
+   is left as it was (for an optimistic tick, the item's queued toggles are dropped and the region
    is reloaded from storage, 001 R9), `notice = writeFailed` (or `storageFull`, without a report,
    when the error is `StorageFull`, 001 R12a), and the action
    resolves to `{ ok: false, error: { type: 'WriteFailed' } }` so a form stays open.
-4. **Business errors** (`Result` errors): refused input (`NameError`, `NameAlreadyUsed`,
+5. **Business errors** (`Result` errors): refused input (`NameError`, `NameAlreadyUsed`,
    `QuantityError`) and `AlreadyOnList` returned by `addArticleToList` (001 US2-8) are returned
    to the caller unchanged and are not reported, since the form or dialog shows them.
    `AlreadyOnList` from `restoreRemovedItem` is a failed restore (001 FR-010), handled as below. Every other `Result` error (a missing
    record or the wrong state: `ItemNotOnList`, `ArticleNotFound`, `CategoryNotFound`,
-   `ListNotFound`, `NothingInCart`, ...) cannot come from the user's input: it is handled as in
-   rule 3 (`notice = writeFailed`, state unchanged, resolves to `WriteFailed`) and reported as an
+   `ListNotFound`, ...) cannot come from the user's input: it is handled as in
+   rule 4 (`notice = writeFailed`, state unchanged, resolves to `WriteFailed`) and reported as an
    `UnexpectedResult` error whose code is the result's tag, with no other content (001 FR-030,
    [001 driving ports](../../001-shopping-lists/contracts/driving-ports.md#conventions)).
 

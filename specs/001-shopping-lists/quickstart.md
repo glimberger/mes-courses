@@ -102,10 +102,14 @@ release. Steps 4, 10, 11, 12, 13 and 14, the timing of step 2 and the background
    list until the item shows on it: under 20 seconds, typing included. Do 3 tries, each with a
    new article ("Pois chiches", then "Lentilles", then "Haricots rouges"), on a reference phone,
    by the maintainer.
-3. **Search and duplicates** (US2-10, US2-8, US2-9, US2-14): create "Pommes" and
+3. **Search and duplicates** (US2-10, US2-8, US2-9, US2-14, US2-19): create "Pommes" and
    "Pommes de terre"; search "pom" and "POM"; tap "Lait", check "Déjà dans la liste"; try to
    create " lait " and "Pommes  de  terre" (double spaces): each is refused as already
-   existing (FR-021); search "xyz" and check the "no match" state. Count the gestures (SC-003):
+   existing (FR-021); search "xyz" and check the "no match" state; create "Pâte", search
+   "pâté", and from "Nouvel article" create "pâté" with its name prefilled (FR-008); try to
+   create " lait " with "1" "L", choose "Ajouter « Lait »": the "already on the list" dialog
+   opens (US2-20); create "Lait 10 L" and "Lait 2 L" in Crèmerie: "Lait 2 L" is listed first
+   (Assumptions). Count the gestures (SC-003):
    adding "Pommes" by browsing takes at most 3 taps, and by searching at most 3 taps and 3
    letters, tapping the search field and "Ajouter" included.
 4. **Airplane mode** (US1-2 to US1-7, US1-5, SC-002, SC-006): turn on airplane mode, go
@@ -136,18 +140,24 @@ release. Steps 4, 10, 11, 12, 13 and 14, the timing of step 2 and the background
     (FR-038). Set the system text size to the maximum (200%) and check nothing is cut off
     or overlaps. Check ticked rows show a check mark and struck-through text in light and dark
     mode.
-11. **Long list** (SC-008): build a release with `EXPO_PUBLIC_SEED_ITEMS=200` (the
-    composition root then fills an empty store to the spec's data size through the use cases:
-    1 000 articles, 20 lists, and 200 items on the current list; builds for users never set
-    it). Record a 10-second scroll with Android's GPU rendering profile
-    (`adb shell dumpsys gfxinfo <package>`) and with Xcode Instruments' Animation Hitches on
-    iOS: at least 55 frames per second on average, and at most 5% of frames dropped (janky).
-    Film 50 ticks and unticks with the phone's slow-motion camera (240 frames per second): at
-    least 48 of them show within 100 ms (24 frames) of the finger touching the screen
-    (SC-002, SC-008).
-12. **Start time** (SC-001): on the release build of step 11, filled to the spec's data size,
-    stop the app completely (swipe it away), then time from tapping the icon until a tap on an
-    item ticks it. Repeat 10 times: at least 9 launches are under 2 seconds.
+11. **Long list** (SC-008): build a `preview` release with the measurement seed,
+    `EXPO_PUBLIC_SEED_ITEMS=200 eas build --profile preview` (the composition root then fills
+    an empty store to the spec's data size through the use cases: 1 000 articles, 20 lists, and
+    200 items on the current list; builds for users never set it). Set up each phone as
+    [research.md](research.md) R11 says: screen at 60 Hz (on a ProMotion iPhone, Accessibility →
+    Motion → Limit Frame Rate), airplane mode on, battery saver off, screen reader off, default
+    text size, light theme, other apps closed. Record a 10-second scroll with Android's GPU
+    rendering profile (`adb shell dumpsys gfxinfo <package>`, "Janky frames") and with Xcode
+    Instruments' Animation Hitches on iOS: at least 55 frames per second on average, and at most
+    5% of frames dropped (a dropped frame misses its display deadline). Film 50 ticks and
+    unticks with a second phone's slow-motion camera (240 frames per second), tapping as fast as
+    you can (about 3 per second) on different items: at least 48 of them show within 100 ms (24
+    frames) of the finger touching the screen (SC-002, SC-008).
+12. **Start time** (SC-001): on the build and setup of step 11, stop the app completely (swipe
+    it away) and film the screen in slow motion. Time from the frame where the finger touches
+    the icon to the first frame where the current list is fully drawn; your own reaction
+    before tapping is not counted. Then tap an item: it ticks or unticks within 100 ms, as in step 11.
+    Repeat 10 times: at least 9 launches are under 2 seconds.
 
 13. **Power cut** (FR-028, SC-007): on an Android emulator running the release build, tick an
     item, then about one second after the tick shows (so its save has finished, SC-007), run
@@ -161,9 +171,19 @@ release. Steps 4, 10, 11, 12, 13 and 14, the timing of step 2 and the background
     check the lists come back. The startup error state (FR-039) and the "update required"
     state (FR-040) cannot be caused by hand on a normal build; their stories and `App.test.tsx`
     cover them.
+15. **Add screen at full catalog size** (SC-011, [research.md](research.md) R11a): on the build
+    and setup of step 11, film the screen in slow motion. From the current list, tap "Ajouter"
+    10 times (going back each time): at least 9 times, the articles show within 1 second of the
+    finger touching "Ajouter". Then type 30 letters into the search field as whole words at normal
+    speed (about 3 letters per second), words the seed contains such as "pommes", "lait",
+    "farine", clearing the field between words: for at least 29 of them (95%), within 300 ms of
+    the finger touching the letter, the list shows the results for the text in the field.
 
-Steps 4, 11 and 12 (SC-001, SC-002, SC-008) are run on the two reference phones of the spec:
-an entry-level Android phone about five years old, and the maintainer's iPhone.
+Steps 4, 11, 12 and 15 (SC-001, SC-002, SC-008, SC-011) are run on the two reference phones
+of the spec: an entry-level Android phone about five years old, and the maintainer's iPhone.
+Record each result per phone in the pull request's test plan. A target missed on either phone
+blocks the release until it is met; record the miss, its cause and the measurement after the
+fix ([research.md](research.md) R11).
 
 ## 6. Error tracking (Principle VIII, FR-030, FR-030a)
 

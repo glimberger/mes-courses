@@ -2,8 +2,8 @@
 
 **Branch**: `feat/001-shopping-lists` | **Date**: 2026-10-05 (amended 2026-10-06 for constitution
 v2.1.0, monorepo, then for Storybook and Detox, then for constitution v2.1.1, then for the
-data clarifications, the failure-flow clarifications, the data checklist review and the
-observability clarifications) |
+data clarifications, the failure-flow clarifications, the data checklist review, the
+observability clarifications and the two passes of performance clarifications) |
 **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/001-shopping-lists/spec.md`
@@ -55,10 +55,17 @@ workspace (R23)
 **Project Type**: mobile app, the first workspace (`apps/mobile/`) of a Yarn workspaces monorepo,
 plus the test-only `tests/e2e/` workspace
 
-**Performance Goals**: current list usable within 2 s of a cold start, in 9 of 10 launches
-(SC-001); 95% of 50 ticks shown within 100 ms (SC-002); a 200-item list scrolled and ticked at
-55 frames per second or more on average, with at most 5% of frames dropped (SC-008); all three on a
-release build on an entry-level Android phone about five years old and the maintainer's iPhone
+**Performance Goals**: current list fully drawn and accepting taps within 2 s of a cold start, in
+9 of 10 launches with existing data, the tester's reaction time not counted, no target for the
+first launch or the first launch after an update (SC-001); 95% of 50 ticks shown within 100 ms,
+tapped about 3 per second on different items (SC-002); a 200-item list scrolled and ticked at 55 frames per second or more on average,
+with at most 5% of frames dropped, the screen set to 60 Hz (SC-008); the add screen showing a
+1 000-article catalog within 1 s of opening, in 9 of 10 openings, and search results updated
+within 300 ms of 95% of letters typed, whole words at about 3 letters per second (SC-011, R11a); all four on one `preview` build filled by
+the measurement seed, on an entry-level Android phone about five years old and the maintainer's
+iPhone, a miss on either phone blocking the release (R11). No other action has a time target,
+and none is promised above the measurement sizes; no target for memory, battery or download
+size (spec Assumptions)
 
 **Constraints**: fully offline, no network on any path (FR-027, Principle VII); no server
 synchronization in this feature (deferred, R19, Complexity Tracking); every change
@@ -79,8 +86,8 @@ the device, at most 30 (FR-030a); a screen failing while drawing replaced by a f
 that restarts the app (FR-039a, R13a)
 
 **Scale/Scope**: one user, one device; 4 screens and 4 dialogs; up to 1 000 articles in the
-catalog, 20 lists and 200 items per list (spec Assumptions), with SC-001, SC-002 and SC-008 measured at
-that size; 5 tables
+catalog, 20 lists and 200 items per list (spec Assumptions), with SC-001, SC-002, SC-008 and SC-011
+measured at that size (measurement sizes, not limits), on data shaped like real use (R11); 5 tables
 
 No NEEDS CLARIFICATION remains: the stack was chosen by the maintainer (React Native with Expo),
 and every other unknown is resolved in [research.md](research.md).
@@ -132,7 +139,7 @@ justified. The design adds no layer, port or dependency beyond those above. Poin
   the quantity grammar are pure domain rules (R6, R7); the startup error is the existing
   `ErrorState` shown by `App.tsx` (R18a); the backup choice is one Expo config key (R18b).
   Editing only the current list (FR-008) is a UI rule: the use cases keep their `listId`.
-- The failure-flow clarifications add no port or dependency either: per-item save queues and a
+- The failure-flow clarifications add no port or dependency either: the store's write queue and a
   reload on failure live in the store (R9), finishing shopping already runs in one transaction
   (R9a), `StorageError` and `DataFromNewerVersion` are thrown by the SQLite adapter (R13, R18c;
   `DataFromNewerVersion` is declared with the ports, since adapters never import each other, R15),
@@ -149,6 +156,11 @@ justified. The design adds no layer, port or dependency beyond those above. Poin
   `beforeSend` filter with its once-per-opening set (R13). Native crashes are reported, so no
   failure is silent. Their installation id is the pseudonymous identifier Principle VIII
   allows; the spec accepts it for native crashes only (FR-030).
+- The performance clarifications add no port, layer or dependency: `filterCatalog` is a pure
+  domain function that `getCatalog` already needed, and the store keeps the loaded catalog and
+  filters it as the user types (R11a); measurement is a quickstart procedure on the existing
+  measurement seed and `preview` profile (R11). FlashList stays out until SC-008 is missed
+  (Principle IV).
 - Nothing in the design blocks the sync feature: ids are device UUIDs that never change, each
   change is one `UnitOfWork` transaction (where a later outbox write can join it), and no read
   model assumes the device holds the only copy. The open questions for that feature (first-launch
@@ -285,7 +297,7 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
   - `app.config.ts` sets `android.allowBackup: true` (R18b);
   - US2-5 makes "Gâteau" current before adding to it (FR-008).
 - **Failure-flow clarifications (2026-10-06)**, to be reflected in the existing tasks:
-  - the store's tick queue per item, with dropped queued toggles and a reload on failure (R9);
+  - the store's write queue, with an item's queued toggles dropped and a reload on failure (R9);
   - a failed "Annuler" ends the offer with the usual notice (R8); a failed "Terminer les
     courses" closes the dialog with focus back on the action (R9a);
   - the SQLite adapter's `StorageError` with no original text or stack (R13);
@@ -329,6 +341,53 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
   - the traceability test (T138) also collects FR-030a and FR-039a;
   - the README tells the maintainer what to declare in the store privacy details if the app is
     published (spec Assumptions, R13).
+- **Domain clarifications (2026-10-06)**, reflected in the existing tasks
+  ([checklists/domain.md](checklists/domain.md)):
+  - one store-wide write queue instead of one per item: every change is saved in the order the
+    user made it, so "Terminer les courses" or a removal waits for earlier toggles and still runs
+    when one fails; a failed toggle drops only that item's queued toggles (R9, T049, T069, T088);
+  - the "Annuler" offer ends on a successful write, a toggle included, and survives a failed
+    write or refused input; an "Annuler" already queued is carried out (R8, T049, T088);
+  - `normalizedName` folds "œ", "æ" and "’", so "Oeufs" and "Œufs" are the same name, and search
+    inherits it (R6, T020, T085, T087);
+  - "Nouvel article" is always shown on AddArticles and prefills the cleaned query (FR-008,
+    US2-19, T092);
+  - the data sizes are measurement sizes, not limits: no use case refuses beyond them (R6);
+  - `cleanName` removes invisible characters and treats every Unicode space as a space (R6,
+    T020);
+  - the add button for the matching article in CreateArticle adds with the typed quantity, and an `AlreadyOnList`
+    result opens the already-on-list QuantityDialog (US2-9, US2-20, T093);
+  - CreateArticle preselects the category of the empty state it was opened from (FR-018, T092,
+    T093, T103);
+  - a created list is not made current and the user stays on Lists (FR-024, T112); user
+    categories stay after "Divers" (`max(position) + 1`, unchanged);
+  - one `compareNames` (French collator, `numeric: true`) sorts items, the catalog and the
+    lists (R6, T020, T066, T085, T109);
+  - the optimistic tick also updates `remainingCount` and `hasItemsInCart`, so "Terminer les
+    courses" follows the ticks shown (FR-007, T069);
+  - tapping the current list on Lists saves nothing and keeps the undo offer (FR-025, T111);
+  - changing a quantity keeps the tick and the lists count all items: already in the data
+    model and contract, now cited by FR-015 and US3-8.
+- **Performance clarifications (2026-10-06)**, to be reflected in the existing tasks:
+  - `filterCatalog(view, query)` in the domain, test-first: it keeps the order of the full view,
+    drops empty sections, and computes each article's search form once per view; `getCatalog`
+    uses it (R11a, T085, T095, T087);
+  - the store's `catalog` region holds the full view; `loadCatalog()` reads it when AddArticles
+    opens and on "Réessayer", and `searchCatalog(query)` filters it synchronously with no storage
+    read and no `loading` state, asserted by a store test where a second `getCatalog` call would
+    fail ([002 ui-state contract](../002-manage-articles/contracts/ui-state.md), T088, T098);
+  - the measurement seed is built into a `preview` build for SC-001, SC-002, SC-008 and SC-011
+    (R11, T135); quickstart steps 11 and 12 set the screen to 60 Hz and time on slow-motion
+    video, and new step 15 checks SC-011; T137 records each result per phone, and any miss
+    blocks the release (spec Success Criteria);
+  - the traceability test needs no change: SC ids are not collected, and SC-011 is cited by
+    quickstart §5;
+  - second round: the measurement seed builds data shaped like real use (R11, T135): 1 000
+    realistic French names from a base list of 100 common products, each with numbered
+    variants ("Pommes", "Pommes 2" … "Pommes 10"), 100 of them lengthened to exactly 60
+    characters; 200 items on the current list, every other one ticked and every other pair with
+    a quantity, so the four combinations of ticked and quantity occur; 50 items on each of the
+    19 other lists; quickstart steps 11 and 15 state the tap and typing pace.
 - No task touches the network or the server: synchronization belongs to the sync feature (R19).
 - The Sentry project is in place (done by the maintainer). The Sentry DSN and build credential
   live in EAS environment variables, set by the maintainer, and are never committed.

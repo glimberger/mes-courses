@@ -40,7 +40,7 @@ What the delete confirmation shows (FR-006, US2-3).
 ```text
 ArticleUsage = {
   article: { id, name }
-  lists: Array<{ id, name }>    // lists holding the article, sorted by name (French collator)
+  lists: Array<{ id, name }>    // lists holding the article, sorted by name with 001's `compareNames` (numbers by value)
 }
 ```
 
@@ -55,7 +55,7 @@ Article
 Pending undo (UI store, one slot for the whole app)
   none --removeItemFromList / deleteArticle succeeds--> offered(snapshot)
   offered --"Annuler"--> none (restore runs)
-  offered --5 s elapse (no screen reader) | snackbar dismissed | any other write starts | app killed--> none (final)
+  offered --5 s elapse (no screen reader) | snackbar dismissed | any other write succeeds | app killed--> none (final)
   offered(A) --another undoable change--> offered(B)  (A becomes final)
 ```
 

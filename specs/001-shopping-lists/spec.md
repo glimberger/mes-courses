@@ -65,8 +65,8 @@
   and stays readable in the subtitle.
 - Q: On which device and with which figure are SC-001, SC-002 and SC-008 measured? → A: On a
   release build, on an entry-level Android phone about five years old and on the maintainer's
-  iPhone; SC-008 means at least 55 frames per second while scrolling and ticking, with each
-  tick shown within 100 ms.
+  iPhone; SC-008 means at least 55 frames per second while scrolling and ticking, with ticks
+  shown within 100 ms (the share is set below, in SC-002).
 - Q: Can items be added, removed or changed only on the current list, or also on a list that
   is not current? → A: Only on the current list; to edit another list, the user makes it
   current first.
@@ -156,7 +156,8 @@
   catalog as if nothing were typed; "œ" and "æ" match "oe" and "ae" both ways (FR-009).
 - Q: When does SC-001's 2-second clock start and stop? → A: Cold start only: from the icon tap,
   with the application fully stopped, until the current list (200 items, 1 000-article
-  catalog) is shown and a tap ticks an item; at least 9 of 10 launches under 2 seconds.
+  catalog) is shown and accepts taps; at least 9 of 10 launches under 2 seconds (stop point
+  refined below).
 - Q: Do scenarios keep their numbers when one is added or removed? → A: Yes: a scenario is cited
   as "US<story>-<n>" and its number never changes; a new scenario takes the next free number at
   the end of its story, and a removed one leaves its number unused, marked "Removed".
@@ -272,6 +273,90 @@
 - Q: Are the theme's medium- and high-contrast color variants used in this feature? → A: No:
   only the light and dark themes are built and checked (FR-036); the variants stay in the theme
   file until a feature selects them (plan, research R2).
+- Q: When "Terminer les courses" is confirmed, or an item removed, while ticks on that list are
+  still being saved, in which order are the changes saved? → A: Every save follows the order the
+  user made the changes, across items and actions: the action is saved after the ticks made
+  before it; if one of those ticks fails, the later action is still saved, and only that tick
+  returns to its stored state (FR-004).
+- Q: Does a tick or untick end the "Annuler" offer, and does a refused input or a failed save?
+  → A: Every saved change ends it, ticks and unticks included; a refused input or the failed save
+  of another change changes nothing and leaves the offer as it was; a failed "Annuler" still ends
+  it (FR-010).
+- Q: Are names differing only by "œ"/"oe", "æ"/"ae" or a straight or curly apostrophe (' ’) the
+  same name? → A: Yes: these pairs are equal for uniqueness, as for search, so "Oeufs" and
+  "Œufs" cannot both exist; accents still count ("Pâte" ≠ "Pâté") (FR-021, FR-009).
+- Q: Are the expected data sizes limits the application enforces? → A: No: they are the sizes
+  SC-001, SC-002, SC-008 and SC-011 are measured at; nothing is refused beyond them, and performance is
+  not promised beyond them (Assumptions).
+- Q: From the add screen, can the user always start creating an article, even when the search
+  finds matches, and is the search text used as its name? → A: Yes: creating an article is
+  always offered on the add screen, and its name is prefilled with the search text cleaned like
+  a name (FR-008, US2-19).
+- Q: When creating an article whose name exists and choosing the existing one instead, is the
+  typed quantity kept, and what if that article is already on the current list? → A: The
+  existing article is added with the quantity typed in the form; if it is already on the
+  current list, the "already on the list" offer of US2-8 is shown instead (FR-011, US2-9,
+  US2-20).
+- Q: Does a newly created list become current, and where does the user land? → A: No: it is
+  not current; the user stays on the screen of my lists, where it appears in its alphabetical
+  place, and makes it current by choosing it (FR-024, US3-2).
+- Q: Is a category preselected when the article form opens? → A: Only when it is opened from an
+  empty category's "create an article" action: that category is preselected; opened in any
+  other way, no category is preselected and one must be chosen (FR-018).
+- Q: Where do categories the user creates appear: after "Divers", or just before it? → A: After
+  "Divers", in creation order; the order is kept until a later feature allows reordering
+  (Key Entities).
+- Q: Which characters count as spaces when names and units are cleaned, and is a name made only
+  of invisible characters blank? → A: Every Unicode space (non-breaking ones included), tab and
+  line break counts as a space; invisible characters (zero-width space, zero-width non-joiner,
+  zero-width joiner, word joiner, byte order mark) are removed, so a name left empty is refused
+  as blank (FR-022).
+- Q: Does an item stay ticked when its quantity is changed or cleared? → A: Yes: only the
+  quantity changes, the ticked state is kept (FR-015).
+- Q: What happens when the user chooses the list that is already current? → A: Nothing is
+  saved: the user returns to the current list screen and the "Annuler" offer stays (FR-025).
+- Q: Does each list's count on the screen of my lists show all its items or only those left to
+  buy? → A: All its items, ticked or not (US3-8).
+- Q: Does "Terminer les courses" follow the ticks shown or the ticks saved? → A: The ticks
+  shown: it appears as soon as an item is shown ticked, and hides again if the last ticked item
+  returns to unticked after a failed save (FR-007).
+- Q: Are numbers in names sorted by value or character by character? → A: By value: "Lait 2 L"
+  comes before "Lait 10 L", wherever names are sorted (Assumptions).
+- Q: What happens when a confirmed "Terminer les courses" runs after the only tick's save
+  failed, so no item is ticked any more? → A: It changes nothing and is not a failure: nothing
+  more is shown and nothing is reported (FR-007).
+- Q: Do the add screen and its search, and actions shown only after their save, get a time
+  target at full catalog size? → A: The add screen and its search do: articles shown within
+  1 second of opening and results updated within 300 ms of each letter, with 1 000 articles,
+  on the reference phones; no other action gets a time target (SC-011).
+- Q: Must a list of more than 200 items still meet SC-008? → A: No: SC-008 is promised up to 200
+  items; above that, items are accepted and shown, but no frame rate or tick time is promised
+  (Edge Cases, Assumptions).
+- Q: Where does SC-001's clock stop, and does the tester's reaction time count? → A: It stops
+  when the current list is fully drawn and accepts taps; the tester's reaction time is not
+  counted, and the first tap then meets SC-002; timed on a slow-motion video, from the finger
+  touching the icon (SC-001).
+- Q: How are SC-008's 55 frames per second and dropped frames read on a 90 or 120 Hz screen?
+  → A: Both reference phones are measured with the screen set to 60 Hz; a dropped frame is one
+  that misses its display deadline (Android "janky frames", iOS hitches) (SC-008).
+- Q: When SC-001, SC-002, SC-008 or SC-011 is missed on a reference phone, is the release
+  blocked? → A: Yes: the release waits until every target is met on both phones; the miss and
+  its fix are recorded in the pull request's test plan (Success Criteria).
+- Q: What does the data used to measure performance look like, beyond its counts? → A:
+  Realistic French article names (common products, completed with numbered variants), 10% of
+  them at the 60-character limit; on the current list, half the items ticked and half with a
+  quantity; each of the 19 other lists holding 50 items (Assumptions).
+- Q: Do the first launch and the first launch after an update have a start-time target? → A:
+  No: SC-001 applies to launches with existing data; the first launch and the first launch
+  after an update have no time target (SC-001).
+- Q: At what pace are the 50 ticks and unticks of SC-002 and SC-008 made? → A: As fast as the
+  tester can tap (about 3 per second), on different items, so earlier saves are still waiting
+  when later taps land; SC-008's ticks are those of SC-002 (SC-002, SC-008).
+- Q: At what pace are the 30 search letters of SC-011 typed? → A: As whole words at normal
+  typing speed (about 3 letters per second); each letter's results show within 300 ms of the
+  letter being typed (SC-011).
+- Q: Does this feature set limits on memory use, battery drain or download size? → A: No: none
+  of them has a target in this feature; a later feature may add one (Assumptions).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -374,7 +459,8 @@ matches.
    change its quantity.
 9. **Given** an article named "Beurre" exists, **When** I try to create an article named
    " beurre " (different case or surrounding spaces), **Then** no duplicate is created and the
-   existing "Beurre" is offered instead.
+   existing "Beurre" is offered instead; choosing it adds "Beurre" to the current list with
+   the quantity typed in the form, if any.
 10. **Given** I type part of a name, "pom", **When** I search the catalog, **Then** articles
     whose name contains it, ignoring case and accents ("Pommes", "Pommes de terre"), are
     shown under their category heading, in that order; typing "oeuf" finds "Œufs", and a
@@ -397,6 +483,13 @@ matches.
 18. **Given** the catalog cannot be read from the device, **When** the add screen appears,
     **Then** an error state says in French that the articles could not be loaded, offers to
     retry, and the error is reported.
+19. **Given** the catalog holds "Pâte" and I search " pâté ", **When** "Pâte" is shown and I
+    choose to create a new article, **Then** the article form opens with the name "pâté", and
+    confirming with a category creates "pâté" and adds it to the current list.
+20. **Given** "Beurre" exists and is already on the current list with "250 g", **When** I try
+    to create " beurre " with "500 g" and choose the existing "Beurre" offered instead,
+    **Then** it is not added twice: I am told it is already on the list and offered to change
+    its quantity, prefilled with "250 g", as in US2-8.
 
 ---
 
@@ -418,7 +511,8 @@ application and check "Barbecue" is shown if it was current.
 1. **Given** a fresh installation, **When** I open the application, **Then** one empty list
    named "Ma liste" exists and is current.
 2. **Given** I have the list "Ma liste", **When** I create a list named "Barbecue", **Then**
-   it appears among my lists with that name, empty.
+   it appears among my lists with that name, empty, in its alphabetical place; "Ma liste"
+   stays current and I stay on the screen of my lists.
 3. **Given** the lists "Ma liste" (current) and "Barbecue" exist, **When** I choose
    "Barbecue" as current, **Then** the current list screen shows "Barbecue", and reopening the
    application shows "Barbecue".
@@ -433,7 +527,7 @@ application and check "Barbecue" is shown if it was current.
    appears, **Then** a loading state is shown; if they cannot be read, an error state offers
    to retry and the error is reported.
 8. **Given** several lists exist, **When** I open the screen of my lists, **Then** each list
-   shows its name, its number of items, and which one is current, and the lists are sorted
+   shows its name, its number of items (all of them, ticked or not), and which one is current, and the lists are sorted
    alphabetically by name (French collation), the current one included.
 
 ---
@@ -486,7 +580,8 @@ the new heading.
 - Very long article, category or list names: names are limited to 60 characters and shown in
   full by wrapping, never cut off silently. Units are limited to 15 characters (FR-022,
   FR-033).
-- Many items (200 or more) on one list: scrolling and ticking meet SC-008.
+- Many items on one list: up to 200 items, scrolling and ticking meet SC-008; above 200, items
+  are still accepted and shown, but no frame rate or tick time is promised (Assumptions).
 - The application cannot open, update or set up its storage at startup: a full-screen error
   state says "L'application n'a pas pu démarrer." and offers "Réessayer", the error is
   reported, and stored data is never deleted or reset automatically (FR-039).
@@ -499,7 +594,9 @@ the new heading.
   when the save fails, with the same message and report. Repeated taps on one item are each
   shown at once and saved in tap order; when one of them fails, the taps still waiting behind it
   are dropped, so the item shows what is stored (for example: tick saved, untick fails, a third
-  tap waiting is dropped, and the item shows ticked). A failed "Annuler" leaves the item removed
+  tap waiting is dropped, and the item shows ticked). "Terminer les courses" or a removal made
+  while ticks are still being saved is saved after them; if one of those ticks fails, the action
+  is still saved (FR-004). A failed "Annuler" leaves the item removed
   and ends the undo offer, with the same message and report (FR-010). A failed "Terminer les
   courses" changes no item: the dialog closes, with the same message and report, and the action
   stays offered (FR-007).
@@ -526,23 +623,32 @@ the new heading.
   cart) with a single tap, and the new state MUST be shown immediately. Taps MUST be saved in
   the order they were made; when a save fails, the item MUST show the state last saved on the
   device, and taps on that item still waiting to be saved MUST be dropped. Only taps made after
-  the failure are saved.
+  the failure are saved. Every change, not only taps, MUST be saved in the order the user made
+  it: "Terminer les courses" (FR-007) or a removal (FR-010) is saved after the ticks made before
+  it, and a failed tick drops only taps on that item, never a later action of another kind. A
+  removal saved after a failed tick keeps, for "Annuler", the ticked state stored on the device.
 - **FR-005**: Within a category, unticked items MUST be shown before ticked items.
 - **FR-006**: A list MUST show how many of its items are left to put in the cart.
 - **FR-007**: Users MUST be able to finish shopping on a list: after a confirmation, every item
   of that list is unticked and kept with its quantity, all or nothing: if saving fails, no item
   changes. The action MUST be offered only while
-  at least one item of the list is ticked.
+  at least one item of the list is shown ticked, including a tick whose save has not finished;
+  it hides again when a failed save returns the last ticked item to unticked (FR-004).
+  Finishing shopping when no item is ticked any more (a confirmed finish saved after the only
+  tick failed) changes nothing and is not a failure: nothing is shown and nothing is reported.
 
 **Editing a list**
 
 - **FR-008**: Users MUST be able to add an existing article to the current list, by browsing the
   catalog by category or by searching by name. Items are added, removed, ticked and have their
   quantity changed only on the current list; to edit another list, the user makes it current
-  first (FR-025).
+  first (FR-025). Creating a new article (FR-018) MUST be offered on the add screen at all
+  times, whether or not a search finds matches; when a search text is typed, the new article's
+  name is prefilled with it, cleaned as in FR-022.
 - **FR-009**: Search MUST match articles whose name contains the typed text, ignoring case and
   every mark added to a letter (accents, cedilla, diaeresis, tilde: "francais" finds "Français",
-  "mais" finds "Maïs"), with "œ" and "æ" matching "oe" and "ae" both ways ("oeuf" finds "Œufs").
+  "mais" finds "Maïs"), with "œ" and "æ" matching "oe" and "ae" both ways ("oeuf" finds "Œufs")
+  and a straight apostrophe matching a curly one both ways ("d'amande" finds "Pâte d’amande").
   The typed text is first trimmed, with repeated inner spaces reduced to one; when nothing is
   left, the full catalog is shown as if nothing were typed. Results MUST be shown like the
   browsed catalog: under their category headings in category order, sorted alphabetically
@@ -554,15 +660,20 @@ the new heading.
   stay offered until the user dismisses it or makes another change. The offer follows the
   current setting: when the screen reader is turned off during an offer, the 5 seconds count
   from the removal, so an offer older than 5 seconds ends at once. Only the last removal can be
-  undone: any other change (including a new removal or switching the current list) and stopping
+  undone: any other change (any change the user makes that is saved, including a tick or untick,
+  a new removal or switching the current list) and stopping
   the application (swiped away or killed by the system) end the offer, while moving between
   screens or sending the application to the background does not; the 5-second limit keeps
-  running in the background. A removal whose offer has ended is final. If restoring the item
+  running in the background. A refused input (FR-016, FR-022) or the failed save of another
+  change changes nothing and does not end the offer. A removal whose offer has ended is final. An "Annuler" chosen while the offer is shown is
+  carried out, even when a change made just before it, still being saved, ends the offer. If restoring the item
   fails, it stays removed and the offer ends; the failed save is handled as in Edge Cases.
 - **FR-011**: An article MUST appear at most once on a given list; it may appear on several
   lists. When browsing or searching the catalog to add articles, articles already on the list
   MUST stay visible with an "already on the list" mark; choosing one MUST NOT duplicate or
-  remove it, and MUST offer to change its quantity.
+  remove it, and MUST offer to change its quantity. The same applies when an article is chosen
+  instead of creating a duplicate (US2-9): it is added with the quantity typed in the create
+  form, or, when already on the list, the same offer is shown (US2-20).
 - **FR-012**: Items newly added to a list MUST be unticked.
 
 **Quantities**
@@ -571,7 +682,8 @@ the new heading.
   on a given list.
 - **FR-014**: When adding an article to a list, users MUST be able to give an optional
   quantity: a positive number (decimals allowed) with an optional free-text unit.
-- **FR-015**: Users MUST be able to change or clear the quantity of an item already on a list.
+- **FR-015**: Users MUST be able to change or clear the quantity of an item already on a list;
+  the item keeps its ticked state.
 - **FR-016**: A unit MUST NOT be accepted without a quantity; a quantity of zero, a negative
   quantity or a non-numeric quantity MUST be refused with a French message. A quantity MUST be
   written with digits and at most one decimal comma or point, with digits on both sides of it,
@@ -585,16 +697,23 @@ the new heading.
 **Articles and categories**
 
 - **FR-018**: Users MUST be able to create an article with a name and exactly one category.
+  When the article form is opened from the empty state of a category (US2-15), that category
+  MUST be preselected; opened in any other way, no category is preselected and the article is
+  not created until one is chosen, with a French message asking for it.
 - **FR-019**: Users MUST be able to create a category with a name.
 - **FR-020**: The application MUST provide the default categories listed in Assumptions on
   first launch.
 - **FR-021**: Article names MUST be unique in the catalog, and category names unique among
   categories. Two names are the same when they match ignoring case, leading and trailing
-  spaces, repeated inner spaces, and how an accented letter was typed (one composed character
-  or a letter followed by an accent mark). Accents count: "Pâte" and "Pâté" are different
+  spaces, repeated inner spaces, how an accented letter was typed (one composed character
+  or a letter followed by an accent mark), "œ" or "oe", "æ" or "ae", and a straight or curly
+  apostrophe (' or ’): "Oeufs" and "Œufs" are the same name. Accents count: "Pâte" and "Pâté" are different
   names.
 - **FR-022**: Names (articles, categories, lists) MUST be non-blank, trimmed, with repeated
-  inner spaces reduced to one, and at most 60 characters long. Units MUST be cleaned the same
+  inner spaces reduced to one, and at most 60 characters long. Every Unicode space
+  (non-breaking spaces included), tab and line break counts as a space, and invisible
+  characters (zero-width space, zero-width non-joiner, zero-width joiner, word joiner, byte
+  order mark) are removed first, so a name made only of them is blank. Units MUST be cleaned the same
   way and be at most 15 characters long after cleaning; a unit left empty by cleaning means no
   unit, with no error.
 
@@ -606,9 +725,12 @@ the new heading.
   Setting up the default categories (FR-020) and "Ma liste" MUST be all or nothing: an
   interrupted first launch leaves nothing set up, and the next launch sets everything up again.
 - **FR-024**: Users MUST be able to create further lists, each with a unique name (same
-  uniqueness rule as FR-021).
+  uniqueness rule as FR-021). Creating a list MUST NOT make it current: the user stays on the
+  screen of their lists and chooses it to make it current (FR-025).
 - **FR-025**: Users MUST be able to see all their lists and choose which one is current; the
-  choice MUST be kept across application restarts.
+  choice MUST be kept across application restarts. Choosing the list that is already current
+  is not a change: nothing is saved, the user returns to the current list screen, and the
+  "Annuler" offer (FR-010) stays.
 - **FR-026**: Each list MUST keep its own items, quantities and ticked states, independent of
   other lists.
 
@@ -659,7 +781,7 @@ the new heading.
   In this feature, the expected situations, never reported, are exactly these three: a full device storage,
   data saved by a newer version of the application (FR-040), and input refused with a French
   message (a name empty, too long or already used, FR-021 and FR-022; an invalid quantity or
-  unit, FR-016 and FR-022). Every other failure is an unexpected error. Being told an article
+  unit, FR-016 and FR-022; no category chosen for a new article, FR-018). Every other failure is an unexpected error. Being told an article
   is already on the list (FR-011, US2-8) is a choice offered, not a failure.
 - **FR-030a**: A report raised without network MUST be stored on the device and sent when the
   network returns. At most 30 reports are kept; when a new report would exceed that, the oldest
@@ -722,7 +844,8 @@ the new heading.
 
 - **Category**: a named group of articles (for example "Fruits et légumes"). Either provided
   by default or created by the user. Has a display order; user-created categories come after
-  the default ones, in creation order.
+  every default one, "Divers" included, in creation order, and the order never changes in
+  this feature (reordering is out of scope).
 - **Article**: something the user buys, identified by a unique name, belonging to exactly one
   category. Lives in the catalog independently of any list and has no quantity.
 - **Catalog**: the set of all known articles, the source the user picks from to fill lists.
@@ -736,12 +859,16 @@ the new heading.
 
 ### Measurable Outcomes
 
-- **SC-001**: From the tap on the application icon, with the application fully stopped (cold
-  start), the current list is shown and a tap ticks an item in under 2 seconds, for at least
-  9 of 10 launches, with a 200-item current list and a 1 000-article catalog.
+- **SC-001**: From the finger touching the application icon, with the application fully
+  stopped (cold start), the current list is fully drawn and accepts taps in under 2 seconds,
+  for at least 9 of 10 launches, with a 200-item current list and a 1 000-article catalog. The
+  tester's reaction time is not counted; the first tap on an item then meets SC-002. Timed on
+  a slow-motion video of the screen. SC-001 applies to launches with existing data: the first
+  launch (FR-023) and the first launch after an update have no time target.
 - **SC-002**: A tick or untick is visible within 100 ms of the tap, with or without network,
   for at least 95% of 50 ticks and unticks in a row, on a 200-item current list with a
-  1 000-article catalog.
+  1 000-article catalog. The taps are made as fast as the tester can (about 3 per second), on
+  different items, so earlier saves are still waiting when later taps land.
 - **SC-003**: From the add screen, adding an existing article to a list without a quantity
   takes at most 3 taps when browsing by category, or at most 3 taps and 3 typed letters when
   searching. Every tap counts, including the confirmation and tapping the search field;
@@ -758,21 +885,30 @@ the new heading.
   changed or cleared, creation of an article, a category or a list, finishing shopping, current
   list choice) whose save on the device has finished is lost after the application is closed,
   killed, the device restarted or its power suddenly lost.
-- **SC-008**: On a list of 200 items, a 10-second scroll and 50 ticks run at 55 frames per
-  second or more on average, with at most 5% of frames dropped, and at least 95% of the ticks
-  are shown within 100 ms.
+- **SC-008**: On a list of 200 items, a 10-second scroll and the 50 ticks of SC-002 run at 55
+  frames per second or more on average, with at most 5% of frames dropped, and the ticks meet
+  SC-002. Measured with the screen set to 60 Hz on both reference phones; a
+  dropped frame is one that misses its display deadline (Android "janky frames", iOS hitches).
 - **SC-009**: Every action of this spec (listed below) can be completed with the screen reader
   alone, and with the system text size at 200%.
 - **SC-010**: A report reaches error tracking within 1 minute: of the error, when the network is
   on; of the network returning, while the application is open; of the next opening of the
   application, after a crash in native code (FR-030, FR-030a).
+- **SC-011**: With a 1 000-article catalog, the add screen shows its articles within 1 second
+  of tapping "Ajouter" on the current list, for at least 9 of 10 openings, and the search
+  results update within 300 ms of each letter typed, for at least 95% of 30 letters typed,
+  as whole words at normal typing speed (about 3 letters per second).
+  No other action of this spec has a time target beyond SC-001, SC-002, SC-004, SC-008 and
+  SC-010.
 
-SC-001, SC-002 and SC-008 are measured on a release build, on two reference phones: an
-entry-level Android phone about five years old, and the maintainer's iPhone.
+SC-001, SC-002, SC-008 and SC-011 are measured on a release build, on two reference phones: an
+entry-level Android phone about five years old, and the maintainer's iPhone. A miss of any of
+them on either phone blocks the release until it is met; the miss and its fix are recorded in
+the pull request's test plan.
 
 Every requirement and acceptance scenario of this spec is proven by an automated test, except
 the following, which each get a written manual check (steps and expected result) run on the
-reference phones before release: SC-001, SC-002, SC-004, SC-008, SC-009 and SC-010; the device restart
+reference phones before release: SC-001, SC-002, SC-004, SC-008, SC-009, SC-010 and SC-011; the device restart
 and sudden power loss cases of SC-007; text at 200% (FR-033); contrast as seen on screen
 (FR-036); screen reader focus and announcements (FR-037, FR-038); and error tracking on a
 release build: a test report arrives with a readable stack trace, a report raised in airplane
@@ -823,7 +959,14 @@ The actions of this spec, checked one by one by SC-006 and SC-009:
   Entretien, Divers.
 - The catalog starts empty: no default articles are provided, only default categories.
 - Expected data size: up to 1 000 articles in the catalog, 20 lists and 200 items per list;
-  SC-001, SC-002 and SC-008 must hold at that size.
+  SC-001, SC-002, SC-008 and SC-011 must hold at that size. These are measurement sizes, not limits:
+  nothing is refused beyond them, and performance is not promised beyond them. The data they
+  are measured on looks like real use: realistic French article names (common products,
+  completed with numbered variants such as "Pommes 2"), 10% of them 60 characters long; on the
+  current list, half the items ticked and half with a quantity; each of the 19 other lists
+  holding 50 items.
+- This feature sets no target for memory use, battery drain or download size; a later feature
+  may add one.
 - The unit is free text (for example "g", "kg", "L", "paquets"); no unit conversion and no
   merging of quantities is done. Items carry no price or note in this feature.
 - Renaming or deleting articles, categories and lists, and reordering categories, are out of
@@ -834,4 +977,5 @@ The actions of this spec, checked one by one by SC-006 and SC-009:
   category are sorted alphabetically (French collation) inside the unticked and ticked groups.
   On the add screen, articles within a category are sorted alphabetically (French collation),
   when browsing and when searching. Lists on the screen of my lists are sorted alphabetically by
-  name (French collation).
+  name (French collation). Wherever names are sorted, numbers in them are compared by value:
+  "Lait 2 L" comes before "Lait 10 L".

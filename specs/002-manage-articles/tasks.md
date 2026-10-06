@@ -161,7 +161,7 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
 
 - [ ] T023 [US2] Write the failing journey `tests/e2e/journeys/delete-article.e2e.ts`: on a fresh install, create "Lait" and put it on "Ma liste" (ticked, "2" "L") and on "Barbecue"; from the catalog, "Plus d'actions pour « Lait »" → "Supprimer": the dialog reads "Il est dans les listes « Barbecue » et « Ma liste » et en sera retiré." (in the order the use case returns); confirm; the lists no longer show it; on the current list tap "Annuler" in "« Lait » supprimé": it is back on both lists, ticked with "2 L" on "Ma liste" (002 US2-1, US2-3, US2-5). Confirm it fails.
 - [ ] T024 [P] [US2] Write failing use case tests in `apps/mobile/src/application/use-cases/get-article-usage.test.ts`:
-  - it returns `ArticleUsage = { article: { id, name }, lists: Array<{ id, name }> }`, with the lists holding the article "sorted by name (French collator)" (FR-006, 002 US2-3);
+  - it returns `ArticleUsage = { article: { id, name }, lists: Array<{ id, name }> }`, with the lists holding the article "sorted by name with 001's `compareNames` (numbers by value)" (FR-006, 002 US2-3);
   - an article on no list gives an empty `lists`;
   - `ArticleNotFound`.
 - [ ] T025 [P] [US2] Write failing use case tests in `apps/mobile/src/application/use-cases/delete-article.test.ts`:
@@ -180,10 +180,10 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
   Also add to `apps/mobile/src/application/use-cases/create-article-and-add-to-list.test.ts`: 002 US2-7 / FR-007, once the deletion is final, creating "Houmous" again succeeds as a new article.
 - [ ] T027 [P] [US2] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.delete-article.test.ts`:
   - `getArticleUsage` returns the `Result` and stores nothing;
-  - `deleteArticle` clears any pending offer first, then on success sets `pendingUndo = { kind: 'deletedArticle', deleted }` and refreshes;
+  - `deleteArticle` on success replaces any pending offer: it sets `pendingUndo = { kind: 'deletedArticle', deleted }` and refreshes;
   - `undo()` with a `deletedArticle` clears the offer, calls `restoreDeletedArticle` and refreshes;
   - if the restore throws, the article stays deleted, `notice = writeFailed`, and the error is reported with `{ operation: 'restoreDeletedArticle' }` (edge case);
-  - 002 US2-6: any other write ends the offer;
+  - 002 US2-6: any other write that succeeds ends the offer, and a failed write or refused input leaves it (001 FR-010);
   - a new deletion or an item removal replaces the offer;
   - `dismissUndo()` ends it;
   - a store built afresh on the same fakes, standing for a killed app, has `pendingUndo = null`: the deletion is final (edge case).

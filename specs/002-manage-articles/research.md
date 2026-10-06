@@ -35,7 +35,8 @@ constitution v2.0.0, which makes a remote server the source of truth.
     view a change touches, and it covers FR-003, FR-008a and the edge case "the list shows the new
     name on its next display" without per-screen focus listeners.
   - Optimistic updates (001 R9) are store actions: update the region, queue the use case call
-    per item, and on failure drop the queued calls, reload the region from storage and set a
+    in the store's single write queue, which every write joins in the order it was made, and on
+    failure drop that item's queued calls, reload the region from storage and set a
     `writeFailed` notice.
   - No middleware ([R1b](#r1b-no-zustand-middleware)).
 - **Where Zustand may be imported**: only under `apps/mobile/src/adapters/ui/`. The domain and application
@@ -135,8 +136,9 @@ constitution v2.0.0, which makes a remote server the source of truth.
     (US2-5, SC-006).
   - The offer ends after 5 s (`setTimeout`, driven by Jest fake timers in tests; no timeout
     while a screen reader is on, [001 research](../001-shopping-lists/research.md) R8), when the
-    user dismisses the snackbar, or when any other write action starts: every store action that writes
-    first clears `pendingUndo` (US2-6). Navigation and reads do not end it.
+    user dismisses the snackbar, or when any other write succeeds: every store write that
+    succeeds clears `pendingUndo` (US2-6), while a failed write or refused input leaves it
+    (001 FR-010, revised 001 R8). Navigation and reads do not end it.
   - A killed app loses the in-memory snapshot, so the deletion is final (edge case).
   - If the restore fails, the article stays deleted, a `writeFailed` notice is shown and the
     error is reported (edge case).

@@ -8,7 +8,7 @@ function in `apps/mobile/src/application/use-cases/`, built by the composition r
 
 - Every failure of a business rule is returned as a value, never thrown: refused input, a
   missing record (`ItemNotOnList`, `ArticleNotFound`, ...) and the wrong state
-  (`NothingInCart`, `AlreadyOnList`).
+  (`AlreadyOnList`).
   `type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }`.
   Errors are tagged unions (`{ type: 'NameRequired' }`, `{ type: 'NameAlreadyUsed'; existing }`, ...).
   Domain functions follow the same rule: they return a `Result` for a broken business rule and
@@ -45,7 +45,7 @@ function in `apps/mobile/src/application/use-cases/`, built by the composition r
 |---|---|---|
 | `getCurrentList` | `() => Promise<CurrentListView>` | Read model of the current list (FR-001, FR-003, FR-005, FR-006). |
 | `toggleItemInCart` | `(listId, articleId) => Promise<Result<{ inCart: boolean }, ItemNotOnList>>` | Flips `inCart` (FR-004). |
-| `finishShopping` | `(listId) => Promise<Result<void, NothingInCart>>` | Sets every item of the list to `inCart = false`; items and quantities kept (FR-007). The confirmation dialog is UI-only. |
+| `finishShopping` | `(listId) => Promise<Result<void, never>>` | Sets every item of the list to `inCart = false`; items and quantities kept (FR-007). With nothing in the cart, it changes nothing and succeeds (FR-007). The confirmation dialog is UI-only. |
 
 ## Editing a list (User Story 2)
 
@@ -56,7 +56,7 @@ their `listId` parameter, which their tests use to check that each list keeps it
 
 | Use case | Signature | Behavior |
 |---|---|---|
-| `getCatalog` | `(listId, query?: string) => Promise<CatalogView>` | Catalog grouped by category with `onList` marks; filtered by `query` when given (FR-008, FR-009, FR-011). |
+| `getCatalog` | `(listId, query?: string) => Promise<CatalogView>` | Catalog grouped by category with `onList` marks; filtered by `query` when given, with the domain's `filterCatalog` (FR-008, FR-009, FR-011). The add screen calls it without a query and filters the result in memory as the user types (SC-011, [research.md](../research.md) R11a). |
 | `addArticleToList` | `(listId, articleId, quantity: Quantity \| null) => Promise<Result<void, AlreadyOnList \| ArticleNotFound>>` | Adds an unticked item (FR-012). `AlreadyOnList` carries the current quantity, so the UI can offer to change it (US2-8). |
 | `createArticleAndAddToList` | `(listId, { name, categoryId }, quantity: Quantity \| null) => Promise<Result<{ articleId }, NameError \| NameAlreadyUsed \| CategoryNotFound>>` | Creates the article and adds it, in one transaction (US2-7). `NameAlreadyUsed.existing` is the matching article (US2-9). |
 | `changeItemQuantity` | `(listId, articleId, quantity: Quantity \| null) => Promise<Result<void, ItemNotOnList>>` | Sets or clears the quantity of this list item only (FR-015, US2-3, US2-4, US2-5). |
@@ -67,7 +67,7 @@ their `listId` parameter, which their tests use to check that each list keeps it
 
 | Use case | Signature | Behavior |
 |---|---|---|
-| `getLists` | `() => Promise<ListSummary[]>` | All lists, sorted by name with the French collator, each with its item count and current mark (US3-8). |
+| `getLists` | `() => Promise<ListSummary[]>` | All lists, sorted by name with `compareNames` (numbers by value), each with its item count (all items, ticked or not) and current mark (US3-8). |
 | `createList` | `(name: string) => Promise<Result<{ listId }, NameError \| NameAlreadyUsed>>` | Creates an empty list; does not make it current (US3-2, US3-5, US3-6). |
 | `setCurrentList` | `(listId) => Promise<Result<void, ListNotFound>>` | Changes the current list (FR-025, US3-3). |
 
