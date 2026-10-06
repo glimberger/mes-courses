@@ -3,7 +3,7 @@
 Changes to the screens of [001](../../001-shopping-lists/contracts/ui-screens.md) and
 [002](../../002-manage-articles/contracts/ui-screens.md) for this feature. UI tests assert this
 text exactly (Principles II and X). Components come from React Native Paper or the shared module
-`src/adapters/ui/components/` (Principle V). Data comes from the store's `sync` slice
+`apps/mobile/src/adapters/ui/components/` (Principle V). Data comes from the store's `sync` slice
 ([../research.md](../research.md) R14).
 
 ## Navigation

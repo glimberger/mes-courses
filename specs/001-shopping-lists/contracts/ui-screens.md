@@ -1,12 +1,12 @@
 # Contract: Screens and User-Facing Text
 
-The UI adapter (`src/adapters/ui/`) as the user meets it: screens, their states, actions,
+The UI adapter (`apps/mobile/src/adapters/ui/`) as the user meets it: screens, their states, actions,
 accessibility labels and French text. UI tests assert this text exactly (Principles II and X).
 Wording may be polished during implementation; when it changes, this contract and the tests
 change together.
 
 Every screen is built only from React Native Paper components and the shared components in
-`src/adapters/ui/components/` (Principle V). Every data region renders one `ScreenState`
+`apps/mobile/src/adapters/ui/components/` (Principle V). Every data region renders one `ScreenState`
 (`loading | empty | error | success`) through the shared `LoadingState`, `EmptyState` and
 `ErrorState` components (Principle IX). Screens read and change data through the application
 store (Zustand, [research.md](../research.md) R10,

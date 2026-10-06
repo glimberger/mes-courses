@@ -1,6 +1,6 @@
 # Contract: Driving Ports (use cases)
 
-New use cases offered to the UI adapter, in `src/application/use-cases/`. Conventions (`Result`,
+New use cases offered to the UI adapter, in `apps/mobile/src/application/use-cases/`. Conventions (`Result`,
 tagged errors, thrown unexpected failures, commit before resolving) are those of
 [001's driving ports](../../001-shopping-lists/contracts/driving-ports.md). Types are in
 [../data-model.md](../data-model.md).

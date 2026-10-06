@@ -30,8 +30,8 @@ its own.
 
 ## Path Conventions
 
-Same single Expo project and layout as 001 ([plan.md](plan.md#source-code-repository-root)). Tests
-sit next to the code they cover as `*.test.ts(x)`.
+Same `apps/mobile/` workspace and layout as 001 ([plan.md](plan.md#source-code-repository-root)); commands
+run from the repository root. Tests sit next to the code they cover as `*.test.ts(x)`.
 
 ## Rules that apply to every task
 
@@ -40,7 +40,7 @@ sit next to the code they cover as `*.test.ts(x)`.
 - **Every write is one `UnitOfWork.run` transaction**: edit, delete and restore are all or nothing (FR-009, SC-005).
 - **French text only in the UI adapter**. The use cases return the tagged errors of [data-model.md](data-model.md#article-changed). UI tests assert the exact text of [contracts/ui-screens.md](contracts/ui-screens.md).
 - **Error reports** carry `{ operation: 'editArticle' | 'getArticleUsage' | 'deleteArticle' | 'restoreDeletedArticle', screen: 'AddArticles' | 'EditArticle' }` only, never an article or list name (FR-011).
-- **The store stays middleware-free**: `zustand` is used only under `src/adapters/ui/`, with no `zustand/middleware` and no `immer` ([research.md](research.md) R1b). 001's architecture test already enforces this.
+- **The store stays middleware-free**: `zustand` is used only under `apps/mobile/src/adapters/ui/`, with no `zustand/middleware` and no `immer` ([research.md](research.md) R1b). 001's architecture test already enforces this.
 
 ---
 
@@ -48,7 +48,7 @@ sit next to the code they cover as `*.test.ts(x)`.
 
 **Purpose**: start from a green 001 baseline.
 
-- [ ] T001 Branch from `origin/main` with 001 merged. Run `npm run typecheck && npm run lint && npm run format:check && npm test && npm run test:architecture` and confirm it is all green before any change. If 001 was built without the store of [contracts/ui-state.md](contracts/ui-state.md), stop: the first task is then a refactoring that moves 001's screens onto it with their tests kept green ([plan.md](plan.md#implementation-notes-for-speckit-tasks)).
+- [ ] T001 Branch from `origin/main` with 001 merged. Run `yarn typecheck && yarn lint && yarn format:check && yarn test && yarn test:architecture` and confirm it is all green before any change. If 001 was built without the store of [contracts/ui-state.md](contracts/ui-state.md), stop: the first task is then a refactoring that moves 001's screens onto it with their tests kept green ([plan.md](plan.md#implementation-notes-for-speckit-tasks)).
 
 ---
 
@@ -61,29 +61,29 @@ story uses.
 
 ### Repository methods ([contracts/driving-ports.md](contracts/driving-ports.md#driven-port-changes))
 
-- [ ] T002 Extend `src/application/testing/contracts/article-repository.contract.ts` with failing cases:
+- [ ] T002 Extend `apps/mobile/src/application/testing/contracts/article-repository.contract.ts` with failing cases:
   - `update(article)` changes the name, the normalized name and the category, and `findByNormalizedName` finds it under the new name only;
   - `remove(id)` deletes the article;
   - `remove(id)` rejects while a list item still refers to it.
-- [ ] T003 Extend `src/application/testing/contracts/list-item-repository.contract.ts` with failing cases:
+- [ ] T003 Extend `apps/mobile/src/application/testing/contracts/list-item-repository.contract.ts` with failing cases:
   - `forArticle(articleId)` returns the article's items on every list, with `inCart` and `quantity`;
   - `removeAllForArticle(articleId)` removes them all and leaves other articles' items untouched.
-- [ ] T004 Add `ArticleRepository.update(article: Article): Promise<void>` and `remove(id: ArticleId): Promise<void>`, and `ListItemRepository.forArticle(articleId): Promise<ListItem[]>` and `removeAllForArticle(articleId): Promise<void>` to `src/application/ports/repositories.ts`. Implement them in the fakes in `src/application/testing/in-memory-repositories.ts`, where `remove` throws while an item refers to the article, to turn T002–T003 green against the fakes.
-- [ ] T005 Implement the same methods in `src/adapters/sqlite/article-repository.ts` and `src/adapters/sqlite/list-item-repository.ts` to turn T002–T003 green against SQLite in `src/adapters/sqlite/sqlite-repositories.test.ts`:
+- [ ] T004 Add `ArticleRepository.update(article: Article): Promise<void>` and `remove(id: ArticleId): Promise<void>`, and `ListItemRepository.forArticle(articleId): Promise<ListItem[]>` and `removeAllForArticle(articleId): Promise<void>` to `apps/mobile/src/application/ports/repositories.ts`. Implement them in the fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts`, where `remove` throws while an item refers to the article, to turn T002–T003 green against the fakes.
+- [ ] T005 Implement the same methods in `apps/mobile/src/adapters/sqlite/article-repository.ts` and `apps/mobile/src/adapters/sqlite/list-item-repository.ts` to turn T002–T003 green against SQLite in `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`:
   - edit: `UPDATE article SET name = ?, normalized_name = ?, category_id = ? WHERE id = ?`;
   - remove items: `DELETE FROM list_item WHERE article_id = ?`;
   - remove article: `DELETE FROM article WHERE id = ?`, where the `NO ACTION` reference from `list_item` makes it fail while an item is left ([research.md](research.md) R4).
 
 ### Shared UI ([contracts/ui-screens.md](contracts/ui-screens.md#shared-components-new-or-changed))
 
-- [ ] T006 [P] Write failing tests for the row menu in `src/adapters/ui/components/article-row.test.tsx`:
+- [ ] T006 [P] Write failing tests for the row menu in `apps/mobile/src/adapters/ui/components/article-row.test.tsx`:
   - a trailing icon button labelled "Plus d'actions pour « {name} »" opens a `Menu` with "Modifier" and "Supprimer";
   - choosing them calls `onEdit` / `onDelete`;
   - both are also accessibility actions of the row;
   - tapping the row itself still calls `onPress` (001's QuantityDialog);
   - the button is ≥ 48 dp.
-- [ ] T007 [P] Add the trailing menu button, the Paper `Menu` and the accessibility actions to `src/adapters/ui/components/ArticleRow.tsx` to turn T006 green.
-- [ ] T008 [P] Extract the category picker from `src/adapters/ui/screens/CreateArticleScreen.tsx` into `src/adapters/ui/components/CategoryPicker.tsx`. It is a radio list of all categories by position plus "Nouvelle catégorie" (CreateCategoryDialog), with a new category preselected. This is a refactoring step: 001's CreateArticle tests stay green unchanged. Then add `src/adapters/ui/components/category-picker.test.tsx`, covering the order, the selection, and the preselection of a new category.
+- [ ] T007 [P] Add the trailing menu button, the Paper `Menu` and the accessibility actions to `apps/mobile/src/adapters/ui/components/ArticleRow.tsx` to turn T006 green.
+- [ ] T008 [P] Extract the category picker from `apps/mobile/src/adapters/ui/screens/CreateArticleScreen.tsx` into `apps/mobile/src/adapters/ui/components/CategoryPicker.tsx`. It is a radio list of all categories by position plus "Nouvelle catégorie" (CreateCategoryDialog), with a new category preselected. This is a refactoring step: 001's CreateArticle tests stay green unchanged. Then add `apps/mobile/src/adapters/ui/components/category-picker.test.tsx`, covering the order, the selection, and the preselection of a new category.
 
 **Checkpoint**: new repository methods green on fakes and SQLite; catalog rows offer
 "Modifier" / "Supprimer" (wired in the stories); 001's suite still green.
@@ -101,11 +101,11 @@ ticked states unchanged.
 
 ### Tests for User Story 1 ⚠️ (write first, confirm they fail)
 
-- [ ] T009 [P] [US1] Write failing domain tests for the edit rule in `src/domain/article.test.ts`. The name follows 001's rules: "trimmed, non-blank, ≤ 60 characters". Uniqueness is "by `normalizedName` among **other** articles":
+- [ ] T009 [P] [US1] Write failing domain tests for the edit rule in `apps/mobile/src/domain/article.test.ts`. The name follows 001's rules: "trimmed, non-blank, ≤ 60 characters". Uniqueness is "by `normalizedName` among **other** articles":
   - a name used by another article → `NameAlreadyUsed` carrying that article (002 US1-4: " beurre " while "Beurre" exists);
   - the article's own name with a different case or spaces is accepted (002 US1-5: "Lait" → "lait");
   - `NameRequired` / `NameTooLong` (002 US1-6).
-- [ ] T010 [P] [US1] Write failing use case tests in `src/application/use-cases/edit-article.test.ts`, on 001's fakes:
+- [ ] T010 [P] [US1] Write failing use case tests in `apps/mobile/src/application/use-cases/edit-article.test.ts`, on 001's fakes:
   - 002 US1-1: the catalog shows the new name and not the old one;
   - 002 US1-2: both lists show the new name, each keeping its quantity and `inCart`;
   - 002 US1-3: searching "demi" and "Lait" both find it;
@@ -113,12 +113,12 @@ ticked states unchanged.
   - 002 US1-8: the item moves to its new alphabetical place in its category;
   - `ArticleNotFound`;
   - the name is stored as typed after trimming.
-- [ ] T011 [P] [US1] Write failing store tests in `src/adapters/ui/state/app-store.edit-article.test.ts`:
+- [ ] T011 [P] [US1] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.edit-article.test.ts`:
   - `editArticle(articleId, { name, categoryId })` clears `pendingUndo` first;
   - it returns the use case `Result` unchanged and does not report business errors;
   - on success it refreshes every loaded region, so `currentList`, `catalog` and `lists` show the new name (edge case "renamed while a list is on screen");
   - on a throw it reports `{ operation: 'editArticle', screen: 'EditArticle' }`, sets `notice = writeFailed` and resolves to `{ ok: false, error: { type: 'WriteFailed' } }`.
-- [ ] T012 [US1] Write failing screen tests in `src/adapters/ui/screens/edit-article-screen.test.tsx`, through `renderWithStore`:
+- [ ] T012 [US1] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/edit-article-screen.test.tsx`, through `renderWithStore`:
   - Appbar "Modifier l'article" with a back action, `NameField` "Nom" prefilled, and the button "Enregistrer";
   - success goes back to AddArticles with no snackbar, and the row shows the new name;
   - 002 US1-4: "Un article « Beurre » existe déjà.";
@@ -126,15 +126,15 @@ ticked states unchanged.
   - after a refused save, the field keeps what was typed and the stored name is unchanged;
   - 002 US1-7: back without saving changes nothing;
   - `ArticleNotFound` or a throw: the screen stays open with "La modification n'a pas pu être enregistrée.", reported.
-- [ ] T013 [US1] Write failing tests in `src/adapters/ui/screens/add-articles-screen.test.tsx`: "Plus d'actions" → "Modifier" opens EditArticle for that article (FR-001), both while browsing by category and in search results; after saving, the search results show the new name (002 US1-3).
+- [ ] T013 [US1] Write failing tests in `apps/mobile/src/adapters/ui/screens/add-articles-screen.test.tsx`: "Plus d'actions" → "Modifier" opens EditArticle for that article (FR-001), both while browsing by category and in search results; after saving, the search results show the new name (002 US1-3).
 
 ### Implementation for User Story 1
 
-- [ ] T014 [P] [US1] Implement the edit rule (validate the name, then check uniqueness against `findByNormalizedName` ignoring the article itself) in `src/domain/article.ts` to turn T009 green ([research.md](research.md) R3).
-- [ ] T015 [US1] Implement `editArticle(articleId, { name, categoryId })` in `src/application/use-cases/edit-article.ts`, per [contracts/driving-ports.md](contracts/driving-ports.md): validate everything before writing, then one `articles.update` inside `UnitOfWork.run`. This turns T010 green. Add it to `UseCases` in `src/adapters/ui/use-cases.ts` and to `src/composition/composition-root.ts`.
-- [ ] T016 [US1] Add the `editArticle` action to `src/adapters/ui/state/app-store.ts`, through the shared write rules, to turn T011 green.
-- [ ] T017 [US1] Implement `src/adapters/ui/screens/EditArticleScreen.tsx` with the name field only; the category field comes in US3, and saving passes the current `categoryId`. Register the `EditArticle` route (param `articleId`) in `src/adapters/ui/navigation.tsx`. This turns T012 green.
-- [ ] T018 [US1] Wire `onEdit` of `ArticleRow` in `src/adapters/ui/screens/AddArticlesScreen.tsx` to navigate to EditArticle, to turn T013 green.
+- [ ] T014 [P] [US1] Implement the edit rule (validate the name, then check uniqueness against `findByNormalizedName` ignoring the article itself) in `apps/mobile/src/domain/article.ts` to turn T009 green ([research.md](research.md) R3).
+- [ ] T015 [US1] Implement `editArticle(articleId, { name, categoryId })` in `apps/mobile/src/application/use-cases/edit-article.ts`, per [contracts/driving-ports.md](contracts/driving-ports.md): validate everything before writing, then one `articles.update` inside `UnitOfWork.run`. This turns T010 green. Add it to `UseCases` in `apps/mobile/src/adapters/ui/use-cases.ts` and to `apps/mobile/src/composition/composition-root.ts`.
+- [ ] T016 [US1] Add the `editArticle` action to `apps/mobile/src/adapters/ui/state/app-store.ts`, through the shared write rules, to turn T011 green.
+- [ ] T017 [US1] Implement `apps/mobile/src/adapters/ui/screens/EditArticleScreen.tsx` with the name field only; the category field comes in US3, and saving passes the current `categoryId`. Register the `EditArticle` route (param `articleId`) in `apps/mobile/src/adapters/ui/navigation.tsx`. This turns T012 green.
+- [ ] T018 [US1] Wire `onEdit` of `ArticleRow` in `apps/mobile/src/adapters/ui/screens/AddArticlesScreen.tsx` to navigate to EditArticle, to turn T013 green.
 
 **Checkpoint**: renaming works end to end, offline, and every list shows the new name.
 
@@ -150,11 +150,11 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
 
 ### Tests for User Story 2 ⚠️ (write first, confirm they fail)
 
-- [ ] T019 [P] [US2] Write failing use case tests in `src/application/use-cases/get-article-usage.test.ts`:
+- [ ] T019 [P] [US2] Write failing use case tests in `apps/mobile/src/application/use-cases/get-article-usage.test.ts`:
   - it returns `ArticleUsage = { article: { id, name }, lists: Array<{ id, name }> }`, with the lists holding the article "sorted by name (French collator)" (FR-006, 002 US2-3);
   - an article on no list gives an empty `lists`;
   - `ArticleNotFound`.
-- [ ] T020 [P] [US2] Write failing use case tests in `src/application/use-cases/delete-article.test.ts`:
+- [ ] T020 [P] [US2] Write failing use case tests in `apps/mobile/src/application/use-cases/delete-article.test.ts`:
   - 002 US2-1: the article is gone from the catalog, its category and search;
   - 002 US2-4: it is gone from both lists, and `remainingCount` and `itemCount` drop;
   - FR-005: the category and the lists remain;
@@ -162,13 +162,13 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
   - 002 US2-8: deleting the last article of a category leaves the category, and the catalog shows it empty;
   - `ArticleNotFound`;
   - a failure midway leaves the article and every item as they were (one transaction, SC-005).
-- [ ] T021 [P] [US2] Write failing use case tests in `src/application/use-cases/restore-deleted-article.test.ts`:
+- [ ] T021 [P] [US2] Write failing use case tests in `apps/mobile/src/application/use-cases/restore-deleted-article.test.ts`:
   - 002 US2-5 / SC-006: the article comes back with the **same id**, name and category, and back on "Ma liste" (2 L, ticked) and "Barbecue" (no quantity, unticked);
   - it runs in one transaction;
   - a storage failure throws.
 
-  Also add to `src/application/use-cases/create-article-and-add-to-list.test.ts`: 002 US2-7 / FR-007, once the deletion is final, creating "Houmous" again succeeds as a new article.
-- [ ] T022 [P] [US2] Write failing store tests in `src/adapters/ui/state/app-store.delete-article.test.ts`:
+  Also add to `apps/mobile/src/application/use-cases/create-article-and-add-to-list.test.ts`: 002 US2-7 / FR-007, once the deletion is final, creating "Houmous" again succeeds as a new article.
+- [ ] T022 [P] [US2] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.delete-article.test.ts`:
   - `getArticleUsage` returns the `Result` and stores nothing;
   - `deleteArticle` clears any pending offer first, then on success sets `pendingUndo = { kind: 'deletedArticle', deleted }` and refreshes;
   - `undo()` with a `deletedArticle` clears the offer, calls `restoreDeletedArticle` and refreshes;
@@ -177,12 +177,12 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
   - a new deletion or an item removal replaces the offer;
   - `dismissUndo()` ends it;
   - a store built afresh on the same fakes, standing for a killed app, has `pendingUndo = null`: the deletion is final (edge case).
-- [ ] T023 [P] [US2] Write failing tests for the French list join in `src/adapters/ui/components/join-french.test.ts`: `["A"]` → "« A »", `["A","B"]` → "« A » et « B »", `["A","B","C"]` → "« A », « B » et « C »".
-- [ ] T024 [P] [US2] Extend `src/adapters/ui/components/undo-snackbar.test.tsx` with failing tests:
+- [ ] T023 [P] [US2] Write failing tests for the French list join in `apps/mobile/src/adapters/ui/components/join-french.test.ts`: `["A"]` → "« A »", `["A","B"]` → "« A » et « B »", `["A","B","C"]` → "« A », « B » et « C »".
+- [ ] T024 [P] [US2] Extend `apps/mobile/src/adapters/ui/components/undo-snackbar.test.tsx` with failing tests:
   - `deletedArticle` shows "« Lait » supprimé" with "Annuler" calling `undo`;
   - it is dismissed after 5 s (Jest fake timers, 002 US2-6);
   - it stays visible after navigating from AddArticles to CurrentList.
-- [ ] T025 [US2] Write failing tests in `src/adapters/ui/screens/delete-article-dialog.test.tsx`:
+- [ ] T025 [US2] Write failing tests in `apps/mobile/src/adapters/ui/screens/delete-article-dialog.test.tsx`:
   - the title is "Supprimer « {name} » ?";
   - the body for no list is "L'article sera retiré du catalogue.";
   - the body for one list is "Il est dans la liste « Ma liste » et en sera retiré.";
@@ -190,7 +190,7 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
   - 002 US2-2: "Annuler" closes the dialog and changes nothing;
   - 002 US2-1 / US2-4: "Supprimer" deletes and closes;
   - an unexpected delete failure closes the dialog, changes nothing and shows "La modification n'a pas pu être enregistrée.", reported.
-- [ ] T026 [US2] Write failing tests in `src/adapters/ui/screens/add-articles-screen.test.tsx`:
+- [ ] T026 [US2] Write failing tests in `apps/mobile/src/adapters/ui/screens/add-articles-screen.test.tsx`:
   - "Plus d'actions" → "Supprimer" loads the usage and opens DeleteArticleDialog;
   - if loading the usage fails: `writeFailed` snackbar, reported with `{ operation: 'getArticleUsage', screen: 'AddArticles' }`;
   - SC-002: deleting takes 3 taps (menu, "Supprimer", confirm);
@@ -199,14 +199,14 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Implement `getArticleUsage` in `src/application/use-cases/get-article-usage.ts` to turn T019 green.
-- [ ] T028 [US2] Implement `deleteArticle` in `src/application/use-cases/delete-article.ts` to turn T020 green. Inside one `UnitOfWork.run`: read the article and `items.forArticle`, then `items.removeAllForArticle`, then `articles.remove`, then return the snapshot ([research.md](research.md) R4).
-- [ ] T029 [US2] Implement `restoreDeletedArticle` in `src/application/use-cases/restore-deleted-article.ts` to turn T021 green. Inside one `UnitOfWork.run`: `articles.add` with the same id, then `items.save` for each item. Add T027–T029 to `UseCases` and to `src/composition/composition-root.ts`.
-- [ ] T030 [US2] Add the `getArticleUsage` and `deleteArticle` actions and the `deletedArticle` branch of `undo()` to `src/adapters/ui/state/app-store.ts`, and widen `pendingUndo` to `{ kind: 'deletedArticle'; deleted: DeletedArticle }`. This turns T022 green.
-- [ ] T031 [P] [US2] Implement `joinFrench` in `src/adapters/ui/components/join-french.ts` to turn T023 green.
-- [ ] T032 [P] [US2] Add the `deletedArticle` text to `src/adapters/ui/components/UndoSnackbar.tsx` to turn T024 green.
-- [ ] T033 [US2] Implement `src/adapters/ui/screens/DeleteArticleDialog.tsx` (Paper `Dialog` in a `Portal`) to turn T025 green.
-- [ ] T034 [US2] Wire `onDelete` of `ArticleRow` in `src/adapters/ui/screens/AddArticlesScreen.tsx` (load usage, then open the dialog) to turn T026 green.
+- [ ] T027 [US2] Implement `getArticleUsage` in `apps/mobile/src/application/use-cases/get-article-usage.ts` to turn T019 green.
+- [ ] T028 [US2] Implement `deleteArticle` in `apps/mobile/src/application/use-cases/delete-article.ts` to turn T020 green. Inside one `UnitOfWork.run`: read the article and `items.forArticle`, then `items.removeAllForArticle`, then `articles.remove`, then return the snapshot ([research.md](research.md) R4).
+- [ ] T029 [US2] Implement `restoreDeletedArticle` in `apps/mobile/src/application/use-cases/restore-deleted-article.ts` to turn T021 green. Inside one `UnitOfWork.run`: `articles.add` with the same id, then `items.save` for each item. Add T027–T029 to `UseCases` and to `apps/mobile/src/composition/composition-root.ts`.
+- [ ] T030 [US2] Add the `getArticleUsage` and `deleteArticle` actions and the `deletedArticle` branch of `undo()` to `apps/mobile/src/adapters/ui/state/app-store.ts`, and widen `pendingUndo` to `{ kind: 'deletedArticle'; deleted: DeletedArticle }`. This turns T022 green.
+- [ ] T031 [P] [US2] Implement `joinFrench` in `apps/mobile/src/adapters/ui/components/join-french.ts` to turn T023 green.
+- [ ] T032 [P] [US2] Add the `deletedArticle` text to `apps/mobile/src/adapters/ui/components/UndoSnackbar.tsx` to turn T024 green.
+- [ ] T033 [US2] Implement `apps/mobile/src/adapters/ui/screens/DeleteArticleDialog.tsx` (Paper `Dialog` in a `Portal`) to turn T025 green.
+- [ ] T034 [US2] Wire `onDelete` of `ArticleRow` in `apps/mobile/src/adapters/ui/screens/AddArticlesScreen.tsx` (load usage, then open the dialog) to turn T026 green.
 
 **Checkpoint**: US1 + US2 form the MVP. Rename and delete work everywhere, offline, with the
 5-second undo.
@@ -223,12 +223,12 @@ the new category heading on the list and in the catalog.
 
 ### Tests for User Story 3 ⚠️ (write first, confirm they fail)
 
-- [ ] T035 [P] [US3] Extend `src/application/use-cases/edit-article.test.ts` with failing tests:
+- [ ] T035 [P] [US3] Extend `apps/mobile/src/application/use-cases/edit-article.test.ts` with failing tests:
   - 002 US3-1: "Houmous" moved from "Épicerie salée" to "Crèmerie" shows under "Crèmerie" in the catalog and on "Ma liste", with its quantity and `inCart` kept;
   - 002 US3-2: when it was the only "Épicerie salée" item on "Ma liste", that section is gone from the list view;
   - 002 US3-3: name and category are applied together, and with a taken name neither is applied;
   - an unknown category → `CategoryNotFound` with nothing written (FR-008).
-- [ ] T036 [US3] Extend `src/adapters/ui/screens/edit-article-screen.test.tsx` with failing tests:
+- [ ] T036 [US3] Extend `apps/mobile/src/adapters/ui/screens/edit-article-screen.test.tsx` with failing tests:
   - `CategoryPicker` shows every category with the current one selected;
   - 002 US3-1: saving another category moves the article on CurrentList;
   - 002 US3-3: a taken name with a new category shows the name error and changes neither;
@@ -237,8 +237,8 @@ the new category heading on the list and in the catalog.
 
 ### Implementation for User Story 3
 
-- [ ] T037 [US3] Make `editArticle` in `src/application/use-cases/edit-article.ts` check `categories.findById` before writing, returning `CategoryNotFound`, to turn T035 green. Only the category validation is new; T015 already saves both fields in one update.
-- [ ] T038 [US3] Add `CategoryPicker` (from T008) to `src/adapters/ui/screens/EditArticleScreen.tsx` and save the chosen `categoryId`, to turn T036 green.
+- [ ] T037 [US3] Make `editArticle` in `apps/mobile/src/application/use-cases/edit-article.ts` check `categories.findById` before writing, returning `CategoryNotFound`, to turn T035 green. Only the category validation is new; T015 already saves both fields in one update.
+- [ ] T038 [US3] Add `CategoryPicker` (from T008) to `apps/mobile/src/adapters/ui/screens/EditArticleScreen.tsx` and save the chosen `categoryId`, to turn T036 green.
 
 **Checkpoint**: all three stories work independently and together.
 
@@ -246,9 +246,9 @@ the new category heading on the list and in the catalog.
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T039 Extend 001's offline scenario in `src/adapters/ui/offline.test.tsx` with `global.fetch` throwing: rename, change category, delete and undo. Every step succeeds and nothing is reported (FR-010, SC-004).
-- [ ] T040 [P] Extend `src/adapters/ui/state/error-context.test.ts` so the reports raised in the 002 store tests carry only the `operation` and `screen` fields, never an article or list name (FR-011).
-- [ ] T041 [P] Extend `src/adapters/ui/screens/accessibility.test.tsx` to cover EditArticle, DeleteArticleDialog, the row menu and the undo snackbar: French labels and ≥ 48 dp targets.
+- [ ] T039 Extend 001's offline scenario in `apps/mobile/src/adapters/ui/offline.test.tsx` with `global.fetch` throwing: rename, change category, delete and undo. Every step succeeds and nothing is reported (FR-010, SC-004).
+- [ ] T040 [P] Extend `apps/mobile/src/adapters/ui/state/error-context.test.ts` so the reports raised in the 002 store tests carry only the `operation` and `screen` fields, never an article or list name (FR-011).
+- [ ] T041 [P] Extend `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx` to cover EditArticle, DeleteArticleDialog, the row menu and the undo snackbar: French labels and ≥ 48 dp targets.
 - [ ] T042 [P] Update `README.md` to list renaming, recategorizing and deleting articles (with undo) among the app's features.
 - [ ] T043 Run [quickstart.md](quickstart.md) section 2 on Android and iOS: the 8 hands-on scenarios, including airplane mode, killing the app while "Annuler" is shown, and TalkBack/VoiceOver. Record the results, and anything not checked, in the pull request's test plan.
 
@@ -291,16 +291,16 @@ Task: "T023 join-french.test.ts"
 Task: "T024 undo-snackbar.test.tsx"
 
 # Green: then, after the use cases
-Task: "T031 joinFrench in src/adapters/ui/components/join-french.ts"
+Task: "T031 joinFrench in apps/mobile/src/adapters/ui/components/join-french.ts"
 Task: "T032 deletedArticle text in UndoSnackbar.tsx"
 ```
 
 ## Parallel Example: User Story 1
 
 ```bash
-Task: "T009 edit rule tests in src/domain/article.test.ts"
-Task: "T010 editArticle tests in src/application/use-cases/edit-article.test.ts"
-Task: "T011 store tests in src/adapters/ui/state/app-store.edit-article.test.ts"
+Task: "T009 edit rule tests in apps/mobile/src/domain/article.test.ts"
+Task: "T010 editArticle tests in apps/mobile/src/application/use-cases/edit-article.test.ts"
+Task: "T011 store tests in apps/mobile/src/adapters/ui/state/app-store.edit-article.test.ts"
 ```
 
 ---

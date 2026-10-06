@@ -10,7 +10,7 @@ constitution v2.0.0, which makes a remote server the source of truth.
 
 ## R1. Application state with Zustand (whole app)
 
-- **Decision**: one Zustand 5 store in the UI adapter, `src/adapters/ui/state/`, holds the state
+- **Decision**: one Zustand 5 store in the UI adapter, `apps/mobile/src/adapters/ui/state/`, holds the state
   every screen reads:
   - one `ScreenState<T>` per data region (current list, catalog with its search query, lists),
     the union of 001's R10, so Principle IX still holds;
@@ -37,9 +37,9 @@ constitution v2.0.0, which makes a remote server the source of truth.
   - Optimistic updates (001 R9) are store actions: update the region, call the use case, revert
     and set a `writeFailed` notice on failure.
   - No middleware ([R1b](#r1b-no-zustand-middleware)).
-- **Where Zustand may be imported**: only under `src/adapters/ui/`. The domain and application
+- **Where Zustand may be imported**: only under `apps/mobile/src/adapters/ui/`. The domain and application
   layers already cannot import npm packages (001 R15); a new dependency-cruiser rule also keeps
-  `zustand` out of the other adapters and out of `src/composition/` (which only calls the
+  `zustand` out of the other adapters and out of `apps/mobile/src/composition/` (which only calls the
   factory). The same rule forbids `zustand/middleware` and `immer` (R1b).
 - **Rationale**: this feature needs state that outlives a screen:
   - the "Annuler" offer after deleting an article starts on the catalog and must stay offered,
@@ -53,7 +53,7 @@ constitution v2.0.0, which makes a remote server the source of truth.
   than mixing two styles. Zustand is about 1 KB, has no dependencies, uses React's
   `useSyncExternalStore`, and its vanilla store is testable without rendering.
 - **Testing**: store tests run against the real use cases wired on 001's in-memory fakes
-  (`src/application/testing/`) and a `RecordingErrorReporter`, with Jest fake timers for the 5 s
+  (`apps/mobile/src/application/testing/`) and a `RecordingErrorReporter`, with Jest fake timers for the 5 s
   undo. Screen tests render through a `renderWithStore` helper that builds a fresh store.
 - **Alternatives considered**:
   - React context + `useReducer`: no dependency, but a hand-written store with selector

@@ -1,7 +1,7 @@
 # Contract: Driving Ports (use cases)
 
 The operations the application layer offers to the UI adapter (Principle VI). Each is an async
-function in `src/application/use-cases/`, built by the composition root from the driven ports in
+function in `apps/mobile/src/application/use-cases/`, built by the composition root from the driven ports in
 [driven-ports.md](driven-ports.md). Types are defined in [../data-model.md](../data-model.md).
 
 ## Conventions

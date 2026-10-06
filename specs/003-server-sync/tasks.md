@@ -33,13 +33,15 @@ prefix, for example `"003 US2-5 a deletion wins over a concurrent tick"`.
 
 ## Path Conventions
 
-npm workspaces ([plan.md](plan.md#source-code-repository-root)):
+The Yarn workspaces monorepo of 001 ([plan.md](plan.md#source-code-repository-root), constitution
+Principle XI):
 
-- the app stays at the root, in `src/` (001 layout);
-- the server is in `server/src/{domain,application,adapters,composition,testing}/`;
+- the app is in `apps/mobile/src/` (001 layout), and its `./testing` entry in `apps/mobile/test/`;
+- the server is in `apps/server/src/{domain,application,adapters,composition,testing}/`;
 - the shared package is `packages/sync-core/src/`;
-- the Pi files are in `deploy/`;
-- cross-stack scenario tests are in `test/sync/`.
+- the tests that need the app and the server together (the `SyncServer` adapter and the
+  cross-stack scenarios) are in the test-only workspace `tests/sync/`;
+- the Pi files are in `deploy/`.
 
 Unit tests sit next to the code they cover as `*.test.ts(x)`.
 
@@ -65,26 +67,27 @@ Unit tests sit next to the code they cover as `*.test.ts(x)`.
 
 **Purpose**: workspaces, the new packages, architecture rules and CI across the workspaces.
 
-- [ ] T001 Branch from `origin/main` with 001 and 002 merged. Run `npm run typecheck && npm run lint && npm run format:check && npm test && npm run test:architecture` and confirm it is all green before any change.
-- [ ] T002 Turn the root `package.json` into an npm workspaces root with `"workspaces": ["server", "packages/*"]`, keeping the Expo app at the root. Make the root scripts `typecheck`, `lint`, `format:check` and `test` also run in every workspace (`--workspaces --include-workspace-root`). Check that `npx expo export --platform android --platform ios` still bundles.
-- [ ] T003 [P] Scaffold `packages/sync-core/` (name `@mes-courses/sync-core`, private): `package.json` with **no dependencies**, `tsconfig.json` (strict, extending the root one), `jest.config.js` (ts preset, node environment) and `src/index.ts`. Add `@mes-courses/sync-core` as a dependency of the app and the server.
-- [ ] T004 [P] Scaffold `server/`:
-  - `package.json` with dependencies `fastify@5` and `@sentry/node`, and scripts `dev` (watch on `127.0.0.1:3000`, database in `server/.data/`), `build` (`tsc` to `server/dist/`), `start` (`node dist/composition/main.js`), `pairing-code` and `test`;
-  - `tsconfig.json` (strict) and `jest.config.js` (node environment);
-  - `.nvmrc` stays at the root (Node 24).
+- [ ] T001 Branch from `origin/main` with 001 and 002 merged. Run `yarn typecheck && yarn lint && yarn format:check && yarn test && yarn test:architecture` and confirm it is all green before any change.
+- [ ] T002 Add `"tests/*"` to the root `package.json` `"workspaces"` (001 set up `"apps/*"` and `"packages/*"`). Scaffold `tests/sync/` (name `@mes-courses/sync-tests`, private): `package.json` with devDependencies `"@mes-courses/mobile": "workspace:*"` and `"@mes-courses/server": "workspace:*"`, `tsconfig.json` extending the root base, and `jest.config.js` (ts preset, node environment). Check that `yarn build` still bundles the app.
+- [ ] T003 [P] Scaffold `packages/sync-core/` (name `@mes-courses/sync-core`, private): `package.json` with **no dependencies**, `tsconfig.json` (strict, extending the root one), `jest.config.js` (ts preset, node environment) and `packages/sync-core/src/index.ts` as its only public entry point. Add `"@mes-courses/sync-core": "workspace:*"` as a dependency of the app (`apps/mobile/package.json`) and the server, then run `yarn install` to update `yarn.lock`.
+- [ ] T004 [P] Scaffold `apps/server/`:
+  - `package.json` (name `@mes-courses/server`, private) with dependencies `fastify@5` and `@sentry/node`, `"exports": { "./testing": "./src/testing/index.ts" }`, and scripts `dev` (watch on `127.0.0.1:3000`, database in `apps/server/.data/`), `build` (`tsc` to `apps/server/dist/`), `start` (`node dist/composition/main.js`), `pairing-code` and `test`;
+  - `tsconfig.json` (extending the root `tsconfig.base.json`) and `jest.config.js` (node environment);
+  - Node 24 comes from 001's Nix dev shell (`flake.nix`), shared by every workspace.
 - [ ] T005 Extend `.dependency-cruiser.cjs` ([research.md](research.md) R16):
   - `packages/sync-core/**` imports nothing outside itself;
-  - `server/src/domain/**` imports only itself and `@mes-courses/sync-core`;
-  - `server/src/application/**` imports only server domain, application and `@mes-courses/sync-core`;
-  - only `server/src/adapters/**` and `server/src/composition/**` import `server/src/adapters/**`;
-  - the app's `src/domain/**` and `src/application/**` may import `@mes-courses/sync-core` and nothing else from npm;
-  - no import between `server/` and the app's `src/`, except `server/src/testing/` from the app's adapter tests.
+  - `apps/server/src/domain/**` imports only itself and `@mes-courses/sync-core`;
+  - `apps/server/src/application/**` imports only server domain, application and `@mes-courses/sync-core`;
+  - only `apps/server/src/adapters/**` and `apps/server/src/composition/**` import `apps/server/src/adapters/**`;
+  - the app's `apps/mobile/src/domain/**` and `apps/mobile/src/application/**` may import `@mes-courses/sync-core` and nothing else from npm;
+  - `apps/mobile/` and `apps/server/` never import each other (001's cross-workspace rule, kept);
+  - only `tests/**` imports `@mes-courses/mobile/testing` and `@mes-courses/server/testing`, and nothing imports `tests/**`.
 
   Prove each new rule fails on a throwaway violation, then delete the violation.
-- [ ] T006 Update `.github/workflows/ci.yml` so the `typecheck`, `lint` and `test` jobs run across workspaces (root scripts from T002), `test` includes `npm run test:architecture`, and `build` still runs `expo export`. The server is built with `npm run build -w server` in the `build` job. There is no deployment step.
-- [ ] T007 [P] Add `server/.data/`, `server/dist/` and `packages/*/dist/` to `.gitignore`.
+- [ ] T006 Check that `.github/workflows/ci.yml` (001) covers the new workspaces with no new job: the root scripts already run in every workspace, and the `build` job's root `yarn build` now also compiles the server. Fix the workflow only if a workspace is missed. There is no deployment step.
+- [ ] T007 [P] Add `apps/server/.data/`, `apps/server/dist/` and `packages/*/dist/` to `.gitignore`.
 
-**Checkpoint**: the workspaces install with one `npm ci`, every existing test is still green, and CI is green on the setup pull request.
+**Checkpoint**: the workspaces install with one `yarn install --immutable`, every existing test is still green, and CI is green on the setup pull request.
 
 ---
 
@@ -117,18 +120,18 @@ Every story needs a device that can pair with a running server.
   - `pickSurvivor(a, b)` returns the smaller `(createdHlc, id)` (R8);
   - `compareCategories` orders by `(position, createdHlc, id)` (FR-014).
 - [ ] T011 [P] Implement `packages/sync-core/src/merge.ts` to turn T010 green.
-- [ ] T012 [P] Move `normalizedName` into `packages/sync-core/src/name.ts`, with its tests moved from 001's `src/domain/name.test.ts` into `packages/sync-core/src/name.test.ts`. Make `src/domain/name.ts` re-export it. 001's name tests stay green unchanged. This is a refactoring step.
+- [ ] T012 [P] Move `normalizedName` into `packages/sync-core/src/name.ts`, with its tests moved from 001's `apps/mobile/src/domain/name.test.ts` into `packages/sync-core/src/name.test.ts`. Make `apps/mobile/src/domain/name.ts` re-export it. 001's name tests stay green unchanged. This is a refactoring step.
 - [ ] T013 [P] Write the protocol types `Change`, `ServerRow`, `SyncRequest`, `SyncResponse`, the error codes, `HealthInfo` and `Pairing` in `packages/sync-core/src/protocol.ts`, exactly as in [contracts/sync-api.md](contracts/sync-api.md) and [data-model.md](data-model.md). Export everything from `packages/sync-core/src/index.ts`.
 
 ### Server: ports, storage, crypto, error reporting
 
-- [ ] T014 Declare the server ports in `server/src/application/ports/`:
+- [ ] T014 Declare the server ports in `apps/server/src/application/ports/`:
   - `store.ts`: `ServerStore` with `run(work)` as one transaction, and repositories for meta (serverId, seq), categories, articles, lists, list items, applied changes, devices, pairing codes and pairing failures;
   - `clock.ts`;
   - `id-generator.ts`;
   - `random.ts` (secure random bytes);
   - `error-reporter.ts`, with `report(error, { operation, route })`.
-- [ ] T015 Write the shared repository contract suites in `server/src/application/testing/contracts/`, one file per repository. They cover:
+- [ ] T015 Write the shared repository contract suites in `apps/server/src/application/testing/contracts/`, one file per repository. They cover:
   - every read and write used by the use cases;
   - `meta.nextSeq()`, which increments and returns;
   - `appliedChanges.has` / `add`;
@@ -136,22 +139,22 @@ Every story needs a device that can pair with a running server.
   - pairing codes by `codeHash`;
   - `pairingFailures.countSince(t)`.
 
-  Add `server/src/application/testing/in-memory-store.test.ts`, which runs them on in-memory fakes, and confirm it fails.
-- [ ] T016 Implement the in-memory fakes, with rollback on throw, in `server/src/application/testing/in-memory-store.ts` to turn T015 green.
-- [ ] T017 Write failing migration tests in `server/src/adapters/sqlite/migrations.test.ts`:
+  Add `apps/server/src/application/testing/in-memory-store.test.ts`, which runs them on in-memory fakes, and confirm it fails.
+- [ ] T016 Implement the in-memory fakes, with rollback on throw, in `apps/server/src/application/testing/in-memory-store.ts` to turn T015 green.
+- [ ] T017 Write failing migration tests in `apps/server/src/adapters/sqlite/migrations.test.ts`:
   - migration 1 creates exactly the tables and indexes of [data-model.md](data-model.md#server-database-pi-sqlite), including the partial unique indexes `... ON ...(normalized_name) WHERE deleted_hlc IS NULL`;
   - `meta` gets a random `server_id` once;
   - `user_version` becomes 1, and running again is a no-op;
   - WAL mode and `synchronous = FULL` are set;
   - `device.name` rejects 0 and 61 characters.
-- [ ] T018 Implement `server/src/adapters/sqlite/migrations.ts` and `open-database.ts` on `node:sqlite`, with the `better-sqlite3` fallback behind the same interface if needed (R3), to turn T017 green.
-- [ ] T019 Write `server/src/adapters/sqlite/sqlite-store.test.ts`, which runs every T015 suite on an in-memory migrated database. Then implement `server/src/adapters/sqlite/sqlite-store.ts` to turn it green.
-- [ ] T020 [P] Write failing tests in `server/src/adapters/crypto/crypto.test.ts`, then implement `server/src/adapters/crypto/crypto.ts`:
+- [ ] T018 Implement `apps/server/src/adapters/sqlite/migrations.ts` and `open-database.ts` on `node:sqlite`, with the `better-sqlite3` fallback behind the same interface if needed (R3), to turn T017 green.
+- [ ] T019 Write `apps/server/src/adapters/sqlite/sqlite-store.test.ts`, which runs every T015 suite on an in-memory migrated database. Then implement `apps/server/src/adapters/sqlite/sqlite-store.ts` to turn it green.
+- [ ] T020 [P] Write failing tests in `apps/server/src/adapters/crypto/crypto.test.ts`, then implement `apps/server/src/adapters/crypto/crypto.ts`:
   - pairing codes are 8 characters from the alphabet without `0 O 1 I L`, formatted `XXXX-XXXX`;
   - `normalizeCode` accepts lower case and a missing dash;
   - credentials are 32 random bytes in base64url;
   - `sha256Hex` matches known vectors.
-- [ ] T021 [P] Write failing tests in `server/src/adapters/error-reporting/sentry-error-reporter.test.ts`, with `@sentry/node` mocked, then implement it and `console-error-reporter.ts` ([research.md](research.md) R15):
+- [ ] T021 [P] Write failing tests in `apps/server/src/adapters/error-reporting/sentry-error-reporter.test.ts`, with `@sentry/node` mocked, then implement it and `console-error-reporter.ts` ([research.md](research.md) R15):
   - `init` with `sendDefaultPii: false`, the release and the environment;
   - `beforeSend` drops request bodies, headers and cookies;
   - `report` sends only `{ operation, route }` tags;
@@ -159,15 +162,15 @@ Every story needs a device that can pair with a running server.
 
 ### Server: pairing ([contracts/sync-api.md](contracts/sync-api.md))
 
-- [ ] T022 Write failing use case tests on fakes in `server/src/application/use-cases/pairing.test.ts`.
+- [ ] T022 Write failing use case tests on fakes in `apps/server/src/application/use-cases/pairing.test.ts`.
   - **`claimPairingCode(code, deviceName)`**:
     - a valid code creates a device with only the credential's SHA-256 stored, marks the code used, and returns `{ deviceId, credential }` (US4-4);
     - an unknown, expired (older than 10 minutes) or used code → `InvalidCode`, recorded as a failure (US4-5);
     - the 6th failure within any rolling 10 minutes → `TooManyAttempts` with the seconds to wait, persisting across a new store instance (FR-019b, US4-12);
     - `deviceName` is trimmed, 1–60 characters.
   - **`createPairingCode(createdBy | null)`**: it returns a code that expires in 10 minutes and stores only its hash (US4-2, US4-3).
-- [ ] T023 Implement `server/src/domain/pairing.ts` and `server/src/application/use-cases/claim-pairing-code.ts` / `create-pairing-code.ts` to turn T022 green.
-- [ ] T024 Write failing HTTP tests with Fastify `inject` in `server/src/adapters/http/app.test.ts`, for the common rules and the pairing routes:
+- [ ] T023 Implement `apps/server/src/domain/pairing.ts` and `apps/server/src/application/use-cases/claim-pairing-code.ts` / `create-pairing-code.ts` to turn T022 green.
+- [ ] T024 Write failing HTTP tests with Fastify `inject` in `apps/server/src/adapters/http/app.test.ts`, for the common rules and the pairing routes:
   - every response carries `serverId`, `apiVersion: 1` and `minAppVersion`;
   - `X-App-Version` below `minAppVersion` → `426 UpdateRequired`, nothing read;
   - a missing, unknown or revoked credential → `401 DeviceNotAuthorized` before any read;
@@ -176,29 +179,29 @@ Every story needs a device that can pair with a running server.
   - `POST /v1/pairing/claim` → `200` / `400 InvalidCode` / `429 TooManyAttempts` with `Retry-After`;
   - `POST /v1/pairing-codes` (auth) → `{ code, expiresAt }`;
   - an unexpected throw → `500 ServerError`, reported with `{ operation, route }`.
-- [ ] T025 Implement `server/src/adapters/http/app.ts` (`buildApp(deps)`), `auth.ts` (the Bearer hook), `schemas.ts` (JSON schemas from [contracts/sync-api.md](contracts/sync-api.md)), `errors.ts` and `routes/{health,pairing}.ts` to turn T024 green.
-- [ ] T026 Write a failing test, then implement the Pi command in `server/src/composition/pairing-code.ts` (`npm run pairing-code -w server`). It opens the database, creates a code with `created_by = NULL`, and prints exactly `Code d'appairage : ABCD-EF23 (valable 10 minutes)`.
-- [ ] T027 Implement `server/src/composition/main.ts`:
-  - open and migrate the database at `MES_COURSES_DB` (default `/var/lib/mes-courses/mes-courses.db`, or `server/.data/` in dev);
+- [ ] T025 Implement `apps/server/src/adapters/http/app.ts` (`buildApp(deps)`), `auth.ts` (the Bearer hook), `schemas.ts` (JSON schemas from [contracts/sync-api.md](contracts/sync-api.md)), `errors.ts` and `routes/{health,pairing}.ts` to turn T024 green.
+- [ ] T026 Write a failing test, then implement the Pi command in `apps/server/src/composition/pairing-code.ts` (`yarn workspace @mes-courses/server pairing-code`). It opens the database, creates a code with `created_by = NULL`, and prints exactly `Code d'appairage : ABCD-EF23 (valable 10 minutes)`.
+- [ ] T027 Implement `apps/server/src/composition/main.ts`:
+  - open and migrate the database at `MES_COURSES_DB` (default `/var/lib/mes-courses/mes-courses.db`, or `apps/server/.data/` in dev);
   - pick the Sentry reporter when `SENTRY_DSN` is set, the console one otherwise;
   - listen on `127.0.0.1:3000` only.
 
-  Then implement `server/src/testing/start-test-server.ts`: `startTestServer({ clock? })` starts `buildApp` on `127.0.0.1` with a random port and an in-memory database, and returns `{ url, createPairingCode(), close() }`. Cover `main` with a test that starts and stops it on a temporary file.
+  Then implement `apps/server/src/testing/start-test-server.ts`, exported from `apps/server/src/testing/index.ts` (the server's `./testing` entry): `startTestServer({ clock? })` starts `buildApp` on `127.0.0.1` with a random port and an in-memory database, and returns `{ url, createPairingCode(), close() }`. Cover `main` with a test that starts and stops it on a temporary file.
 
 ### App: migration, ports, adapters, connection ([contracts/app-ports.md](contracts/app-ports.md))
 
-- [ ] T028 Write failing tests for migration 2 in `src/adapters/sqlite/migrations.test.ts`:
+- [ ] T028 Write failing tests for migration 2 in `apps/mobile/src/adapters/sqlite/migrations.test.ts`:
   - `pending_change` and `sync_state` are created exactly as in [data-model.md](data-model.md#changes-to-001s-schema-migration-2), with `kind IN ('category','article','list','listItem')` and `snapshot_done IN (0, 1)`;
   - `category.position` is no longer `UNIQUE`, and two equal positions insert;
   - `created_hlc` is added to `category`, `article` and `shopping_list`, existing rows getting the encoded `MIN(deviceId)` stamp;
   - existing rows and `list_item` data survive the table rebuild;
   - `user_version` = 2;
   - it runs in one transaction.
-- [ ] T029 Implement migration 2 in `src/adapters/sqlite/migrations.ts` to turn T028 green. Update the category SQLite repository and the read models to order by `(position, created_hlc, id)` through `compareCategories`, keeping 001's ordering tests green.
-- [ ] T030 Declare the app ports in `src/application/ports/`, with exactly the signatures of [contracts/app-ports.md](contracts/app-ports.md#new-driven-ports-srcapplicationports):
+- [ ] T029 Implement migration 2 in `apps/mobile/src/adapters/sqlite/migrations.ts` to turn T028 green. Update the category SQLite repository and the read models to order by `(position, created_hlc, id)` through `compareCategories`, keeping 001's ordering tests green.
+- [ ] T030 Declare the app ports in `apps/mobile/src/application/ports/`, with exactly the signatures of [contracts/app-ports.md](contracts/app-ports.md#new-driven-ports-srcapplicationports):
   - `change-recorder.ts`, `sync-state.ts` and `pulled-rows.ts`, added to `Repositories`;
   - `clock.ts`, `sync-server.ts` and `credential-store.ts`.
-- [ ] T031 Write the contract suites in `src/application/testing/contracts/`:
+- [ ] T031 Write the contract suites in `apps/mobile/src/application/testing/contracts/`:
   - `change-recorder.contract.ts`:
     - `record` stamps a strictly increasing HLC from the `Clock`;
     - `pending` excludes held entries and keeps order;
@@ -207,24 +210,24 @@ Every story needs a device that can pair with a running server.
     - a `run` that throws leaves no entry.
   - `sync-state.contract.ts`: the defaults (`lastSeq = 0`, `snapshotDone = false`), and `save` then `get`.
 
-  Run them on fakes in `src/application/testing/in-memory-repositories.test.ts` and on SQLite in `src/adapters/sqlite/sqlite-repositories.test.ts`, and confirm they fail.
-- [ ] T032 Implement the fakes in `src/application/testing/in-memory-repositories.ts` and `FakeClock` in `src/application/testing/fake-clock.ts`. Implement the SQLite versions in `src/adapters/sqlite/change-recorder.ts` and `src/adapters/sqlite/sync-state-repository.ts`. Together they turn T031 green.
-- [ ] T033 [P] Implement `SystemClock` (`Date.now()`) in `src/adapters/clock/system-clock.ts`. Implement `CredentialStore` over `expo-secure-store` in `src/adapters/secure-store/credential-store.ts`, test-first with the module mocked, plus `InMemoryCredentialStore` in `src/application/testing/`. Install `expo-secure-store` with `npx expo install`.
-- [ ] T034 Write failing tests for the `SyncServer` HTTP adapter in `src/adapters/sync-http/sync-server.test.ts`, against `startTestServer()` from `server/src/testing/`:
+  Run them on fakes in `apps/mobile/src/application/testing/in-memory-repositories.test.ts` and on SQLite in `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`, and confirm they fail.
+- [ ] T032 Implement the fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts` and `FakeClock` in `apps/mobile/src/application/testing/fake-clock.ts`. Implement the SQLite versions in `apps/mobile/src/adapters/sqlite/change-recorder.ts` and `apps/mobile/src/adapters/sqlite/sync-state-repository.ts`. Together they turn T031 green.
+- [ ] T033 [P] Implement `SystemClock` (`Date.now()`) in `apps/mobile/src/adapters/clock/system-clock.ts`. Implement `CredentialStore` over `expo-secure-store` in `apps/mobile/src/adapters/secure-store/credential-store.ts`, test-first with the module mocked, plus `InMemoryCredentialStore` in `apps/mobile/src/application/testing/`. Install `expo-secure-store` with `yarn expo install`.
+- [ ] T034 Add the app's `./testing` entry: `apps/mobile/test/index.ts`, declared in `apps/mobile/package.json` `"exports"`, re-exporting 001's `node:sqlite` wrapper and the `SyncServer` adapter factory. Then write failing tests for the `SyncServer` HTTP adapter in `tests/sync/sync-server-adapter.test.ts`, importing the adapter from `@mes-courses/mobile/testing` and `startTestServer()` from `@mes-courses/server/testing` (the app never imports the server, Principle XI):
   - `health` returns `HealthInfo`;
   - `claim` maps `200` / `400` / `429` to `Pairing` / `InvalidCode` / `TooManyAttempts` (with minutes to wait);
   - each request sends `X-App-Version` and, when authenticated, `Authorization: Bearer`;
   - connection refused or a timeout of 10 s → `Offline` / `ServerUnreachable`;
   - a TLS verification error, simulated by an injected `fetch` that throws the platform's TLS error, → `UntrustedServer` and never a retry over `http://`;
   - `401` → `DeviceNotAuthorized`, `426` → `UpdateRequired`, `5xx` → `ServerError`.
-- [ ] T035 Implement `src/adapters/sync-http/sync-server.ts` (over `fetch`, with an injectable `fetch` and timeout) to turn the T034 tests for `health` and `claim` green. The other methods follow in the stories.
-- [ ] T036 Write failing use case tests in `src/application/use-cases/connect-to-server.test.ts`, on fakes and a fake `SyncServer`:
+- [ ] T035 Implement `apps/mobile/src/adapters/sync-http/sync-server.ts` (over `fetch`, with an injectable `fetch` and timeout) to turn the T034 tests for `health` and `claim` green. The other methods follow in the stories.
+- [ ] T036 Write failing use case tests in `apps/mobile/src/application/use-cases/connect-to-server.test.ts`, on fakes and a fake `SyncServer`:
   - "courses.example.fr" becomes `https://courses.example.fr`;
   - `http://` → `InvalidUrl`, unless the composition passes `allowInsecure` (development only);
   - `health` is called before `claim`, and `ServerUnreachable` / `UntrustedServer` change nothing;
   - `InvalidCode` and `TooManyAttempts` change nothing;
   - on success the credential goes to `CredentialStore` only, and `sync_state` stores `serverUrl`, `serverId` and `deviceId`, with `lastSeq = 0` and `snapshotDone = false`.
-- [ ] T037 Implement `src/application/use-cases/connect-to-server.ts` to turn T036 green. Add it to `UseCases` and to `src/composition/composition-root.ts`, with `SystemClock`, `CredentialStore` and `SyncServer` wired, and `allowInsecure` only when `__DEV__ && EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL === '1'`.
+- [ ] T037 Implement `apps/mobile/src/application/use-cases/connect-to-server.ts` to turn T036 green. Add it to `UseCases` and to `apps/mobile/src/composition/composition-root.ts`, with `SystemClock`, `CredentialStore` and `SyncServer` wired, and `allowInsecure` only when `__DEV__ && EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL === '1'`.
 
 **Checkpoint**: a development build can pair with a local server. Every existing test and the architecture test are green.
 
@@ -240,7 +243,7 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
 
 ### Tests for User Story 1 ⚠️ (write first, confirm they fail)
 
-- [ ] T038 [P] [US1] Write failing server domain tests in `server/src/domain/apply-change.test.ts` ([data-model.md](data-model.md#server-database-pi-sqlite)):
+- [ ] T038 [P] [US1] Write failing server domain tests in `apps/server/src/domain/apply-change.test.ts` ([data-model.md](data-model.md#server-database-pi-sqlite)):
   - a create sets every field with its HLC and `createdHlc`;
   - an update writes a field only when `mergeField` keeps the incoming value;
   - changes to different fields are both kept (FR-009);
@@ -248,7 +251,7 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
   - `article.deleted` sets `deletedHlc`, and any later change to it is ignored (FR-011);
   - a change for an unknown entity is ignored;
   - every touched row gets the new `seq`.
-- [ ] T039 [P] [US1] Write failing use case tests in `server/src/application/use-cases/sync.test.ts`, on fakes:
+- [ ] T039 [P] [US1] Write failing use case tests in `apps/server/src/application/use-cases/sync.test.ts`, on fakes:
   - changes are applied in request order;
   - a replayed `changeId` is acknowledged and not applied again (FR-006);
   - a change with no effect is still acknowledged;
@@ -257,15 +260,15 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
   - more than 500 changes → `400`;
   - the device's `lastSyncAt` is set;
   - a failure midway applies nothing (one transaction).
-- [ ] T040 [P] [US1] Write failing HTTP tests for `POST /v1/sync` in `server/src/adapters/http/sync-route.test.ts`, with `inject` and a real SQLite store: the schema rejects a bad body with nothing applied, `401` for a revoked device, and a round trip with a fake clock.
-- [ ] T041 [P] [US1] Write failing tests in `src/adapters/sqlite/pulled-rows-applier.test.ts`, on a migrated `node:sqlite` database:
+- [ ] T040 [P] [US1] Write failing HTTP tests for `POST /v1/sync` in `apps/server/src/adapters/http/sync-route.test.ts`, with `inject` and a real SQLite store: the schema rejects a bad body with nothing applied, `401` for a revoked device, and a round trip with a fake clock.
+- [ ] T041 [P] [US1] Write failing tests in `apps/mobile/src/adapters/sqlite/pulled-rows-applier.test.ts`, on a migrated `node:sqlite` database:
   - pulled rows are upserted into `category`, `article`, `shopping_list` and `list_item`;
   - a `listItem` with `present = false` deletes the local row;
   - a deleted or merged article deletes the local article and its items;
   - fields with a pending local change are skipped;
   - a row that would break `UNIQUE (normalized_name)` against a pending local create is deferred and counted, not failed (R8);
   - `app_state.current_list_id` is never touched (FR-015).
-- [ ] T042 [P] [US1] Write failing use case tests in `src/application/use-cases/synchronize.test.ts`, with fakes and a fake `SyncServer`:
+- [ ] T042 [P] [US1] Write failing use case tests in `apps/mobile/src/application/use-cases/synchronize.test.ts`, with fakes and a fake `SyncServer`:
   - `notConnected` when there is no `serverUrl`;
   - the first cycle pushes a snapshot of every local row and field stamped with `MIN(deviceId)` before the outbox, then sets `snapshotDone` (R13, US1-6);
   - outbox entries are pushed in order, in batches of at most 500, until empty (US1-3);
@@ -274,8 +277,8 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
   - `DeviceNotAuthorized` or a different `serverId` → `disconnectedByServer`, keeping every row and pending change (FR-018a);
   - `UpdateRequired` → `updateRequired`;
   - `more: true` → pull again.
-- [ ] T043 [P] [US1] Write failing tests for `releaseHeldChanges(undoId)` in `src/application/use-cases/release-held-changes.test.ts`, and extend `src/application/use-cases/initialize-store.test.ts`: at every start it calls `changes.releaseAll()`, so a deletion left held by a killed app becomes final (R10).
-- [ ] T044 [P] [US1] Write failing store and scheduler tests in `src/adapters/ui/state/sync-scheduler.test.ts`, with Jest fake timers and a mocked React Native `AppState`:
+- [ ] T043 [P] [US1] Write failing tests for `releaseHeldChanges(undoId)` in `apps/mobile/src/application/use-cases/release-held-changes.test.ts`, and extend `apps/mobile/src/application/use-cases/initialize-store.test.ts`: at every start it calls `changes.releaseAll()`, so a deletion left held by a killed app becomes final (R10).
+- [ ] T044 [P] [US1] Write failing store and scheduler tests in `apps/mobile/src/adapters/ui/state/sync-scheduler.test.ts`, with Jest fake timers and a mocked React Native `AppState`:
   - a cycle runs at start;
   - a cycle runs on coming back to the foreground;
   - a cycle runs 1 s after a write (debounced);
@@ -283,8 +286,8 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
   - never two cycles at once;
   - after failures the delay backs off 5 s → 10 s → … → 5 min, and resets on success;
   - after a cycle that pulled rows, the store runs `refresh()`.
-- [ ] T045 [US1] Write failing tests in `src/adapters/ui/state/app-store.undo-sync.test.ts`: when an undo offer ends (5 s, the next write, dismissal, or a new undo replacing it), the store calls `releaseHeldChanges(undoId)`; "Annuler" calls the restore, which discards the held entries.
-- [ ] T046 [US1] Write failing screen tests in `src/adapters/ui/screens/settings-screen.test.tsx` and `src/adapters/ui/screens/connect-server-screen.test.tsx`, through `renderWithStore` and the texts of [contracts/ui-screens.md](contracts/ui-screens.md):
+- [ ] T045 [US1] Write failing tests in `apps/mobile/src/adapters/ui/state/app-store.undo-sync.test.ts`: when an undo offer ends (5 s, the next write, dismissal, or a new undo replacing it), the store calls `releaseHeldChanges(undoId)`; "Annuler" calls the restore, which discards the held entries.
+- [ ] T046 [US1] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/settings-screen.test.tsx` and `apps/mobile/src/adapters/ui/screens/connect-server-screen.test.tsx`, through `renderWithStore` and the texts of [contracts/ui-screens.md](contracts/ui-screens.md):
   - Appbar action "Réglages" on CurrentList;
   - not connected: "Synchronisez vos listes avec votre serveur pour les retrouver sur vos autres appareils." and "Connecter à un serveur";
   - ConnectServer fields "Adresse du serveur", "Code d'appairage" and "Nom de cet appareil", the latter prefilled with the device model and capped at 60 characters;
@@ -296,7 +299,7 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
     - `InvalidCode` → "Ce code n'est pas valide ou a expiré. Demandez un nouveau code." (US4-5);
     - `TooManyAttempts` → "Trop d'essais. Réessayez dans {n} minutes." (US4-12);
   - connected: the server address and "Dernière synchronisation : …" or "Jamais".
-- [ ] T047 [US1] Write a failing cross-stack scenario test in `test/sync/single-device.test.ts`: one app stack on SQLite (`node:sqlite`) with the real `SyncServer` adapter, the real use cases and a fake clock, against `startTestServer()`.
+- [ ] T047 [US1] Write a failing cross-stack scenario test in `tests/sync/single-device.test.ts`: one app stack on SQLite (`node:sqlite`) with the real `SyncServer` adapter, the real use cases and a fake clock, against `startTestServer()`. The stack comes from a `buildTestAppStack({ serverUrl, clock })` helper added to `apps/mobile/test/index.ts`, which wires the app's composition the same way as production, minus the UI.
   - 003 US1-1: a tick reaches the server after one cycle.
   - 003 US1-2 / US1-3: with the server closed, add, tick, rename and delete; nothing fails; restart the server and the changes arrive in order, none twice.
   - 003 US1-4: rebuild the app stack on the same database, as a killed app would; the outbox is still sent.
@@ -306,29 +309,29 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
 
 ### Implementation for User Story 1
 
-- [ ] T048 [US1] Implement `server/src/domain/apply-change.ts` to turn T038 green.
-- [ ] T049 [US1] Implement `server/src/application/use-cases/sync.ts` to turn T039 green.
-- [ ] T050 [US1] Implement `server/src/adapters/http/routes/sync.ts` and its schema to turn T040 green.
-- [ ] T051 [US1] Implement `src/adapters/sqlite/pulled-rows-applier.ts` to turn T041 green.
-- [ ] T052 [US1] Add `sync` to `src/adapters/sync-http/sync-server.ts`, extending `sync-server.test.ts` first with a round trip against `startTestServer()`.
-- [ ] T053 [US1] Implement `src/application/use-cases/synchronize.ts` to turn T042 green.
-- [ ] T054 [US1] Implement `src/application/use-cases/release-held-changes.ts` and call `changes.releaseAll()` in `initialize-store.ts`, to turn T043 green.
-- [ ] T055 [P] [US1] Test-first, record the seeded categories (`name`, `position`) and the first list (`name`) with `changes.record` in `src/application/use-cases/initialize-store.ts` ([contracts/app-ports.md](contracts/app-ports.md#changes-to-existing-use-cases-001-and-002)). Keep every existing test green.
-- [ ] T056 [P] [US1] Test-first, record `listItem.inCart` in `src/application/use-cases/toggle-item-in-cart.ts`.
-- [ ] T057 [P] [US1] Test-first, record `listItem.inCart = false` for each item ticked at that moment, with one HLC, in `src/application/use-cases/finish-shopping.ts` (FR-013).
-- [ ] T058 [P] [US1] Test-first, record `listItem { listId, articleId, present: true, inCart: false, quantity }` in `src/application/use-cases/add-article-to-list.ts`.
-- [ ] T059 [P] [US1] Test-first, record `article { name, categoryId }` and then the `listItem` in `src/application/use-cases/create-article-and-add-to-list.ts`. The article's change must come first.
-- [ ] T060 [P] [US1] Test-first, record `listItem.quantity` in `src/application/use-cases/change-item-quantity.ts`.
-- [ ] T061 [P] [US1] Test-first, record `listItem.present = false` **held** by a new `undoId`, returned in `RemovedItem`, in `src/application/use-cases/remove-item-from-list.ts`.
-- [ ] T062 [P] [US1] Test-first, call `changes.discard(removed.undoId)` and record nothing in `src/application/use-cases/restore-removed-item.ts`.
-- [ ] T063 [P] [US1] Test-first, record `list.name` in `src/application/use-cases/create-list.ts`, and assert `set-current-list.ts` records nothing (FR-015).
-- [ ] T064 [P] [US1] Test-first, record `category { name, position }` in `src/application/use-cases/create-category.ts`.
-- [ ] T065 [P] [US1] Test-first, record only the changed fields (`article.name` and/or `article.categoryId`) in `src/application/use-cases/edit-article.ts` (002).
-- [ ] T066 [P] [US1] Test-first, record `article.deleted = true` **held** by a new `undoId`, returned in `DeletedArticle`, in `src/application/use-cases/delete-article.ts` (002).
-- [ ] T067 [P] [US1] Test-first, call `changes.discard(deleted.undoId)` in `src/application/use-cases/restore-deleted-article.ts` (002).
-- [ ] T068 [US1] Add the `sync` slice (`connection`, `status`, `pendingCount`, `lastSyncAt`, per [research.md](research.md) R14) and the `connectToServer` action to `src/adapters/ui/state/app-store.ts`. Implement `src/adapters/ui/state/sync-scheduler.ts`. Release held changes when an undo offer ends. Together these turn T044–T045 green. Start the scheduler from `src/composition/composition-root.ts`.
-- [ ] T069 [US1] Implement `src/adapters/ui/screens/SettingsScreen.tsx` (not-connected and server sections) and `src/adapters/ui/screens/ConnectServerScreen.tsx`. Add the "Réglages" Appbar action (cog icon) to `CurrentListScreen.tsx`, and the routes to `src/adapters/ui/navigation.tsx`. This turns T046 green.
-- [ ] T070 [US1] Make `test/sync/single-device.test.ts` (T047) green, fixing only what it reveals, each fix with its own failing unit test first.
+- [ ] T048 [US1] Implement `apps/server/src/domain/apply-change.ts` to turn T038 green.
+- [ ] T049 [US1] Implement `apps/server/src/application/use-cases/sync.ts` to turn T039 green.
+- [ ] T050 [US1] Implement `apps/server/src/adapters/http/routes/sync.ts` and its schema to turn T040 green.
+- [ ] T051 [US1] Implement `apps/mobile/src/adapters/sqlite/pulled-rows-applier.ts` to turn T041 green.
+- [ ] T052 [US1] Add `sync` to `apps/mobile/src/adapters/sync-http/sync-server.ts`, extending `tests/sync/sync-server-adapter.test.ts` first with a round trip against `startTestServer()`.
+- [ ] T053 [US1] Implement `apps/mobile/src/application/use-cases/synchronize.ts` to turn T042 green.
+- [ ] T054 [US1] Implement `apps/mobile/src/application/use-cases/release-held-changes.ts` and call `changes.releaseAll()` in `initialize-store.ts`, to turn T043 green.
+- [ ] T055 [P] [US1] Test-first, record the seeded categories (`name`, `position`) and the first list (`name`) with `changes.record` in `apps/mobile/src/application/use-cases/initialize-store.ts` ([contracts/app-ports.md](contracts/app-ports.md#changes-to-existing-use-cases-001-and-002)). Keep every existing test green.
+- [ ] T056 [P] [US1] Test-first, record `listItem.inCart` in `apps/mobile/src/application/use-cases/toggle-item-in-cart.ts`.
+- [ ] T057 [P] [US1] Test-first, record `listItem.inCart = false` for each item ticked at that moment, with one HLC, in `apps/mobile/src/application/use-cases/finish-shopping.ts` (FR-013).
+- [ ] T058 [P] [US1] Test-first, record `listItem { listId, articleId, present: true, inCart: false, quantity }` in `apps/mobile/src/application/use-cases/add-article-to-list.ts`.
+- [ ] T059 [P] [US1] Test-first, record `article { name, categoryId }` and then the `listItem` in `apps/mobile/src/application/use-cases/create-article-and-add-to-list.ts`. The article's change must come first.
+- [ ] T060 [P] [US1] Test-first, record `listItem.quantity` in `apps/mobile/src/application/use-cases/change-item-quantity.ts`.
+- [ ] T061 [P] [US1] Test-first, record `listItem.present = false` **held** by a new `undoId`, returned in `RemovedItem`, in `apps/mobile/src/application/use-cases/remove-item-from-list.ts`.
+- [ ] T062 [P] [US1] Test-first, call `changes.discard(removed.undoId)` and record nothing in `apps/mobile/src/application/use-cases/restore-removed-item.ts`.
+- [ ] T063 [P] [US1] Test-first, record `list.name` in `apps/mobile/src/application/use-cases/create-list.ts`, and assert `set-current-list.ts` records nothing (FR-015).
+- [ ] T064 [P] [US1] Test-first, record `category { name, position }` in `apps/mobile/src/application/use-cases/create-category.ts`.
+- [ ] T065 [P] [US1] Test-first, record only the changed fields (`article.name` and/or `article.categoryId`) in `apps/mobile/src/application/use-cases/edit-article.ts` (002).
+- [ ] T066 [P] [US1] Test-first, record `article.deleted = true` **held** by a new `undoId`, returned in `DeletedArticle`, in `apps/mobile/src/application/use-cases/delete-article.ts` (002).
+- [ ] T067 [P] [US1] Test-first, call `changes.discard(deleted.undoId)` in `apps/mobile/src/application/use-cases/restore-deleted-article.ts` (002).
+- [ ] T068 [US1] Add the `sync` slice (`connection`, `status`, `pendingCount`, `lastSyncAt`, per [research.md](research.md) R14) and the `connectToServer` action to `apps/mobile/src/adapters/ui/state/app-store.ts`. Implement `apps/mobile/src/adapters/ui/state/sync-scheduler.ts`. Release held changes when an undo offer ends. Together these turn T044–T045 green. Start the scheduler from `apps/mobile/src/composition/composition-root.ts`.
+- [ ] T069 [US1] Implement `apps/mobile/src/adapters/ui/screens/SettingsScreen.tsx` (not-connected and server sections) and `apps/mobile/src/adapters/ui/screens/ConnectServerScreen.tsx`. Add the "Réglages" Appbar action (cog icon) to `CurrentListScreen.tsx`, and the routes to `apps/mobile/src/adapters/ui/navigation.tsx`. This turns T046 green.
+- [ ] T070 [US1] Make `tests/sync/single-device.test.ts` (T047) green, fixing only what it reveals, each fix with its own failing unit test first.
 
 **Checkpoint**: one device syncs with the server and survives reinstalling. This is the first half of the MVP.
 
@@ -344,7 +347,7 @@ offline at the same time, and check they end identical after syncing, per US2's 
 
 ### Tests for User Story 2 ⚠️ (write first, confirm they fail)
 
-- [ ] T071 [P] [US2] Write failing server domain tests in `server/src/domain/merge-by-name.test.ts` ([research.md](research.md) R8):
+- [ ] T071 [P] [US2] Write failing server domain tests in `apps/server/src/domain/merge-by-name.test.ts` ([research.md](research.md) R8):
   - two categories, two articles or two lists with the same `normalizedName` → the survivor is the smaller `(createdHlc, id)`, and the other is tombstoned with `mergedInto`;
   - a merged article's list items move to the survivor, and are merged field by field when the survivor is already on that list;
   - a merged category's articles move;
@@ -352,10 +355,10 @@ offline at the same time, and check they end identical after syncing, per US2's 
   - a later change to a merged id is redirected, following chains;
   - a rename that collides triggers the same merge (spec edge case);
   - all of it happens in the transaction of the change that caused it.
-- [ ] T072 [P] [US2] Extend `server/src/application/use-cases/sync.test.ts` with failing tests:
+- [ ] T072 [P] [US2] Extend `apps/server/src/application/use-cases/sync.test.ts` with failing tests:
   - an incoming HLC more than 60 s ahead of the server clock is clamped, so a device with its clock in the future does not win a later honest change made 2 minutes after (spec edge case "wrong clock");
   - the server's HLC returned to a slow device makes that device's next change win over older ones.
-- [ ] T073 [US2] Write failing two-device scenario tests in `test/sync/two-devices.test.ts`: two app stacks (A and B) on separate databases, one `startTestServer()`, and a fake clock shared or skewed per test. Each US2 scenario of the spec is one test, with both devices offline (server closed) between their changes:
+- [ ] T073 [US2] Write failing two-device scenario tests in `tests/sync/two-devices.test.ts`: two app stacks (A and B) on separate databases, one `startTestServer()`, and a fake clock shared or skewed per test. Each US2 scenario of the spec is one test, with both devices offline (server closed) between their changes:
   - 003 US2-1: "Pain" added on A appears on B after B's next cycle;
   - 003 US2-2: A ticks, then B unticks later → unticked on both;
   - 003 US2-3: a rename on A and a quantity change on B → "Lait entier, 2 L" on both;
@@ -367,7 +370,7 @@ offline at the same time, and check they end identical after syncing, per US2's 
   - 003 US2-9: each device keeps its own current list;
   - 003 FR-017 / SC-007: B with its own seeded defaults and data joins a server holding A's data → no duplicated default category or "Ma liste", and B's own articles are added;
   - SC-003: after every scenario, A's and B's full read models are deep-equal.
-- [ ] T074 [US2] Write a failing scenario test in `test/sync/reset-server.test.ts` (FR-018a):
+- [ ] T074 [US2] Write a failing scenario test in `tests/sync/reset-server.test.ts` (FR-018a):
   - both devices hold data, then the server is replaced by an empty one with a new `serverId`;
   - each device reports `disconnectedByServer` and keeps its data and outbox;
   - A pairs again and repopulates; B pairs again and merges with no duplicates;
@@ -375,9 +378,9 @@ offline at the same time, and check they end identical after syncing, per US2's 
 
 ### Implementation for User Story 2
 
-- [ ] T075 [US2] Implement `server/src/domain/merge-by-name.ts` and call it from `apply-change.ts` on creates and renames, to turn T071 green.
-- [ ] T076 [US2] Add the HLC clamp and the server HLC state to `server/src/application/use-cases/sync.ts` to turn T072 green.
-- [ ] T077 [US2] Make `test/sync/two-devices.test.ts` (T073) and `test/sync/reset-server.test.ts` (T074) green. Every production fix they force starts with its own failing unit test in the layer where it belongs: `sync-core`, server domain, `PulledRowsApplier` or `synchronize`.
+- [ ] T075 [US2] Implement `apps/server/src/domain/merge-by-name.ts` and call it from `apply-change.ts` on creates and renames, to turn T071 green.
+- [ ] T076 [US2] Add the HLC clamp and the server HLC state to `apps/server/src/application/use-cases/sync.ts` to turn T072 green.
+- [ ] T077 [US2] Make `tests/sync/two-devices.test.ts` (T073) and `tests/sync/reset-server.test.ts` (T074) green. Every production fix they force starts with its own failing unit test in the layer where it belongs: `sync-core`, server domain, `PulledRowsApplier` or `synchronize`.
 
 **Checkpoint**: US1 and US2 together form the MVP. The server is the source of truth, and every
 device converges.
@@ -394,7 +397,7 @@ the server failing (failed, then "Réessayer").
 
 ### Tests for User Story 3 ⚠️ (write first, confirm they fail)
 
-- [ ] T078 [P] [US3] Write failing store tests in `src/adapters/ui/state/app-store.sync-status.test.ts`, following the transitions of [data-model.md](data-model.md#sync-status-ui-store-syncstatus-us3):
+- [ ] T078 [P] [US3] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.sync-status.test.ts`, following the transitions of [data-model.md](data-model.md#sync-status-ui-store-syncstatus-us3):
   - a local write → `waiting` with `pendingCount`;
   - a cycle → `sending`, then `saved` when the outbox is empty;
   - `Offline` → `waiting`, never reported (FR-022);
@@ -402,7 +405,7 @@ the server failing (failed, then "Réessayer").
   - a success resets the streak;
   - `syncNow()` starts a cycle at once (US3-5);
   - `retry()` from `failed` starts a cycle.
-- [ ] T079 [P] [US3] Write failing component tests in `src/adapters/ui/components/sync-status-bar.test.tsx`, with the texts of [contracts/ui-screens.md](contracts/ui-screens.md#syncstatusbar-new-shared-component-fr-020):
+- [ ] T079 [P] [US3] Write failing component tests in `apps/mobile/src/adapters/ui/components/sync-status-bar.test.tsx`, with the texts of [contracts/ui-screens.md](contracts/ui-screens.md#syncstatusbar-new-shared-component-fr-020):
   - "Synchronisé" (US3-1);
   - "En attente de synchronisation (3)", with the accessibility label "3 modifications", and no error color (US3-2);
   - "Synchronisation…" (US3-3);
@@ -416,8 +419,8 @@ the server failing (failed, then "Réessayer").
 
 ### Implementation for User Story 3
 
-- [ ] T081 [US3] Implement the status transitions, the failure streak, `syncNow()` and `retry()` in `src/adapters/ui/state/app-store.ts` and `src/adapters/ui/state/sync-scheduler.ts` to turn T078 green.
-- [ ] T082 [P] [US3] Implement `src/adapters/ui/components/SyncStatusBar.tsx` (Paper only, theme tokens) to turn T079 green.
+- [ ] T081 [US3] Implement the status transitions, the failure streak, `syncNow()` and `retry()` in `apps/mobile/src/adapters/ui/state/app-store.ts` and `apps/mobile/src/adapters/ui/state/sync-scheduler.ts` to turn T078 green.
+- [ ] T082 [P] [US3] Implement `apps/mobile/src/adapters/ui/components/SyncStatusBar.tsx` (Paper only, theme tokens) to turn T079 green.
 - [ ] T083 [US3] Render `SyncStatusBar` in `CurrentListScreen.tsx`, `AddArticlesScreen.tsx`, `ListsScreen.tsx`, `EditArticleScreen.tsx` and `SettingsScreen.tsx`, and add "Synchroniser maintenant" to Settings, to turn T080 green.
 
 **Checkpoint**: the user always sees whether changes are on the server.
@@ -440,27 +443,27 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
 
 ### Tests for User Story 4 ⚠️ (write first, confirm they fail)
 
-- [ ] T084 [P] [US4] Write failing server use case tests in `server/src/application/use-cases/devices.test.ts`:
+- [ ] T084 [P] [US4] Write failing server use case tests in `apps/server/src/application/use-cases/devices.test.ts`:
   - `listDevices` excludes revoked ones and returns `{ id, name, createdAt, lastSyncAt }` (US4-8);
   - `renameDevice` trims to 1–60 characters, or `NotFound`;
   - `revokeDevice` sets `revokedAt`, and the next request from that device is refused (US4-9, SC-009);
   - a device may revoke itself (US4-11).
-- [ ] T085 [P] [US4] Write failing HTTP tests in `server/src/adapters/http/devices-route.test.ts` for `GET /v1/devices`, `PATCH /v1/devices/:id` and `DELETE /v1/devices/:id` (`200`/`204`/`404`, auth required).
-- [ ] T086 [P] [US4] Write failing app use case tests in `src/application/use-cases/`, one file each, on fakes and a fake `SyncServer`:
+- [ ] T085 [P] [US4] Write failing HTTP tests in `apps/server/src/adapters/http/devices-route.test.ts` for `GET /v1/devices`, `PATCH /v1/devices/:id` and `DELETE /v1/devices/:id` (`200`/`204`/`404`, auth required).
+- [ ] T086 [P] [US4] Write failing app use case tests in `apps/mobile/src/application/use-cases/`, one file each, on fakes and a fake `SyncServer`:
   - `create-pairing-code.test.ts`: US4-3, and `Offline`;
   - `list-devices.test.ts`: marks `isThisDevice`;
   - `rename-device.test.ts`: 001's `validateName` errors;
   - `revoke-device.test.ts`: US4-9;
   - `disconnect.test.ts` (US4-11): it revokes itself when the server is reachable, otherwise best effort; it clears the credential and the connection fields; it keeps the local data and the outbox; `connection` becomes `notConnected`.
-- [ ] T087 [US4] Extend `src/adapters/sync-http/sync-server.test.ts` with failing tests for `createPairingCode`, `listDevices`, `renameDevice` and `revokeDevice` against `startTestServer()`.
-- [ ] T088 [US4] Write failing screen tests in `src/adapters/ui/screens/settings-screen.test.tsx`, with the texts of [contracts/ui-screens.md](contracts/ui-screens.md#settings-new-screen):
+- [ ] T087 [US4] Extend `tests/sync/sync-server-adapter.test.ts` with failing tests for `createPairingCode`, `listDevices`, `renameDevice` and `revokeDevice` against `startTestServer()`.
+- [ ] T088 [US4] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/settings-screen.test.tsx`, with the texts of [contracts/ui-screens.md](contracts/ui-screens.md#settings-new-screen):
   - the Appareils section: rows with the name, "Dernière synchronisation : …" and "Cet appareil"; loading; error "Impossible de charger les appareils." with "Réessayer"; offline "Liste des appareils indisponible hors connexion." (not reported);
   - "Renommer" dialog;
   - "Révoquer « … » ?" dialog with "Cet appareil ne pourra plus synchroniser. Ses données restent sur l'appareil.", not offered on this device;
   - "Déconnecter cet appareil ?" dialog;
   - `PairingCodeDialog` "Ajouter un appareil" showing "ABCD-EF23" and "Valable jusqu'à {heure}.", with the offline message "Connexion au serveur nécessaire pour ajouter un appareil.";
   - with `connection = disconnectedByServer`, the bar shows "Cet appareil n'est plus connecté au serveur." and "Se reconnecter" opens ConnectServer (US4-10).
-- [ ] T089 [US4] Write a failing scenario test in `test/sync/revocation.test.ts`:
+- [ ] T089 [US4] Write a failing scenario test in `tests/sync/revocation.test.ts`:
   - A creates a code and B claims it (US4-3, US4-4);
   - A revokes B; B's next cycle → `disconnectedByServer`, with B's data and outbox kept (US4-10, SC-009);
   - B pairs again with a new code and its waiting changes are sent;
@@ -469,11 +472,11 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
 
 ### Implementation for User Story 4
 
-- [ ] T090 [US4] Implement `server/src/application/use-cases/{list-devices,rename-device,revoke-device}.ts` and `server/src/adapters/http/routes/devices.ts` to turn T084–T085 green.
-- [ ] T091 [US4] Add `createPairingCode`, `listDevices`, `renameDevice` and `revokeDevice` to `src/adapters/sync-http/sync-server.ts` to turn T087 green.
-- [ ] T092 [US4] Implement `src/application/use-cases/{create-pairing-code,list-devices,rename-device,revoke-device,disconnect}.ts` to turn T086 green. Add them to `UseCases`, to the composition root and to store actions in `src/adapters/ui/state/app-store.ts`.
-- [ ] T093 [US4] Implement the Appareils and Actions sections of `SettingsScreen.tsx`, `src/adapters/ui/screens/PairingCodeDialog.tsx`, `RenameDeviceDialog.tsx`, `RevokeDeviceDialog.tsx`, `DisconnectDialog.tsx`, and the "Se reconnecter" action of `SyncStatusBar`, to turn T088 green.
-- [ ] T094 [US4] Make `test/sync/revocation.test.ts` (T089) green. Each fix it forces starts with its own failing unit test first.
+- [ ] T090 [US4] Implement `apps/server/src/application/use-cases/{list-devices,rename-device,revoke-device}.ts` and `apps/server/src/adapters/http/routes/devices.ts` to turn T084–T085 green.
+- [ ] T091 [US4] Add `createPairingCode`, `listDevices`, `renameDevice` and `revokeDevice` to `apps/mobile/src/adapters/sync-http/sync-server.ts` to turn T087 green.
+- [ ] T092 [US4] Implement `apps/mobile/src/application/use-cases/{create-pairing-code,list-devices,rename-device,revoke-device,disconnect}.ts` to turn T086 green. Add them to `UseCases`, to the composition root and to store actions in `apps/mobile/src/adapters/ui/state/app-store.ts`.
+- [ ] T093 [US4] Implement the Appareils and Actions sections of `SettingsScreen.tsx`, `apps/mobile/src/adapters/ui/screens/PairingCodeDialog.tsx`, `RenameDeviceDialog.tsx`, `RevokeDeviceDialog.tsx`, `DisconnectDialog.tsx`, and the "Se reconnecter" action of `SyncStatusBar`, to turn T088 green.
+- [ ] T094 [US4] Make `tests/sync/revocation.test.ts` (T089) green. Each fix it forces starts with its own failing unit test first.
 
 **Checkpoint**: all four stories work. Devices are paired, managed and revoked from the app.
 
@@ -481,16 +484,16 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T095 [P] Add `deploy/Caddyfile` (`{$MES_COURSES_DOMAIN}` → `reverse_proxy 127.0.0.1:3000`, with automatic HTTPS), `deploy/mes-courses.service` (user `mes-courses`, `EnvironmentFile=/etc/mes-courses.env`, `Restart=always`, `NODE_ENV=production`) and `deploy/mes-courses.env.example` (variable names only, no values) ([research.md](research.md) R17).
-- [ ] T096 [P] Extend `src/adapters/ui/state/error-context.test.ts` (001) and add `server/src/adapters/error-reporting/report-context.test.ts`. Every report raised in the 003 tests carries only the allowed fields. Scan the serialized reports for the test URL, device names, codes, credentials and article names, and fail if any is found (FR-022, FR-022a).
-- [ ] T097 [P] Extend `src/adapters/ui/screens/accessibility.test.tsx` (001) to Settings, ConnectServer, the device dialogs, `PairingCodeDialog` and `SyncStatusBar`: French labels on every interactive element and ≥ 48 dp targets (FR-023).
-- [ ] T098 Extend 001's offline scenario `src/adapters/ui/offline.test.tsx` with a connected device whose `SyncServer` always returns `Offline`. Every 001 and 002 action still succeeds, the status is `waiting`, and nothing is reported (FR-003, SC-004).
-- [ ] T099 Add a test in `test/sync/performance.test.ts`:
+- [ ] T095 [P] Add `deploy/Caddyfile` (`{$MES_COURSES_DOMAIN}` → `reverse_proxy 127.0.0.1:3000`, with automatic HTTPS), `deploy/mes-courses.service` (user `mes-courses`, `ExecStart=/opt/mes-courses/runtime/bin/node /opt/mes-courses/apps/server/dist/composition/main.js`, `EnvironmentFile=/etc/mes-courses.env`, `Restart=always`, `NODE_ENV=production`). Add `packages.<system>.node` (the dev shell's `nodejs_24`) to `flake.nix`, so the Pi can build its runtime with `nix build .#node` and `deploy/mes-courses.env.example` (variable names only, no values) ([research.md](research.md) R17).
+- [ ] T096 [P] Extend `apps/mobile/src/adapters/ui/state/error-context.test.ts` (001) and add `apps/server/src/adapters/error-reporting/report-context.test.ts`. Every report raised in the 003 tests carries only the allowed fields. Scan the serialized reports for the test URL, device names, codes, credentials and article names, and fail if any is found (FR-022, FR-022a).
+- [ ] T097 [P] Extend `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx` (001) to Settings, ConnectServer, the device dialogs, `PairingCodeDialog` and `SyncStatusBar`: French labels on every interactive element and ≥ 48 dp targets (FR-023).
+- [ ] T098 Extend 001's offline scenario `apps/mobile/src/adapters/ui/offline.test.tsx` with a connected device whose `SyncServer` always returns `Offline`. Every 001 and 002 action still succeeds, the status is `waiting`, and nothing is reported (FR-003, SC-004).
+- [ ] T099 Add a test in `tests/sync/performance.test.ts`:
   - a new device restores 500 articles, 5 lists and 300 items from `startTestServer()`, with the cycle loop finishing (asserted as at most 2 sync requests at the 5,000-row page size, SC-005);
   - a local tick's handler never awaits the scheduler (SC-004).
 - [ ] T100 Update `README.md`:
-  - the workspaces (`server/`, `packages/sync-core/`);
-  - running the server in development (`npm run dev -w server`, `npm run pairing-code -w server`);
+  - the workspaces (`apps/server/`, `packages/sync-core/`, `tests/sync/`);
+  - running the server in development (`yarn workspace @mes-courses/server dev`, `yarn workspace @mes-courses/server pairing-code`);
   - the Pi and Freebox setup, referring to [quickstart.md](quickstart.md) §3;
   - the environment variables `SENTRY_DSN`, `MES_COURSES_DB`, `MES_COURSES_DOMAIN` and `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL` (development only).
 - [ ] T101 Run [quickstart.md](quickstart.md) §1–§2 locally. With the maintainer, who does the Freebox, DNS and Pi actions of §3, deploy to the Pi and check `curl https://<domain>/v1/health` from mobile data and from the home Wi-Fi. Then run the 15 scenarios of §4 and §5 on a phone and a tablet. Record results, and anything not checked, in the pull request's test plan.
@@ -539,11 +542,11 @@ followed by a refactor and a commit.
 
 ```bash
 # Red: independent test files
-Task: "T038 server/src/domain/apply-change.test.ts"
-Task: "T039 server/src/application/use-cases/sync.test.ts"
-Task: "T041 src/adapters/sqlite/pulled-rows-applier.test.ts"
-Task: "T042 src/application/use-cases/synchronize.test.ts"
-Task: "T044 src/adapters/ui/state/sync-scheduler.test.ts"
+Task: "T038 apps/server/src/domain/apply-change.test.ts"
+Task: "T039 apps/server/src/application/use-cases/sync.test.ts"
+Task: "T041 apps/mobile/src/adapters/sqlite/pulled-rows-applier.test.ts"
+Task: "T042 apps/mobile/src/application/use-cases/synchronize.test.ts"
+Task: "T044 apps/mobile/src/adapters/ui/state/sync-scheduler.test.ts"
 
 # Recording changes: one use case per task, all in parallel
 Task: "T056 toggle-item-in-cart.ts"

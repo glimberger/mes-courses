@@ -2,8 +2,8 @@
 
 **Feature**: [spec.md](spec.md) | **Plan**: [plan.md](plan.md) | **Date**: 2026-10-05
 
-The domain model is in `src/domain/` (pure TypeScript). Its storage in SQLite is in
-`src/adapters/sqlite/`. Names of types and errors below are the contract between layers; French
+The domain model is in `apps/mobile/src/domain/` (pure TypeScript). Its storage in SQLite is in
+`apps/mobile/src/adapters/sqlite/`. Names of types and errors below are the contract between layers; French
 text appears only in the UI adapter (Principle X).
 
 ## Shared value rules

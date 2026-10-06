@@ -115,7 +115,7 @@ From the next request on, the revoked device gets `401` (SC-009).
 ## Command line on the Pi (not HTTP)
 
 ```sh
-npm run pairing-code -w server   # prints "Code d'appairage : ABCD-EF23 (valable 10 minutes)"
+yarn workspace @mes-courses/server pairing-code   # prints "Code d'appairage : ABCD-EF23 (valable 10 minutes)"
 ```
 
 It creates a code with `created_by = NULL`, directly in the database (research R11). This is

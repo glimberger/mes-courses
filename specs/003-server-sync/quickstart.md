@@ -9,11 +9,13 @@ devices. Behavior is in [spec.md](spec.md); the API in
 ## 1. Automated checks (same as CI)
 
 ```sh
-npm ci
-npm run typecheck --workspaces --include-workspace-root
-npm run lint --workspaces --include-workspace-root
-npm test --workspaces --include-workspace-root   # sync-core, server, app (incl. two-device scenarios)
-npm run test:architecture                        # app, server and sync-core layer rules
+yarn install --immutable                     # from the repository root: every workspace
+yarn typecheck          # root scripts run in every workspace (001 research R20)
+yarn lint
+yarn format:check
+yarn test                   # sync-core, server, app, tests/sync (adapter and two-device scenarios)
+yarn test:architecture  # app, server, sync-core and cross-workspace rules
+yarn build              # app (expo export) and server (tsc)
 ```
 
 Expected: everything is green. No test reaches the network beyond `127.0.0.1`, and none reaches
@@ -22,8 +24,8 @@ the Pi. Scenario tests are named after the spec ("003 US2-5 …").
 ## 2. Run the server locally (development)
 
 ```sh
-npm run dev -w server          # http://127.0.0.1:3000, database in server/.data/
-npm run pairing-code -w server # prints a code valid 10 minutes
+yarn workspace @mes-courses/server dev          # http://127.0.0.1:3000, database in apps/server/.data/
+yarn workspace @mes-courses/server pairing-code # prints a code valid 10 minutes
 ```
 
 A development build of the app accepts `http://127.0.0.1:3000` (or the LAN address of the
@@ -45,11 +47,12 @@ refuse `http://` (FR-019).
    takes effect after the Freebox restarts ([research.md](research.md) R4).
 4. **DNS**: create an A record `courses.<your domain>` pointing to the Freebox's public IPv4
    address. Check with `dig +short courses.<your domain>`.
-5. **Software**: on the Pi, install Node 24 (NodeSource, arm64) and Caddy (its Debian
-   repository).
+5. **Software**: on the Pi, install Nix (multi-user, with flakes enabled) and Caddy (its Debian
+   repository). Node and Yarn come from the project's flake ([research.md](research.md) R17).
 6. **Deploy**:
    - clone the repository into `/opt/mes-courses`;
-   - run `npm ci -w server && npm run build -w server`;
+   - run `nix develop --command sh -c 'yarn workspaces focus @mes-courses/server && yarn workspace @mes-courses/server build'`;
+   - run `nix build .#node --out-link /opt/mes-courses/runtime` (the Node the service runs);
    - copy `deploy/mes-courses.service` to `/etc/systemd/system/` and `deploy/Caddyfile` to
      `/etc/caddy/Caddyfile`, with the domain filled in;
    - create `/etc/mes-courses.env` from `deploy/mes-courses.env.example` (Sentry DSN), mode
@@ -67,7 +70,7 @@ Start with the phone holding data from 001 and 002 (several lists, ticked items)
 freshly installed, and the server empty.
 
 1. **First device on an empty server** (US4-2, US4-4, US1-6, FR-018):
-   - on the Pi, run `npm run pairing-code -w server`;
+   - on the Pi, in `/opt/mes-courses`, run `nix develop --command yarn workspace @mes-courses/server pairing-code`;
    - on the phone, open Réglages › Connecter à un serveur and enter the domain, the code and a
      name;
    - the status bar goes "Synchronisation…" then "Synchronisé";

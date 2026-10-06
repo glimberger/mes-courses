@@ -7,7 +7,7 @@ Additions and changes to the app's driving and driven ports
 those of 001: `Result` for expected failures, throws for unexpected ones, and every write in
 `UnitOfWork.run`. Types are in [../data-model.md](../data-model.md).
 
-## New driven ports (`src/application/ports/`)
+## New driven ports (`apps/mobile/src/application/ports/`)
 
 ```ts
 interface ChangeRecorder {                     // part of Repositories, so it shares the transaction
@@ -57,7 +57,7 @@ interface CredentialStore {                    // expo-secure-store adapter; in-
 `Connection = { url, deviceId, credential }`. It is built by the use cases from
 `SyncStateRepository` and `CredentialStore`, and never stored in SQLite.
 
-## New use cases (`src/application/use-cases/`)
+## New use cases (`apps/mobile/src/application/use-cases/`)
 
 | Use case | Signature | Behavior |
 |---|---|---|
