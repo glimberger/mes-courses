@@ -340,7 +340,15 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
     inherits it (R6, T020, T085, T087);
   - "Nouvel article" is always shown on AddArticles and prefills the cleaned query (FR-008,
     US2-19, T092);
-  - the data sizes are measurement sizes, not limits: no use case refuses beyond them (R6).
+  - the data sizes are measurement sizes, not limits: no use case refuses beyond them (R6);
+  - `cleanName` removes invisible characters and treats every Unicode space as a space (R6,
+    T020);
+  - the add button for the matching article in CreateArticle adds with the typed quantity, and an `AlreadyOnList`
+    result opens the already-on-list QuantityDialog (US2-9, US2-20, T093);
+  - CreateArticle preselects the category of the empty state it was opened from (FR-018, T092,
+    T093, T103);
+  - a created list is not made current and the user stays on Lists (FR-024, T112); user
+    categories stay after "Divers" (`max(position) + 1`, unchanged).
 - No task touches the network or the server: synchronization belongs to the sync feature (R19).
 - The Sentry project is in place (done by the maintainer). The Sentry DSN and build credential
   live in EAS environment variables, set by the maintainer, and are never committed.

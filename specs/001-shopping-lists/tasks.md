@@ -156,7 +156,8 @@ story depends on them.
 - [ ] T020 [P] Write failing tests for name rules in `apps/mobile/src/domain/name.test.ts`, per [data-model.md](data-model.md#name-articles-categories-lists):
   - `cleanName(text) = text.normalize('NFC').trim().replace(/\s+/gu, ' ')`: "  Pommes \t de   terre " → "Pommes de terre", and "e" followed by U+0301 (combining acute accent) becomes the single character "é" (FR-021, FR-022);
   - `validateName` returns the clean name;
-  - `NameRequired` for empty or blank text (US2-11, US3-6, US4-4);
+  - `NameRequired` for empty or blank text (US2-11, US3-6, US4-4), including text made only of zero-width spaces, joiners or a byte order mark (FR-022);
+  - a non-breaking space (U+00A0), a narrow non-breaking space (U+202F), a tab and a line break each count as a space: "Pommes\u00A0de\nterre" → "Pommes de terre", and "Pâte\u200Bs" → "Pâtes" (FR-022);
   - `NameTooLong` above "At most 60 characters after cleaning, counted in Unicode code points", and 60 characters accepted; the length is `[...name].length`, so 60 emoji are accepted (120 UTF-16 units) and 30 decomposed "é" count as 30 after cleaning;
   - `normalizedName(name)` is `cleanName(name).toLocaleLowerCase('fr')` with "œ" → "oe", "æ" → "ae" and "’" → "'", accents kept, so "Pâte" ≠ "Pâté", while " beurre ", "BEURRE", "Pommes  de terre" and a decomposed "Crème" each equal the normalized form of "Beurre", "Pommes de terre" and "Crème", "Oeufs" equals "Œufs", "Caesar" equals "Cæsar" and "Pâte d'amande" equals "Pâte d’amande" (FR-021);
   - `searchForm` removes diacritics (`NFD`, combining marks removed) from the normalized name, so "Épicerie" → "epicerie", "Œufs" → "oeufs", "Cæsar" → "caesar" and "d’amande" → "d'amande" (FR-009).
@@ -468,7 +469,7 @@ content matches.
   - FR-037: opening moves focus to the dialog title, and closing gives it back to the row that opened it.
 - [ ] T092 [US2] Write failing screen tests for `AddArticles` in `apps/mobile/src/adapters/ui/screens/add-articles-screen.test.tsx`:
   - Appbar "Ajouter des articles" and the Searchbar placeholder "Rechercher un article";
-  - US2-15: an empty category shows "Aucun article dans cette catégorie" with "Créer un article";
+  - US2-15: an empty category shows "Aucun article dans cette catégorie" with "Créer un article", which opens CreateArticle with that category preselected (FR-018);
   - US2-10: search results grouped by category; typing only spaces shows the full catalog, not the no-match state;
   - US2-14: "Aucun article ne correspond à « xyz »" with "Créer « xyz »";
   - US2-8: the "Déjà dans la liste" mark, and tapping opens already-on-list mode without duplicating;
@@ -482,7 +483,9 @@ content matches.
   - US2-7: "Houmous" + "Épicerie salée" is created and added, the screen goes back to AddArticles, and the snackbar shows "« Houmous » ajouté";
   - US2-11: "Indiquez un nom.";
   - "Le nom ne peut pas dépasser 60 caractères.";
-  - US2-9: "« Beurre » existe déjà." with "Ajouter « Beurre »" adding the existing article;
+  - US2-9: "« Beurre » existe déjà." with "Ajouter « Beurre »" adding the existing article with the quantity typed in the form ("500 g");
+  - US2-20, FR-011: when "Beurre" is already on the current list with "250 g", "Ajouter « Beurre »" opens QuantityDialog in already-on-list mode prefilled with "250 g", and nothing is added;
+  - FR-018: opened from the empty state of "Boissons", "Boissons" is preselected; opened from "Nouvel article", no category is preselected;
   - "Choisissez une catégorie." when no category is chosen.
 - [ ] T094 [US2] Extend `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx` with failing tests:
   - the row action and accessibility action "Modifier la quantité" opens QuantityDialog prefilled, and saving shows the new quantity (US2-3, US2-4);
@@ -502,7 +505,7 @@ content matches.
 - [ ] T100 [P] [US2] Implement `UndoSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` (no timeout while a screen reader is on, per [contracts/ui-screens.md](contracts/ui-screens.md#undo-offer); the deadline is taken from the removal time and checked again on each `AppState` change to `active` and on each screen reader on/off change (`AccessibilityInfo` `screenReaderChanged`)) and render it once at the root in `apps/mobile/src/adapters/ui/navigation.tsx`, to turn T090 green.
 - [ ] T101 [US2] Implement `QuantityDialog.tsx` in `apps/mobile/src/adapters/ui/screens/`, with modes add / already-on-list / edit, parsing through the domain's `parseQuantity`, with the focus moves of FR-037, to turn T091 green.
 - [ ] T102 [US2] Implement `AddArticlesScreen.tsx` in `apps/mobile/src/adapters/ui/screens/` and replace its placeholder in `navigation.tsx`, to turn T092 green.
-- [ ] T103 [US2] Implement `CreateArticleScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`, validating the name through the domain's `validateName` before submitting. The category picker lists categories only; "Nouvelle catégorie" comes with US4. Replace the placeholder in `navigation.tsx`. It turns T093 green.
+- [ ] T103 [US2] Implement `CreateArticleScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`, validating the name through the domain's `validateName` before submitting, taking an optional `categoryId` route parameter to preselect (FR-018). The category picker lists categories only; "Nouvelle catégorie" comes with US4. Replace the placeholder in `navigation.tsx`. It turns T093 green.
 - [ ] T104 [US2] Fill the trailing actions and accessibility actions of `ListItemRow` ("Modifier la quantité", "Retirer de la liste") and wire them in `CurrentListScreen.tsx`, moving focus after a removal (FR-037), to turn T094 green.
 - [ ] T105 [US2] Add the US2 ids of [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) to `required-stories.ts`: `Components/ArticleRow/Default`, `.../AlreadyOnList`, `Components/QuantityFields/Empty`, `.../Filled`, `.../WithError`, `Components/NameField/Empty`, `.../WithError`, `Components/UndoSnackbar/RemovedItem`, `Screens/AddArticles/Loading`, `.../Error`, `.../NoQuery`, `.../SearchMatches`, `.../SearchNoMatch`, `Screens/CreateArticle/Empty`, `.../NameAlreadyUsed`, `Dialogs/QuantityDialog/Add`, `.../Edit`, `.../AlreadyOnList` and `.../InvalidAmount`. Confirm the story test fails on each.
 - [ ] T106 [US2] Write the stories to turn T105 green: `ArticleRow.stories.tsx`, `QuantityFields.stories.tsx`, `NameField.stories.tsx` and `UndoSnackbar.stories.tsx` (a `prepare` that removes an item) in `apps/mobile/src/adapters/ui/components/`; `AddArticlesScreen.stories.tsx` (pending and failing `getCatalog`, an empty category, a `prepare` searching "pom" with "Pommes" already on the list, a search for "xyz"), `CreateArticleScreen.stories.tsx` (the `NameAlreadyUsed` story renders the form with the error "« Lait » existe déjà.", T058) and `QuantityDialog.stories.tsx` in `apps/mobile/src/adapters/ui/screens/`. Review them in Storybook on both platforms, light and dark.
@@ -551,7 +554,7 @@ current.
   - SC-005: two taps from CurrentList ("Mes listes", then the list).
 - [ ] T112 [US3] Write failing dialog tests in `apps/mobile/src/adapters/ui/screens/create-list-dialog.test.tsx`:
   - title "Nouvelle liste", buttons "Annuler" / "Créer";
-  - US3-2: the list appears empty in Lists;
+  - US3-2, FR-024: the list appears empty in Lists, in its alphabetical place, the dialog closes on Lists and "Ma liste" stays current;
   - US3-5: "Une liste porte déjà ce nom.";
   - US3-6: "Indiquez un nom.";
   - FR-037: opening moves focus to the dialog title, and closing gives it back to the FAB "Nouvelle liste".

@@ -119,10 +119,15 @@ FR-030a, FR-039a).
 
 - **Decision**:
   - *Clean name*, the form that is validated, stored and shown (FR-022, clarified 2026-10-06):
-    `text.normalize('NFC').trim().replace(/\s+/gu, ' ')`. NFC turns a letter followed by a
+    `text.normalize('NFC').replace(/[\u200B-\u200D\u2060\uFEFF]/gu, '').trim().replace(/\s+/gu, ' ')`. NFC turns a letter followed by a
     combining accent into the single composed character, so "é" is stored the same however it
-    was typed; runs of inner white space become one space. `validateName` returns the clean
-    name.
+    was typed; runs of inner white space become one space. `trim()` and `\s` match every
+    Unicode space (the non-breaking U+00A0 and narrow U+202F that French typing inserts
+    included), tabs and line breaks. The invisible characters U+200B to U+200D, U+2060 and
+    U+FEFF are removed first (clarified 2026-10-06), so a name made only of them is blank and
+    two names that look the same compare equal; removing the zero-width joiner splits a joined
+    emoji such as a family into its parts, an accepted cost for shopping names.
+    `validateName` returns the clean name.
   - *Length*: counted in Unicode code points of the clean name (`[...name].length`), which is
     what SQLite's `length()` counts on text, so the domain check and the `CHECK` constraint
     agree (data checklist CHK014). A string's `.length` (UTF-16 units) is never used: an emoji

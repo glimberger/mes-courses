@@ -291,6 +291,25 @@
   finds matches, and is the search text used as its name? → A: Yes: creating an article is
   always offered on the add screen, and its name is prefilled with the search text cleaned like
   a name (FR-008, US2-19).
+- Q: When creating an article whose name exists and choosing the existing one instead, is the
+  typed quantity kept, and what if that article is already on the current list? → A: The
+  existing article is added with the quantity typed in the form; if it is already on the
+  current list, the "already on the list" offer of US2-8 is shown instead (FR-011, US2-9,
+  US2-20).
+- Q: Does a newly created list become current, and where does the user land? → A: No: it is
+  not current; the user stays on the screen of my lists, where it appears in its alphabetical
+  place, and makes it current by choosing it (FR-024, US3-2).
+- Q: Is a category preselected when the article form opens? → A: Only when it is opened from an
+  empty category's "create an article" action: that category is preselected; opened in any
+  other way, no category is preselected and one must be chosen (FR-018).
+- Q: Where do categories the user creates appear: after "Divers", or just before it? → A: After
+  "Divers", in creation order; the order is kept until a later feature allows reordering
+  (Key Entities).
+- Q: Which characters count as spaces when names and units are cleaned, and is a name made only
+  of invisible characters blank? → A: Every Unicode space (non-breaking ones included), tab and
+  line break counts as a space; invisible characters (zero-width space, zero-width non-joiner,
+  zero-width joiner, word joiner, byte order mark) are removed, so a name left empty is refused
+  as blank (FR-022).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -393,7 +412,8 @@ matches.
    change its quantity.
 9. **Given** an article named "Beurre" exists, **When** I try to create an article named
    " beurre " (different case or surrounding spaces), **Then** no duplicate is created and the
-   existing "Beurre" is offered instead.
+   existing "Beurre" is offered instead; choosing it adds "Beurre" to the current list with
+   the quantity typed in the form, if any.
 10. **Given** I type part of a name, "pom", **When** I search the catalog, **Then** articles
     whose name contains it, ignoring case and accents ("Pommes", "Pommes de terre"), are
     shown under their category heading, in that order; typing "oeuf" finds "Œufs", and a
@@ -419,6 +439,10 @@ matches.
 19. **Given** the catalog holds "Pâte" and I search " pâté ", **When** "Pâte" is shown and I
     choose to create a new article, **Then** the article form opens with the name "pâté", and
     confirming with a category creates "pâté" and adds it to the current list.
+20. **Given** "Beurre" exists and is already on the current list with "250 g", **When** I try
+    to create " beurre " with "500 g" and choose the existing "Beurre" offered instead,
+    **Then** it is not added twice: I am told it is already on the list and offered to change
+    its quantity, prefilled with "250 g", as in US2-8.
 
 ---
 
@@ -440,7 +464,8 @@ application and check "Barbecue" is shown if it was current.
 1. **Given** a fresh installation, **When** I open the application, **Then** one empty list
    named "Ma liste" exists and is current.
 2. **Given** I have the list "Ma liste", **When** I create a list named "Barbecue", **Then**
-   it appears among my lists with that name, empty.
+   it appears among my lists with that name, empty, in its alphabetical place; "Ma liste"
+   stays current and I stay on the screen of my lists.
 3. **Given** the lists "Ma liste" (current) and "Barbecue" exist, **When** I choose
    "Barbecue" as current, **Then** the current list screen shows "Barbecue", and reopening the
    application shows "Barbecue".
@@ -594,7 +619,9 @@ the new heading.
 - **FR-011**: An article MUST appear at most once on a given list; it may appear on several
   lists. When browsing or searching the catalog to add articles, articles already on the list
   MUST stay visible with an "already on the list" mark; choosing one MUST NOT duplicate or
-  remove it, and MUST offer to change its quantity.
+  remove it, and MUST offer to change its quantity. The same applies when an article is chosen
+  instead of creating a duplicate (US2-9): it is added with the quantity typed in the create
+  form, or, when already on the list, the same offer is shown (US2-20).
 - **FR-012**: Items newly added to a list MUST be unticked.
 
 **Quantities**
@@ -617,6 +644,9 @@ the new heading.
 **Articles and categories**
 
 - **FR-018**: Users MUST be able to create an article with a name and exactly one category.
+  When the article form is opened from the empty state of a category (US2-15), that category
+  MUST be preselected; opened in any other way, no category is preselected and the article is
+  not created until one is chosen, with a French message asking for it.
 - **FR-019**: Users MUST be able to create a category with a name.
 - **FR-020**: The application MUST provide the default categories listed in Assumptions on
   first launch.
@@ -627,7 +657,10 @@ the new heading.
   apostrophe (' or ’): "Oeufs" and "Œufs" are the same name. Accents count: "Pâte" and "Pâté" are different
   names.
 - **FR-022**: Names (articles, categories, lists) MUST be non-blank, trimmed, with repeated
-  inner spaces reduced to one, and at most 60 characters long. Units MUST be cleaned the same
+  inner spaces reduced to one, and at most 60 characters long. Every Unicode space
+  (non-breaking spaces included), tab and line break counts as a space, and invisible
+  characters (zero-width space, zero-width non-joiner, zero-width joiner, word joiner, byte
+  order mark) are removed first, so a name made only of them is blank. Units MUST be cleaned the same
   way and be at most 15 characters long after cleaning; a unit left empty by cleaning means no
   unit, with no error.
 
@@ -639,7 +672,8 @@ the new heading.
   Setting up the default categories (FR-020) and "Ma liste" MUST be all or nothing: an
   interrupted first launch leaves nothing set up, and the next launch sets everything up again.
 - **FR-024**: Users MUST be able to create further lists, each with a unique name (same
-  uniqueness rule as FR-021).
+  uniqueness rule as FR-021). Creating a list MUST NOT make it current: the user stays on the
+  screen of their lists and chooses it to make it current (FR-025).
 - **FR-025**: Users MUST be able to see all their lists and choose which one is current; the
   choice MUST be kept across application restarts.
 - **FR-026**: Each list MUST keep its own items, quantities and ticked states, independent of
@@ -755,7 +789,8 @@ the new heading.
 
 - **Category**: a named group of articles (for example "Fruits et légumes"). Either provided
   by default or created by the user. Has a display order; user-created categories come after
-  the default ones, in creation order.
+  every default one, "Divers" included, in creation order, and the order never changes in
+  this feature (reordering is out of scope).
 - **Article**: something the user buys, identified by a unique name, belonging to exactly one
   category. Lives in the catalog independently of any list and has no quantity.
 - **Catalog**: the set of all known articles, the source the user picks from to fill lists.

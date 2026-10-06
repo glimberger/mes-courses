@@ -152,11 +152,15 @@ Appbar title "Nouvel article". `NameField` "Nom", category picker (radio list of
 "Nouvelle catégorie" opening CreateCategoryDialog, new category preselected on success),
 `QuantityFields` (optional), button "Créer et ajouter".
 
+Opened from a category's empty state ("Créer un article", US2-15), that category is
+preselected; opened from "Nouvel article" or from a search with no match, no category is
+preselected (FR-018).
+
 | Domain error | Text |
 |---|---|
 | `NameRequired` | "Indiquez un nom." (US2-11) |
 | `NameTooLong` | "Le nom ne peut pas dépasser 60 caractères." |
-| `NameAlreadyUsed` | "« {existing.name} » existe déjà." + button "Ajouter « {existing.name} »", which adds the existing article (US2-9) |
+| `NameAlreadyUsed` | "« {existing.name} » existe déjà." + button "Ajouter « {existing.name} »", which adds the existing article with the quantity typed in the form, if any (US2-9); when `addArticleToList` returns `AlreadyOnList`, it opens QuantityDialog in "already on list" mode instead, prefilled with the item's current quantity (US2-20, FR-011) |
 | No category chosen | "Choisissez une catégorie." |
 
 Success: back to AddArticles, snackbar "« {name} » ajouté" (US2-7).
@@ -182,7 +186,7 @@ At least one list always exists, so there is no empty state.
 | Action | Behavior |
 |---|---|
 | Tap a list | Makes it current and returns to CurrentList (US3-3). |
-| FAB "Nouvelle liste" | Opens CreateListDialog. |
+| FAB "Nouvelle liste" | Opens CreateListDialog. On success the dialog closes and the user stays on Lists, where the new list appears in its alphabetical place, not current (FR-024, US3-2). |
 
 Row accessibility: "{name}, {n} articles[, liste actuelle]".
 

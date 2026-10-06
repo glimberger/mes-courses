@@ -17,7 +17,9 @@ text appears only in the UI adapter (Principle X).
 | At most 60 characters after cleaning, counted in Unicode code points | FR-022 | `NameTooLong` |
 | Unique within its kind, comparing `normalizedName` | FR-021, FR-024 | `NameAlreadyUsed` (carries the existing entity) |
 
-- `cleanName(text) = text.normalize('NFC').trim().replace(/\s+/gu, ' ')`.
+- `cleanName(text) = text.normalize('NFC').replace(/[\u200B-\u200D\u2060\uFEFF]/gu, '').trim().replace(/\s+/gu, ' ')`: invisible characters (zero-width space, non-joiner and
+  joiner, word joiner, byte order mark) are removed, and JavaScript's `trim()` and `\s` cover
+  every Unicode space, non-breaking ones included, tabs and line breaks (FR-022).
 - `normalizedName(name) = foldLetters(cleanName(name).toLocaleLowerCase('fr'))`, where
   `foldLetters` replaces "œ" with "oe", "æ" with "ae" and the curly apostrophe "’" (U+2019) with
   "'": case, outer and repeated inner spaces, composed or decomposed accents, these ligatures and
@@ -42,7 +44,7 @@ Quantity = { amount: number; unit: string | null }
 | `amount > 0` (a leading `-` or zero) | FR-016, US2-12 | `AmountNotPositive` |
 | At most 3 digits after the separator, as typed | FR-016 | `AmountTooPrecise` |
 | `amount <= 9999` | FR-016 | `AmountTooLarge` |
-| `unit` cleaned like a name (`cleanName`: NFC, trimmed, inner spaces reduced); a unit empty after cleaning becomes `null` | FR-014, FR-022 | – |
+| `unit` cleaned like a name (`cleanName`: NFC, invisible characters removed, trimmed, inner spaces reduced); a unit empty after cleaning becomes `null` | FR-014, FR-022 | – |
 | A unit requires an amount | FR-016, US2-13 | `UnitWithoutAmount` |
 | `unit` at most 15 characters | FR-022 | `UnitTooLong` |
 
