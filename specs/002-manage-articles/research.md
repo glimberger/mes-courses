@@ -132,8 +132,9 @@ constitution v2.0.0, which makes a remote server the source of truth.
   - `restoreDeletedArticle(snapshot)` re-inserts the article with its **same id**, name and
     category, then each list item with its quantity and ticked state, in one transaction
     (US2-5, SC-006).
-  - The offer ends after 5 s (`setTimeout`, driven by Jest fake timers in tests), when the user
-    dismisses the snackbar, or when any other write action starts: every store action that writes
+  - The offer ends after 5 s (`setTimeout`, driven by Jest fake timers in tests; no timeout
+    while a screen reader is on, [001 research](../001-shopping-lists/research.md) R8), when the
+    user dismisses the snackbar, or when any other write action starts: every store action that writes
     first clears `pendingUndo` (US2-6). Navigation and reads do not end it.
   - A killed app loses the in-memory snapshot, so the deletion is final (edge case).
   - If the restore fails, the article stays deleted, a `writeFailed` notice is shown and the

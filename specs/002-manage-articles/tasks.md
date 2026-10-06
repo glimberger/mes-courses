@@ -190,7 +190,7 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
 - [ ] T028 [P] [US2] Write failing tests for the French list join in `apps/mobile/src/adapters/ui/components/join-french.test.ts`: `["A"]` → "« A »", `["A","B"]` → "« A » et « B »", `["A","B","C"]` → "« A », « B » et « C »".
 - [ ] T029 [P] [US2] Extend `apps/mobile/src/adapters/ui/components/undo-snackbar.test.tsx` with failing tests:
   - `deletedArticle` shows "« Lait » supprimé" with "Annuler" calling `undo`;
-  - it is dismissed after 5 s (Jest fake timers, 002 US2-6);
+  - it is dismissed after 5 s (Jest fake timers, 002 US2-6), but not while a screen reader is on (mocked `AccessibilityInfo`, FR-006a);
   - it stays visible after navigating from AddArticles to CurrentList.
 - [ ] T030 [US2] Write failing tests in `apps/mobile/src/adapters/ui/screens/delete-article-dialog.test.tsx`:
   - the title is "Supprimer « {name} » ?";

@@ -22,7 +22,7 @@ New dialog: DeleteArticleDialog. New app-wide component: UndoSnackbar.
 |---|---|
 | `ArticleRow` (changed) | Adds a trailing icon button, label "Plus d'actions pour « {name} »", opening a `Menu` with "Modifier" and "Supprimer". The same two actions are accessibility actions of the row. Tapping the row itself still opens QuantityDialog (001). |
 | `CategoryPicker` (extracted from CreateArticle) | Radio list of all categories by position, plus "Nouvelle catégorie" (CreateCategoryDialog); a new category is preselected (US3-4). |
-| `UndoSnackbar` (new) | Rendered once at the app root from `pendingUndo`; text per kind (below), action "Annuler", dismissed after 5 s. |
+| `UndoSnackbar` (new) | Rendered once at the app root from `pendingUndo`; text per kind (below), action "Annuler", dismissed after 5 s, or only by the user while a screen reader is on ([001 Undo offer](../../001-shopping-lists/contracts/ui-screens.md#undo-offer)). |
 | `NoticeSnackbar` (new) | Rendered once at the app root from `notice`. |
 
 ## AddArticles (changed)
@@ -74,7 +74,8 @@ reported.
 | `deletedArticle` | "« {name} » supprimé" | "Annuler" restores the article and its list items (US2-5). |
 | `removedItem` (001) | "« {name} » retiré de la liste" | "Annuler" restores the item (001 US2-16). |
 
-Shown on whatever screen is displayed, for 5 s, or until the next write (US2-6). Undo failure:
+Shown on whatever screen is displayed, for 5 s (no timeout while a screen reader is on), or
+until the next write (US2-6). Undo failure:
 the change stays, `writeFailed` snackbar, reported.
 
 ## Accessibility

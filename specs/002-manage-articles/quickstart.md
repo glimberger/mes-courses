@@ -43,7 +43,9 @@ Start from a build with at least "Ma liste" and a second list "Barbecue".
    the catalog, both lists and the remaining counts.
 5. **Undo** (US2-5, US2-6, US2-7): delete "Lait" again, go back to the current list and tap
    "Annuler" there: it is back on both lists, same quantity and ticked state. Delete it again
-   and wait 5 s, or tick another item: "Annuler" disappears. Create "Lait" again: it is new.
+   and wait 5 s, or tick another item: "Annuler" disappears. With TalkBack or VoiceOver on,
+   delete it and wait more than 5 s: "Annuler" is still offered (FR-006a). Create "Lait" again:
+   it is new.
 6. **Airplane mode** (FR-010, SC-004): repeat 1, 4 and 5 with airplane mode on.
 7. **Killed app** (SC-005, edge cases): rename, then kill the app at once and reopen: renamed
    everywhere. Delete, kill while "Annuler" is shown, reopen: deleted everywhere, never half.
