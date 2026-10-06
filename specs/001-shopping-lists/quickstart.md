@@ -12,6 +12,10 @@ Behavior is defined in [spec.md](spec.md); screens and text in
   command below runs inside it.
 - For device checks: Android Studio with an emulator, or Xcode with an iOS simulator (macOS), or a
   phone with a development build.
+- For the Detox journeys ([research.md](research.md) R23): an Android emulator named
+  `Pixel_API_35` (or set `DETOX_AVD_NAME`) with a JDK 17 (the one bundled with Android Studio
+  works); for iOS, Xcode and `applesimutils` (`brew tap wix/brew && brew install applesimutils`).
+  These stay outside Nix.
 - Optional: a Sentry project. Without `EXPO_PUBLIC_SENTRY_DSN`, errors go to the console only.
 
 Commands run from the repository root unless stated otherwise: one `yarn install` installs every
@@ -27,16 +31,52 @@ yarn install
 yarn typecheck          # tsc --noEmit in every workspace
 yarn lint               # ESLint (includes style-token rules)
 yarn format:check       # Prettier
-yarn test                   # Jest in every workspace: domain, use cases, SQLite adapter, UI, offline scenario
+yarn test               # Jest in every workspace: domain, use cases, SQLite adapter, UI, offline scenario, stories
 yarn test:architecture  # dependency-cruiser layer and cross-workspace rules
 yarn build              # every workspace; for the app: expo export for Android and iOS
 ```
 
 Expected: everything passes. `yarn test` finishes in seconds and needs no device or network.
 Every acceptance scenario of the spec has a test whose name states it (search the test names for
-"US1-", "US2-", ...).
+"US1-", "US2-", ...). `stories.test.tsx` renders every story in light and dark and fails if a story
+required by [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) is missing.
 
-## 2. Run the app
+## 2. Review the screens in Storybook
+
+```sh
+cd apps/mobile
+yarn expo run:android   # once, to install a development build (or: yarn expo run:ios)
+yarn storybook          # STORYBOOK_ENABLED=true expo start: the app opens on Storybook
+```
+
+Expected: the Storybook navigator lists `Components/…`, `Screens/…` and `Dialogs/…`, with every
+story of [contracts/ui-validation.md](contracts/ui-validation.md#required-stories). For a pull
+request that changes the UI, open each story it lists:
+
+- all text is French and matches [contracts/ui-screens.md](contracts/ui-screens.md);
+- colors, type and spacing come from the theme: switch the device to dark mode and check every
+  story again;
+- at 200% system text size, the `LongName` stories and the success states wrap without cutting
+  or overlapping text;
+- the same stories look right on Android and on iOS.
+
+Run `yarn start` (without `STORYBOOK_ENABLED`) to get the app back. A release build never
+contains Storybook.
+
+## 3. End-to-end journeys (Detox)
+
+```sh
+yarn test:e2e:android   # builds the Android release with expo prebuild + Gradle, runs every journey
+yarn test:e2e:ios       # macOS only: builds the iOS release for the simulator, runs every journey
+```
+
+Expected: every journey in [contracts/ui-validation.md](contracts/ui-validation.md#end-to-end-journeys)
+passes on the first try (no retries are configured). A failure leaves screenshots and logs in
+`tests/e2e/artifacts/`. In CI the `e2e-android` job runs the Android journeys on every pull
+request. Run the iOS journeys before a release and on any pull request that changes
+`app.config.ts`, a config plugin or a native dependency.
+
+## 4. Run the app
 
 ```sh
 cd apps/mobile
@@ -45,9 +85,11 @@ yarn expo run:android   # or: yarn expo run:ios
 
 A development build is used (not Expo Go) because of the Sentry native module.
 
-## 3. Hands-on scenarios on a device
+## 5. Hands-on scenarios on a device
 
-Run on a fresh install (uninstall first). Each step names the spec scenarios it covers.
+Run on a fresh install (uninstall first). Each step names the spec scenarios it covers. Steps
+1, 5, 6, 7 and 8, and the happy path of step 2, are also automated by the Detox journeys; keep them for a manual pass before a
+release. Steps 4, 10, 11 and 12 need a person.
 
 1. **First launch** (US3-1, US4-1, US1-10): the app opens on "Ma liste" with the empty state
    "Votre liste est vide". Open "Ajouter": the 11 default categories appear in the spec's order,
@@ -84,14 +126,14 @@ Run on a fresh install (uninstall first). Each step names the spec scenarios it 
 12. **Start time** (SC-001): on a release build (`yarn expo run:android --variant release`, from `apps/mobile/`),
     from tapping the icon to a tickable list takes under 2 seconds.
 
-## 4. Error tracking (Principle VIII)
+## 6. Error tracking (Principle VIII)
 
 Build a release with `EXPO_PUBLIC_SENTRY_DSN` and `EXPO_PUBLIC_SENTRY_SMOKE_TEST=1` set (the
 composition root then reports one test error at startup), and open it: the event appears in Sentry with a readable stack trace, the app version, platform and
 environment, and no list content. Repeat in airplane mode, then reconnect: the event arrives
 after reconnection.
 
-## 5. Continuous integration
+## 7. Continuous integration
 
-Open a pull request: the `typecheck`, `lint`, `test` and `build` jobs run, and `gh pr checks <pr>`
-shows them all green before the pull request is merged (constitution v1.7.0).
+Open a pull request: the `typecheck`, `lint`, `test`, `build` and `e2e-android` jobs run, and
+`gh pr checks <pr>` shows them all green before the pull request is merged (constitution v1.7.0).

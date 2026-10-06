@@ -21,6 +21,11 @@ yarn build              # app (expo export) and server (tsc)
 Expected: everything is green. No test reaches the network beyond `127.0.0.1`, and none reaches
 the Pi. Scenario tests are named after the spec ("003 US2-5 …").
 
+Screens and journeys ([001 quickstart](../001-shopping-lists/quickstart.md) §2 and §3): the stories
+listed in [contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-end-journeys) appear
+in Storybook and meet the review checklist; `yarn test:e2e:android` runs `sync-unreachable` green
+with the journeys of 001 and 002.
+
 ## 2. Run the server locally (development)
 
 ```sh

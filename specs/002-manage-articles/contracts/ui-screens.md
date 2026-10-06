@@ -83,3 +83,21 @@ the change stays, `writeFailed` snackbar, reported.
   default).
 - The dialog's buttons and the snackbar's action are reachable by screen readers; the snackbar
   text is announced (Paper `Snackbar` live region).
+
+## Stories and end-to-end journeys
+
+Additions to [001's validation contract](../../001-shopping-lists/contracts/ui-validation.md)
+(001 research R22, R23).
+
+| Story id | Shows | Scenarios |
+|---|---|---|
+| `Components/CategoryPicker/Default`, `.../NewCategorySelected` | categories by position; a new category preselected | US3-4 |
+| `Components/UndoSnackbar/DeletedArticle` | "« Lait » supprimé" with "Annuler" | US2-5 |
+| `Screens/EditArticle/Default` | name and category prefilled | US1-1 |
+| `Screens/EditArticle/NameAlreadyUsed`, `.../NameRequired` | the field errors | US1-4, US1-6 |
+| `Dialogs/DeleteArticleDialog/NoList`, `.../OneList`, `.../SeveralLists` | the three bodies | US2-3 |
+
+| File | Journey | Scenarios |
+|---|---|---|
+| `rename-article.e2e.ts` | Create "Lait", add it to "Ma liste" ticked and to "Barbecue"; rename it "Lait demi-écrémé" from the catalog menu; both lists show the new name with ticked state and quantity kept; terminate and relaunch: still renamed. | US1-1, US1-2, SC-005 |
+| `delete-article.e2e.ts` | Delete "Lait" from the catalog: the dialog names both lists; confirm; the lists no longer show it; tap "Annuler" on the current list: it is back on both, same state. | US2-1, US2-3, US2-5 |

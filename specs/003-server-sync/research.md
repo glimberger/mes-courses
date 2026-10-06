@@ -22,7 +22,8 @@ kept (R7) and the first pairing code (R11).
   - local dependencies use the `workspace:*` protocol (001 R20);
   - `tests/sync/` (`@mes-courses/sync-tests`, private, test-only) holds the tests that need the
     app and the server together: the app's `SyncServer` adapter against a real in-process
-    server, and the cross-stack scenarios. The root `"workspaces"` gains `"tests/*"`.
+    server, and the cross-stack scenarios. The root `"workspaces"` already holds `"tests/*"`, added by 001 for its
+    `tests/e2e/` workspace ([001 research](../001-shopping-lists/research.md) R23).
 
   `sync-core` has no dependency and no side effect. The app's domain and application layers,
   and the server's, may import it; dependency-cruiser allows `@mes-courses/sync-core` there and

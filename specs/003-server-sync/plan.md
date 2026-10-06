@@ -1,6 +1,6 @@
 # Implementation Plan: Server Synchronization
 
-**Branch**: `feat/003-server-sync` | **Date**: 2026-10-05 | **Spec**: [spec.md](spec.md)
+**Branch**: `feat/003-server-sync` | **Date**: 2026-10-05 (amended 2026-10-06 for Storybook and Detox) | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/003-server-sync/spec.md`
 
@@ -61,6 +61,12 @@ The justification is in [research.md](research.md#new-dependencies-principle-iv)
   on the other (Principle XI, [research.md](research.md) R1).
 - Fake `Clock` and `IdGenerator` everywhere (Principle III).
 - dependency-cruiser covers app, server and `sync-core`.
+- Storybook stories for `SyncStatusBar`, Settings, ConnectServer and the dialogs, in every state,
+  rendered by 001's story test; their store uses the in-memory `SyncServer` fake.
+- One Detox journey in 001's `tests/e2e/` workspace checks an unpaired device and an unreachable
+  server on the release build. Journeys never pair with a real server: that would need a trusted
+  TLS certificate on the emulator (FR-019), so pairing stays covered by `tests/sync/` and the
+  quickstart's Pi pass ([001 research](../001-shopping-lists/research.md) R22, R23).
 
 **Target Platform**: Android and iOS phones and tablets; the server on a Raspberry Pi 4 or 5 with
 Raspberry Pi OS Lite 64-bit, behind a Freebox with a full-stack IPv4 address.
@@ -108,10 +114,10 @@ resolved in research.
 | VI | Hexagonal architecture | App: new driven ports (`ChangeRecorder`, `SyncStateRepository`, `PulledRowsApplier`, `Clock`, `SyncServer`, `CredentialStore`), with use cases in the application layer and adapters for HTTP, SQLite and secure storage. Server: the same domain → application → adapters split. `sync-core` is pure and the only shared import allowed in both domains. dependency-cruiser enforces all of this. | ✅ |
 | VII | Remote source of truth, offline first | The server is authoritative (R5). Every read and write goes to the local replica first. Sync goes through the `SyncServer` port. Offline changes wait in a durable outbox. Reconciliation is deterministic and tested in `sync-core` and on the server. Tests cover no network, an unreachable server, connectivity loss and recovery. **This closes the deviation recorded by 001 and 002.** | ✅ |
 | VIII | Observability | The app reports sync failures (three in a row) and untrusted servers, but never being offline. The server reports through `@sentry/node` behind its own `ErrorReporter` port, with the same privacy rules (R15). | ✅ |
-| IX | Explicit screen states | `SyncStatusBar` gives every data screen its synchronization state, from one store slice. Settings' device list has loading, error, offline and success states, each tested. | ✅ |
+| IX | Explicit screen states | `SyncStatusBar` gives every data screen its synchronization state, from one store slice. Settings' device list has loading, error, offline and success states, each tested and each with a required story ([contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-end-journeys)). | ✅ |
 | X | French interface, no i18n | French text only in the app's UI adapter. The server returns error codes. The one French string outside the app is the Pi command's output, read by the maintainer. | ✅ |
 | XI | Single repository (monorepo) | The server joins as `apps/server/` (`@mes-courses/server`) and the shared rules as `packages/sync-core/` (`@mes-courses/sync-core`), both under 001's workspaces root, with the same lockfile, configs and CI. `sync-core` is pure and depends on nothing. The app and the server never import each other: the tests that need both (HTTP adapter, cross-stack scenarios) live in the `tests/sync/` workspace and use each side's `./testing` entry point. dependency-cruiser enforces it. | ✅ |
-| QG | Quality gates and CI | CI runs typecheck, lint, tests and the architecture test across the workspaces, plus the app build. There is no deployment from CI, and no test reaches the Pi. | ✅ |
+| QG | Quality gates and CI | CI runs typecheck, lint, tests and the architecture test across the workspaces, plus the app build and 001's `e2e-android` job. There is no deployment from CI, and no test reaches the Pi; the e2e journey uses `127.0.0.1:9` on the device, where nothing listens. 001's Quality Gates deviation (iOS journeys and the device suite outside the per-commit gate) applies unchanged. | ✅ |
 | WF | Development workflow | The spec states offline behavior, synchronization and reconciliation (US2, FR-009 to FR-015). | ✅ |
 
 **Gate result before research**: no violation.
@@ -148,10 +154,10 @@ specs/003-server-sync/
 ### Source Code (repository root)
 
 ```text
-package.json                           # + "tests/*" in "workspaces" (001 has "apps/*", "packages/*")
+package.json                           # "tests/*" already in "workspaces" (added by 001 for tests/e2e)
 .dependency-cruiser.cjs                # + apps/server/ rules, sync-core purity, sync-core allowed in both
                                        #   domains, tests/* the only importer of the ./testing entries
-.github/workflows/ci.yml               # unchanged jobs, now covering the new workspaces
+.github/workflows/ci.yml               # unchanged jobs (e2e-android included), now covering the new workspaces
 apps/
 ├── mobile/                            # the app (001 layout), additions:
 │   ├── package.json                   # + expo-secure-store, @mes-courses/sync-core;
@@ -170,8 +176,8 @@ apps/
 │   │   │   ├── clock/                 # Date.now()
 │   │   │   └── ui/
 │   │   │       ├── state/             # + sync slice, SyncScheduler (AppState, debounce, 5 s poll, backoff)
-│   │   │       ├── components/        # + SyncStatusBar
-│   │   │       └── screens/           # + Settings, ConnectServer, PairingCodeDialog, device dialogs
+│   │   │       ├── components/        # + SyncStatusBar (+ stories)
+│   │   │       └── screens/           # + Settings, ConnectServer, PairingCodeDialog, device dialogs (+ stories)
 │   │   └── composition/               # wires the sync adapters and starts the scheduler
 │   └── test/
 │       ├── sqlite/                    # node:sqlite wrapper (001)
@@ -204,6 +210,7 @@ packages/
         ├── protocol.ts                # Change, ServerRow, request/response types (contracts/sync-api.md)
         └── *.test.ts
 tests/
+├── e2e/journeys/sync-unreachable.e2e.ts # + unpaired device and unreachable server on a device (001 R23)
 └── sync/                              # @mes-courses/sync-tests, private, test-only
     ├── package.json                   # devDependencies: @mes-courses/mobile, @mes-courses/server
     ├── sync-server-adapter.test.ts    # the app's SyncServer adapter against startTestServer()
@@ -234,7 +241,8 @@ on the Pi, never by CI.
   5. `synchronize` and `connectToServer`;
   6. the HTTP adapter, tested from `tests/sync/` against `startTestServer`;
   7. the sync slice and scheduler;
-  8. the UI;
+  8. the UI, each screen state with its story added to 001's required list, and the
+     `sync-unreachable` journey written first;
   9. the two-device scenario tests in `tests/sync/`;
   10. deployment files and the quickstart on the Pi.
 - **Story mapping**: US1 (P1) is the server, the outbox and the single-device sync. US2 (P1) is

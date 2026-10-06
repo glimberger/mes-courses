@@ -1,6 +1,6 @@
 # Implementation Plan: Manage Articles
 
-**Branch**: `feat/002-manage-articles` | **Date**: 2026-10-05 | **Spec**: [spec.md](spec.md)
+**Branch**: `feat/002-manage-articles` | **Date**: 2026-10-05 (amended 2026-10-06 for Storybook and Detox) | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/002-manage-articles/spec.md`
 
@@ -34,7 +34,9 @@ Decisions are in [research.md](research.md).
 
 **Testing**: Jest 30 (`jest-expo`), React Native Testing Library, `node:sqlite` for adapter
 contract tests, dependency-cruiser; store tests on the vanilla Zustand store with in-memory fakes
-and Jest fake timers
+and Jest fake timers; Storybook stories for the new screen, dialog and snackbar states, rendered
+by 001's story test; Detox journeys for rename and delete-with-undo in `tests/e2e/`
+([001 research](../001-shopping-lists/research.md) R22, R23)
 
 **Target Platform**: Android and iOS phones
 
@@ -59,18 +61,18 @@ No NEEDS CLARIFICATION remains.
 
 | # | Principle | How this plan complies | Status |
 |---|---|---|---|
-| I | Test-First (non-negotiable) | Each use case, repository method, store action and screen behavior starts with a failing test; the store is driven by tests before any screen uses it. | ✅ |
-| II | Tests as executable specification | Each scenario (002 US1-1 … US3-4) and edge case maps to a named test; UI tests query by role and French label. | ✅ |
+| I | Test-First (non-negotiable) | Each use case, repository method, store action and screen behavior starts with a failing test; the store is driven by tests before any screen uses it. Each story's Detox journey is written first and fails until the story is done (001 R23). | ✅ |
+| II | Tests as executable specification | Each scenario (002 US1-1 … US3-4) and edge case maps to a named test; UI tests query by role and French label. Journeys find elements by French text and label and name their scenarios ([contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-end-journeys)). | ✅ |
 | III | Fast, deterministic, isolated | Vanilla store built per test from a factory (no singleton); in-memory fakes; Jest fake timers for the 5 s undo; no network. | ✅ |
 | IV | Simplicity (YAGNI) | One new dependency, `zustand`, justified in [research.md](research.md) R1 (cross-screen undo and refresh, maintainer's choice for the whole app); no middleware, each one ruled out in [research.md](research.md#r1b-no-zustand-middleware) R1b; no migration; refresh-everything instead of fine-grained invalidation. | ✅ |
-| V | Single design system | Paper `Menu`, `Dialog`, `Snackbar`; `CategoryPicker` extracted into the shared module; `UndoSnackbar` and `NoticeSnackbar` are shared components. | ✅ |
+| V | Single design system | Paper `Menu`, `Dialog`, `Snackbar`; `CategoryPicker` extracted into the shared module; `UndoSnackbar` and `NoticeSnackbar` are shared components, each with stories reviewed in light and dark (001 R22). | ✅ |
 | VI | Hexagonal architecture | Use cases and port methods in `apps/mobile/src/application`; SQLite methods in the adapter; the store lives in `apps/mobile/src/adapters/ui/state` and depends on use cases, never the reverse. New dependency-cruiser rules: `zustand` only under `apps/mobile/src/adapters/ui/`; `zustand/middleware` and `immer` nowhere (R1b). | ✅ |
 | VII | Remote source of truth, offline first | Local first and offline: every write goes to SQLite in one transaction, the offline UI scenario covers edit, delete and undo with `fetch` throwing, quickstart checks airplane mode. **Not met**: no synchronization with the Pi server and no reconciliation rule; deferred to a dedicated sync feature (R7), justified in Complexity Tracking. Choices kept sync-compatible: device-generated UUIDs, ids never change, each change is one transaction. | ⚠️ deviation |
 | VIII | Observability | Store catches unexpected failures, reports them with `{ operation, screen }` only, and shows a French notice; no silent catch. | ✅ |
-| IX | Explicit screen states | Store regions are `ScreenState` unions rendered by the shared state components; `EditArticle` reads already-loaded data, and its save outcomes are tested. No synchronization status yet: no data is synchronized until the sync feature (R7), which adds it to every data screen. | ✅ (sync status deferred with VII) |
+| IX | Explicit screen states | Store regions are `ScreenState` unions rendered by the shared state components; `EditArticle` reads already-loaded data, and its save outcomes are tested and have stories. No synchronization status yet: no data is synchronized until the sync feature (R7), which adds it to every data screen. | ✅ (sync status deferred with VII) |
 | X | French interface, no i18n | Text only in UI components ([contracts/ui-screens.md](contracts/ui-screens.md)); store and use cases return typed results and notices. | ✅ |
 | XI | Single repository (monorepo) | Everything stays in the `apps/mobile/` workspace of 001; no new workspace or shared package. The new dependency-cruiser rules go in the root config. | ✅ |
-| QG | Quality gates and CI | Same CI jobs as 001; architecture test gains the `zustand` rules. "Works with the server unreachable" holds trivially: no code path reaches a server. | ✅ |
+| QG | Quality gates and CI | Same CI jobs as 001, `e2e-android` included; architecture test gains the `zustand` rules. 001's Quality Gates deviation (iOS journeys and the device suite outside the per-commit gate) applies unchanged. "Works with the server unreachable" holds trivially: no code path reaches a server. | ✅ |
 | WF | Development workflow | The spec states offline behavior (FR-010) but not synchronization or reconciliation; deferred with VII (R7). | ⚠️ deviation |
 
 **Gate result before research**: one deviation, Principle VII (and the matching workflow rule):
@@ -125,10 +127,11 @@ apps/mobile/src/
 │   └── ui/
 │       ├── state/                    # app-store.ts (createAppStore), provider, useAppStore + tests
 │       ├── testing/                  # renderWithStore
-│       ├── components/               # CategoryPicker, UndoSnackbar, NoticeSnackbar; ArticleRow menu
-│       └── screens/                  # EditArticle, DeleteArticleDialog; AddArticles row menu
+│       ├── components/               # CategoryPicker, UndoSnackbar, NoticeSnackbar; ArticleRow menu (+ stories)
+│       └── screens/                  # EditArticle, DeleteArticleDialog; AddArticles row menu (+ stories)
 └── composition/                      # builds the store once and wraps the app in AppStoreProvider
 .dependency-cruiser.cjs (root)        # + zustand only under apps/mobile/src/adapters/ui; no zustand/middleware or immer
+tests/e2e/journeys/                   # + rename-article.e2e.ts, delete-article.e2e.ts
 ```
 
 **Structure Decision**: same `apps/mobile/` workspace and hexagonal layout as 001, with no new
@@ -145,7 +148,9 @@ every other adapter.
   tests kept green.
 - Order: repository methods (contract tests on fake and SQLite) → use cases → store actions and
   undo rules → `CategoryPicker` extraction (refactor, tests green) → EditArticle (US1, US3) →
-  DeleteArticleDialog and UndoSnackbar (US2) → offline scenario extension.
+  DeleteArticleDialog and UndoSnackbar (US2) → offline scenario extension. US1 and US2 each
+  start with their Detox journey (red) and add their stories to 001's required list
+  ([contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-end-journeys)).
 - US1 and US2 (P1) form the MVP; US3 (P2) reuses EditArticle and only adds the category field.
 - No task touches the network or the server: synchronization belongs to the sync feature (R7).
 
