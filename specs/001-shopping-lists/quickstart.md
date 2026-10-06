@@ -118,14 +118,21 @@ release. Steps 4, 10, 11 and 12 need a person.
 10. **Accessibility** (FR-032 to FR-035, SC-009): with TalkBack (Android) or VoiceOver (iOS),
     repeat steps 2, 4 and 6 using the screen reader only; each row announces e.g. "Lait, 2 L,
     dans le caddie". Remove an item and wait more than 5 s: "Annuler" is still offered until
-    you dismiss it or make another change (FR-010). Set the system text size to the maximum (200%) and check nothing is cut off
+    you dismiss it or make another change (FR-010). Open and close a dialog, remove an item and
+    tick one: focus goes to the dialog, back to its opener, to the next row, and stays on the
+    ticked row (FR-037). Snackbars and form errors are read out; the remaining count is not
+    (FR-038). Set the system text size to the maximum (200%) and check nothing is cut off
     or overlaps. Check ticked rows show a check mark and struck-through text in light and dark
     mode.
-11. **Long list** (SC-008): start a development build with `EXPO_PUBLIC_DEV_SEED_ITEMS=200`
-    (the composition root then fills an empty current list with 200 articles through the use
-    cases; ignored in release builds), then scroll and tick; no visible lag.
+11. **Long list** (SC-008): build a release with `EXPO_PUBLIC_DEV_SEED_ITEMS=200` (the
+    composition root then fills an empty current list with 200 articles through the use cases;
+    builds for users never set it). Open React Native's Perf Monitor, then scroll and tick:
+    55 frames per second or more, and each tick shown at once.
 12. **Start time** (SC-001): on a release build (`yarn expo run:android --variant release`, from `apps/mobile/`),
     from tapping the icon to a tickable list takes under 2 seconds.
+
+Steps 4, 11 and 12 (SC-001, SC-002, SC-008) are run on the two reference phones of the spec:
+an entry-level Android phone about five years old, and the maintainer's iPhone.
 
 ## 6. Error tracking (Principle VIII)
 
