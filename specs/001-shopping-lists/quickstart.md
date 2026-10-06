@@ -89,7 +89,7 @@ A development build is used (not Expo Go) because of the Sentry native module.
 
 Run on a fresh install (uninstall first). Each step names the spec scenarios it covers. Steps
 1, 5, 6, 7 and 8, and the happy path of step 2, are also automated by the Detox journeys; keep them for a manual pass before a
-release. Steps 4, 10, 11, 12 and 13 need a person.
+release. Steps 4, 10, 11, 12, 13 and 14 need a person.
 
 1. **First launch** (US3-1, US4-1, US1-10): the app opens on "Ma liste" with the empty state
    "Votre liste est vide". Open "Ajouter": the 11 default categories appear in the spec's order,
@@ -104,9 +104,10 @@ release. Steps 4, 10, 11, 12 and 13 need a person.
    existing (FR-021); search "xyz" and check the "no match" state. Count the gestures (SC-003):
    adding "Pommes" by browsing takes at most 3 taps, and by searching at most 3 taps and 3
    letters, tapping the search field and "Ajouter" included.
-4. **Tick in airplane mode** (US1-2 to US1-7, US1-5, SC-002, SC-006): turn on airplane mode, go
+4. **Airplane mode** (US1-2 to US1-7, US1-5, SC-002, SC-006): turn on airplane mode, go
    back to the list, tick and untick items. Ticks show at once, ticked items move to the bottom
-   of their category, the remaining count updates, no error appears.
+   of their category, the remaining count updates, no error appears. Then do each of the 12
+   actions listed under the spec's Success Criteria: every one succeeds.
 5. **Persistence** (US1-4, SC-007): with items ticked, kill the app from the app switcher and
    reopen: ticks are kept. Restart the device once and check again.
 6. **Quantity and removal** (US2-3, US2-4, US2-6, US2-16): change "Farine" to "2 kg", clear it,
@@ -120,7 +121,8 @@ release. Steps 4, 10, 11, 12 and 13 need a person.
 9. **Categories** (US4-2, US4-3, US4-5): create "Bébé" from the article form, try "bébé";
    create an article in it; only categories with items show on the list.
 10. **Accessibility** (FR-032 to FR-035, SC-009): with TalkBack (Android) or VoiceOver (iOS),
-    repeat steps 2, 4 and 6 using the screen reader only; each row announces e.g. "Lait, 2 L,
+    do each of the 12 actions listed under the spec's Success Criteria using the screen reader
+    only; each row announces e.g. "Lait, 2 L,
     dans le caddie". Remove an item and wait more than 5 s: "Annuler" is still offered until
     you dismiss it or make another change (FR-010). Open and close a dialog, remove an item and
     tick one: focus goes to the dialog, back to its opener, to the next row, and stays on the
@@ -129,13 +131,18 @@ release. Steps 4, 10, 11, 12 and 13 need a person.
     or overlaps. Check ticked rows show a check mark and struck-through text in light and dark
     mode.
 11. **Long list** (SC-008): build a release with `EXPO_PUBLIC_SEED_ITEMS=200` (the
-    composition root then fills an empty current list with 200 articles through the use cases;
-    builds for users never set it). Open React Native's Perf Monitor, then scroll and tick:
+    composition root then fills an empty store to the spec's data size through the use cases:
+    1 000 articles, 20 lists, and 200 items on the current list; builds for users never set
+    it). Open React Native's Perf Monitor, then scroll and tick:
     55 frames per second or more, and each tick shown at once.
-12. **Start time** (SC-001): on a release build (`yarn expo run:android --variant release`, from `apps/mobile/`),
+12. **Start time** (SC-001): on the release build of step 11, filled to the spec's data size,
     from tapping the icon to a tickable list takes under 2 seconds.
 
-13. **System backup** (Assumptions, [research.md](research.md) R18b), once before the first
+13. **Power cut** (FR-028, SC-007): on an Android emulator running the release build, tick an
+    item, then right after the tick shows, run `adb emu kill` (the emulator stops like a phone
+    losing power) and cold boot it: the tick is still there. Repeat once with a removal and with
+    "Terminer les courses".
+14. **System backup** (Assumptions, [research.md](research.md) R18b), once before the first
     release: on Android, with lists created, run `adb shell bmgr backupnow <package>` (the
     `android.package` of `app.config.ts`), uninstall, reinstall from the same build and
     check the lists come back. On iOS, back up the phone (Finder or iCloud), restore it and

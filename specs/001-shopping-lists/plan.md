@@ -2,7 +2,8 @@
 
 **Branch**: `feat/001-shopping-lists` | **Date**: 2026-10-05 (amended 2026-10-06 for constitution
 v2.1.0, monorepo, then for Storybook and Detox, then for constitution v2.1.1, then for the
-data clarifications and the failure-flow clarifications) | **Spec**: [spec.md](spec.md)
+data clarifications, the failure-flow clarifications and the data checklist review) |
+**Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/001-shopping-lists/spec.md`
 
@@ -65,10 +66,12 @@ committed to storage before it is shown as saved (FR-028); French-only UI with n
 (FR-039); data kept across updates and never opened by an older version (FR-040); data kept
 in the system backup, not encrypted beyond the system's own (Assumptions); no storage error
 text in reports (FR-030); sync compatibility kept for 003: ids are generated on the device and
-never change (R5), and each user action is one `UnitOfWork` transaction (FR-028)
+never change (R5), and each user action is one `UnitOfWork` transaction (FR-028); every commit synced to storage so it survives a power cut (R4); a full storage shown
+with its own message and not reported (R12a)
 
-**Scale/Scope**: one user, one device; 4 screens and 4 dialogs; hundreds of articles at most,
-around 200 items per list at most; 5 tables
+**Scale/Scope**: one user, one device; 4 screens and 4 dialogs; up to 1 000 articles in the
+catalog, 20 lists and 200 items per list (spec Assumptions), with SC-001 and SC-008 measured at
+that size; 5 tables
 
 No NEEDS CLARIFICATION remains: the stack was chosen by the maintainer (React Native with Expo),
 and every other unknown is resolved in [research.md](research.md).
@@ -125,6 +128,10 @@ justified. The design adds no layer, port or dependency beyond those above. Poin
   (R9a), `StorageError` and `DataFromNewerVersion` are thrown by the SQLite adapter (R13, R18c),
   and `UpdateRequired` is a second full-screen view of `App.tsx`. `toggleItemInCart` keeps its
   signature, which 003 extends.
+- The data checklist review adds no port or dependency: two pragmas in `openDatabase` (R4), a
+  `StorageFull` kind of the existing `StorageError` (R12a), and a larger measurement seed (R11).
+  Not reporting a full storage fits Principle VIII: it is an expected situation the user can
+  fix, shown to them, not an error swallowed.
 - Nothing in the design blocks the sync feature: ids are device UUIDs that never change, each
   change is one `UnitOfWork` transaction (where a later outbox write can join it), and no read
   model assumes the device holds the only copy. The open questions for that feature (first-launch
@@ -267,6 +274,14 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
   - the SQLite adapter's `StorageError` with no original text or stack (R13);
   - `migrate` throws `DataFromNewerVersion` above the known version, and `App.tsx` shows
     `UpdateRequired`, with its story and no report (R18c).
+- **Data checklist review (2026-10-06)**, to be reflected in the existing tasks:
+  - `openDatabase` sets `journal_mode = WAL` and `synchronous = FULL` and checks them (R4);
+  - `StorageFull` in the SQLite adapter, the `storageFull` notice with no report, and its
+    story (R12a);
+  - the measurement seed fills the spec's data size (1 000 articles, 20 lists, 200 items) for
+    SC-001 and SC-008 (R11), and the offline scenario and the accessibility pass cover the 12
+    actions listed in the spec;
+  - quickstart: new step 13 (power cut), the backup check becomes step 14.
 - No task touches the network or the server: synchronization belongs to the sync feature (R19).
 - The Sentry project is in place (done by the maintainer). The Sentry DSN and build credential
   live in EAS environment variables, set by the maintainer, and are never committed.

@@ -415,6 +415,8 @@ kept (R7) and the first pairing code (R11).
   Status rules:
   - a network error, a timeout or a server that cannot be reached means `waiting`. It is never
     reported (FR-022);
+  - a `StorageFull` while applying a pull means `waiting` too: it is never reported (001 FR-030),
+    and the `storageFull` notice is shown once per streak;
   - a `5xx`, an unexpected response, or a certificate that cannot be verified, three times in a
     row, means `failed`, reported once per failure streak with `{ operation: 'sync' }`;
   - a success resets the streak.
