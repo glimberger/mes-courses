@@ -36,6 +36,7 @@ or in their own `contracts/ui-screens.md` ([002](../../002-manage-articles/contr
 | `Components/NameField/Empty`, `.../WithError` | Field and a `HelperText` error |
 | `Components/UndoSnackbar/RemovedItem` | "« Lait » retiré de la liste" with "Annuler" |
 | `Components/NoticeSnackbar/WriteFailed` | "La modification n'a pas pu être enregistrée." |
+| `Components/NoticeSnackbar/StorageFull` | "Espace de stockage insuffisant. Libérez de la place sur votre téléphone." |
 
 ### Screens and dialogs
 

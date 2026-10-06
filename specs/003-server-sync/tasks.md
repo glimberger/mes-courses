@@ -419,6 +419,7 @@ the server failing (failed, then "Réessayer").
   - a local write → `waiting` with `pendingCount`;
   - a cycle → `sending`, then `saved` when the outbox is empty;
   - `Offline` → `waiting`, never reported (FR-022);
+  - `StorageFull` while applying a pull → `waiting`, not reported, `notice = storageFull` once per streak (001 FR-030);
   - `ServerError`, a bad response or `UntrustedServer` three times in a row → `failed`, reported once per streak with `{ operation: 'sync' }`;
   - a success resets the streak;
   - `syncNow()` starts a cycle at once (US3-5);

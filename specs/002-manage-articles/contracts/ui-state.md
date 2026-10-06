@@ -42,6 +42,9 @@ interface AppState {
 
 type Notice =
   | { type: 'writeFailed' }
+  | { type: 'storageFull' }                                  // 001 FR-030, not reported
+  | { type: 'articleDeletedElsewhere' }                      // 003 FR-020a, FR-008
+  | { type: 'itemRemovedElsewhere' }                         // 003 FR-020a
   | { type: 'articleAdded'; name: string };
 ```
 
@@ -62,7 +65,7 @@ type Notice =
 | `editArticle(articleId, { name, categoryId })` | Calls `editArticle`; returns its `Result` so the screen can show field errors. |
 | `getArticleUsage(articleId)` | Calls the query and returns its `Result`; nothing is stored (the dialog holds it). |
 | `deleteArticle(articleId)` | Calls `deleteArticle`; on success sets `pendingUndo = { kind: 'deletedArticle', deleted }`. |
-| `undo()` | Clears `pendingUndo`, then restores it (`restoreRemovedItem` or `restoreDeletedArticle`) and refreshes. On failure: stays deleted or removed, `notice = writeFailed`, report. |
+| `undo()` | Clears `pendingUndo`, then restores it (`restoreRemovedItem` or `restoreDeletedArticle`) and refreshes. On failure: stays deleted or removed, `notice = writeFailed` and a report (`storageFull` and no report for `StorageFull`). |
 | `dismissUndo()` | Clears `pendingUndo` (the change becomes final). Called by the snackbar's 5 s timeout (none while a screen reader is on) and its dismissal. |
 | `dismissNotice()` | Clears `notice`. |
 
@@ -74,7 +77,8 @@ Rules shared by every write action:
    (FR-003, FR-008a, US2-4).
 3. **Unexpected failures**: the thrown error is reported with `{ operation, screen }` only, state
    is left as it was (for an optimistic tick, the item's queued saves are dropped and the region
-   is reloaded from storage, 001 R9), `notice = writeFailed`, and the action
+   is reloaded from storage, 001 R9), `notice = writeFailed` (or `storageFull`, without a report,
+   when the error is `StorageFull`, 001 R12a), and the action
    resolves to `{ ok: false, error: { type: 'WriteFailed' } }` so a form stays open.
 4. **Business errors** (`Result` errors) are returned to the caller unchanged and are not
    reported.

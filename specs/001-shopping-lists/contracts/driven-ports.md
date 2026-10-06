@@ -73,6 +73,11 @@ interface AppStateRepository {
   message ("Storage operation failed") and the SQLite result code when there is one; its own
   stack is captured at the rethrow, and the original error, message and stack are dropped, so
   no stored value reaches a report (FR-030, [../research.md](../research.md) R13).
+  When the error is a full storage (`SQLITE_FULL`, or the engine's message "database or disk
+  is full", checked before the text is dropped), the adapter throws `StorageFull`, with the
+  same fixed message. `StorageFull` is declared in `application/ports/storage-full.ts`, so the
+  UI adapter recognizes it without importing the SQLite adapter (FR-030,
+  [../research.md](../research.md) R12a).
   `migrate` throws `DataFromNewerVersion` instead when `PRAGMA user_version` is above the
   highest migration it knows, before any other statement (FR-040, R18c).
 - Contract tests: one shared suite per repository runs against both the in-memory fake and the

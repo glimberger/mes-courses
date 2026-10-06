@@ -165,6 +165,8 @@ synchronization column or table: those come with the sync feature's own migratio
 
 ```sql
 PRAGMA foreign_keys = ON;
+PRAGMA journal_mode = WAL;     -- set by openDatabase before migrating (research R4)
+PRAGMA synchronous = FULL;     -- every commit synced to storage: survives a power cut (FR-028)
 
 CREATE TABLE category (
   id       TEXT PRIMARY KEY,

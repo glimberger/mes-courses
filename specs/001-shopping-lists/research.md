@@ -67,6 +67,17 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
   (FR-011, FR-021, FR-024). Every write is committed before the UI shows it as saved, which
   covers FR-028 and SC-007 (killed app, device restart). The data set is small, so hand-written
   SQL is short and needs no ORM.
+- **Durability against power loss** (FR-028, SC-007, clarified 2026-10-06): `openDatabase` sets
+  `PRAGMA journal_mode = WAL` and `PRAGMA synchronous = FULL` before migrating, and checks both
+  values read back. In WAL mode, `synchronous = NORMAL` (a common default) can lose the last
+  committed transactions when power is cut; `FULL` syncs the log to storage at every commit,
+  so a change shown as saved survives a power cut. The cost is one storage sync per write, a
+  few milliseconds on the reference phones; ticks are shown before their save (R9), so SC-002
+  is unaffected.
+- **Alternatives considered for durability**: the rollback journal with `synchronous = FULL`
+  (also durable, but writers block readers, and WAL keeps reads fast while a save runs);
+  `synchronous = EXTRA` (one more sync per transaction for a guarantee only needed on file
+  systems that lose directory updates, which neither platform's app storage does).
 - **Adapter tests against the real technology (Principle VI)**: the adapter is written against a
   minimal `SqlDatabase` interface whose methods mirror expo-sqlite's async API (`execAsync`,
   `runAsync`, `getAllAsync`, `getFirstAsync`, `withTransactionAsync`). In the app it is the
@@ -111,9 +122,9 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
     error, not a constraint failure.
   - *Search form*: the normalized name with diacritics removed
     (`normalize('NFD').replace(/\p{M}/gu, '')`). The query is matched as a substring. Searching
-    runs in the domain over the catalog read into memory: a personal catalog holds hundreds of
-    articles at most, so filtering in memory takes well under a millisecond and keeps the rule
-    in tested domain code.
+    runs in the domain over the catalog read into memory: the spec sizes the catalog at up to
+    1 000 articles (Assumptions), so filtering in memory takes about a millisecond and keeps
+    the rule in tested domain code.
   - *Sorting*: categories by `position`; items within a category unticked first, then ticked,
     each group sorted by name with `Intl.Collator('fr', { sensitivity: 'base' })` (supported by
     Hermes).
@@ -235,7 +246,9 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
 - **Rationale**: 200 rows is well within `SectionList`'s range. FlashList would be a new
   dependency with no measured need; it can replace `SectionList` if profiling shows lag.
 - **Measurement**: SC-008 (55 frames per second or more while scrolling and ticking) is read
-  from React Native's Perf Monitor, on a release build filled by the seed (T135), on the two
+  from React Native's Perf Monitor, on a release build filled by the measurement seed (T135) to
+  the spec's data size: 1 000 articles in the catalog, 20 lists, and 200 items on the current
+  list (Assumptions). SC-001 is measured on the same build. Both run on the two
   reference phones of the spec: an entry-level Android phone about five years old and the
   maintainer's iPhone.
 
@@ -265,6 +278,26 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
 - **Testing**: React Native Testing Library queries by role and French label (`getByRole`,
   `getByLabelText`), so the UI tests check the accessibility contract too. The 200% text size and
   screen reader passes are part of [quickstart.md](quickstart.md).
+
+## R12a. A full device storage (FR-030, edge case)
+
+- **Decision**: the SQLite adapter recognizes a full storage before it drops the error's text
+  (R13): the SQLite result code `SQLITE_FULL` (13) when the binding gives one, otherwise the
+  engine's fixed message "database or disk is full". It then throws `StorageFull`, with the same
+  fixed, content-free message as `StorageError`. `StorageFull` is declared with the driven ports
+  (`apps/mobile/src/application/ports/storage-full.ts`), not in the SQLite adapter, so the UI
+  adapter can recognize it without importing another adapter (Principle VI). The store treats every failed save
+  as before (nothing shown as saved, a failed tick reloaded, a failed "Annuler" or "Terminer
+  les courses" as in R8 and R9a), with two differences for `StorageFull`: the notice is
+  `storageFull`, shown as "Espace de stockage insuffisant. Libérez de la place sur votre
+  téléphone.", and nothing is reported. A full storage at startup is not a save: FR-039 still
+  applies (startup error, reported).
+- **Rationale**: a full phone is an expected situation the user can fix, and reporting it would
+  fill error tracking with noise the maintainer cannot act on. Recognizing it in the adapter
+  keeps the rule next to the only code that sees the engine's error.
+- **Alternatives considered**: checking free space before each write (a native module, and a
+  race with other apps filling the storage); a generic message (rejected in the spec's
+  clarification).
 
 ## R13. Error tracking (Principle VIII)
 
@@ -435,7 +468,7 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
   written down so a later change is deliberate), and no backup rule excludes the
   database (003 adds one that excludes only the secure storage holding the device credential). Android Auto Backup then includes the expo-sqlite file (well under its 25 MB
   limit), and on iOS the file lives in the app's Documents folder, which the iCloud device
-  backup includes; quickstart step 13 checks both platforms before the first release. No
+  backup includes; quickstart step 14 checks both platforms before the first release. No
   encryption is added (no SQLCipher): the data is not sensitive, and the
   system already encrypts the phone's storage.
 - **Rationale**: the fallback costs one config line, and a phone restored from backup gets its

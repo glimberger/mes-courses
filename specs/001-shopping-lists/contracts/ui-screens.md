@@ -203,3 +203,8 @@ The remaining count in the CurrentList subtitle is not announced when it changes
 
 Any write that throws: the change is not shown as saved, snackbar
 "La modification n'a pas pu être enregistrée.", error reported with `{ operation, screen }`.
+
+When the error is `StorageFull`: the same handling, but the snackbar reads "Espace de stockage
+insuffisant. Libérez de la place sur votre téléphone." and nothing is reported (FR-030,
+[research.md](../research.md) R12a). At startup, a full storage still shows the startup error
+(FR-039).
