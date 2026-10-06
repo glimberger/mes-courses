@@ -22,6 +22,12 @@ categories, lists and list items).
 - Q: Is changing an article's category in scope? → A: Yes, it is edited in the same place as
   the name.
 
+### Session 2026-10-06
+
+- Q: Does the 5-second undo window change when a screen reader is on? → A: Yes, as for item
+  removal in [001](../001-shopping-lists/spec.md) FR-010: while a screen reader is on, the
+  offer stays until the user dismisses it or makes another change.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Rename an article (Priority: P1)
@@ -89,8 +95,9 @@ undo, and check it is back everywhere as before.
    quantity, unticked), **When** I tap "Annuler" while it is offered, **Then** "Lait" is back
    in the catalog with its name and category, and back on both lists with the same quantity
    and ticked state.
-6. **Given** I just deleted an article, **When** 5 seconds pass or I make another change,
-   **Then** "Annuler" is no longer offered and the deletion is final.
+6. **Given** I just deleted an article and no screen reader is on, **When** 5 seconds pass or
+   I make another change, **Then** "Annuler" is no longer offered and the deletion is final.
+   With a screen reader on, the offer stays until I dismiss it or make another change.
 7. **Given** I deleted "Houmous" and the undo is no longer offered, **When** I create a new
    article named "Houmous", **Then** it is created normally, with no trace of the deleted one.
 8. **Given** I deleted the last article of a category, **When** I browse that category,
@@ -162,7 +169,8 @@ under the new category heading on the list and in the catalog.
 - **FR-006**: When the article is on one or more lists, the confirmation MUST name those
   lists, and confirming MUST remove the article from all of them.
 - **FR-006a**: Right after a deletion, users MUST be offered to undo it for 5 seconds or until
-  their next change, whichever comes first. Undoing MUST restore the article (name and
+  their next change, whichever comes first. While a screen reader is on, the offer MUST stay
+  until the user dismisses it or makes their next change, as for item removal in 001 (FR-010). Undoing MUST restore the article (name and
   category) and each list item it had (list, quantity, ticked state).
 - **FR-007**: Once the deletion is final, the article's name MUST be available again for a
   new article.

@@ -63,7 +63,7 @@ type Notice =
 | `getArticleUsage(articleId)` | Calls the query and returns its `Result`; nothing is stored (the dialog holds it). |
 | `deleteArticle(articleId)` | Calls `deleteArticle`; on success sets `pendingUndo = { kind: 'deletedArticle', deleted }`. |
 | `undo()` | Clears `pendingUndo`, then restores it (`restoreRemovedItem` or `restoreDeletedArticle`) and refreshes. On failure: stays deleted or removed, `notice = writeFailed`, report. |
-| `dismissUndo()` | Clears `pendingUndo` (the change becomes final). Called by the snackbar's 5 s timeout and its dismissal. |
+| `dismissUndo()` | Clears `pendingUndo` (the change becomes final). Called by the snackbar's 5 s timeout (none while a screen reader is on) and its dismissal. |
 | `dismissNotice()` | Clears `notice`. |
 
 Rules shared by every write action:
@@ -81,5 +81,7 @@ Rules shared by every write action:
 ## Undo timing
 
 The undo snackbar is rendered once, at the root of the app, from `pendingUndo`, so it stays on
-screen across navigation. It calls `dismissUndo()` after 5 s. Tests drive the delay with Jest
-fake timers (Principle III).
+screen across navigation. It calls `dismissUndo()` after 5 s, except while a screen reader is on
+(`AccessibilityInfo`), when only the user's dismissal or the next write ends the offer (001
+FR-010, 002 FR-006a). Tests drive the delay with Jest fake timers and mock `AccessibilityInfo`
+(Principle III).
