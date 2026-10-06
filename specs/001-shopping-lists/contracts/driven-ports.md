@@ -69,6 +69,12 @@ interface AppStateRepository {
   (`execAsync`, `runAsync`, `getAllAsync`, `getFirstAsync`, `withTransactionAsync`). It is the
   expo-sqlite database in the app and a `node:sqlite` wrapper in adapter tests
   ([../research.md](../research.md) R4).
+- Every error thrown by the database is rethrown by the adapter as a `StorageError` with a fixed
+  message ("Storage operation failed") and the SQLite result code when there is one; its own
+  stack is captured at the rethrow, and the original error, message and stack are dropped, so
+  no stored value reaches a report (FR-030, [../research.md](../research.md) R13).
+  `migrate` throws `DataFromNewerVersion` instead when `PRAGMA user_version` is above the
+  highest migration it knows, before any other statement (FR-040, R18c).
 - Contract tests: one shared suite per repository runs against both the in-memory fake and the
   SQLite adapter, so the fake cannot drift from the real behavior.
 

@@ -74,7 +74,7 @@ story uses.
   - `forArticle(articleId)` returns the article's items on every list, with `inCart` and `quantity`;
   - `removeAllForArticle(articleId)` removes them all and leaves other articles' items untouched.
 - [ ] T004 Add `ArticleRepository.update(article: Article): Promise<void>` and `remove(id: ArticleId): Promise<void>`, and `ListItemRepository.forArticle(articleId): Promise<ListItem[]>` and `removeAllForArticle(articleId): Promise<void>` to `apps/mobile/src/application/ports/repositories.ts`. Implement them in the fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts`, where `remove` throws while an item refers to the article, to turn T002–T003 green against the fakes.
-- [ ] T005 Implement the same methods in `apps/mobile/src/adapters/sqlite/article-repository.ts` and `apps/mobile/src/adapters/sqlite/list-item-repository.ts` to turn T002–T003 green against SQLite in `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`:
+- [ ] T005 Implement the same methods in `apps/mobile/src/adapters/sqlite/article-repository.ts` and `apps/mobile/src/adapters/sqlite/list-item-repository.ts` to turn T002–T003 green against SQLite in `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`. Wrap every database call with `toStorageError` (001 R13), and add one test there: a failing `remove` rejects with a `StorageError` whose message and stack hold no article name. The SQL:
   - edit: `UPDATE article SET name = ?, normalized_name = ?, category_id = ? WHERE id = ?`;
   - remove items: `DELETE FROM list_item WHERE article_id = ?`;
   - remove article: `DELETE FROM article WHERE id = ?`, where the `NO ACTION` reference from `list_item` makes it fail while an item is left ([research.md](research.md) R4).

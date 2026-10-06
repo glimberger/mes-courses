@@ -2,7 +2,7 @@
 
 **Branch**: `feat/001-shopping-lists` | **Date**: 2026-10-05 (amended 2026-10-06 for constitution
 v2.1.0, monorepo, then for Storybook and Detox, then for constitution v2.1.1, then for the
-data clarifications) | **Spec**: [spec.md](spec.md)
+data clarifications and the failure-flow clarifications) | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/001-shopping-lists/spec.md`
 
@@ -62,7 +62,9 @@ synchronization in this feature (deferred, R19, Complexity Tracking); every chan
 committed to storage before it is shown as saved (FR-028); French-only UI with no i18n layer
 (Principle X); accessibility per FR-032 to FR-035; no list content in error reports
 (Principle VIII); stored data never deleted or reset to recover from a startup failure
-(FR-039); data kept in the system backup, not encrypted beyond the system's own (Assumptions)
+(FR-039); data kept across updates and never opened by an older version (FR-040); data kept
+in the system backup, not encrypted beyond the system's own (Assumptions); no storage error
+text in reports (FR-030)
 
 **Scale/Scope**: one user, one device; 4 screens and 4 dialogs; hundreds of articles at most,
 around 200 items per list at most; 5 tables
@@ -117,6 +119,11 @@ justified. The design adds no layer, port or dependency beyond those above. Poin
   the quantity grammar are pure domain rules (R6, R7); the startup error is the existing
   `ErrorState` shown by `App.tsx` (R18a); the backup choice is one Expo config key (R18b).
   Editing only the current list (FR-008) is a UI rule: the use cases keep their `listId`.
+- The failure-flow clarifications add no port or dependency either: per-item save queues and a
+  reload on failure live in the store (R9), finishing shopping already runs in one transaction
+  (R9a), `StorageError` and `DataFromNewerVersion` are thrown by the SQLite adapter (R13, R18c),
+  and `UpdateRequired` is a second full-screen view of `App.tsx`. `toggleItemInCart` keeps its
+  signature, which 003 extends.
 - Nothing in the design blocks the sync feature: ids are device UUIDs that never change, each
   change is one `UnitOfWork` transaction (where a later outbox write can join it), and no read
   model assumes the device holds the only copy. The open questions for that feature (first-launch
@@ -252,6 +259,13 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
     root, and its required story (R18a, [contracts/ui-screens.md](contracts/ui-screens.md#app-startup-fr-039));
   - `app.config.ts` sets `android.allowBackup: true` (R18b);
   - US2-5 makes "Gâteau" current before adding to it (FR-008).
+- **Failure-flow clarifications (2026-10-06)**, to be reflected in the existing tasks:
+  - the store's tick queue per item, with dropped queued toggles and a reload on failure (R9);
+  - a failed "Annuler" ends the offer with the usual notice (R8); a failed "Terminer les
+    courses" closes the dialog with focus back on the action (R9a);
+  - the SQLite adapter's `StorageError` with no original text or stack (R13);
+  - `migrate` throws `DataFromNewerVersion` above the known version, and `App.tsx` shows
+    `UpdateRequired`, with its story and no report (R18c).
 - No task touches the network or the server: synchronization belongs to the sync feature (R19).
 - The Sentry project is in place (done by the maintainer). The Sentry DSN and build credential
   live in EAS environment variables, set by the maintainer, and are never committed.

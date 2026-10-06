@@ -203,7 +203,7 @@ Every story needs a device that can pair with a running server.
   - existing rows and `list_item` data survive the table rebuild;
   - `user_version` = 2;
   - it runs in one transaction.
-- [ ] T029 Implement migration 2 in `apps/mobile/src/adapters/sqlite/migrations.ts` to turn T028 green. Update the category SQLite repository and the read models to order by `(position, created_hlc, id)` through `compareCategories`, keeping 001's ordering tests green.
+- [ ] T029 Implement migration 2 in `apps/mobile/src/adapters/sqlite/migrations.ts` to turn T028 green. Update the category SQLite repository and the read models to order by `(position, created_hlc, id)` through `compareCategories`, keeping 001's ordering tests green. Wrap every database call with `toStorageError` (001 R13), so no stored value reaches a report (001 FR-030).
 - [ ] T030 Declare the app ports in `apps/mobile/src/application/ports/`, with exactly the signatures of [contracts/app-ports.md](contracts/app-ports.md#new-driven-ports-srcapplicationports):
   - `change-recorder.ts`, `sync-state.ts` and `pulled-rows.ts`, added to `Repositories`;
   - `clock.ts`, `sync-server.ts` and `credential-store.ts`.
@@ -217,7 +217,7 @@ Every story needs a device that can pair with a running server.
   - `sync-state.contract.ts`: the defaults (`lastSeq = 0`, `snapshotDone = false`), and `save` then `get`.
 
   Run them on fakes in `apps/mobile/src/application/testing/in-memory-repositories.test.ts` and on SQLite in `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`, and confirm they fail.
-- [ ] T032 Implement the fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts` and `FakeClock` in `apps/mobile/src/application/testing/fake-clock.ts`. Implement the SQLite versions in `apps/mobile/src/adapters/sqlite/change-recorder.ts` and `apps/mobile/src/adapters/sqlite/sync-state-repository.ts`. Together they turn T031 green.
+- [ ] T032 Implement the fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts` and `FakeClock` in `apps/mobile/src/application/testing/fake-clock.ts`. Implement the SQLite versions in `apps/mobile/src/adapters/sqlite/change-recorder.ts` and `apps/mobile/src/adapters/sqlite/sync-state-repository.ts`. Together they turn T031 green. Wrap every database call with `toStorageError` (001 R13), so no stored value reaches a report (001 FR-030).
 - [ ] T033 [P] Implement `SystemClock` (`Date.now()`) in `apps/mobile/src/adapters/clock/system-clock.ts`. Implement `CredentialStore` over `expo-secure-store` in `apps/mobile/src/adapters/secure-store/credential-store.ts`, test-first with the module mocked, plus `InMemoryCredentialStore` in `apps/mobile/src/application/testing/`. Install `expo-secure-store` with `yarn expo install`.
 - [ ] T034 Add the app's `./testing` entry: `apps/mobile/test/index.ts`, declared in `apps/mobile/package.json` `"exports"`, re-exporting 001's `node:sqlite` wrapper and the `SyncServer` adapter factory. Then write failing tests for the `SyncServer` HTTP adapter in `tests/sync/sync-server-adapter.test.ts`, importing the adapter from `@mes-courses/mobile/testing` and `startTestServer()` from `@mes-courses/server/testing` (the app never imports the server, Principle XI):
   - `health` returns `HealthInfo`;
@@ -319,7 +319,7 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
 - [ ] T049 [US1] Implement `apps/server/src/domain/apply-change.ts` to turn T039 green.
 - [ ] T050 [US1] Implement `apps/server/src/application/use-cases/sync.ts` to turn T040 green.
 - [ ] T051 [US1] Implement `apps/server/src/adapters/http/routes/sync.ts` and its schema to turn T041 green.
-- [ ] T052 [US1] Implement `apps/mobile/src/adapters/sqlite/pulled-rows-applier.ts` to turn T042 green.
+- [ ] T052 [US1] Implement `apps/mobile/src/adapters/sqlite/pulled-rows-applier.ts` to turn T042 green. Wrap every database call with `toStorageError` (001 R13), so no stored value reaches a report (001 FR-030).
 - [ ] T053 [US1] Add `sync` to `apps/mobile/src/adapters/sync-http/sync-server.ts`, extending `tests/sync/sync-server-adapter.test.ts` first with a round trip against `startTestServer()`.
 - [ ] T054 [US1] Implement `apps/mobile/src/application/use-cases/synchronize.ts` to turn T043 green.
 - [ ] T055 [US1] Implement `apps/mobile/src/application/use-cases/release-held-changes.ts` and call `changes.releaseAll()` in `initialize-store.ts`, to turn T044 green.
