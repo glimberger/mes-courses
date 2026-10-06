@@ -85,7 +85,7 @@ CreateCategoryDialog.
 
 | Action | Behavior |
 |---|---|
-| Tap a row | Tick or untick immediately (optimistic); saves are queued per item, in tap order. On a failed save: the item's later queued saves are dropped, the list is reloaded so the item shows its stored state, snackbar "La modification n'a pas pu être enregistrée.", report with `{ operation: 'toggleItemInCart', screen: 'CurrentList' }`. (US1-2, US1-3, FR-004, [research.md](../research.md) R9) |
+| Tap a row | Tick or untick immediately (optimistic); the save joins the store's single write queue, so every change is saved in the order it was made, and "Terminer les courses" or a removal is saved after the taps made before it (FR-004). On a failed save: the item's later queued toggles are dropped (other writes still run), the list is reloaded so the item shows its stored state, snackbar "La modification n'a pas pu être enregistrée.", report with `{ operation: 'toggleItemInCart', screen: 'CurrentList' }`. (US1-2, US1-3, FR-004, [research.md](../research.md) R9) |
 | Row action "Modifier la quantité" | Opens QuantityDialog prefilled. |
 | Row action "Retirer de la liste" | Removes at once; snackbar "« {name} » retiré de la liste" with action "Annuler" (US2-6, US2-16), offered per [Undo offer](#undo-offer). |
 | Appbar action "Terminer les courses" | Shown only when `hasItemsInCart`. Opens FinishShoppingDialog (US1-8, US1-9). |
@@ -126,7 +126,7 @@ its own (FR-029).
 |---|---|
 | Tap an article not on the list | Opens QuantityDialog in "add" mode; "Ajouter" with empty fields adds without quantity (SC-003: tap + "Ajouter"). |
 | Tap an article marked "Déjà dans la liste" | QuantityDialog in "already on list" mode: message "« {name} » est déjà dans la liste.", fields prefilled, buttons "Fermer" and "Modifier la quantité" (US2-8). |
-| "Nouvel article" (Appbar action) or empty-state action | Opens CreateArticle, name prefilled with the query if any. |
+| "Nouvel article" (Appbar action, always shown, with or without matches) or empty-state action | Opens CreateArticle, name prefilled with the query cleaned like a name (trimmed, inner spaces reduced, FR-022), if any (FR-008, US2-19). |
 
 The screen stays open after adding, so several articles can be added in a row; a snackbar
 confirms "« {name} » ajouté". Back returns to CurrentList, already reloaded by the store after the
@@ -205,8 +205,11 @@ between screens does not end the offer (FR-010):
 - it follows the current screen reader setting: turned on during an offer, the offer stays with
   no limit; turned off, the 5 s count from the removal again, so an offer older than 5 s is
   dismissed at once (FR-010);
-- any other write, including a new removal or a change of the current list, ends the offer
-  first, so only the last removal can be undone;
+- any other write that succeeds, including a toggle, a new removal or a change of the current
+  list, ends the offer, so only the last removal can be undone; a write that fails, or input
+  refused, leaves the offer as it was; an "Annuler" tapped while the offer shows is carried out
+  even if a write made just before it ends the offer while it waits in the write queue
+  ([research.md](../research.md) R8, R9);
 - it is never stored, so closing the app ends it.
 
 A removal whose offer has ended is final. If "Annuler" fails to save, the item stays removed,

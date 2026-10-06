@@ -129,15 +129,20 @@ FR-030a, FR-039a).
     would count twice. For the same reason the name field sets no native `maxLength`, which
     counts UTF-16 units; `NameTooLong` is the only limit.
   - *Normalized name*, used for uniqueness (articles, categories, lists, FR-021):
-    `cleanName(name).toLocaleLowerCase('fr')`. Accents are kept: "Pâte" and "Pâté" are
+    `cleanName(name).toLocaleLowerCase('fr')`, then "œ" → "oe", "æ" → "ae" and "’" → "'"
+    (clarified 2026-10-06): phone keyboards insert the ligature and the curly apostrophe or not
+    depending on their settings, so "Oeufs" and "Œufs", or "Pâte d'amande" and "Pâte d’amande",
+    are the same name. Accents are kept: "Pâte" and "Pâté" are
     different names. It is stored in a `normalized_name`
     column with a `UNIQUE` constraint, and the domain checks it first so the user gets a typed
     error, not a constraint failure.
   - *Search form*: the normalized name with diacritics removed
-    (`normalize('NFD').replace(/\p{M}/gu, '')`). The query is matched as a substring. Searching
-    runs in the domain over the catalog read into memory: the spec sizes the catalog at up to
+    (`normalize('NFD').replace(/\p{M}/gu, '')`), so it inherits the ligature and apostrophe
+    folding. The query is matched as a substring. Searching
+    runs in the domain over the catalog read into memory: the spec measures the catalog at up to
     1 000 articles (Assumptions), so filtering in memory takes about a millisecond and keeps
-    the rule in tested domain code.
+    the rule in tested domain code. That size is a measurement size, not a limit: nothing is
+    refused beyond it (clarified 2026-10-06).
   - *Sorting*: categories by `position`; items within a category unticked first, then ticked,
     each group sorted by name with `Intl.Collator('fr', { sensitivity: 'base' })` (supported by
     Hermes).
@@ -183,11 +188,16 @@ FR-030a, FR-039a).
   (list, article, ticked state, quantity). The application store (R10) keeps the snapshot in its
   single `pendingUndo` slot while the app-wide undo snackbar shows "« {name} » retiré de la liste"
   with an "Annuler" action for 5 seconds; `restoreRemovedItem(snapshot)` re-inserts it as it was.
-  Any other write ends the offer, and a new undoable change replaces it (the same rule as
-  [002's deleted articles](../002-manage-articles/research.md) R5). Moving between screens does
+  Any other write that succeeds ends the offer, a toggle included, and a new undoable change
+  replaces it (the same rule as
+  [002's deleted articles](../002-manage-articles/research.md) R5). A write that fails, or input
+  refused before or by a use case, changes nothing and leaves the offer as it was (clarified
+  2026-10-06). An "Annuler" tapped while the offer shows is carried out with its snapshot, even
+  if a write made just before it ends the offer while it waits in the write queue (R9): the user
+  chose it while it was offered. Moving between screens does
   not end it. While a screen reader is on (`AccessibilityInfo.isScreenReaderEnabled` and its
   `screenReaderChanged` event), the snackbar has no timeout: it stays until dismissed or the
-  next write (FR-010), because 5 seconds is too short to reach "Annuler" with TalkBack or
+  next successful write (FR-010), because 5 seconds is too short to reach "Annuler" with TalkBack or
   VoiceOver.
 - **Failed restore** (FR-010, clarified 2026-10-06): if `restoreRemovedItem` throws, the store
   clears `pendingUndo` (the offer ends and the removal is final), leaves the list as stored
@@ -201,19 +211,28 @@ FR-030a, FR-039a).
 
 - **Decision**: the store's `toggleItem` action (R10) updates the tick in the current list region
   immediately, then queues a call to `toggleItemInCart` (FR-004, clarified 2026-10-06):
-  - each item has its own queue in the store (a promise chain keyed by list and article), so
-    quick taps on one item are saved one after the other, in tap order; taps on different items
-    do not wait for each other;
-  - if a save fails, the store drops the toggles still queued for that item, reloads the current
+  - the store has one write queue (a single promise chain) that every write goes through,
+    toggles, removals, "Terminer les courses", undo and creations alike, so changes are saved in
+    the order the user made them: a removal or `finishShopping` waits for the toggles tapped
+    before it (FR-004, clarified 2026-10-06); quick taps on one item are saved one after the
+    other, in tap order;
+  - if a toggle's save fails, the store drops the toggles still queued for that item (and only
+    those: later writes of other items or other kinds still run), reloads the current
     list region from storage, so the item shows the state last saved, sets the usual `notice`
     ("La modification n'a pas pu être enregistrée.") and reports
-    `{ operation: 'toggleItemInCart' }`.
+    `{ operation: 'toggleItemInCart' }`;
+  - `removeItemFromList` reads the item as stored when it runs, so a removal queued behind a
+    failed toggle keeps the stored ticked state in its `RemovedItem` snapshot.
 - **Rationale**: an expo-sqlite write takes a few milliseconds, but the optimistic update keeps
   the tap feedback independent of storage speed and still never shows a failed change as saved.
   Saving in order makes the stored state after n successful toggles equal to the shown one.
   Reloading rather than flipping back is what makes a failure in the middle of quick taps
   correct: "the previous state" is ambiguous with several taps in flight, the stored state is
-  not. Dropping the later toggles keeps the reloaded screen and storage equal.
+  not. Dropping the later toggles keeps the reloaded screen and storage equal. One queue for
+  every write, rather than one per item, is what keeps "Terminer les courses" or a removal from
+  being overtaken by a toggle tapped before it; a write takes a few milliseconds, and ticks are
+  shown before their save, so waiting in one queue never delays what the user sees by more than
+  that.
 - **Alternatives considered**: ignoring taps while a save is pending (rejected in the spec's
   clarification); a `setItemInCart(value)` use case instead of a toggle (would also be correct
   with the queue, but changes a use case that 003 already extends, for no gain).

@@ -180,10 +180,10 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
   Also add to `apps/mobile/src/application/use-cases/create-article-and-add-to-list.test.ts`: 002 US2-7 / FR-007, once the deletion is final, creating "Houmous" again succeeds as a new article.
 - [ ] T027 [P] [US2] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.delete-article.test.ts`:
   - `getArticleUsage` returns the `Result` and stores nothing;
-  - `deleteArticle` clears any pending offer first, then on success sets `pendingUndo = { kind: 'deletedArticle', deleted }` and refreshes;
+  - `deleteArticle` on success replaces any pending offer: it sets `pendingUndo = { kind: 'deletedArticle', deleted }` and refreshes;
   - `undo()` with a `deletedArticle` clears the offer, calls `restoreDeletedArticle` and refreshes;
   - if the restore throws, the article stays deleted, `notice = writeFailed`, and the error is reported with `{ operation: 'restoreDeletedArticle' }` (edge case);
-  - 002 US2-6: any other write ends the offer;
+  - 002 US2-6: any other write that succeeds ends the offer, and a failed write or refused input leaves it (001 FR-010);
   - a new deletion or an item removal replaces the offer;
   - `dismissUndo()` ends it;
   - a store built afresh on the same fakes, standing for a killed app, has `pendingUndo = null`: the deletion is final (edge case).

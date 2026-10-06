@@ -18,11 +18,13 @@ text appears only in the UI adapter (Principle X).
 | Unique within its kind, comparing `normalizedName` | FR-021, FR-024 | `NameAlreadyUsed` (carries the existing entity) |
 
 - `cleanName(text) = text.normalize('NFC').trim().replace(/\s+/gu, ' ')`.
-- `normalizedName(name) = cleanName(name).toLocaleLowerCase('fr')`: case, outer and repeated
-  inner spaces, and composed or decomposed accents are ignored; accents themselves are kept, so
-  "Pâte" ≠ "Pâté" ([research.md](research.md) R6).
+- `normalizedName(name) = foldLetters(cleanName(name).toLocaleLowerCase('fr'))`, where
+  `foldLetters` replaces "œ" with "oe", "æ" with "ae" and the curly apostrophe "’" (U+2019) with
+  "'": case, outer and repeated inner spaces, composed or decomposed accents, these ligatures and
+  the apostrophe style are ignored, so "Oeufs" = "Œufs" and "Pâte d'amande" = "Pâte d’amande";
+  accents themselves are kept, so "Pâte" ≠ "Pâté" (FR-021, [research.md](research.md) R6).
 - `searchForm(text) = normalizedName(text)` without diacritics (`NFD`, combining marks removed),
-  with "œ" → "oe" and "æ" → "ae", so "oeuf" and "œuf" have the same search form (FR-009).
+  so "oeuf" and "œuf" have the same search form, and so do "d'amande" and "d’amande" (FR-009).
 - The name is stored cleaned ("Houmous"; "Pommes  de terre" is stored "Pommes de terre");
   `normalizedName` is stored next to it.
 - The length is counted as `[...name].length`, the unit SQLite's `length()` counts, so the

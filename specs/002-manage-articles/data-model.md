@@ -55,7 +55,7 @@ Article
 Pending undo (UI store, one slot for the whole app)
   none --removeItemFromList / deleteArticle succeeds--> offered(snapshot)
   offered --"Annuler"--> none (restore runs)
-  offered --5 s elapse (no screen reader) | snackbar dismissed | any other write starts | app killed--> none (final)
+  offered --5 s elapse (no screen reader) | snackbar dismissed | any other write succeeds | app killed--> none (final)
   offered(A) --another undoable change--> offered(B)  (A becomes final)
 ```
 

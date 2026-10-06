@@ -80,7 +80,7 @@ that restarts the app (FR-039a, R13a)
 
 **Scale/Scope**: one user, one device; 4 screens and 4 dialogs; up to 1 000 articles in the
 catalog, 20 lists and 200 items per list (spec Assumptions), with SC-001, SC-002 and SC-008 measured at
-that size; 5 tables
+that size (measurement sizes, not limits); 5 tables
 
 No NEEDS CLARIFICATION remains: the stack was chosen by the maintainer (React Native with Expo),
 and every other unknown is resolved in [research.md](research.md).
@@ -132,7 +132,7 @@ justified. The design adds no layer, port or dependency beyond those above. Poin
   the quantity grammar are pure domain rules (R6, R7); the startup error is the existing
   `ErrorState` shown by `App.tsx` (R18a); the backup choice is one Expo config key (R18b).
   Editing only the current list (FR-008) is a UI rule: the use cases keep their `listId`.
-- The failure-flow clarifications add no port or dependency either: per-item save queues and a
+- The failure-flow clarifications add no port or dependency either: the store's write queue and a
   reload on failure live in the store (R9), finishing shopping already runs in one transaction
   (R9a), `StorageError` and `DataFromNewerVersion` are thrown by the SQLite adapter (R13, R18c;
   `DataFromNewerVersion` is declared with the ports, since adapters never import each other, R15),
@@ -285,7 +285,7 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
   - `app.config.ts` sets `android.allowBackup: true` (R18b);
   - US2-5 makes "Gâteau" current before adding to it (FR-008).
 - **Failure-flow clarifications (2026-10-06)**, to be reflected in the existing tasks:
-  - the store's tick queue per item, with dropped queued toggles and a reload on failure (R9);
+  - the store's write queue, with an item's queued toggles dropped and a reload on failure (R9);
   - a failed "Annuler" ends the offer with the usual notice (R8); a failed "Terminer les
     courses" closes the dialog with focus back on the action (R9a);
   - the SQLite adapter's `StorageError` with no original text or stack (R13);
@@ -329,6 +329,18 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
   - the traceability test (T138) also collects FR-030a and FR-039a;
   - the README tells the maintainer what to declare in the store privacy details if the app is
     published (spec Assumptions, R13).
+- **Domain clarifications (2026-10-06)**, reflected in the existing tasks
+  ([checklists/domain.md](checklists/domain.md)):
+  - one store-wide write queue instead of one per item: every change is saved in the order the
+    user made it, so "Terminer les courses" or a removal waits for earlier toggles and still runs
+    when one fails; a failed toggle drops only that item's queued toggles (R9, T049, T069, T088);
+  - the "Annuler" offer ends on a successful write, a toggle included, and survives a failed
+    write or refused input; an "Annuler" already queued is carried out (R8, T049, T088);
+  - `normalizedName` folds "œ", "æ" and "’", so "Oeufs" and "Œufs" are the same name, and search
+    inherits it (R6, T020, T085, T087);
+  - "Nouvel article" is always shown on AddArticles and prefills the cleaned query (FR-008,
+    US2-19, T092);
+  - the data sizes are measurement sizes, not limits: no use case refuses beyond them (R6).
 - No task touches the network or the server: synchronization belongs to the sync feature (R19).
 - The Sentry project is in place (done by the maintainer). The Sentry DSN and build credential
   live in EAS environment variables, set by the maintainer, and are never committed.

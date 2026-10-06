@@ -102,10 +102,11 @@ release. Steps 4, 10, 11, 12, 13 and 14, the timing of step 2 and the background
    list until the item shows on it: under 20 seconds, typing included. Do 3 tries, each with a
    new article ("Pois chiches", then "Lentilles", then "Haricots rouges"), on a reference phone,
    by the maintainer.
-3. **Search and duplicates** (US2-10, US2-8, US2-9, US2-14): create "Pommes" and
+3. **Search and duplicates** (US2-10, US2-8, US2-9, US2-14, US2-19): create "Pommes" and
    "Pommes de terre"; search "pom" and "POM"; tap "Lait", check "Déjà dans la liste"; try to
    create " lait " and "Pommes  de  terre" (double spaces): each is refused as already
-   existing (FR-021); search "xyz" and check the "no match" state. Count the gestures (SC-003):
+   existing (FR-021); search "xyz" and check the "no match" state; create "Pâte", search
+   "pâté", and from "Nouvel article" create "pâté" with its name prefilled (FR-008). Count the gestures (SC-003):
    adding "Pommes" by browsing takes at most 3 taps, and by searching at most 3 taps and 3
    letters, tapping the search field and "Ajouter" included.
 4. **Airplane mode** (US1-2 to US1-7, US1-5, SC-002, SC-006): turn on airplane mode, go

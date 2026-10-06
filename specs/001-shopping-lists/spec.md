@@ -272,6 +272,25 @@
 - Q: Are the theme's medium- and high-contrast color variants used in this feature? → A: No:
   only the light and dark themes are built and checked (FR-036); the variants stay in the theme
   file until a feature selects them (plan, research R2).
+- Q: When "Terminer les courses" is confirmed, or an item removed, while ticks on that list are
+  still being saved, in which order are the changes saved? → A: Every save follows the order the
+  user made the changes, across items and actions: the action is saved after the ticks made
+  before it; if one of those ticks fails, the later action is still saved, and only that tick
+  returns to its stored state (FR-004).
+- Q: Does a tick or untick end the "Annuler" offer, and does a refused input or a failed save?
+  → A: Every saved change ends it, ticks and unticks included; a refused input or the failed save
+  of another change changes nothing and leaves the offer as it was; a failed "Annuler" still ends
+  it (FR-010).
+- Q: Are names differing only by "œ"/"oe", "æ"/"ae" or a straight or curly apostrophe (' ’) the
+  same name? → A: Yes: these pairs are equal for uniqueness, as for search, so "Oeufs" and
+  "Œufs" cannot both exist; accents still count ("Pâte" ≠ "Pâté") (FR-021, FR-009).
+- Q: Are the expected data sizes limits the application enforces? → A: No: they are the sizes
+  SC-001, SC-002 and SC-008 are measured at; nothing is refused beyond them, and performance is
+  not promised beyond them (Assumptions).
+- Q: From the add screen, can the user always start creating an article, even when the search
+  finds matches, and is the search text used as its name? → A: Yes: creating an article is
+  always offered on the add screen, and its name is prefilled with the search text cleaned like
+  a name (FR-008, US2-19).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -397,6 +416,9 @@ matches.
 18. **Given** the catalog cannot be read from the device, **When** the add screen appears,
     **Then** an error state says in French that the articles could not be loaded, offers to
     retry, and the error is reported.
+19. **Given** the catalog holds "Pâte" and I search " pâté ", **When** "Pâte" is shown and I
+    choose to create a new article, **Then** the article form opens with the name "pâté", and
+    confirming with a category creates "pâté" and adds it to the current list.
 
 ---
 
@@ -499,7 +521,9 @@ the new heading.
   when the save fails, with the same message and report. Repeated taps on one item are each
   shown at once and saved in tap order; when one of them fails, the taps still waiting behind it
   are dropped, so the item shows what is stored (for example: tick saved, untick fails, a third
-  tap waiting is dropped, and the item shows ticked). A failed "Annuler" leaves the item removed
+  tap waiting is dropped, and the item shows ticked). "Terminer les courses" or a removal made
+  while ticks are still being saved is saved after them; if one of those ticks fails, the action
+  is still saved (FR-004). A failed "Annuler" leaves the item removed
   and ends the undo offer, with the same message and report (FR-010). A failed "Terminer les
   courses" changes no item: the dialog closes, with the same message and report, and the action
   stays offered (FR-007).
@@ -526,7 +550,10 @@ the new heading.
   cart) with a single tap, and the new state MUST be shown immediately. Taps MUST be saved in
   the order they were made; when a save fails, the item MUST show the state last saved on the
   device, and taps on that item still waiting to be saved MUST be dropped. Only taps made after
-  the failure are saved.
+  the failure are saved. Every change, not only taps, MUST be saved in the order the user made
+  it: "Terminer les courses" (FR-007) or a removal (FR-010) is saved after the ticks made before
+  it, and a failed tick drops only taps on that item, never a later action of another kind. A
+  removal saved after a failed tick keeps, for "Annuler", the ticked state stored on the device.
 - **FR-005**: Within a category, unticked items MUST be shown before ticked items.
 - **FR-006**: A list MUST show how many of its items are left to put in the cart.
 - **FR-007**: Users MUST be able to finish shopping on a list: after a confirmation, every item
@@ -539,10 +566,13 @@ the new heading.
 - **FR-008**: Users MUST be able to add an existing article to the current list, by browsing the
   catalog by category or by searching by name. Items are added, removed, ticked and have their
   quantity changed only on the current list; to edit another list, the user makes it current
-  first (FR-025).
+  first (FR-025). Creating a new article (FR-018) MUST be offered on the add screen at all
+  times, whether or not a search finds matches; when a search text is typed, the new article's
+  name is prefilled with it, cleaned as in FR-022.
 - **FR-009**: Search MUST match articles whose name contains the typed text, ignoring case and
   every mark added to a letter (accents, cedilla, diaeresis, tilde: "francais" finds "Français",
-  "mais" finds "Maïs"), with "œ" and "æ" matching "oe" and "ae" both ways ("oeuf" finds "Œufs").
+  "mais" finds "Maïs"), with "œ" and "æ" matching "oe" and "ae" both ways ("oeuf" finds "Œufs")
+  and a straight apostrophe matching a curly one both ways ("d'amande" finds "Pâte d’amande").
   The typed text is first trimmed, with repeated inner spaces reduced to one; when nothing is
   left, the full catalog is shown as if nothing were typed. Results MUST be shown like the
   browsed catalog: under their category headings in category order, sorted alphabetically
@@ -554,10 +584,12 @@ the new heading.
   stay offered until the user dismisses it or makes another change. The offer follows the
   current setting: when the screen reader is turned off during an offer, the 5 seconds count
   from the removal, so an offer older than 5 seconds ends at once. Only the last removal can be
-  undone: any other change (including a new removal or switching the current list) and stopping
+  undone: any other change (any change the user makes that is saved, including a tick or untick,
+  a new removal or switching the current list) and stopping
   the application (swiped away or killed by the system) end the offer, while moving between
   screens or sending the application to the background does not; the 5-second limit keeps
-  running in the background. A removal whose offer has ended is final. If restoring the item
+  running in the background. A refused input (FR-016, FR-022) or the failed save of another
+  change changes nothing and does not end the offer. A removal whose offer has ended is final. If restoring the item
   fails, it stays removed and the offer ends; the failed save is handled as in Edge Cases.
 - **FR-011**: An article MUST appear at most once on a given list; it may appear on several
   lists. When browsing or searching the catalog to add articles, articles already on the list
@@ -590,8 +622,9 @@ the new heading.
   first launch.
 - **FR-021**: Article names MUST be unique in the catalog, and category names unique among
   categories. Two names are the same when they match ignoring case, leading and trailing
-  spaces, repeated inner spaces, and how an accented letter was typed (one composed character
-  or a letter followed by an accent mark). Accents count: "Pâte" and "Pâté" are different
+  spaces, repeated inner spaces, how an accented letter was typed (one composed character
+  or a letter followed by an accent mark), "œ" or "oe", "æ" or "ae", and a straight or curly
+  apostrophe (' or ’): "Oeufs" and "Œufs" are the same name. Accents count: "Pâte" and "Pâté" are different
   names.
 - **FR-022**: Names (articles, categories, lists) MUST be non-blank, trimmed, with repeated
   inner spaces reduced to one, and at most 60 characters long. Units MUST be cleaned the same
@@ -823,7 +856,8 @@ The actions of this spec, checked one by one by SC-006 and SC-009:
   Entretien, Divers.
 - The catalog starts empty: no default articles are provided, only default categories.
 - Expected data size: up to 1 000 articles in the catalog, 20 lists and 200 items per list;
-  SC-001, SC-002 and SC-008 must hold at that size.
+  SC-001, SC-002 and SC-008 must hold at that size. These are measurement sizes, not limits:
+  nothing is refused beyond them, and performance is not promised beyond them.
 - The unit is free text (for example "g", "kg", "L", "paquets"); no unit conversion and no
   merging of quantities is done. Items carry no price or note in this feature.
 - Renaming or deleting articles, categories and lists, and reordering categories, are out of

@@ -158,8 +158,8 @@ story depends on them.
   - `validateName` returns the clean name;
   - `NameRequired` for empty or blank text (US2-11, US3-6, US4-4);
   - `NameTooLong` above "At most 60 characters after cleaning, counted in Unicode code points", and 60 characters accepted; the length is `[...name].length`, so 60 emoji are accepted (120 UTF-16 units) and 30 decomposed "é" count as 30 after cleaning;
-  - `normalizedName(name) = cleanName(name).toLocaleLowerCase('fr')` with accents kept, so "Pâte" ≠ "Pâté", while " beurre ", "BEURRE", "Pommes  de terre" and a decomposed "Crème" each equal the normalized form of "Beurre", "Pommes de terre" and "Crème";
-  - `searchForm` removes diacritics (`NFD`, combining marks removed), so "Épicerie" → "epicerie", and expands "œ" and "æ", so "Œufs" → "oeufs" and "Cæsar" → "caesar" (FR-009).
+  - `normalizedName(name)` is `cleanName(name).toLocaleLowerCase('fr')` with "œ" → "oe", "æ" → "ae" and "’" → "'", accents kept, so "Pâte" ≠ "Pâté", while " beurre ", "BEURRE", "Pommes  de terre" and a decomposed "Crème" each equal the normalized form of "Beurre", "Pommes de terre" and "Crème", "Oeufs" equals "Œufs", "Caesar" equals "Cæsar" and "Pâte d'amande" equals "Pâte d’amande" (FR-021);
+  - `searchForm` removes diacritics (`NFD`, combining marks removed) from the normalized name, so "Épicerie" → "epicerie", "Œufs" → "oeufs", "Cæsar" → "caesar" and "d’amande" → "d'amande" (FR-009).
 - [ ] T021 Implement `cleanName`, `validateName`, `normalizedName`, `searchForm` and the `NameError` union (`NameRequired | NameTooLong`) in `apps/mobile/src/domain/name.ts` to turn T020 green.
 - [ ] T022 [P] Write failing tests for `parseQuantity(amountText, unitText)` in `apps/mobile/src/domain/quantity.test.ts`, per [data-model.md](data-model.md#quantity-value-object):
   - both blank → `null` (no quantity);
@@ -259,14 +259,15 @@ story depends on them.
   - `pendingUndo` starts `null`.
 - [ ] T048 Implement `createAppStore` with `createStore` from `zustand/vanilla` and the `AppState`, `ScreenState<T, E>` (`idle | loading | error | empty | success`) and `Notice` types in `apps/mobile/src/adapters/ui/state/app-store.ts`, to turn T047 green. Use no middleware.
 - [ ] T049 Write failing tests in `apps/mobile/src/adapters/ui/state/app-store.write-rules.test.ts` for the shared write rules, through a test-only write action:
-  - a write clears `pendingUndo` before it starts;
+  - every write goes through one store-wide queue, in the order the actions were called: with the first use case held pending, a second write starts only after the first resolves (FR-004, [research.md](research.md) R9);
+  - a write that succeeds clears `pendingUndo`; a write that fails (a throw or a `Result` error) or returns refused input leaves `pendingUndo` as it was (FR-010, R8);
   - after success, `refresh()` reloads every region that is not `idle`, keeping `success` / `empty` data on screen while it reloads;
   - an unexpected throw is reported with `{ operation, screen }` only, sets `notice = { type: 'writeFailed' }`, leaves state unchanged and resolves to `{ ok: false, error: { type: 'WriteFailed' } }`;
   - a throw of `StorageFull` is handled the same way except that it sets `notice = { type: 'storageFull' }` and is not reported (FR-030, R12a);
   - a `Result` error of refused input (`NameRequired`, `NameAlreadyUsed`, `AmountNotPositive`) or `AlreadyOnList` from `addArticleToList` is returned unchanged and not reported;
   - `AlreadyOnList` from `restoreRemovedItem` is a failed restore: `notice = { type: 'writeFailed' }`, reported as an `UnexpectedResult` with code `AlreadyOnList` (FR-010);
   - any other `Result` error (`ItemNotOnList`, `NothingInCart`) is handled like an unexpected throw (`notice = { type: 'writeFailed' }`, state unchanged, resolves to `WriteFailed`) and reported as an `UnexpectedResult` error whose `code` is the tag and whose message is fixed ([contracts/driving-ports.md](contracts/driving-ports.md#conventions)).
-- [ ] T050 Implement the internal `runWrite` helper and `refresh()` in `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T049 green.
+- [ ] T050 Implement the internal `runWrite` helper (with the store-wide write queue) and `refresh()` in `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T049 green.
 - [ ] T051 Implement `AppStoreProvider` (React context) in `apps/mobile/src/adapters/ui/state/app-store-provider.tsx` and `useAppStore(selector)` (wraps `useStore`) in `apps/mobile/src/adapters/ui/state/use-app-store.ts`, with a test rendering a component that selects a slice. Add the `renderWithStore(ui, { seed? })` helper in `apps/mobile/src/adapters/ui/testing/render-with-store.tsx`: it builds fresh fakes, use cases, store, theme and navigation container for each test.
 - [ ] T052 [P] Write failing tests for `NoticeSnackbar` in `apps/mobile/src/adapters/ui/components/notice-snackbar.test.tsx`: `writeFailed` shows "La modification n'a pas pu être enregistrée.", `storageFull` shows "Espace de stockage insuffisant. Libérez de la place sur votre téléphone.", `articleAdded` shows "« {name} » ajouté", and dismissing calls `dismissNotice`. Each notice is announced with its French text as it appears (`AccessibilityInfo.announceForAccessibility` mocked, FR-038).
 - [ ] T053 [P] Implement `NoticeSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T052 green.
@@ -329,9 +330,10 @@ finish shopping and check every item is unticked and still present.
 - [ ] T069 [P] [US1] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.current-list.test.ts`:
   - `loadCurrentList()` goes `loading` → `success` / `empty`, and on a throw goes `error` and reports `{ operation: 'getCurrentList', screen: 'CurrentList' }` (US1-12);
   - `toggleItem` updates the region immediately (optimistic) before the use case resolves, then keeps it (US1-2, US1-3);
-  - quick toggles on one item are saved one after the other in tap order: with the use case held pending, three taps show ticked, unticked, ticked at once, and `toggleItemInCart` is called a second time only after the first call resolves; toggles on two different items do not wait for each other (FR-004, [research.md](research.md) R9);
-  - a failed toggle drops the toggles still queued for that item, reloads the region so the item shows the state stored on the device, sets `notice = writeFailed` and reports `{ operation: 'toggleItemInCart' }` (edge case "storage fails"): after taps 1 (saved), 2 (fails) and 3 (queued), the item shows the state after tap 1 and the use case was called twice;
+  - quick toggles on one item are saved one after the other in tap order: with the use case held pending, three taps show ticked, unticked, ticked at once, and `toggleItemInCart` is called a second time only after the first call resolves; toggles on other items and other writes join the same queue behind them (FR-004, [research.md](research.md) R9);
+  - a failed toggle drops the toggles still queued for that item, reloads the region so the item shows the state stored on the device, sets `notice = writeFailed` and reports `{ operation: 'toggleItemInCart' }` (edge case "storage fails"): after taps 1 (saved), 2 (fails) and 3 (queued), the item shows the state after tap 1 and the use case was called twice; a toggle of another item queued behind the failure is still saved;
   - a queued toggle that throws `StorageFull` is handled the same way, except that it sets `notice = storageFull` and reports nothing (FR-030, R12a);
+  - `finishShopping` called while toggles are still queued runs after them, and is still saved when one of them fails, so every item ends unticked (FR-004, FR-007);
   - `finishShopping` refreshes the list; when it throws, no item changes in the region, `notice = writeFailed` and `{ operation: 'finishShopping' }` is reported (FR-007, R9a).
 - [ ] T070 [P] [US1] Write failing component tests for `ListItemRow` in `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx`:
   - role `checkbox` with the `checked` state;
@@ -365,7 +367,7 @@ finish shopping and check every item is unticked and still present.
 - [ ] T074 [P] [US1] Implement `buildCurrentListView` in `apps/mobile/src/domain/current-list-view.ts` to turn T066 green.
 - [ ] T075 [P] [US1] Implement `toggle` and `finish` with the `ItemNotOnList` and `NothingInCart` errors in `apps/mobile/src/domain/list-item.ts` to turn T067 green.
 - [ ] T076 [US1] Implement `getCurrentList`, `toggleItemInCart` and `finishShopping` in `apps/mobile/src/application/use-cases/get-current-list.ts`, `toggle-item-in-cart.ts` and `finish-shopping.ts`, per [contracts/driving-ports.md](contracts/driving-ports.md#current-list-user-story-1), to turn T068 green. Add them to `UseCases` (`apps/mobile/src/adapters/ui/use-cases.ts`) and to the composition root.
-- [ ] T077 [US1] Add the `currentList` region and the `loadCurrentList`, `toggleItem` (optimistic, saved through a queue per item, and on failure the item's queued toggles dropped and the region reloaded, [research.md](research.md) R9) and `finishShopping` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T069 green.
+- [ ] T077 [US1] Add the `currentList` region and the `loadCurrentList`, `toggleItem` (optimistic, saved through the store's single write queue, and on failure the item's queued toggles dropped and the region reloaded, [research.md](research.md) R9) and `finishShopping` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T069 green.
 - [ ] T078 [P] [US1] Implement `ListItemRow.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T070 green. Leave the trailing action slots empty for now; US2 fills them.
 - [ ] T079 [US1] Implement `CurrentListScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`:
   - a `SectionList` with one section per category, memoized rows identified by article id ([research.md](research.md) R11);
@@ -415,7 +417,7 @@ content matches.
   - without a query: every category ordered by `position`, including empty ones (US2-15);
   - with a query: only articles whose `searchForm(name)` contains `searchForm(query)`, so "pom" finds "Pommes" and "Pommes de terre" and "POM" finds them too, ignoring case and accents (FR-009, US2-10);
   - empty categories are omitted under a query, and no section at all means no match (US2-14);
-  - "oeuf" and "œuf" both find "Œufs" (US2-10);
+  - "oeuf" and "œuf" both find "Œufs" (US2-10), and "d'amande" finds "Pâte d’amande" (FR-009);
   - "mais" finds "Maïs" and "francais" finds "Pain français": the cedilla and diaeresis are ignored like accents (FR-009);
   - "   " is treated as no query: every category is shown, empty ones included (US2-10, FR-009);
   - "pommes  de" (double space) finds "Pommes de terre" (FR-009);
@@ -428,7 +430,7 @@ content matches.
 - [ ] T087 [P] [US2] Write failing use case tests on fakes, one file each in `apps/mobile/src/application/use-cases/`:
   - `get-catalog.test.ts`: the catalog with `onList` marks for the given list, filtered by query;
   - `add-article-to-list.test.ts`: US2-1 and FR-008; US2-2; US2-5, the same article on two lists keeps a quantity per list; `AlreadyOnList`; `ArticleNotFound`;
-  - `create-article-and-add-to-list.test.ts`: US2-7 and FR-018, created and added in one transaction; US2-9, " beurre " → `NameAlreadyUsed` with `existing` = "Beurre" and nothing created, and "pommes  de  terre" → `NameAlreadyUsed` with `existing` = "Pommes de terre" (FR-021); a new name is stored cleaned, so "  Houmous   maison " is created as "Houmous maison" (FR-022); US2-11, `NameRequired`; `NameTooLong`; `CategoryNotFound`;
+  - `create-article-and-add-to-list.test.ts`: US2-7 and FR-018, created and added in one transaction; US2-9, " beurre " → `NameAlreadyUsed` with `existing` = "Beurre" and nothing created, and "pommes  de  terre" → `NameAlreadyUsed` with `existing` = "Pommes de terre", and "Oeufs" → `NameAlreadyUsed` with `existing` = "Œufs" (FR-021); a new name is stored cleaned, so "  Houmous   maison " is created as "Houmous maison" (FR-022); US2-11, `NameRequired`; `NameTooLong`; `CategoryNotFound`;
   - `change-item-quantity.test.ts`: US2-3, the article itself is unchanged; US2-4, cleared; `ItemNotOnList`;
   - `remove-item-from-list.test.ts`: US2-6, the item is gone, the article stays in the catalog, and a `RemovedItem` is returned;
   - `restore-removed-item.test.ts`: US2-16, back ticked with "2 kg"; `AlreadyOnList` / `ListNotFound` / `ArticleNotFound`;
@@ -438,9 +440,11 @@ content matches.
   - `addArticleToList` and `createArticleAndAddToList` return their `Result`, refresh, and set `notice = { type: 'articleAdded', name }` on success;
   - `changeItemQuantity` refreshes;
   - `removeItem` sets `pendingUndo = { kind: 'removedItem', removed, name }`;
+  - a removal queued behind a toggle of the same item that fails is still saved, and its `removed` snapshot holds the ticked state stored on the device (FR-004);
   - `undo()` clears `pendingUndo`, restores and refreshes; on failure the item stays removed, the offer stays ended (`pendingUndo` is not set again), `notice = writeFailed`, and `{ operation: 'restoreRemovedItem', screen }` is reported, with the screen shown at that moment (FR-010, [research.md](research.md) R8);
   - `dismissUndo()` clears the offer;
-  - any write clears a pending offer first;
+  - a successful write clears a pending offer, a toggle included; a failed write or refused input (`NameRequired`, `AmountNotPositive`) leaves it (FR-010);
+  - `undo()` called while an earlier write is still queued is carried out when its turn comes, even if that write ends the offer (R8);
   - a new removal replaces the previous offer;
   - a store built afresh on the same fakes, standing for a closed app, has `pendingUndo = null`: the removal is final (FR-010).
 - [ ] T089 [P] [US2] Write failing component tests:
@@ -471,7 +475,7 @@ content matches.
   - adding keeps the screen open and shows "« {name} » ajouté";
   - US2-17, FR-029: loading;
   - US2-18: error "Impossible de charger les articles." with "Réessayer", reported;
-  - the "Nouvel article" action opens CreateArticle with the query prefilled.
+  - US2-19, FR-008: the "Nouvel article" action is shown with and without matches; with "Pâte" in the catalog, searching " pâté " shows "Pâte", and "Nouvel article" opens CreateArticle with the name "pâté" (the query cleaned).
 - [ ] T093 [US2] Write failing screen tests for `CreateArticle` in `apps/mobile/src/adapters/ui/screens/create-article-screen.test.tsx`:
   - Appbar "Nouvel article";
   - the "Nom" field, the category radio list from `getCategories`, the optional quantity, and "Créer et ajouter";
