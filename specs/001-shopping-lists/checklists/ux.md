@@ -12,64 +12,64 @@
 
 ## Screen State Completeness
 
-- [ ] CHK001 - Does the spec define acceptance scenarios for the loading and error states of the add screen (catalog by category and search results), as Principle IX requires every state of each screen to be covered by a scenario? [Gap, Spec §FR-029]
-- [ ] CHK002 - Is it specified whether search results have their own loading state while a query runs, or reuse the catalog's state? [Gap, Spec §FR-029]
-- [ ] CHK003 - Is the fresh-install add screen specified, where the catalog is empty and every default category shows its own empty state? Is one screen-wide empty state intended instead? [Clarity, Spec §Assumptions, Spec §US2-15]
-- [ ] CHK004 - Does the spec state that the lists screen has no empty state because at least one list always exists, or does this rule live only in the UI contract? [Traceability, Spec §Assumptions, Contract §Lists]
-- [ ] CHK005 - Is the "everything is in the cart" state (all items ticked) given its own display requirement in the spec, matching the "Tout est dans le caddie" text in the contract? [Gap, Spec §Edge Cases, Spec §FR-006]
-- [ ] CHK006 - Is the behavior specified when "Réessayer" fails again (same error state, error reported again or not)? [Gap, Exception Flow, Spec §US1-12]
-- [ ] CHK007 - Is it specified whether the loading state appears at once or only after a short delay, so a fast local read does not cause a flicker? [Clarity, Spec §US1-11]
-- [ ] CHK008 - Are the loading, empty and error requirements for the screen-region level defined (for example the category list inside the create-article screen)? [Gap, Spec §FR-029]
+- [x] CHK001 - Does the spec define acceptance scenarios for the loading and error states of the add screen (catalog by category and search results), as Principle IX requires every state of each screen to be covered by a scenario? [Gap, Spec §FR-029]
+- [x] CHK002 - Is it specified whether search results have their own loading state while a query runs, or reuse the catalog's state? [Gap, Spec §FR-029]
+- [x] CHK003 - Is the fresh-install add screen specified, where the catalog is empty and every default category shows its own empty state? Is one screen-wide empty state intended instead? [Clarity, Spec §Assumptions, Spec §US2-15]
+- [x] CHK004 - Does the spec state that the lists screen has no empty state because at least one list always exists, or does this rule live only in the UI contract? [Traceability, Spec §Assumptions, Contract §Lists]
+- [x] CHK005 - Is the "everything is in the cart" state (all items ticked) given its own display requirement in the spec, matching the "Tout est dans le caddie" text in the contract? [Gap, Spec §Edge Cases, Spec §FR-006]
+- [x] CHK006 - Is the behavior specified when "Réessayer" fails again (same error state, error reported again or not)? [Gap, Exception Flow, Spec §US1-12]
+- [x] CHK007 - Is it specified whether the loading state appears at once or only after a short delay, so a fast local read does not cause a flicker? [Clarity, Spec §US1-11]
+- [x] CHK008 - Are the loading, empty and error requirements for the screen-region level defined (for example the category list inside the create-article screen)? [Gap, Spec §FR-029]
 
 ## Requirement Clarity
 
-- [ ] CHK009 - Is "a few seconds" for the undo offer given a value in the spec, consistent with the 5 seconds set in the UI contract? [Ambiguity, Spec §FR-010, Contract §CurrentList]
-- [ ] CHK010 - Is "the action is unavailable or does nothing" for "Terminer les courses" with no ticked item narrowed to one behavior (hidden, disabled, or no-op)? [Ambiguity, Spec §Edge Cases]
-- [ ] CHK011 - Is the wording and pluralization of the remaining-items count ("3 articles restants", "1 article restant") specified in the spec or explicitly delegated to the contract? [Clarity, Spec §FR-006, Spec §US1-7]
-- [ ] CHK012 - Is "shown immediately" for a tick defined consistently with SC-002 (100 ms), and does it apply to the reordering of the row below unticked items too? [Clarity, Spec §FR-004, Spec §FR-005, Spec §SC-002]
-- [ ] CHK013 - Is it specified when name and quantity validation messages appear (on confirm only, or while typing)? [Clarity, Spec §FR-016, Spec §FR-022]
-- [ ] CHK014 - Is the 60-character limit defined as an input that stops at 60 characters or as a validation error on confirm? The contract has both a field limit and a `NameTooLong` message. [Ambiguity, Spec §FR-022, Contract §CreateArticle]
-- [ ] CHK015 - Are the French messages for every validation error (blank name, duplicate name, invalid quantity, unit without quantity, unit too long, no category chosen) traceable from a spec requirement to the exact text in the contract? [Traceability, Spec §FR-016, Spec §FR-021, Spec §FR-031]
+- [x] CHK009 - Is "a few seconds" for the undo offer given a value in the spec, consistent with the 5 seconds set in the UI contract? [Ambiguity, Spec §FR-010, Contract §CurrentList]
+- [x] CHK010 - Is "the action is unavailable or does nothing" for "Terminer les courses" with no ticked item narrowed to one behavior (hidden, disabled, or no-op)? [Ambiguity, Spec §Edge Cases]
+- [x] CHK011 - Is the wording and pluralization of the remaining-items count ("3 articles restants", "1 article restant") specified in the spec or explicitly delegated to the contract? [Clarity, Spec §FR-006, Spec §US1-7]
+- [x] CHK012 - Is "shown immediately" for a tick defined consistently with SC-002 (100 ms), and does it apply to the reordering of the row below unticked items too? [Clarity, Spec §FR-004, Spec §FR-005, Spec §SC-002]
+- [x] CHK013 - Is it specified when name and quantity validation messages appear (on confirm only, or while typing)? [Clarity, Spec §FR-016, Spec §FR-022]
+- [x] CHK014 - Is the 60-character limit defined as an input that stops at 60 characters or as a validation error on confirm? The contract has both a field limit and a `NameTooLong` message. [Ambiguity, Spec §FR-022, Contract §CreateArticle]
+- [x] CHK015 - Are the French messages for every validation error (blank name, duplicate name, invalid quantity, unit without quantity, unit too long, no category chosen) traceable from a spec requirement to the exact text in the contract? [Traceability, Spec §FR-016, Spec §FR-021, Spec §FR-031]
 
 ## Requirement Consistency
 
-- [ ] CHK016 - Is the optimistic tick in the contract (shown at once, reverted on save failure) consistent with the edge case "the change is not shown as saved" and with FR-028? [Conflict, Spec §Edge Cases, Spec §FR-028, Contract §CurrentList]
-- [ ] CHK017 - Do the three create flows (article, category, list) use the same rules and wording for blank names and duplicates, or are the differences ("existe déjà" with an add action vs. a plain message) intentional and stated? [Consistency, Spec §US2-9, Spec §US3-5, Spec §US4-3]
-- [ ] CHK018 - Is the "already on the list" behavior consistent between browsing and searching, and between the mark, the tap, and the quantity change offer? [Consistency, Spec §FR-011, Spec §US2-8]
-- [ ] CHK019 - Do the confirmation rules form a stated policy: confirm for "Terminer les courses", undo without confirmation for removal? Is the absence of undo after finishing shopping intentional? [Consistency, Spec §FR-007, Spec §FR-010]
-- [ ] CHK020 - Are the current-list marks on the lists screen required to avoid relying on color alone, as FR-035 requires for the ticked state? [Consistency, Spec §FR-035, Spec §US3-8]
+- [x] CHK016 - Is the optimistic tick in the contract (shown at once, reverted on save failure) consistent with the edge case "the change is not shown as saved" and with FR-028? [Conflict, Spec §Edge Cases, Spec §FR-028, Contract §CurrentList]
+- [x] CHK017 - Do the three create flows (article, category, list) use the same rules and wording for blank names and duplicates, or are the differences ("existe déjà" with an add action vs. a plain message) intentional and stated? [Consistency, Spec §US2-9, Spec §US3-5, Spec §US4-3]
+- [x] CHK018 - Is the "already on the list" behavior consistent between browsing and searching, and between the mark, the tap, and the quantity change offer? [Consistency, Spec §FR-011, Spec §US2-8]
+- [x] CHK019 - Do the confirmation rules form a stated policy: confirm for "Terminer les courses", undo without confirmation for removal? Is the absence of undo after finishing shopping intentional? [Consistency, Spec §FR-007, Spec §FR-010]
+- [x] CHK020 - Are the current-list marks on the lists screen required to avoid relying on color alone, as FR-035 requires for the ticked state? [Consistency, Spec §FR-035, Spec §US3-8]
 
 ## Feedback, Undo and Navigation Flows
 
-- [ ] CHK021 - Are requirements defined for a second removal while an undo offer is still showing (does the first offer end, stack, or stay undoable)? [Gap, Spec §FR-010]
-- [ ] CHK022 - Is it specified what happens to a pending undo when the user leaves the screen, switches the current list, or closes the app? [Gap, Spec §FR-010, Spec §SC-007]
-- [ ] CHK023 - Does the spec say that the add screen stays open after an article is added and confirms the addition, as the contract does? [Gap, Spec §US2, Contract §AddArticles]
-- [ ] CHK024 - Are requirements defined for leaving a form or dialog with unsaved input (system back, tap outside a dialog)? [Gap, Alternate Flow]
-- [ ] CHK025 - Is it specified where the user lands after switching the current list, and is SC-005 ("at most 2 taps") traceable to that flow? [Clarity, Spec §US3-3, Spec §SC-005]
-- [ ] CHK026 - Is it specified what the user sees after creating a category from the create-article flow (is the new category selected)? [Gap, Spec §US4-2]
+- [x] CHK021 - Are requirements defined for a second removal while an undo offer is still showing (does the first offer end, stack, or stay undoable)? [Gap, Spec §FR-010]
+- [x] CHK022 - Is it specified what happens to a pending undo when the user leaves the screen, switches the current list, or closes the app? [Gap, Spec §FR-010, Spec §SC-007]
+- [x] CHK023 - Does the spec say that the add screen stays open after an article is added and confirms the addition, as the contract does? [Gap, Spec §US2, Contract §AddArticles]
+- [x] CHK024 - Are requirements defined for leaving a form or dialog with unsaved input (system back, tap outside a dialog)? [Gap, Alternate Flow]
+- [x] CHK025 - Is it specified where the user lands after switching the current list, and is SC-005 ("at most 2 taps") traceable to that flow? [Clarity, Spec §US3-3, Spec §SC-005]
+- [x] CHK026 - Is it specified what the user sees after creating a category from the create-article flow (is the new category selected)? [Gap, Spec §US4-2]
 
 ## Accessibility
 
-- [ ] CHK027 - Are both platform screen readers (TalkBack and VoiceOver) named as targets, or is "the system screen reader" left open? [Clarity, Spec §FR-032, Spec §SC-009]
-- [ ] CHK028 - Are screen reader requirements defined for state changes that are not on the focused element: the remaining count after a tick, snackbars, validation messages, and the move of a ticked row? [Gap, Spec §FR-032]
-- [ ] CHK029 - Is the 5-second undo window reconciled with screen reader and motor-impaired use (time to reach "Annuler", or a longer window when a screen reader is on)? [Gap, Spec §FR-010, Spec §FR-032]
-- [ ] CHK030 - Are focus requirements defined: where focus goes when a dialog opens and closes, after a removal, and after an item moves on tick? [Gap, Spec §FR-032]
-- [ ] CHK031 - Are French accessibility labels specified for every non-text control (FAB, Appbar actions, search field, row actions, category picker), not only for list rows? [Completeness, Spec §FR-032, Contract §CurrentList]
-- [ ] CHK032 - Are color contrast requirements defined, including the muted color of ticked rows and in dark mode, which the plan supports but the spec does not mention? [Gap, Spec §FR-035, Plan §Principle V]
-- [ ] CHK033 - Is the 200% text size requirement extended to dialogs, the Appbar title (a 60-character list name), snackbars and buttons, not only list rows? [Coverage, Spec §FR-033, Spec §Edge Cases]
-- [ ] CHK034 - Does the 48 × 48 dp target rule state how it applies to compact controls inside a row (checkbox, row actions, "Déjà dans la liste" chip)? [Clarity, Spec §FR-034]
+- [x] CHK027 - Are both platform screen readers (TalkBack and VoiceOver) named as targets, or is "the system screen reader" left open? [Clarity, Spec §FR-032, Spec §SC-009]
+- [x] CHK028 - Are screen reader requirements defined for state changes that are not on the focused element: the remaining count after a tick, snackbars, validation messages, and the move of a ticked row? [Gap, Spec §FR-032]
+- [x] CHK029 - Is the 5-second undo window reconciled with screen reader and motor-impaired use (time to reach "Annuler", or a longer window when a screen reader is on)? [Gap, Spec §FR-010, Spec §FR-032]
+- [x] CHK030 - Are focus requirements defined: where focus goes when a dialog opens and closes, after a removal, and after an item moves on tick? [Gap, Spec §FR-032]
+- [x] CHK031 - Are French accessibility labels specified for every non-text control (FAB, Appbar actions, search field, row actions, category picker), not only for list rows? [Completeness, Spec §FR-032, Contract §CurrentList]
+- [x] CHK032 - Are color contrast requirements defined, including the muted color of ticked rows and in dark mode, which the plan supports but the spec does not mention? [Gap, Spec §FR-035, Plan §Principle V]
+- [x] CHK033 - Is the 200% text size requirement extended to dialogs, the Appbar title (a 60-character list name), snackbars and buttons, not only list rows? [Coverage, Spec §FR-033, Spec §Edge Cases]
+- [x] CHK034 - Does the 48 × 48 dp target rule state how it applies to compact controls inside a row (checkbox, row actions, "Déjà dans la liste" chip)? [Clarity, Spec §FR-034]
 
 ## Acceptance Criteria Measurability
 
-- [ ] CHK035 - Can "without visible lag" in SC-008 be checked objectively (frame rate, response time, reference device)? [Measurability, Spec §SC-008]
-- [ ] CHK036 - Is a reference device or device class stated for SC-001 (2 s) and SC-002 (100 ms), and are release builds specified as the measurement setup? [Measurability, Spec §SC-001, Spec §SC-002]
-- [ ] CHK037 - Is SC-009 tied to a defined list of actions and an observable success criterion (each action done with the screen reader alone, with nothing cut off at 200%)? [Measurability, Spec §SC-009]
-- [ ] CHK038 - Is the tap counting in SC-003 defined (does the quantity dialog's "Ajouter" count, does bringing up the on-screen typing panel count)? [Clarity, Spec §SC-003]
+- [x] CHK035 - Can "without visible lag" in SC-008 be checked objectively (frame rate, response time, reference device)? [Measurability, Spec §SC-008]
+- [x] CHK036 - Is a reference device or device class stated for SC-001 (2 s) and SC-002 (100 ms), and are release builds specified as the measurement setup? [Measurability, Spec §SC-001, Spec §SC-002]
+- [x] CHK037 - Is SC-009 tied to a defined list of actions and an observable success criterion (each action done with the screen reader alone, with nothing cut off at 200%)? [Measurability, Spec §SC-009]
+- [x] CHK038 - Is the tap counting in SC-003 defined (does the quantity dialog's "Ajouter" count, does bringing up the on-screen typing panel count)? [Clarity, Spec §SC-003]
 
 ## Dependencies and Assumptions
 
-- [ ] CHK039 - Is the assumption that French alone covers every user-facing text checked against system-provided UI (the decimal separator offered for numeric input, system dialogs, screen reader role names)? [Assumption, Spec §FR-017, Spec §FR-031]
-- [ ] CHK040 - Is the dependency on the synchronization status of Principle IX, deferred to 003, recorded in the spec so the absence of that state on data screens is a known exclusion? [Dependency, Spec §FR-027, Plan §Principle IX]
+- [x] CHK039 - Is the assumption that French alone covers every user-facing text checked against system-provided UI (the decimal separator offered for numeric input, system dialogs, screen reader role names)? [Assumption, Spec §FR-017, Spec §FR-031]
+- [x] CHK040 - Is the dependency on the synchronization status of Principle IX, deferred to 003, recorded in the spec so the absence of that state on data screens is a known exclusion? [Dependency, Spec §FR-027, Plan §Principle IX]
 
 ## Notes
 
