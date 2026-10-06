@@ -79,12 +79,15 @@ quality gate, Storybook, the Detox workspace and CI in place before any applicat
 - [ ] T004 Create `.talismanrc` with two `fileignoreconfig` entries, both with `ignore_detectors: [filecontent]`: `flake.lock` with the comment and exact entry required by the workspace `AGENTS.md`, and `yarn.lock` with a comment saying Yarn lockfiles hold package checksums, not secrets. Do this before the first commit that contains either lockfile.
 - [ ] T005 Install the runtime dependencies listed in [research.md](research.md#new-dependencies-principle-iv) into the app workspace, running `yarn expo install` from `apps/mobile/` for Expo-managed versions: `react-native-paper`, `react-native-safe-area-context`, `@expo/vector-icons`, `@react-navigation/native`, `@react-navigation/native-stack`, `react-native-screens`, `zustand`, `expo-sqlite`, `expo-crypto`, `@sentry/react-native`. Register the `expo-sqlite` and `@sentry/react-native/expo` config plugins in `apps/mobile/app.config.ts`, and set `android.allowBackup: true` there explicitly, with no backup rules excluding the database, so the system backup keeps the data ([research.md](research.md) R18b).
 - [ ] T006 [P] Configure Jest 30 with the `jest-expo` preset and React Native Testing Library in `apps/mobile/jest.config.js` and `apps/mobile/package.json` (scripts `test`, `test:watch`). Add the root script `test` (`yarn workspaces foreach --all --exclude mes-courses run test`). Add a trivial green test in `apps/mobile/src/smoke.test.ts` to prove the runner works, then delete it once the first real test exists.
-- [ ] T007 [P] Configure ESLint 9 flat config in the root `eslint.config.mjs`: `typescript-eslint` strict and `eslint-config-prettier` for every workspace, plus `eslint-config-expo` and `eslint-plugin-react-native` (with `react-native/no-color-literals` and `react-native/no-inline-styles` as errors) scoped to `apps/mobile/**`. Add Prettier 3 in the root `.prettierrc`, the root scripts `lint`, `format` and `format:check`, and `typecheck` (`tsc --noEmit`) in `apps/mobile/package.json` with a root `typecheck` running it in every workspace ([research.md](research.md) R16).
+- [ ] T007 [P] Configure ESLint 9 flat config in the root `eslint.config.mjs`: `typescript-eslint` strict and `eslint-config-prettier` for every workspace, plus `eslint-config-expo` and `eslint-plugin-react-native` (with `react-native/no-color-literals` and `react-native/no-inline-styles` as errors) scoped to `apps/mobile/**`, and a `no-restricted-syntax` rule scoped to `apps/mobile/src/adapters/ui/screens/**` that allows in `StyleSheet.create` only the layout properties of [research.md](research.md) R2 (flex, alignment, position, and `margin*`, `padding*`, `gap` set from `spacing.*`) and no number literal other than `0` and flex factors; prove it fails on a throwaway screen with `borderRadius: 8` and with `padding: 12`, then delete it. Add Prettier 3 in the root `.prettierrc`, the root scripts `lint`, `format` and `format:check`, and `typecheck` (`tsc --noEmit`) in `apps/mobile/package.json` with a root `typecheck` running it in every workspace ([research.md](research.md) R16).
 - [ ] T008 [P] Configure dependency-cruiser in the root `.dependency-cruiser.cjs` with the rules of [research.md](research.md) R15:
   - no relative import crosses a workspace folder (`apps/*`, `packages/*`), and no app workspace imports another;
   - `apps/mobile/src/domain/**` imports nothing outside `apps/mobile/src/domain/`, npm packages included;
   - `apps/mobile/src/application/**` imports only `apps/mobile/src/domain/` and `apps/mobile/src/application/`;
-  - only `apps/mobile/src/adapters/**` and `apps/mobile/src/composition/**` import `apps/mobile/src/adapters/**`;
+  - in both rules, npm packages are refused for type-only imports too; the only exception is a workspace package in the pure-package list of `.dependency-cruiser.cjs`, empty in 001 (003 adds `@mes-courses/sync-core`);
+  - only `apps/mobile/src/adapters/**`, `apps/mobile/src/composition/**`, `apps/mobile/App.tsx` and the test helpers in `apps/mobile/test/**` import `apps/mobile/src/adapters/**`;
+  - no adapter (`apps/mobile/src/adapters/<name>/**`) imports another adapter, type imports included;
+  - only `apps/mobile/App.tsx`, `apps/mobile/App.test.tsx` and `apps/mobile/src/composition/**` import `apps/mobile/src/composition/**`;
   - `zustand` is imported only under `apps/mobile/src/adapters/ui/**`;
   - `zustand/middleware` and `immer` are imported nowhere;
   - no circular dependency.
@@ -106,7 +109,7 @@ quality gate, Storybook, the Detox workspace and CI in place before any applicat
   Prove it with a throwaway `apps/mobile/src/adapters/ui/smoke.stories.tsx` that renders a Paper `Text`: it is green; a story that throws fails; a required id with no story fails. Then delete the throwaway story and id.
 - [ ] T011 Extend the root `.dependency-cruiser.cjs` with the rules of [research.md](research.md) R15 for Storybook and the e2e workspace, scanning `apps/mobile/.rnstorybook/` too:
   - `@storybook/*` is imported only by `**/*.stories.tsx`, `apps/mobile/.rnstorybook/**` and `apps/mobile/src/adapters/ui/stories.test.tsx`;
-  - `**/*.stories.tsx`, `apps/mobile/src/adapters/ui/testing/**` and `apps/mobile/src/application/testing/**` are imported only by `*.test.ts(x)` files, `*.stories.tsx` files, `apps/mobile/.rnstorybook/**` and other files in those testing folders, never by production code;
+  - `**/*.stories.tsx`, `apps/mobile/src/adapters/ui/testing/**`, `apps/mobile/src/application/testing/**` and `apps/mobile/test/**` are imported only by `*.test.ts(x)` files, `*.stories.tsx` files, `apps/mobile/.rnstorybook/**` and other files in those testing folders, never by production code;
   - `tests/e2e/**` imports no other workspace, by package name or by path.
 
   Prove each rule fails on a deliberate violation in a throwaway file, then delete the file.
@@ -174,7 +177,7 @@ story depends on them.
 
 ### Ports and test doubles
 
-- [ ] T025 Declare the driven ports exactly as in [contracts/driven-ports.md](contracts/driven-ports.md): `UnitOfWork` and `Repositories` in `apps/mobile/src/application/ports/unit-of-work.ts`; `CategoryRepository`, `ArticleRepository`, `ShoppingListRepository`, `ListItemRepository`, `AppStateRepository` in `apps/mobile/src/application/ports/repositories.ts`; `IdGenerator` in `apps/mobile/src/application/ports/id-generator.ts`; `ErrorReporter` in `apps/mobile/src/application/ports/error-reporter.ts`; the `StorageFull` error class (fixed message "Storage operation failed", no other field) in `apps/mobile/src/application/ports/storage-full.ts`, so the UI adapter can recognize it without importing the SQLite adapter ([research.md](research.md) R12a).
+- [ ] T025 Declare the driven ports exactly as in [contracts/driven-ports.md](contracts/driven-ports.md): `UnitOfWork` and `Repositories` in `apps/mobile/src/application/ports/unit-of-work.ts`; `CategoryRepository`, `ArticleRepository`, `ShoppingListRepository`, `ListItemRepository`, `AppStateRepository` in `apps/mobile/src/application/ports/repositories.ts`; `IdGenerator` in `apps/mobile/src/application/ports/id-generator.ts`; `ErrorReporter` in `apps/mobile/src/application/ports/error-reporter.ts`; the `StorageFull` error class (fixed message "Storage operation failed", no other field) in `apps/mobile/src/application/ports/storage-full.ts`, so the UI adapter can recognize it without importing the SQLite adapter ([research.md](research.md) R12a); and the `DataFromNewerVersion` error class in `apps/mobile/src/application/ports/data-from-newer-version.ts`, for the same reason (R18c, R15).
 - [ ] T026 [P] Write the shared repository contract suites, as functions taking a factory that returns fresh `Repositories`, in `apps/mobile/src/application/testing/contracts/`:
   - `category-repository.contract.ts`: `all` ordered by position, `findById`, `findByNormalizedName`, `nextPosition` = max + 1 (0 when empty), `add`;
   - `article-repository.contract.ts`: `all`, `findById`, `findByNormalizedName`, `add`;
@@ -196,7 +199,7 @@ story depends on them.
   - a database whose `user_version` is above the highest known migration (set it to 99) makes `migrate` throw `DataFromNewerVersion` before any other statement: no table is created or changed and `user_version` stays 99 (FR-040, [research.md](research.md) R18c);
   - foreign constraints are enforced on open;
   - the constraints reject a 61-character name, a duplicate `normalized_name`, `quantity_amount <= 0`, `quantity_amount > 9999`, a unit without an amount, and a second `app_state` row.
-- [ ] T032 Implement `migrate(db)`, the `DataFromNewerVersion` error and migration 1 in `apps/mobile/src/adapters/sqlite/migrations.ts` to turn T031 green.
+- [ ] T032 Implement `migrate(db)` (throwing the `DataFromNewerVersion` of T025) and migration 1 in `apps/mobile/src/adapters/sqlite/migrations.ts` to turn T031 green.
 - [ ] T033 Write `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`, which runs every T026 suite against the SQLite repositories on a migrated `node:sqlite` database, plus adapter-only tests for `StorageFull`, from a fake `SqlDatabase` that throws an error with the SQLite result code 13 and, separately, one whose message contains "database or disk is full": both reject with `StorageFull`, with no other text kept (FR-030, R12a); and for `StorageError` (FR-030, [research.md](research.md) R13): a repository write rejected by a constraint while saving the article name "Houmous maison" (a duplicate `normalized_name` inserted directly) and a `UnitOfWork.run` on a closed database both reject with a `StorageError` whose `message` is "Storage operation failed", whose `stack` does not contain "Houmous" or the SQL text, which carries the SQLite result code when there is one, and which has no `cause`. Confirm it fails.
 - [ ] T034 Implement the SQLite repositories in `apps/mobile/src/adapters/sqlite/`: `category-repository.ts`, `article-repository.ts`, `shopping-list-repository.ts`, `list-item-repository.ts` (`quantity_amount` / `quantity_unit` ↔ `Quantity | null`, `in_cart` 0/1 ↔ boolean) and `app-state-repository.ts`. Implement `SqliteUnitOfWork` (`withTransactionAsync`) in `apps/mobile/src/adapters/sqlite/unit-of-work.ts`. Add `StorageError` and a `toStorageError(error)` helper in `apps/mobile/src/adapters/sqlite/storage-error.ts`, which returns `StorageFull` for a full storage (result code 13 or the message "database or disk is full", checked before the text is dropped) and `StorageError` otherwise, and wrap every database call of the repositories, the unit of work and `migrate` with it (`DataFromNewerVersion` passes through unchanged). All of them turn T033 green.
 - [ ] T035 Add `openDatabase()` in `apps/mobile/src/adapters/sqlite/open-database.ts`: it opens the expo-sqlite database `mes-courses.db`, enforces foreign constraints, calls `configureDatabase(db)`, and runs `migrate`. Test-first, write `configureDatabase` in `apps/mobile/src/adapters/sqlite/configure-database.ts`: it sets `PRAGMA journal_mode = WAL` and `PRAGMA synchronous = FULL`, and throws when either does not read back with that value (FR-028, power cut, [research.md](research.md) R4). Its test, `configure-database.test.ts`, runs on a `node:sqlite` database file in a temporary folder (an in-memory database always reports `memory`): both values read back as `wal` and 2 (`FULL`), and it throws when the journal mode does not take (a fake `SqlDatabase` answering `memory`). It is thin wiring over expo-sqlite, which does not load in Jest: the composition test (T064) covers the same steps on `node:sqlite`, and quickstart step 5 covers the real binding on a device. Wrap its database calls with `toStorageError` (T034).
@@ -204,7 +207,7 @@ story depends on them.
 ### Startup seed
 
 - [ ] T036 Write failing tests for `initializeStore` in `apps/mobile/src/application/use-cases/initialize-store.test.ts`, on fakes:
-  - on an empty store it creates the given categories with positions 0..n-1 in order, then the first list, and makes it current (US3-1, US4-1);
+  - on an empty store it creates the given categories with positions 0..n-1 in order, then the first list, and makes it current (US3-1, US4-1, FR-002, FR-020, FR-023);
   - on a store that already has a list it does nothing;
   - a failure midway leaves nothing behind (one transaction).
 - [ ] T037 Implement `initializeStore(seed: { categoryNames; firstListName })` in `apps/mobile/src/application/use-cases/initialize-store.ts` to turn T036 green.
@@ -236,7 +239,6 @@ story depends on them.
 - [ ] T041 Write failing tests in `apps/mobile/src/adapters/ui/theme/theme.test.ts`:
   - every MD3 color role of the light and dark Paper themes equals the matching role of `schemes.light` and `schemes.dark` in `design/material-theme.json`;
   - `elevation.level0..5` derive from `surfaceContainerLowest..Highest`;
-  - the contrast variants are mapped;
   - FR-036: in light and dark, every foreground role the screens and shared components use (text, icons, checkbox, outline; at least `onSurface`, `onSurfaceVariant` for ticked rows, `primary`, `outline`) against every background role it is drawn on (at least `surface` and the `surfaceContainer*` roles) reaches 4.5:1 for text and 3:1 for the others (WCAG contrast ratio computed in the test). The pairs come from one exported list in `apps/mobile/src/adapters/ui/theme/used-color-pairs.ts`, which each task adding a new role to a screen or component extends;
   - the `spacing` tokens are `xs = 4` … `xl = 32` on the 4 dp grid.
 - [ ] T042 Implement the light and dark themes from the JSON in `apps/mobile/src/adapters/ui/theme/theme.ts` and the `spacing` tokens in `apps/mobile/src/adapters/ui/theme/spacing.ts`, and add `ThemeProvider` (follows `useColorScheme`, wraps `PaperProvider`) in `apps/mobile/src/adapters/ui/theme/theme-provider.tsx`, to turn T041 green. If a contrast pair of T041 fails with the colors of `design/material-theme.json`, export the theme again from Material Theme Builder, or use a role of the same scheme that passes and record the choice in [research.md](research.md) R12; never lower the threshold.
@@ -261,7 +263,9 @@ story depends on them.
   - after success, `refresh()` reloads every region that is not `idle`, keeping `success` / `empty` data on screen while it reloads;
   - an unexpected throw is reported with `{ operation, screen }` only, sets `notice = { type: 'writeFailed' }`, leaves state unchanged and resolves to `{ ok: false, error: { type: 'WriteFailed' } }`;
   - a throw of `StorageFull` is handled the same way except that it sets `notice = { type: 'storageFull' }` and is not reported (FR-030, R12a);
-  - a `Result` error is returned unchanged and not reported.
+  - a `Result` error of refused input (`NameRequired`, `NameAlreadyUsed`, `AmountNotPositive`) or `AlreadyOnList` from `addArticleToList` is returned unchanged and not reported;
+  - `AlreadyOnList` from `restoreRemovedItem` is a failed restore: `notice = { type: 'writeFailed' }`, reported as an `UnexpectedResult` with code `AlreadyOnList` (FR-010);
+  - any other `Result` error (`ItemNotOnList`, `NothingInCart`) is handled like an unexpected throw (`notice = { type: 'writeFailed' }`, state unchanged, resolves to `WriteFailed`) and reported as an `UnexpectedResult` error whose `code` is the tag and whose message is fixed ([contracts/driving-ports.md](contracts/driving-ports.md#conventions)).
 - [ ] T050 Implement the internal `runWrite` helper and `refresh()` in `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T049 green.
 - [ ] T051 Implement `AppStoreProvider` (React context) in `apps/mobile/src/adapters/ui/state/app-store-provider.tsx` and `useAppStore(selector)` (wraps `useStore`) in `apps/mobile/src/adapters/ui/state/use-app-store.ts`, with a test rendering a component that selects a slice. Add the `renderWithStore(ui, { seed? })` helper in `apps/mobile/src/adapters/ui/testing/render-with-store.tsx`: it builds fresh fakes, use cases, store, theme and navigation container for each test.
 - [ ] T052 [P] Write failing tests for `NoticeSnackbar` in `apps/mobile/src/adapters/ui/components/notice-snackbar.test.tsx`: `writeFailed` shows "La modification n'a pas pu être enregistrée.", `storageFull` shows "Espace de stockage insuffisant. Libérez de la place sur votre téléphone.", `articleAdded` shows "« {name} » ajouté", and dismissing calls `dismissNotice`. Each notice is announced with its French text as it appears (`AccessibilityInfo.announceForAccessibility` mocked, FR-038).
@@ -311,8 +315,8 @@ finish shopping and check every item is unticked and still present.
 - [ ] T065 [US1] Write the failing journey `tests/e2e/journeys/first-launch.e2e.ts` ([contracts/ui-validation.md](contracts/ui-validation.md#end-to-end-journeys)): on a fresh install (`device.launchApp({ delete: true, newInstance: true })`), the app opens on "Ma liste" with "Votre liste est vide" and "Ajouter des articles" (US3-1, US1-10), found by text only. Delete `launch.e2e.ts` (T014), whose check this one includes. Run `yarn test:e2e:android` and confirm it fails on the placeholder screen.
 - [ ] T066 [P] [US1] Write failing domain tests for the current list view in `apps/mobile/src/domain/current-list-view.test.ts`:
   - sections only for categories holding an item of the list, ordered by `position` (FR-003, US4-5);
-  - within a section, unticked items first, then ticked, each group sorted with `Intl.Collator('fr', { sensitivity: 'base' })` (US1-6);
-  - `remainingCount` = unticked items (US1-7: 5 items with 2 ticked → 3);
+  - within a section, unticked items first, then ticked, each group sorted with `Intl.Collator('fr', { sensitivity: 'base' })` (US1-6, FR-005);
+  - `remainingCount` = unticked items (US1-7, FR-006: 5 items with 2 ticked → 3);
   - `totalCount`, and `hasItemsInCart`.
 - [ ] T067 [P] [US1] Write failing domain tests for the list item transitions in `apps/mobile/src/domain/list-item.test.ts`:
   - `toggle` flips `inCart` (US1-2, US1-3);
@@ -340,10 +344,10 @@ finish shopping and check every item is unticked and still present.
 - [ ] T071 [US1] Write failing screen tests for `CurrentList` in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx`, through `renderWithStore`:
   - US1-1: the list name is in the Appbar, items sit under category headings, and "Lait" shows "2 L";
   - US1-2 / US1-3: tapping ticks and unticks immediately;
-  - US1-6: ticked items move after unticked ones;
-  - US1-7: the subtitle reads "3 articles restants", "1 article restant", or "Tout est dans le caddie";
+  - US1-6, FR-005: ticked items move after unticked ones;
+  - US1-7, FR-006: the subtitle reads "3 articles restants", "1 article restant", or "Tout est dans le caddie";
   - US1-10: "Votre liste est vide" with "Ajouter des articles";
-  - US1-11: `LoadingState` shows while the use case is pending;
+  - US1-11, FR-029: `LoadingState` shows while the use case is pending;
   - US1-12: "Impossible de charger la liste." with "Réessayer" retrying, and the error reported;
   - US4-5: an empty category heading is not shown;
   - "Terminer les courses" is absent when nothing is ticked;
@@ -418,13 +422,13 @@ content matches.
   - `onList` and the target-list `quantity` are set for articles already on the list (US2-8);
   - articles are sorted by name with the French collator.
 - [ ] T086 [P] [US2] Write failing domain tests for adding to a list in `apps/mobile/src/domain/list-item.test.ts`:
-  - `add` creates an unticked item (FR-012) with the given quantity or none (US2-1, US2-2);
+  - `add` creates an unticked item (FR-012) with the given quantity or none (US2-1, US2-2, FR-013, FR-014);
   - adding an article already on the list → `AlreadyOnList` carrying the current quantity (FR-011);
-  - `changeQuantity` keeps `inCart` and sets or clears the quantity (US2-3, US2-4).
+  - `changeQuantity` keeps `inCart` and sets or clears the quantity (US2-3, US2-4, FR-015).
 - [ ] T087 [P] [US2] Write failing use case tests on fakes, one file each in `apps/mobile/src/application/use-cases/`:
   - `get-catalog.test.ts`: the catalog with `onList` marks for the given list, filtered by query;
-  - `add-article-to-list.test.ts`: US2-1; US2-2; US2-5, the same article on two lists keeps a quantity per list; `AlreadyOnList`; `ArticleNotFound`;
-  - `create-article-and-add-to-list.test.ts`: US2-7, created and added in one transaction; US2-9, " beurre " → `NameAlreadyUsed` with `existing` = "Beurre" and nothing created, and "pommes  de  terre" → `NameAlreadyUsed` with `existing` = "Pommes de terre" (FR-021); a new name is stored cleaned, so "  Houmous   maison " is created as "Houmous maison" (FR-022); US2-11, `NameRequired`; `NameTooLong`; `CategoryNotFound`;
+  - `add-article-to-list.test.ts`: US2-1 and FR-008; US2-2; US2-5, the same article on two lists keeps a quantity per list; `AlreadyOnList`; `ArticleNotFound`;
+  - `create-article-and-add-to-list.test.ts`: US2-7 and FR-018, created and added in one transaction; US2-9, " beurre " → `NameAlreadyUsed` with `existing` = "Beurre" and nothing created, and "pommes  de  terre" → `NameAlreadyUsed` with `existing` = "Pommes de terre" (FR-021); a new name is stored cleaned, so "  Houmous   maison " is created as "Houmous maison" (FR-022); US2-11, `NameRequired`; `NameTooLong`; `CategoryNotFound`;
   - `change-item-quantity.test.ts`: US2-3, the article itself is unchanged; US2-4, cleared; `ItemNotOnList`;
   - `remove-item-from-list.test.ts`: US2-6, the item is gone, the article stays in the catalog, and a `RemovedItem` is returned;
   - `restore-removed-item.test.ts`: US2-16, back ticked with "2 kg"; `AlreadyOnList` / `ListNotFound` / `ArticleNotFound`;
@@ -465,7 +469,7 @@ content matches.
   - US2-14: "Aucun article ne correspond à « xyz »" with "Créer « xyz »";
   - US2-8: the "Déjà dans la liste" mark, and tapping opens already-on-list mode without duplicating;
   - adding keeps the screen open and shows "« {name} » ajouté";
-  - US2-17: loading;
+  - US2-17, FR-029: loading;
   - US2-18: error "Impossible de charger les articles." with "Réessayer", reported;
   - the "Nouvel article" action opens CreateArticle with the query prefilled.
 - [ ] T093 [US2] Write failing screen tests for `CreateArticle` in `apps/mobile/src/adapters/ui/screens/create-article-screen.test.tsx`:
@@ -524,11 +528,11 @@ current.
 - [ ] T109 [P] [US3] Write failing use case tests on fakes in `apps/mobile/src/application/use-cases/`:
   - `get-lists.test.ts`: lists sorted by name with the French collator, each with `itemCount` and `isCurrent` (US3-8);
   - `create-list.test.ts`:
-    - US3-2: an empty list is created and is not made current;
+    - US3-2, FR-024: an empty list is created and is not made current;
     - US3-5: "barbecue" → `NameAlreadyUsed`;
     - US3-6: `NameRequired`;
     - `NameTooLong`;
-  - `set-current-list.test.ts`: US3-3, persisted across a new store instance on the same fakes; `ListNotFound`;
+  - `set-current-list.test.ts`: US3-3 and FR-025, persisted across a new store instance on the same fakes; `ListNotFound`;
   - FR-026 / US3-4: ticking "Lait" on one list leaves it unticked on another.
 - [ ] T110 [P] [US3] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.lists.test.ts`:
   - `loadLists()` uses the region states and reports `{ operation: 'getLists', screen: 'Lists' }` on failure (US3-7);
@@ -539,7 +543,7 @@ current.
   - US3-7: loading; the error "Impossible de charger vos listes." with "Réessayer", reported;
   - US3-8: rows show the name, "{n} articles" / "1 article", and "Liste actuelle" with a check icon and text;
   - row accessibility: "Barbecue, 0 articles, liste actuelle";
-  - US3-3: tapping a list makes it current and returns to CurrentList, which shows "Barbecue";
+  - US3-3, FR-002: tapping a list makes it current and returns to CurrentList, which shows "Barbecue";
   - SC-005: two taps from CurrentList ("Mes listes", then the list).
 - [ ] T112 [US3] Write failing dialog tests in `apps/mobile/src/adapters/ui/screens/create-list-dialog.test.tsx`:
   - title "Nouvelle liste", buttons "Annuler" / "Créer";
@@ -573,7 +577,7 @@ create an article in it, add it to the current list, and check it appears under 
 ### Tests for User Story 4 ⚠️ (write first, confirm they fail)
 
 - [ ] T119 [P] [US4] Write failing use case tests in `apps/mobile/src/application/use-cases/create-category.test.ts`:
-  - US4-2: the category is appended with `position = max + 1` and `getCategories` lists it last;
+  - US4-2, FR-019: the category is appended with `position = max + 1` and `getCategories` lists it last;
   - US4-3: "boissons" → `NameAlreadyUsed`;
   - US4-4: `NameRequired`;
   - `NameTooLong`.
@@ -607,9 +611,9 @@ validation of [quickstart.md](quickstart.md).
 
 - [ ] T128 Write the full offline UI scenario in `apps/mobile/src/adapters/ui/offline.test.tsx`: with `global.fetch` replaced by a function that throws, do each of the 12 actions listed under the spec's Success Criteria, in its order: open, tick and untick, finish, add by browsing and by searching, create and add, set, change and clear a quantity, remove, undo, see the lists, create a list, choose the current list, and create a category. Every step succeeds and nothing is reported (Principle VII, FR-027, SC-006). Make it green with no production change; any change it forces gets its own failing test first.
 - [ ] T129 [P] Write a test in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx` that renders a 200-item list through `renderWithStore`, ticks the last item, and checks that only that row re-renders (memoized rows identified by article id, [research.md](research.md) R11, SC-008). If it fails, fix the memoization in `ListItemRow.tsx` and `CurrentListScreen.tsx`.
-- [ ] T130 [P] Extend `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx` to render a ticked row under the dark theme and each contrast variant of T041/T042: the check mark and the struck-through text are present in every theme, not only a color change (FR-035).
+- [ ] T130 [P] Extend `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx` to render a ticked row under the light and dark themes of T041/T042: the check mark and the struck-through text are present in every theme, not only a color change (FR-035).
 - [ ] T131 [P] Write a test in `apps/mobile/src/adapters/ui/state/error-context.test.ts` that every `report` call made during the US1–US4 store tests carries only the `operation` and `screen` fields, never names or quantities, and that the Sentry adapter's `beforeSend` output for a thrown `Error('Lait')`, on an event carrying `user.id` "install-1" and the device name "iPhone de Marie", contains none of "Lait", "install-1" and "Marie" anywhere in the serialized event (FR-030, Principle VIII).
-- [ ] T132 [P] Write accessibility tests in `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx`: every interactive element on the four screens and four dialogs has a French `accessibilityLabel` or a visible French text (FR-032), and every touch target is ≥ 48 dp (FR-034). The focus moves (FR-037) and announcements (FR-038) are driven by the tests of the components that make them: T052, T071, T072, T089, T090, T091, T094, T112 and T121.
+- [ ] T132 [P] Write accessibility tests in `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx`: every interactive element on the four screens and four dialogs has a French `accessibilityLabel` or a visible French text (FR-032, FR-031), and every touch target is ≥ 48 dp (FR-034). The focus moves (FR-037) and announcements (FR-038) are driven by the tests of the components that make them: T052, T071, T072, T089, T090, T091, T094, T112 and T121.
 - [ ] T133 Add the build-time Sentry smoke test to `apps/mobile/src/composition/composition-root.ts`: when `EXPO_PUBLIC_SENTRY_SMOKE_TEST=1`, report one test error at startup with `{ operation: 'smokeTest', screen: 'CurrentList' }`; when it is `native`, call the reporter's `crashNatively()` 10 seconds after startup, which the Sentry adapter implements with `Sentry.nativeCrash()`, the console reporter with a log line and `RecordingErrorReporter` by recording the call (quickstart §6 step 5). Test-first in `apps/mobile/src/composition/composition-root.test.ts`, with Jest fake timers and a `RecordingErrorReporter`: `1` gives one report, `native` one `crashNatively` call after 10 seconds and none before, and any other value or none is ignored.
 - [ ] T134 [P] Configure the Sentry Expo plugin options (organization, project, source map and native debug file upload through EAS Build) in `apps/mobile/app.config.ts`. Create `apps/mobile/eas.json` ([research.md](research.md) R13): `cli.appVersionSource: "remote"`; a `production` profile (store builds) and a `preview` profile (`distribution: "internal"`), each with `autoIncrement: true` and `env.EXPO_PUBLIC_APP_ENVIRONMENT` set to `production` and `preview`; a `development` profile with neither. `createErrorReporter()` reads `EXPO_PUBLIC_APP_ENVIRONMENT` (T061). Document in `README.md` the EAS environment variables the maintainer sets, never committed: the DSN, defined for the EAS `production` and `preview` environments only, and the Sentry access EAS uses to upload source maps. The README also lists the Sentry alert setup of FR-030c ([research.md](research.md) R13): two issue alert rules on the `production` environment, each emailing the maintainer ("a new issue is created", "an issue changes state from resolved to unresolved"), the default alert rule deleted, and the maintainer's personal workflow notifications turned off; quickstart §6 step 7 checks it once. The README also says what to declare if the app is published on a store: crash data and a random installation identifier, neither linked to the user nor used for tracking (Google Play "Crash logs" and "Device or other IDs", App Store "Crash Data" and "Device ID"), as the spec's Assumptions and R13 state.
 - [ ] T135 Add the measurement seed to `apps/mobile/src/composition/measurement-seed.ts`: when `EXPO_PUBLIC_SEED_ITEMS=<n>` is set at build time, fill an empty store to the spec's data size through the use cases: 1 000 articles spread over the 11 default categories, 20 lists ("Ma liste" and 19 more), and n items on the current list ([research.md](research.md) R11, spec Assumptions). It works in release builds too, so SC-001, SC-002 and SC-008 can be measured there (like the Sentry smoke test, T133); builds for users never set it. Test-first in `apps/mobile/src/composition/measurement-seed.test.ts`: with `n = 200` the store holds 1 000 articles, 20 lists and 200 items on the current list; ignored when the variable is unset or the store already holds an article.

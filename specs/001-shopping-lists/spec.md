@@ -250,6 +250,28 @@
 - Q: How quickly must a report reach error tracking? → A: Within 1 minute of the error with the
   network on, of the network returning while the application is open, or of the next opening
   after a native crash (SC-010).
+- Q: Apart from the composition root, may one adapter import code from another adapter, and
+  does the application's entry point count as part of the composition root? → A: Adapters never
+  import each other; the entry point counts as the composition root, the only code that knows
+  every adapter; an error the user interface must recognize (a full device storage, data saved
+  by a newer version) is declared with the application's ports (plan, research R15).
+- Q: What may the domain and application layers import from outside their own folders? → A: No
+  outside library at all, not even its types; the only exception, from 003 on, is a shared
+  package of the repository marked pure (no framework, no side effects, importing only other
+  pure shared packages) (plan, research R15).
+- Q: Which failures does an action return rather than throw, and is a returned failure that no
+  input can cause reported? → A: Every broken business rule is returned, never thrown, by
+  actions and business rules alike; only technical failures are thrown. Refused input (and
+  "already on the list", US2-8) is shown and never reported; any other returned failure (a
+  missing record, the wrong state) shows the usual failed-save message and is reported, with
+  its kind as the error code (FR-030).
+- Q: What styling may a screen define itself? → A: Layout only (flex, alignment, position, and
+  margins, padding and gaps taken from spacing tokens); colors, fonts, borders, radius, shadow
+  and raw numbers are refused, and anything visual goes into a shared component (plan, research
+  R2).
+- Q: Are the theme's medium- and high-contrast color variants used in this feature? → A: No:
+  only the light and dark themes are built and checked (FR-036); the variants stay in the theme
+  file until a feature selects them (plan, research R2).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -637,7 +659,8 @@ the new heading.
   In this feature, the expected situations, never reported, are exactly these three: a full device storage,
   data saved by a newer version of the application (FR-040), and input refused with a French
   message (a name empty, too long or already used, FR-021 and FR-022; an invalid quantity or
-  unit, FR-016 and FR-022). Every other failure is an unexpected error.
+  unit, FR-016 and FR-022). Every other failure is an unexpected error. Being told an article
+  is already on the list (FR-011, US2-8) is a choice offered, not a failure.
 - **FR-030a**: A report raised without network MUST be stored on the device and sent when the
   network returns. At most 30 reports are kept; when a new report would exceed that, the oldest
   one is dropped. Stored reports MUST survive the application being stopped and the device

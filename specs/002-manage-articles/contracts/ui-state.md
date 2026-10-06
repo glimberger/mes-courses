@@ -80,8 +80,15 @@ Rules shared by every write action:
    is reloaded from storage, 001 R9), `notice = writeFailed` (or `storageFull`, without a report,
    when the error is `StorageFull`, 001 R12a), and the action
    resolves to `{ ok: false, error: { type: 'WriteFailed' } }` so a form stays open.
-4. **Business errors** (`Result` errors) are returned to the caller unchanged and are not
-   reported.
+4. **Business errors** (`Result` errors): refused input (`NameError`, `NameAlreadyUsed`,
+   `QuantityError`) and `AlreadyOnList` returned by `addArticleToList` (001 US2-8) are returned
+   to the caller unchanged and are not reported, since the form or dialog shows them.
+   `AlreadyOnList` from `restoreRemovedItem` is a failed restore (001 FR-010), handled as below. Every other `Result` error (a missing
+   record or the wrong state: `ItemNotOnList`, `ArticleNotFound`, `CategoryNotFound`,
+   `ListNotFound`, `NothingInCart`, ...) cannot come from the user's input: it is handled as in
+   rule 3 (`notice = writeFailed`, state unchanged, resolves to `WriteFailed`) and reported as an
+   `UnexpectedResult` error whose code is the result's tag, with no other content (001 FR-030,
+   [001 driving ports](../../001-shopping-lists/contracts/driving-ports.md#conventions)).
 
 ## Undo timing
 

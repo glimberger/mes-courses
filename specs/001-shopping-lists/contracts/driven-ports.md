@@ -79,7 +79,10 @@ interface AppStateRepository {
   UI adapter recognizes it without importing the SQLite adapter (FR-030,
   [../research.md](../research.md) R12a).
   `migrate` throws `DataFromNewerVersion` instead when `PRAGMA user_version` is above the
-  highest migration it knows, before any other statement (FR-040, R18c).
+  highest migration it knows, before any other statement (FR-040, R18c). It is declared in
+  `application/ports/data-from-newer-version.ts` for the same reason as `StorageFull`: adapters
+  never import each other ([../research.md](../research.md) R15). `StorageError` stays in the
+  SQLite adapter, since no other code tells it apart from any unexpected error.
 - Contract tests: one shared suite per repository runs against both the in-memory fake and the
   SQLite adapter, so the fake cannot drift from the real behavior.
 

@@ -6,12 +6,26 @@ function in `apps/mobile/src/application/use-cases/`, built by the composition r
 
 ## Conventions
 
-- Expected business failures are returned as values:
+- Every failure of a business rule is returned as a value, never thrown: refused input, a
+  missing record (`ItemNotOnList`, `ArticleNotFound`, ...) and the wrong state
+  (`NothingInCart`, `AlreadyOnList`).
   `type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }`.
-  Errors are tagged unions (`{ type: 'NameRequired' }`, `{ type: 'NameAlreadyUsed'; existing }`, ...)
-  that the UI adapter turns into French text (Principle X).
-- Unexpected failures (storage errors) are thrown. The UI adapter catches them, shows the error
-  state or a French snackbar, and reports them through `ErrorReporter` (Principle VIII).
+  Errors are tagged unions (`{ type: 'NameRequired' }`, `{ type: 'NameAlreadyUsed'; existing }`, ...).
+  Domain functions follow the same rule: they return a `Result` for a broken business rule and
+  throw nothing else. Use cases throw only technical failures (storage errors, a bug).
+- Refused input (`NameError`, `NameAlreadyUsed`, `QuantityError`) and `AlreadyOnList` returned
+  by `addArticleToList` (US2-8)
+  are shown by the UI adapter in French (Principle X) and never reported: they are FR-030's
+  expected situations. Every other returned error cannot come from the user's input in 001:
+  the store shows the usual failed-save notice and reports it as an `UnexpectedResult` error
+  whose code is the result's tag ([002 ui-state](../../002-manage-articles/contracts/ui-state.md)
+  rule 4, the store contract's owner). Under sync (003) some of these states become reachable;
+  a later feature may name them as its own expected situations (FR-030b), as 003 does for an
+  article deleted on another device (a `restoreRemovedItem` returning `ArticleNotFound` shows
+  its own notice, unreported). Every returned failure that no feature names stays reported.
+- Thrown failures are unexpected (except `StorageFull` and `DataFromNewerVersion`, R12a and
+  R18c). The UI adapter catches them, shows the error state or a French snackbar, and reports
+  them through `ErrorReporter` (Principle VIII).
 - Every write is committed to storage before the promise resolves (FR-028).
 - `NameError = NameRequired | NameTooLong`;
   `QuantityError = AmountNotANumber | AmountNotPositive | AmountTooPrecise | AmountTooLarge |
