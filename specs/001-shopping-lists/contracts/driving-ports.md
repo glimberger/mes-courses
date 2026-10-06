@@ -8,7 +8,7 @@ function in `apps/mobile/src/application/use-cases/`, built by the composition r
 
 - Every failure of a business rule is returned as a value, never thrown: refused input, a
   missing record (`ItemNotOnList`, `ArticleNotFound`, ...) and the wrong state
-  (`NothingInCart`, `AlreadyOnList`).
+  (`AlreadyOnList`).
   `type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }`.
   Errors are tagged unions (`{ type: 'NameRequired' }`, `{ type: 'NameAlreadyUsed'; existing }`, ...).
   Domain functions follow the same rule: they return a `Result` for a broken business rule and
@@ -45,7 +45,7 @@ function in `apps/mobile/src/application/use-cases/`, built by the composition r
 |---|---|---|
 | `getCurrentList` | `() => Promise<CurrentListView>` | Read model of the current list (FR-001, FR-003, FR-005, FR-006). |
 | `toggleItemInCart` | `(listId, articleId) => Promise<Result<{ inCart: boolean }, ItemNotOnList>>` | Flips `inCart` (FR-004). |
-| `finishShopping` | `(listId) => Promise<Result<void, NothingInCart>>` | Sets every item of the list to `inCart = false`; items and quantities kept (FR-007). The confirmation dialog is UI-only. |
+| `finishShopping` | `(listId) => Promise<Result<void, never>>` | Sets every item of the list to `inCart = false`; items and quantities kept (FR-007). With nothing in the cart, it changes nothing and succeeds (FR-007). The confirmation dialog is UI-only. |
 
 ## Editing a list (User Story 2)
 

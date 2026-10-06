@@ -163,8 +163,9 @@ Current list
   L1 --setCurrentList(L2)--> L2      (L2 must exist: ListNotFound otherwise)
 ```
 
-`finishShopping` on a list with no item in the cart returns `NothingInCart` and changes nothing
-(edge case); the UI does not offer the action in that case.
+`finishShopping` on a list with no item in the cart changes nothing and succeeds. The UI does
+not offer the action then, but a finish queued behind the only tick can meet that case when
+the tick's save fails (FR-007).
 
 ## SQLite schema (migration 1)
 

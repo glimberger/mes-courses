@@ -71,22 +71,28 @@ type Notice =
 
 Rules shared by every write action:
 
-1. **Ends the undo offer first**: `pendingUndo` is cleared before the write starts (FR-006a "or
-   until their next change"). Reads, navigation and `undo()` itself do not clear it beforehand.
-2. **Refreshes after success**: `refresh()` runs, so every loaded region shows the change
+1. **One write queue**: every write action joins a single store-wide queue and runs in the
+   order it was called, so changes are saved in the order the user made them (001 FR-004,
+   001 R9). An optimistic tick is shown before its turn comes.
+2. **Ends the undo offer on success**: a write that succeeds clears `pendingUndo`, a toggle
+   included (FR-006a "or until their next change", 001 FR-010). A write that fails, or input
+   refused by a form or a use case, leaves the offer as it was. An `undo()` already queued is
+   carried out even if an earlier queued write ends the offer (001 R8). Reads and navigation
+   never clear it.
+3. **Refreshes after success**: `refresh()` runs, so every loaded region shows the change
    (FR-003, FR-008a, US2-4).
-3. **Unexpected failures**: the thrown error is reported with `{ operation, screen }` only, state
-   is left as it was (for an optimistic tick, the item's queued saves are dropped and the region
+4. **Unexpected failures**: the thrown error is reported with `{ operation, screen }` only, state
+   is left as it was (for an optimistic tick, the item's queued toggles are dropped and the region
    is reloaded from storage, 001 R9), `notice = writeFailed` (or `storageFull`, without a report,
    when the error is `StorageFull`, 001 R12a), and the action
    resolves to `{ ok: false, error: { type: 'WriteFailed' } }` so a form stays open.
-4. **Business errors** (`Result` errors): refused input (`NameError`, `NameAlreadyUsed`,
+5. **Business errors** (`Result` errors): refused input (`NameError`, `NameAlreadyUsed`,
    `QuantityError`) and `AlreadyOnList` returned by `addArticleToList` (001 US2-8) are returned
    to the caller unchanged and are not reported, since the form or dialog shows them.
    `AlreadyOnList` from `restoreRemovedItem` is a failed restore (001 FR-010), handled as below. Every other `Result` error (a missing
    record or the wrong state: `ItemNotOnList`, `ArticleNotFound`, `CategoryNotFound`,
-   `ListNotFound`, `NothingInCart`, ...) cannot come from the user's input: it is handled as in
-   rule 3 (`notice = writeFailed`, state unchanged, resolves to `WriteFailed`) and reported as an
+   `ListNotFound`, ...) cannot come from the user's input: it is handled as in
+   rule 4 (`notice = writeFailed`, state unchanged, resolves to `WriteFailed`) and reported as an
    `UnexpectedResult` error whose code is the result's tag, with no other content (001 FR-030,
    [001 driving ports](../../001-shopping-lists/contracts/driving-ports.md#conventions)).
 

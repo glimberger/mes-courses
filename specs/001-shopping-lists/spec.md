@@ -321,6 +321,9 @@
   returns to unticked after a failed save (FR-007).
 - Q: Are numbers in names sorted by value or character by character? → A: By value: "Lait 2 L"
   comes before "Lait 10 L", wherever names are sorted (Assumptions).
+- Q: What happens when a confirmed "Terminer les courses" runs after the only tick's save
+  failed, so no item is ticked any more? → A: It changes nothing and is not a failure: nothing
+  more is shown and nothing is reported (FR-007).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -597,6 +600,8 @@ the new heading.
   changes. The action MUST be offered only while
   at least one item of the list is shown ticked, including a tick whose save has not finished;
   it hides again when a failed save returns the last ticked item to unticked (FR-004).
+  Finishing shopping when no item is ticked any more (a confirmed finish saved after the only
+  tick failed) changes nothing and is not a failure: nothing is shown and nothing is reported.
 
 **Editing a list**
 
@@ -626,7 +631,8 @@ the new heading.
   the application (swiped away or killed by the system) end the offer, while moving between
   screens or sending the application to the background does not; the 5-second limit keeps
   running in the background. A refused input (FR-016, FR-022) or the failed save of another
-  change changes nothing and does not end the offer. A removal whose offer has ended is final. If restoring the item
+  change changes nothing and does not end the offer. A removal whose offer has ended is final. An "Annuler" chosen while the offer is shown is
+  carried out, even when a change made just before it, still being saved, ends the offer. If restoring the item
   fails, it stays removed and the offer ends; the failed save is handled as in Edge Cases.
 - **FR-011**: An article MUST appear at most once on a given list; it may appear on several
   lists. When browsing or searching the catalog to add articles, articles already on the list
@@ -741,7 +747,7 @@ the new heading.
   In this feature, the expected situations, never reported, are exactly these three: a full device storage,
   data saved by a newer version of the application (FR-040), and input refused with a French
   message (a name empty, too long or already used, FR-021 and FR-022; an invalid quantity or
-  unit, FR-016 and FR-022). Every other failure is an unexpected error. Being told an article
+  unit, FR-016 and FR-022; no category chosen for a new article, FR-018). Every other failure is an unexpected error. Being told an article
   is already on the list (FR-011, US2-8) is a choice offered, not a failure.
 - **FR-030a**: A report raised without network MUST be stored on the device and sent when the
   network returns. At most 30 reports are kept; when a new report would exceed that, the oldest
