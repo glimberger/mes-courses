@@ -22,10 +22,30 @@ once at the app root from the store.
 | too old | Full-screen `UpdateRequired`: "Cette version de l'application est trop ancienne pour vos données. Mettez-la à jour.", no action, nothing reported; the composition root threw `DataFromNewerVersion` before any read or write ([research.md](../research.md) R18c) |
 | ready | Navigation, on CurrentList |
 
-"Réessayer" runs the composition root again from the start; each failure is reported again.
+"Réessayer" runs the composition root again from the start; each failure goes to the
+reporter again, which sends the same failure only once per opening (FR-030).
 Nothing is deleted or reset to recover ([research.md](../research.md) R18a). `StartupError` is
 rendered outside the store and navigation, which do not exist yet when it shows; so is
 `UpdateRequired`.
+
+## A screen fails while drawing (FR-039a)
+
+| State | Shown |
+|---|---|
+| crashed | Full-screen `CrashError`: "Une erreur est survenue." + "Réessayer", in place of the whole app; error reported with `{ operation: 'render', screen }`, the screen being the route shown |
+
+`AppErrorBoundary`, around the navigation, catches any error thrown while a screen renders
+([research.md](../research.md) R13a). "Réessayer" restarts the app as on a startup failure:
+`LoadingState`, then the composition root runs again from the start, and the current list is
+shown when it succeeds. Each new failure goes to the reporter again, which sends the same
+failure only once per opening (FR-030). Nothing is deleted or reset.
+`CrashError`, like `StartupError`, renders without the store.
+
+An error thrown outside rendering (an event handler, a promise nobody awaits) changes nothing
+on screen; the global handlers report it with `{ operation: 'uncaught', screen }`.
+
+The navigation container passes the route shown to `ErrorReporter.setScreen` on every route
+change, so a report always names a screen ([driven-ports.md](driven-ports.md#errorreporter)).
 
 ## Navigation
 

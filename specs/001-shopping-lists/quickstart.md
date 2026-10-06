@@ -165,12 +165,38 @@ release. Steps 4, 10, 11, 12, 13 and 14, the timing of step 2 and the background
 Steps 4, 11 and 12 (SC-001, SC-002, SC-008) are run on the two reference phones of the spec:
 an entry-level Android phone about five years old, and the maintainer's iPhone.
 
-## 6. Error tracking (Principle VIII)
+## 6. Error tracking (Principle VIII, FR-030, FR-030a)
 
-Build a release with `EXPO_PUBLIC_SENTRY_DSN` and `EXPO_PUBLIC_SENTRY_SMOKE_TEST=1` set (the
-composition root then reports one test error at startup), and open it: the event appears in Sentry with a readable stack trace, the app version, the device model
-and system version and the environment, and no list content and no error message text. Repeat in airplane mode, then reconnect: the event arrives
-after reconnection.
+This is the spec's manual check for error tracking, run before each release on one of the
+reference phones, with a `preview` build from EAS (`eas build --profile preview`), which has the
+DSN. Build it with `EXPO_PUBLIC_SENTRY_SMOKE_TEST=1` set (the composition root then reports one
+test error at startup).
+
+Time each delivery: every report must appear in Sentry within 1 minute (SC-010).
+
+1. Open it with the network on: within 1 minute of startup, the event appears in Sentry under
+   the `preview` environment,
+   with a stack trace that names source files and functions (not minified code), the version
+   and build number ("1.2.0 (42)"), the device model and system version, and an operation and
+   a screen.
+2. In the same event: no list content, no error message text, no user, no installation id and
+   no device name (the name given to the phone in its settings).
+3. Stop the app and open it again: the same test error is reported a second time, since each
+   opening may send it once (FR-030).
+4. Turn on airplane mode, stop the app, open it again (a third test report), stop it, and
+   restart the phone. Open the app, still in airplane mode, wait 10 seconds, then turn airplane
+   mode off with the app open: within 1 minute, the reports raised offline arrive in Sentry,
+   readable like the first one.
+5. Build again with `EXPO_PUBLIC_SENTRY_SMOKE_TEST=native`: 10 seconds after startup, the app
+   crashes in native code. Open it again: within 1 minute, the crash arrives in Sentry with the
+   operation `uncaught` and the screen shown, no device name and no list content; its only
+   identifier is the random installation id.
+6. On a development run (`EXPO_PUBLIC_SENTRY_SMOKE_TEST=1 yarn start`), the same test error: it is printed in the
+   console, and nothing arrives in Sentry.
+7. Once, when error tracking is set up (FR-030c): in Sentry, the project has the two alert rules
+   of [research.md](research.md) R13, both on `production` only, and no other rule; "Send test
+   notification" on each one delivers an email to the maintainer. The preview reports of steps
+   1 to 5 have sent no email.
 
 ## 7. Continuous integration
 

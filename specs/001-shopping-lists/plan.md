@@ -2,7 +2,8 @@
 
 **Branch**: `feat/001-shopping-lists` | **Date**: 2026-10-05 (amended 2026-10-06 for constitution
 v2.1.0, monorepo, then for Storybook and Detox, then for constitution v2.1.1, then for the
-data clarifications, the failure-flow clarifications and the data checklist review) |
+data clarifications, the failure-flow clarifications, the data checklist review and the
+observability clarifications) |
 **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/001-shopping-lists/spec.md`
@@ -68,7 +69,14 @@ committed to storage before it is shown as saved (FR-028); French-only UI with n
 in the system backup, not encrypted beyond the system's own (Assumptions); no storage error
 text in reports (FR-030); sync compatibility kept for 003: ids are generated on the device and
 never change (R5), and each user action is one `UnitOfWork` transaction (FR-028); every commit synced to storage so it survives a power cut (R4); a full storage shown
-with its own message and not reported (R12a)
+with its own message and not reported (R12a); no user, installation or device identifier in
+reports, except the random installation id of a native crash, and sessions off (R13); the same
+failure sent once per opening, only from `production` and `preview` builds, with the version
+and build number (FR-030, R13); the same rules for every feature's reports (FR-030b); email
+alerts on new and returning `production` failures, set in Sentry (FR-030c); every report in
+Sentry within 1 minute (SC-010), measured by hand; reports raised offline kept on
+the device, at most 30 (FR-030a); a screen failing while drawing replaced by a full-screen error
+that restarts the app (FR-039a, R13a)
 
 **Scale/Scope**: one user, one device; 4 screens and 4 dialogs; up to 1 000 articles in the
 catalog, 20 lists and 200 items per list (spec Assumptions), with SC-001, SC-002 and SC-008 measured at
@@ -84,13 +92,13 @@ and every other unknown is resolved in [research.md](research.md).
 | # | Principle | How this plan complies | Status |
 |---|---|---|---|
 | I | Test-First (non-negotiable) | Every task in `tasks.md` puts a failing test before the code it drives. Domain and use cases are driven by fast unit tests; SQLite adapter by contract tests; screens by RNTL tests. Scaffolding (config files, CI) is not production behavior; the first behavior commits start with a red test. Each story's Detox journey is written first and fails, as the outer loop; the inner unit and screen tests drive the code until it turns green (R23). Stories are fixtures, not production code, so they need no test of their own beyond the story test. | ✅ |
-| II | Tests as executable specification | Each acceptance scenario (US1-1 … US4-5) and each functional requirement (FR-001 … FR-040) maps to at least one test named after the behavior, with the scenario or FR id in its name; the success criteria and requirements the spec lists as manual checks are covered by [quickstart.md](quickstart.md) §5 instead, and a traceability test fails on any id cited nowhere (T138). UI tests query by role and French label, not internals. Detox journeys find elements by French text and accessibility label, no `testID`, and name the scenarios they cover ([contracts/ui-validation.md](contracts/ui-validation.md)). | ✅ |
+| II | Tests as executable specification | Each acceptance scenario (US1-1 … US4-5) and each functional requirement (FR-001 … FR-040, with FR-030a and FR-039a) maps to at least one test named after the behavior, with the scenario or FR id in its name; the success criteria and requirements the spec lists as manual checks are covered by [quickstart.md](quickstart.md) §5 and §6 instead, and a traceability test fails on any id cited nowhere (T138). UI tests query by role and French label, not internals. Detox journeys find elements by French text and accessibility label, no `testID`, and name the scenarios they cover ([contracts/ui-validation.md](contracts/ui-validation.md)). | ✅ |
 | III | Fast, deterministic, isolated | Driven ports for IDs (no randomness), no clock port: the undo deadline reads `Date.now`, which Jest fake timers control, in-memory fakes, `node:sqlite` in-memory databases per test, Jest fake timers for the undo snackbar. No network in tests. The story test runs inside `yarn test` with no device. Detox journeys stay out of the unit suite (their own workspace and command), start each file on a fresh install, use no sleeps and no retries (R23). | ✅ |
 | IV | Simplicity (YAGNI) | No ORM, no FlashList, no Expo Router; each new dependency is justified in [research.md](research.md#new-dependencies-principle-iv), including Zustand for the application state, chosen by the maintainer for the whole app (R10, [002 research](../002-manage-articles/research.md) R1); no Zustand middleware ([002 research](../002-manage-articles/research.md#r1b-no-zustand-middleware) R1b). Ports are those required by Principle VI only. The Nix flake provides tools only (Node, Corepack, watchman), with no devenv or Devbox layer and no Android SDK in Nix (R21). Storybook and Detox are the maintainer's choice and justified in R22 and R23; no Storybook add-on, no visual regression service, no Detox on debug builds. | ✅ |
 | V | Single design system | React Native Paper (MD3) only; theme built from `design/material-theme.json` (light + dark) and checked by a test; shared components in `apps/mobile/src/adapters/ui/components/`; spacing tokens; ESLint bans color literals and inline styles. Storybook catalogs the shared module, so a new shared component is reviewed in its pull request through its stories, in light and dark (R22). | ✅ |
 | VI | Hexagonal architecture | In `apps/mobile/src/`: `domain` → `application` (use cases + ports) → `adapters` (sqlite, ui, error-reporting) + `composition` (wiring). The Zustand store is part of the UI adapter. dependency-cruiser test fails on any outward import, and on `zustand` imported outside `adapters/ui` ([research.md](research.md) R15). New rules: Storybook only in story files, `.rnstorybook/` and the story test; stories and testing helpers never imported by production code; `tests/e2e` imports no workspace (R22, R23). | ✅ |
 | VII | Remote source of truth, offline first | Local first and offline: every read and write goes to SQLite, no feature touches the network, an offline UI test runs the full scenario with `fetch` throwing, quickstart checks airplane mode on a device. **Not met**: no synchronization with the Pi server and no reconciliation rule (the spec excludes synchronization, FR-027); deferred to a dedicated sync feature (R19), justified in Complexity Tracking. Choices kept sync-compatible: device-generated UUIDs, ids never change, each change is one `UnitOfWork` transaction. | ⚠️ deviation |
-| VIII | Observability | `ErrorReporter` port; Sentry adapter with global handlers, offline cache, source maps through EAS Build, `sendDefaultPii: false`, content-free context, and every event filtered in `beforeSend` down to FR-030's fields, the error's own text removed ([research.md](research.md) R13); console reporter when no DSN; `RecordingErrorReporter` in tests. | ✅ |
+| VIII | Observability | `ErrorReporter` port; Sentry adapter with global handlers and native crash handling, an offline cache of 30 reports (FR-030a), source maps through EAS Build, `sendDefaultPii: false`, no breadcrumbs, content-free context, and every JavaScript event filtered in `beforeSend` down to FR-030's fields, the error's own text, the user and the device name removed, then dropped if the same failure was already sent since the app opened; sessions and app hang reports off ([research.md](research.md) R13); a root error boundary reports rendering failures (R13a); one fingerprint per kind of failure and email alerts on new and returning `production` issues (FR-030c); `production` and `preview` environments only, console reporter when no DSN; `RecordingErrorReporter` in tests. Pseudonymous identifier: only native crashes carry one, the SDK's random installation id, as FR-030 allows. | ✅ |
 | IX | Explicit screen states | One `ScreenState` union per data region, held in the store, rendered by shared `LoadingState` / `EmptyState` / `ErrorState`; each state tested ([contracts/ui-screens.md](contracts/ui-screens.md)) and has a required story, built through the real store ([contracts/ui-validation.md](contracts/ui-validation.md)). No synchronization status yet: no data is synchronized until the sync feature (R19), which adds it to every data screen. | ✅ (sync status deferred with VII) |
 | X | French interface, no i18n | French text only in `apps/mobile/src/adapters/ui/`; domain and use cases return tagged errors; seed names passed in from the UI adapter; tests assert French text; `Intl` formats quantities with a decimal comma. | ✅ |
 | XI | Single repository (monorepo) | Yarn 4 workspaces (pinned by `packageManager`, run through Corepack), root `package.json` with `"workspaces": ["apps/*", "packages/*"]`, one `yarn.lock`, one `yarn install --immutable`, one CI. Shared bases at the root: `tsconfig.base.json`, ESLint flat config, Prettier, dependency-cruiser. The app is `@mes-courses/mobile` in `apps/mobile/`. No shared package exists yet, so `packages/` is not created (Principle IV); dependency-cruiser already forbids relative imports across workspaces ([research.md](research.md) R15, R20). The e2e tests are the test-only `tests/e2e/` workspace (`@mes-courses/e2e-tests`), so `"workspaces"` gains `"tests/*"`; its Jest 29 stays local to it, in the same `yarn.lock` (R23). | ✅ |
@@ -133,6 +141,13 @@ justified. The design adds no layer, port or dependency beyond those above. Poin
   `StorageFull` kind of the existing `StorageError` (R12a), and a larger measurement seed (R11).
   Not reporting a full storage fits Principle VIII: it is an expected situation the user can
   fix, shown to them, not an error swallowed.
+- The observability clarifications add no port, layer or dependency: `setScreen` and
+  `crashNatively` (smoke test only) are new methods of the existing `ErrorReporter`; `AppErrorBoundary` and `CrashError` are UI adapter
+  components built on the shared `ErrorState`, and "Réessayer" reuses the startup restart
+  (R13a); the rest is `Sentry.init` options, two global tags, `eas.json` profiles and the
+  `beforeSend` filter with its once-per-opening set (R13). Native crashes are reported, so no
+  failure is silent. Their installation id is the pseudonymous identifier Principle VIII
+  allows; the spec accepts it for native crashes only (FR-030).
 - Nothing in the design blocks the sync feature: ids are device UUIDs that never change, each
   change is one `UnitOfWork` transaction (where a later outbox write can join it), and no read
   model assumes the device holds the only copy. The open questions for that feature (first-launch
@@ -283,6 +298,36 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
     SC-001 and SC-008 (R11), and the offline scenario and the accessibility pass cover the 12
     actions listed in the spec;
   - quickstart: new step 13 (power cut), the backup check becomes step 14.
+- **Observability clarifications (2026-10-06)**, to be reflected in the existing tasks:
+  - the Sentry adapter: `maxCacheItems: 30`, `enableNativeCrashHandling: true`,
+    `maxBreadcrumbs: 0`, app hang tracking and `enableAutoSessionTracking` off, the
+    environment from `EXPO_PUBLIC_APP_ENVIRONMENT` (`production` or `preview`, else the console
+    reporter), global tags `operation: 'uncaught'` and `screen` (kept up to date by
+    `setScreen`), and `beforeSend` removing `user` and the device name, then dropping a failure
+    already sent since the app opened, each asserted on the `Sentry.init` options or on a
+    filtered event (R13);
+  - `eas.json`: `cli.appVersionSource: remote`, `autoIncrement: true` and
+    `EXPO_PUBLIC_APP_ENVIRONMENT` on the `production` and `preview` profiles; the DSN defined
+    in the EAS `production` and `preview` environments only (R13);
+  - `ErrorReporter.setScreen`, in the port, `RecordingErrorReporter`, the console reporter and
+    the navigation container's route-change callback;
+  - `AppErrorBoundary` around the navigation and `CrashError` with "Réessayer" restarting like
+    `StartupError`, test-first in `App.test.tsx` with a screen that throws while rendering, and
+    the `Screens/Crash/Error` required story (R13a, FR-039a);
+  - the adapter sets each event's fingerprint to `type | code | operation | screen` (FR-030c);
+  - the README lists the Sentry alert setup (two rules on `production`, default rule deleted,
+    personal workflow notifications off) and quickstart §6 step 7 checks it once (FR-030c, R13);
+  - the traceability test's pattern already finds FR-030b and FR-030c; FR-030b is cited by the
+    Sentry adapter's tests, FR-030c and SC-010 by quickstart §6;
+  - quickstart §6 becomes the spec's manual check for error tracking (readable stack trace, no
+    identifier, a report raised offline arriving after a restart, a native test crash, nothing
+    sent from a development run); the smoke test also accepts `native`;
+  - the startup and crash retries still pass every failure to the reporter; the tests that
+    expected "a second report" assert a second `report` call, and only the adapter's tests
+    assert the drop (R13, R18a);
+  - the traceability test (T138) also collects FR-030a and FR-039a;
+  - the README tells the maintainer what to declare in the store privacy details if the app is
+    published (spec Assumptions, R13).
 - No task touches the network or the server: synchronization belongs to the sync feature (R19).
 - The Sentry project is in place (done by the maintainer). The Sentry DSN and build credential
   live in EAS environment variables, set by the maintainer, and are never committed.
