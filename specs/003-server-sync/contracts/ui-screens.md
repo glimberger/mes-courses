@@ -33,9 +33,28 @@ nothing to show (US4-1).
 | `connection = updateRequired` | update | "Mettez à jour l'application pour synchroniser." |
 
 - It is never shown in error colors for `waiting`: being offline is normal (US3-2).
-- Accessibility: it is a live region (`accessibilityLiveRegion="polite"`), so each change is
-  announced (US3-6, FR-023). It is ≥ 48 dp high when it has a button.
+- Accessibility (US3-6, US3-7, FR-023): it is **not** a live region. Only two transitions are
+  announced, through `AccessibilityInfo.announceForAccessibility`: into `failed` ("Échec de la
+  synchronisation") and back to `saved` after a failure ("Synchronisé"). The routine
+  "Synchronisation…" ↔ "Synchronisé" cycle and the waiting count are not announced; the bar's
+  label stays readable when focused. It is ≥ 48 dp high when it has a button.
+- `connection = disconnectedByServer` also covers a phone restored from a system backup, which
+  has no credential (FR-018b, [../research.md](../research.md) R12a).
 - Tapping the bar opens Settings.
+
+## Changes a pull makes to open screens (FR-020a, FR-008, FR-015, FR-023)
+
+| Situation | Behavior |
+|---|---|
+| A form that edits synced data is open (QuantityDialog, or EditArticle with its name and category) and a pull changes what it edits | The fields keep what the user typed; saving is a new change (merged on the server). If the entity was merged, the save goes to the survivor. |
+| The article it edits was deleted on another device | The form closes; snackbar "Cet article a été supprimé sur un autre appareil."; focus returns as when the form closes (001 FR-037) |
+| The item it edits was removed from the list on another device | The form closes; snackbar "Cet article a été retiré de la liste sur un autre appareil." |
+| "Annuler" is offered for an item or article whose article the pull deleted | The undo snackbar disappears and the offer ends; a tap racing it restores nothing and shows "Cet article a été supprimé sur un autre appareil." |
+| The current list was merged into another list | CurrentList shows the surviving list (its name, the items of both), with no snackbar (US2-10) |
+| A screen reader is on and the pull removes the row the user last activated | Focus moves to the next row, the previous one if none, or the empty state, as after a local removal; nothing is announced for the rows the pull changed (US3-7) |
+
+The two snackbars are rendered by 001's `NoticeSnackbar` and announced as it appears (001
+FR-038). See [../research.md](../research.md) R8a, R10a and R14.
 
 ## Settings (new screen)
 
@@ -102,7 +121,8 @@ in-memory `SyncServer` and `CredentialStore` fakes, never by hand.
 
 | Story id | Shows | Scenarios |
 |---|---|---|
-| `Components/SyncStatusBar/Saved`, `.../Waiting`, `.../Sending`, `.../Failed`, `.../DisconnectedByServer`, `.../UpdateRequired` | each row of the SyncStatusBar table; `Waiting` not in error colors | US3-2, US3-4, US4-10 |
+| `Components/SyncStatusBar/Saved`, `.../Waiting`, `.../Sending`, `.../Failed`, `.../DisconnectedByServer`, `.../UpdateRequired` | each row of the SyncStatusBar table; `Waiting` not in error colors; `DisconnectedByServer` also built from a connection with no credential (FR-018b) | US3-2, US3-4, US4-10 |
+| `Components/NoticeSnackbar/ArticleDeletedElsewhere`, `.../ItemRemovedElsewhere` | the two notices a pull can raise | FR-020a, US1-8 |
 | `Screens/CurrentList/WithSyncStatus` | the bar under the Appbar of a data screen | FR-020 |
 | `Screens/Settings/NotConnected` | the explanation and "Connecter à un serveur" | US4-1 |
 | `Screens/Settings/Connected` | server section and device list, "Cet appareil" marked | US3-5 |

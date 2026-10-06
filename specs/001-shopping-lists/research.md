@@ -432,8 +432,8 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
 - **Decision**: the device holds the only copy of the data until 003; losing it with the phone
   is an accepted risk (spec Assumptions, clarified 2026-10-06). The system backup stays on as
   a fallback: `app.config.ts` sets `android.allowBackup: true` explicitly (Expo's default,
-  written down so a later change is deliberate), with no backup rules that exclude the
-  database. Android Auto Backup then includes the expo-sqlite file (well under its 25 MB
+  written down so a later change is deliberate), and no backup rule excludes the
+  database (003 adds one that excludes only the secure storage holding the device credential). Android Auto Backup then includes the expo-sqlite file (well under its 25 MB
   limit), and on iOS the file lives in the app's Documents folder, which the iCloud device
   backup includes; quickstart step 13 checks both platforms before the first release. No
   encryption is added (no SQLCipher): the data is not sensitive, and the

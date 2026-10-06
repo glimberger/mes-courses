@@ -37,6 +37,9 @@
   sync? → A: It works on its restored copy but counts as not connected, because its device
   credential is not restored; it says in French that it must be connected again, and once
   paired again it sends its pending changes and full copy, merged by the usual rules.
+- Q: Must the device credential never come back from a backup, even onto the same phone?
+  → A: It is never restored onto another device; a phone restored onto its own hardware may
+  get it back and then syncs as the same device.
 - Q: When a device's current list is merged into a list with the same name, which list does it
   show? → A: Its current list silently becomes the list it was merged into, which now holds the
   items of both.
@@ -48,7 +51,8 @@
   sync changes the rows on screen? → A: Only "Échec de la synchronisation" and the return to
   "Synchronisé" after a failure are announced; the routine cycle, the waiting count and rows
   changed by a sync are not. Focus stays put; if its row is removed, it moves as after a
-  removal in 001.
+  removal in 001 (refined: the row last activated, since the focused element cannot be read on
+  React Native).
 - Q: While "Annuler" is offered for a removal on this device, what happens if a sync deletes that
   article on another device? → A: The undo offer ends when the deletion arrives and the snackbar
   disappears; if "Annuler" was just tapped, nothing is restored and a French message says the
@@ -141,7 +145,7 @@ offline (waiting), and with the server refusing changes (could not be sent, with
 4. **Given** the server refuses or fails to save changes several times in a row, **When** I look, **Then** the status says sync failed ("Échec de la synchronisation") with a "Réessayer" action, and the failure is reported to error tracking.
 5. **Given** the server is reachable, **When** I choose "Synchroniser maintenant", **Then** a sync starts at once.
 6. **Given** a screen reader is on, **When** sync fails, **Then** "Échec de la synchronisation" is announced in French, and the next "Synchronisé" is announced too; the routine change between "Synchronisation…" and "Synchronisé", and the waiting count, are not announced and stay readable in the status.
-7. **Given** a screen reader is on and focus is on the row "Pain", **When** a sync removes "Pain" from the list (removed on another device), **Then** focus moves to the next row, or the previous one if none, or the empty state, as after a removal in 001 (001 FR-037), and nothing is announced for the rows a sync changed.
+7. **Given** a screen reader is on and I last activated the row "Pain", **When** a sync removes "Pain" from the list (removed on another device), **Then** focus moves to the next row, or the previous one if none, or the empty state, as after a removal in 001 (001 FR-037), and nothing is announced for the rows a sync changed.
 
 ---
 
@@ -192,8 +196,10 @@ from another one and check it can no longer sync while it keeps working on its l
 - The server lost its data and was reinstalled empty: each device behaves as revoked (US4-10) until it is paired again; the first one repopulates the server, and the next ones merge their copies into it (FR-018a). Data that existed only on the lost server, with no device holding it, is lost.
 - A phone is restored from a system backup (Android backup or iCloud, 001 Assumptions): it opens
   on the restored local copy, older than the server's data, with the pending changes it held at
-  backup time. Its device credential is not restored, so it is not connected: it says so in
-  French and offers to connect again (FR-018b). Once paired again, the restored changes are
+  backup time. When restored onto another phone, its device credential is not restored, so it
+  is not connected: it says so in French and offers to connect again (FR-018b). When restored
+  onto its own hardware (iOS can bring the credential back there), it syncs at once as the
+  same device. Once paired again, the restored changes are
   merged by FR-009 to FR-014; changes made since on other devices are more recent, so they win.
 - A dialog or form is open (quantity, rename, category) when a sync changes what it edits: the
   form keeps what the user typed, and saving it is a new change, merged by FR-009 to FR-014
@@ -240,7 +246,9 @@ from another one and check it can no longer sync while it keeps working on its l
 - **FR-017**: A device connected to a server that already holds data MUST take that data, merging its own local data into it by FR-012, and MUST NOT create the default categories or "Ma liste" a second time.
 - **FR-018**: A device connected to an empty server MUST send all its local data to it.
 - **FR-018a**: When a device finds that the server no longer knows it (the server was reset or reinstalled), it MUST keep its local copy and its pending changes, show in French that it must be connected again, and, once paired again, send its full local copy, merged by FR-009 to FR-014 with what other re-paired devices already sent. The feature provides no server backup.
-- **FR-018b**: A device credential MUST NOT be restored from a system backup. A device whose
+- **FR-018b**: A device credential MUST never be restored onto another device from a system
+  backup; a phone restored onto its own hardware may get its own credential back, and then
+  syncs as the same device, its restored changes merged by FR-009 to FR-014. A device whose
   local copy says it was connected but that holds no credential (a phone restored from a
   backup) MUST keep its local copy and pending changes, show in French that it must be
   connected again, and, once paired again with a new pairing code, send its pending changes
@@ -263,7 +271,7 @@ from another one and check it can no longer sync while it keeps working on its l
 - **FR-021**: Users MUST be able to start a sync now and to retry after a failure.
 - **FR-022**: Repeated sync failures MUST be reported to error tracking without any list content or name (001 FR-030). Being offline or the server being unreachable MUST NOT be reported.
 - **FR-022a**: The server MUST report its own unexpected errors (failed writes, crashes, failed certificate renewal) to the same error tracking tool as the app, with its version and environment and without any list content, name or device name. Refused pairing attempts and refused unauthorized requests are expected events, not errors, and are not reported individually.
-- **FR-023**: All user-facing text MUST be in French. Screen readers MUST announce the status only when sync fails ("Échec de la synchronisation") and when it is back to "Synchronisé" after a failure; the routine change between sending and saved, the waiting count, and rows added, changed or removed by a sync MUST NOT be announced. A sync MUST NOT move screen reader focus, except when the focused row is removed: focus then moves as after a removal (001 FR-037).
+- **FR-023**: All user-facing text MUST be in French. Screen readers MUST announce the status only when sync fails ("Échec de la synchronisation") and when it is back to "Synchronisé" after a failure; the routine change between sending and saved, the waiting count, and rows added, changed or removed by a sync MUST NOT be announced. A sync MUST NOT move screen reader focus, except when it removes the row the user last activated: focus then moves as after a removal (001 FR-037). A row the user only moved to without activating it is left to the screen reader, which moves focus off a removed element itself.
 
 ### Key Entities
 

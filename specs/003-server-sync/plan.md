@@ -1,6 +1,6 @@
 # Implementation Plan: Server Synchronization
 
-**Branch**: `feat/003-server-sync` | **Date**: 2026-10-05 (amended 2026-10-06 for Storybook and Detox) | **Spec**: [spec.md](spec.md)
+**Branch**: `feat/003-server-sync` | **Date**: 2026-10-05 (amended 2026-10-06 for Storybook and Detox, then for the sync clarifications) | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/003-server-sync/spec.md`
 
@@ -132,7 +132,13 @@ resolved in research.
   is written, so 001's and 002's plans need a migration note (see Implementation notes).
 - The `present` flag exists only on the server and in payloads. Locally, items are still deleted
   rows, so 002 R4's reasons against soft deletes still hold for the device.
-- The device credential never touches SQLite, logs or error reports.
+- The device credential never touches SQLite, logs or error reports, and the secure storage
+  settings keep it out of system backups (research R12a).
+- The 2026-10-06 clarifications add no port, layer or dependency: `PulledRowsApplier.apply`
+  returns the `RemoteEffects` of a pull (R10a) and moves a merged current list (R8a);
+  `synchronize` treats a missing credential as `disconnectedByServer` (R12a); the status bar
+  announces only failure and recovery (R14). An iOS phone restored onto the same hardware gets
+  its own credential back, which FR-018b allows (R12a).
 
 ## Project Structure
 
@@ -254,6 +260,19 @@ on the Pi, never by CI.
   implemented, the tasks add `changes.record` to each with its tests kept green. Each of their
   plans gets one line under Complexity Tracking saying the Principle VII deviation is closed by
   003.
+- **Sync clarifications (2026-10-06)**, to be reflected in the tasks:
+  - `CredentialStore` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY` and `configureAndroidBackup: true`,
+    decryption failures read as `null`; `synchronize` and `getSyncInfo` give
+    `disconnectedByServer` for a URL without credential (R12a, FR-018b);
+  - `PulledRowsApplier` moves a merged current list to the survivor (R8a, US2-10) and returns
+    `RemoteEffects` (R10a);
+  - the sync slice keeps `redirects`, closes open forms on removals with the two notices, and
+    ends an undo offer on an article deleted elsewhere (R10a, FR-020a, FR-008, US1-8);
+  - `SyncStatusBar` without a live region, announcing only failure and recovery; the
+    CurrentList focus move when a pull removes the last activated row (R14, FR-023, US3-6,
+    US3-7);
+  - the two new `NoticeSnackbar` stories ([contracts/ui-screens.md](contracts/ui-screens.md)),
+    and quickstart steps 15 to 17.
 - **Prerequisite on the network side**: a full-stack IPv4 address on the Freebox, the domain's
   A record, and ports 80 and 443 forwarded. These are the maintainer's actions, listed in
   quickstart §3. They are not tasks for an agent, but the deployment task checks them with
