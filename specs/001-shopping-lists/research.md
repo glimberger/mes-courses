@@ -40,13 +40,24 @@ FR-030a, FR-039a).
   are derived from `surfaceContainerLowest..Highest`, as Material 3 defines surface
   containers. A unit test checks every role in the Paper theme against the JSON, so the file
   stays the single source of truth. The export's contrast variants (`light-medium-contrast`,
-  `dark-high-contrast`, ...) are mapped too. React Native has no cross-platform API to read the
-  system contrast setting, so they are not selected automatically in this feature.
+  `dark-high-contrast`, ...) are not mapped in this feature (clarified 2026-10-06): React Native
+  has no cross-platform API to read the system contrast setting, so nothing would select them,
+  and FR-036 already holds WCAG AA in the light and dark themes (Principle IV). They stay in the
+  JSON, which remains the single color source Principle V asks for, until a feature selects
+  them.
 - **Tokens beyond color**: typography uses Paper's MD3 type scale (`theme.fonts.*`), shapes use
   `theme.roundness`. Spacing is not defined by Paper, so the shared module defines spacing
   tokens on Material's 4 dp grid (`spacing.xs = 4` … `spacing.xl = 32`). ESLint's
   `react-native/no-color-literals` and `react-native/no-inline-styles` rules block hard-coded
   colors and ad hoc styles in screens.
+- **What a screen may style** (Principle V's "one-off style", clarified 2026-10-06): a file in
+  `apps/mobile/src/adapters/ui/screens/` may call `StyleSheet.create` for layout only: flex
+  (`flex`, `flexDirection`, `flexGrow`, `flexShrink`, `flexWrap`), alignment (`alignItems`,
+  `alignSelf`, `justifyContent`), position, and `margin*`, `padding*` and `gap` whose value
+  is a spacing token (`spacing.*`). Every other property (colors, fonts, text, borders, radius,
+  shadow, elevation, opacity, sizes) and every number literal other than `0` and the flex
+  factors is refused by an ESLint `no-restricted-syntax` rule scoped to `screens/**`. Anything
+  visual a screen needs is a shared component (Principle V), styled from theme tokens.
 - **Alternatives considered**: Tamagui / NativeWind (not Material 3); hand-written MD3
   components (rebuilds what Paper already provides, against Principle IV).
 
@@ -386,9 +397,12 @@ FR-030a, FR-039a).
   reporter, and the adapter's tests assert the drop.
 - **Expected situations** (FR-030, clarified 2026-10-06): exactly the three the spec lists, each
   already handled without a report: `StorageFull` (R12a), `DataFromNewerVersion` (R18c), and the
-  `Result` errors that use cases return for refused input (`NameEmpty`, `NameTooLong`,
-  `NameAlreadyUsed` and the `QuantityError` union), which the store returns to the form without
-  calling `report` (T049). Anything thrown is unexpected and reported. For a JavaScript error,
+  `Result` errors that use cases return for refused input (`NameRequired`, `NameTooLong`,
+  `NameAlreadyUsed` and the `QuantityError` union, plus `AlreadyOnList` from `addArticleToList`,
+  which US2-8 shows as a choice), which the store returns to the form without calling `report` (T049). Any other
+  `Result` error (a missing record or the wrong state) and anything thrown is unexpected and
+  reported; the store reports such a result as an `UnexpectedResult` error whose code is the
+  result's tag ([contracts/driving-ports.md](contracts/driving-ports.md#conventions)). For a JavaScript error,
   the error type is its `name` and the error code its `code` property when it has one (the
   SQLite result code for `StorageError`), and no code otherwise.
 - **Delivery within 1 minute** (SC-010, clarified 2026-10-06): with the network on, the SDK sends
@@ -505,7 +519,26 @@ FR-030a, FR-039a).
     app workspace (`apps/*`) imports another app workspace (Principle XI);
   - `apps/mobile/src/domain/**` imports anything outside `apps/mobile/src/domain/` (including any npm package);
   - `apps/mobile/src/application/**` imports anything other than `apps/mobile/src/domain/` and `apps/mobile/src/application/`;
-  - anything outside `apps/mobile/src/adapters/**` and `apps/mobile/src/composition/**` imports from `apps/mobile/src/adapters/**`;
+  - in both rules above, an npm package is refused even for a type-only import (`import type`).
+    This is stricter than Principle VI's "library with side effects" on purpose: the project
+    then never has to judge whether a library has side effects, and nothing in 001 needs one.
+    The only exception, added by [003](../003-server-sync/research.md) for `@mes-courses/sync-core`,
+    is a shared workspace package listed as pure in `.dependency-cruiser.cjs`: no framework, no
+    side effects, and importing only other pure packages, which its own rule checks
+    (Principle XI). No shared package exists in 001, so the list starts empty;
+  - anything outside `apps/mobile/src/adapters/**`, `apps/mobile/src/composition/**`,
+    `apps/mobile/App.tsx` and the adapter test helpers in `apps/mobile/test/` imports from
+    `apps/mobile/src/adapters/**`. `apps/mobile/test/sqlite/` implements the SQLite adapter's
+    `SqlDatabase` for its tests; the rule that production code never imports a testing helper
+    keeps it out of the app. `App.tsx`, the Expo entry,
+    is part of the composition root: it builds the use cases and renders the UI adapter;
+  - a file in one adapter (`apps/mobile/src/adapters/<name>/**`) imports from another adapter
+    (`sqlite`, `ui`, `error-reporting`, `id`): adapters never import each other, not even types.
+    An error the UI adapter must recognize is declared in `apps/mobile/src/application/ports/`
+    (`StorageFull`, R12a; `DataFromNewerVersion`, R18c);
+  - anything other than `apps/mobile/App.tsx`, `apps/mobile/App.test.tsx` and
+    `apps/mobile/src/composition/**` imports from `apps/mobile/src/composition/**`, so the
+    composition root stays the only code that knows every adapter;
   - anything outside `apps/mobile/src/adapters/ui/**` imports `zustand` (R10);
   - anything imports `zustand/middleware` or `immer` (R10, [002 research](../002-manage-articles/research.md#r1b-no-zustand-middleware) R1b);
   - `@storybook/*` is imported outside story files, `.rnstorybook/` and the story test, or a
@@ -589,7 +622,9 @@ FR-030a, FR-039a).
     are still there. A failed migration rolls back and shows the startup error (FR-039, R18a).
   - *Older versions*: `migrate` first reads `PRAGMA user_version`. When it is greater than the
     highest migration the app knows, it runs nothing and throws `DataFromNewerVersion`, before
-    any read or write. `App.tsx` shows the full-screen `UpdateRequired` view: "Cette version de
+    any read or write. Like `StorageFull` (R12a), the error is declared with the driven ports
+    (`apps/mobile/src/application/ports/data-from-newer-version.ts`), since adapters never
+    import each other (R15). `App.tsx` shows the full-screen `UpdateRequired` view: "Cette version de
     l'application est trop ancienne pour vos données. Mettez-la à jour.", with no action (a
     retry cannot help) and no report (FR-040: an expected situation). The database is closed
     untouched.
