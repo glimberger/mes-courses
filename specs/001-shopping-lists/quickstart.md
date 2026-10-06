@@ -89,17 +89,19 @@ A development build is used (not Expo Go) because of the Sentry native module.
 
 Run on a fresh install (uninstall first). Each step names the spec scenarios it covers. Steps
 1, 5, 6, 7 and 8, and the happy path of step 2, are also automated by the Detox journeys; keep them for a manual pass before a
-release. Steps 4, 10, 11 and 12 need a person.
+release. Steps 4, 10, 11, 12 and 13 need a person.
 
 1. **First launch** (US3-1, US4-1, US1-10): the app opens on "Ma liste" with the empty state
    "Votre liste est vide". Open "Ajouter": the 11 default categories appear in the spec's order,
    each empty.
-2. **Create and add** (US2-7, US2-2, US2-11, US2-12, US2-13): create "Lait" in Crèmerie with
-   "2" "L"; try an empty name, quantity "0", "abc", and a unit with no quantity, and check the
-   French messages. Create "Farine" with "1.5" "kg" and check it shows "1,5 kg".
+2. **Create and add** (US2-7, US2-2, US2-11, US2-12, US2-13, FR-016, FR-017): create "Lait" in
+   Crèmerie with "2" "L"; try an empty name, quantity "0", "abc", "1 000", "+2", "1e3",
+   "1,2345", "10000", and a unit with no quantity, and check the French messages. Create
+   "Farine" with "1.50" "kg" and check it shows "1,5 kg".
 3. **Search and duplicates** (US2-10, US2-8, US2-9, US2-14): create "Pommes" and
    "Pommes de terre"; search "pom" and "POM"; tap "Lait", check "Déjà dans la liste"; try to
-   create " lait "; search "xyz" and check the "no match" state. Count the gestures (SC-003):
+   create " lait " and "Pommes  de  terre" (double spaces): each is refused as already
+   existing (FR-021); search "xyz" and check the "no match" state. Count the gestures (SC-003):
    adding "Pommes" by browsing takes at most 3 taps, and by searching at most 3 taps and 3
    letters, tapping the search field and "Ajouter" included.
 4. **Tick in airplane mode** (US1-2 to US1-7, US1-5, SC-002, SC-006): turn on airplane mode, go
@@ -132,6 +134,13 @@ release. Steps 4, 10, 11 and 12 need a person.
     55 frames per second or more, and each tick shown at once.
 12. **Start time** (SC-001): on a release build (`yarn expo run:android --variant release`, from `apps/mobile/`),
     from tapping the icon to a tickable list takes under 2 seconds.
+
+13. **System backup** (Assumptions, [research.md](research.md) R18b), once before the first
+    release: on Android, with lists created, run `adb shell bmgr backupnow <package>` (the
+    `android.package` of `app.config.ts`), uninstall, reinstall from the same build and
+    check the lists come back. On iOS, back up the phone (Finder or iCloud), restore it and
+    check the lists come back. The startup error state (FR-039) cannot be caused by hand; its
+    story and `App.test.tsx` cover it.
 
 Steps 4, 11 and 12 (SC-001, SC-002, SC-008) are run on the two reference phones of the spec:
 an entry-level Android phone about five years old, and the maintainer's iPhone.

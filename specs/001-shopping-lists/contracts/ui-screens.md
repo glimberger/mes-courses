@@ -13,6 +13,18 @@ store (Zustand, [research.md](../research.md) R10,
 [002 ui-state contract](../../002-manage-articles/contracts/ui-state.md)); snackbars are rendered
 once at the app root from the store.
 
+## App startup (FR-039)
+
+| State | Shown |
+|---|---|
+| starting | `LoadingState` while the composition root opens the database, migrates and seeds |
+| failed | Full-screen `StartupError`: "L'application n'a pas pu démarrer." + "Réessayer"; error reported with `{ operation: 'startup' }` |
+| ready | Navigation, on CurrentList |
+
+"Réessayer" runs the composition root again from the start; each failure is reported again.
+Nothing is deleted or reset to recover ([research.md](../research.md) R18a). `StartupError` is
+rendered outside the store and navigation, which do not exist yet when it shows.
+
 ## Navigation
 
 ```text
@@ -35,10 +47,10 @@ CreateCategoryDialog.
 | `ListItemRow` | Tappable row: checkbox, name, quantity, trailing actions; ticked style = check mark + struck-through text + muted color (`onSurfaceVariant`, still WCAG AA, FR-036); min height 48 dp; text wraps. |
 | `ArticleRow` | Catalog row with optional "Déjà dans la liste" chip. |
 | `QuantityFields` | Two `TextInput`s ("Quantité", "Unité") with `HelperText` errors; numeric keyboard with decimal separator. |
-| `NameField` | `TextInput` with 60-character limit and `HelperText` error. |
+| `NameField` | `TextInput` with a `HelperText` error. No native `maxLength` (it counts UTF-16 units, not characters): the 60-character limit is the `NameTooLong` error ([research.md](../research.md) R6). |
 | `ScreenStateView` | Renders a `ScreenState` with the three components above. |
 | `UndoSnackbar`, `NoticeSnackbar` | App-wide snackbars rendered from the store's `pendingUndo` and `notice`. |
-| `formatQuantity(q)` | `Intl.NumberFormat('fr-FR')` amount + optional unit, for example "1,5 kg". |
+| `formatQuantity(q)` | `Intl.NumberFormat('fr-FR', { maximumFractionDigits: 3, useGrouping: false })` amount + optional unit, for example "1,5 kg"; no trailing zeros, no digit grouping, so the QuantityDialog prefill parses back unchanged (FR-017). |
 
 ## CurrentList
 
@@ -98,7 +110,9 @@ Title = article name. `QuantityFields`. Field errors (FR-016):
 
 | Domain error | Text |
 |---|---|
-| `AmountNotANumber`, `AmountNotPositive` | "La quantité doit être un nombre positif." |
+| `AmountNotANumber`, `AmountNotPositive` | "La quantité doit être un nombre positif écrit en chiffres, par exemple 2 ou 1,5." |
+| `AmountTooPrecise` | "La quantité ne peut pas avoir plus de 3 décimales." |
+| `AmountTooLarge` | "La quantité ne peut pas dépasser 9999." |
 | `UnitWithoutAmount` | "Indiquez une quantité pour cette unité." |
 | `UnitTooLong` | "L'unité ne peut pas dépasser 15 caractères." |
 

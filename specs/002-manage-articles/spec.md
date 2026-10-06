@@ -156,8 +156,9 @@ under the new category heading on the list and in the catalog.
 - **FR-001**: Users MUST be able to rename an article from the catalog (browsing by category
   or search results).
 - **FR-002**: A new name MUST follow the naming rules of 001-shopping-lists: non-blank,
-  trimmed, at most 60 characters, unique in the catalog compared case-insensitively. Changing
-  only the case or the surrounding spaces of the article's own name MUST be accepted.
+  cleaned and compared as in 001's FR-021 and FR-022, at most 60 characters, unique in the
+  catalog. Changing only the case, the spaces or the accent encoding of the article's own name
+  MUST be accepted.
 - **FR-003**: A rename MUST apply everywhere the article appears (catalog, search, every
   list), keeping each list item's quantity and ticked state.
 

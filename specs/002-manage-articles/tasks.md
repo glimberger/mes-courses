@@ -108,9 +108,9 @@ ticked states unchanged.
 ### Tests for User Story 1 ⚠️ (write first, confirm they fail)
 
 - [ ] T010 [US1] Write the failing journey `tests/e2e/journeys/rename-article.e2e.ts` ([contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-end-journeys)): on a fresh install, create "Lait", add it to "Ma liste" with "2" "L" and tick it, create "Barbecue" and add "Lait" there; from the catalog, "Plus d'actions pour « Lait »" → "Modifier", rename it "Lait demi-écrémé", save; both lists show the new name with the ticked state and quantity kept; `device.terminateApp()` then `device.launchApp({ newInstance: true })`: still renamed (002 US1-1, US1-2, SC-005). Run `yarn test:e2e:android` and confirm it fails on the missing menu.
-- [ ] T011 [P] [US1] Write failing domain tests for the edit rule in `apps/mobile/src/domain/article.test.ts`. The name follows 001's rules: "trimmed, non-blank, ≤ 60 characters". Uniqueness is "by `normalizedName` among **other** articles":
+- [ ] T011 [P] [US1] Write failing domain tests for the edit rule in `apps/mobile/src/domain/article.test.ts`. The name follows 001's rules: "cleaned, non-blank, ≤ 60 characters". Uniqueness is "by `normalizedName` among **other** articles":
   - a name used by another article → `NameAlreadyUsed` carrying that article (002 US1-4: " beurre " while "Beurre" exists);
-  - the article's own name with a different case or spaces is accepted (002 US1-5: "Lait" → "lait");
+  - the article's own name with a different case or spaces is accepted (002 US1-5: "Lait" → "lait", and "Pommes de terre" → "Pommes  de terre");
   - `NameRequired` / `NameTooLong` (002 US1-6).
 - [ ] T012 [P] [US1] Write failing use case tests in `apps/mobile/src/application/use-cases/edit-article.test.ts`, on 001's fakes:
   - 002 US1-1: the catalog shows the new name and not the old one;
@@ -119,7 +119,7 @@ ticked states unchanged.
   - 002 US1-4 / US1-5 / US1-6: as in T011, and on any error nothing is written;
   - 002 US1-8: the item moves to its new alphabetical place in its category;
   - `ArticleNotFound`;
-  - the name is stored as typed after trimming.
+  - the name is stored cleaned: "  Lait   demi-écrémé " → "Lait demi-écrémé".
 - [ ] T013 [P] [US1] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.edit-article.test.ts`:
   - `editArticle(articleId, { name, categoryId })` clears `pendingUndo` first;
   - it returns the use case `Result` unchanged and does not report business errors;

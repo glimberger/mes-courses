@@ -12,14 +12,20 @@ text appears only in the UI adapter (Principle X).
 
 | Rule | Source | Domain error |
 |---|---|---|
-| Trimmed before use and storage | FR-022 | – |
-| Not empty after trimming | FR-022, US2-11, US3-6, US4-4 | `NameRequired` |
-| At most 60 characters after trimming | FR-022 | `NameTooLong` |
+| Cleaned before use and storage: NFC, trimmed, inner runs of white space reduced to one space | FR-021, FR-022 | – |
+| Not empty after cleaning | FR-022, US2-11, US3-6, US4-4 | `NameRequired` |
+| At most 60 characters after cleaning, counted in Unicode code points | FR-022 | `NameTooLong` |
 | Unique within its kind, comparing `normalizedName` | FR-021, FR-024 | `NameAlreadyUsed` (carries the existing entity) |
 
-- `normalizedName(name) = name.trim().toLocaleLowerCase('fr')` (accents kept).
+- `cleanName(text) = text.normalize('NFC').trim().replace(/\s+/gu, ' ')`.
+- `normalizedName(name) = cleanName(name).toLocaleLowerCase('fr')`: case, outer and repeated
+  inner spaces, and composed or decomposed accents are ignored; accents themselves are kept, so
+  "Pâte" ≠ "Pâté" ([research.md](research.md) R6).
 - `searchForm(text) = normalizedName(text)` without diacritics (`NFD`, combining marks removed).
-- The name is stored as typed after trimming ("Houmous"); `normalizedName` is stored next to it.
+- The name is stored cleaned ("Houmous"; "Pommes  de terre" is stored "Pommes de terre");
+  `normalizedName` is stored next to it.
+- The length is counted as `[...name].length`, the unit SQLite's `length()` counts, so the
+  domain rule and the `CHECK` constraint agree.
 
 ### Quantity (value object)
 
@@ -29,14 +35,18 @@ Quantity = { amount: number; unit: string | null }
 
 | Rule | Source | Domain error |
 |---|---|---|
-| `amount` is a finite number; `,` or `.` accepted as decimal separator when parsing | FR-014, FR-017, edge case | `AmountNotANumber` |
-| `amount > 0` | FR-016, US2-12 | `AmountNotPositive` |
+| Amount text is digits with at most one `,` or `.` decimal separator, digits on both sides (`^-?\d+([.,]\d+)?$`); spaces, `+`, exponents and other text refused | FR-014, FR-016, FR-017, edge case | `AmountNotANumber` |
+| `amount > 0` (a leading `-` or zero) | FR-016, US2-12 | `AmountNotPositive` |
+| At most 3 digits after the separator, as typed | FR-016 | `AmountTooPrecise` |
+| `amount <= 9999` | FR-016 | `AmountTooLarge` |
 | `unit` trimmed; empty unit becomes `null` | FR-014 | – |
 | A unit requires an amount | FR-016, US2-13 | `UnitWithoutAmount` |
 | `unit` at most 15 characters | FR-022 | `UnitTooLong` |
 
 `parseQuantity(amountText, unitText)` returns `null` (no quantity) when both texts are blank,
-a `Quantity`, or one of the errors above. Formatting ("1,5 kg") is done by the UI adapter.
+a `Quantity`, or the first error above, in table order. Formatting ("1,5 kg") is done by the UI
+adapter: decimal comma, no trailing zeros ("1,50" → "1,5", "2,0" → "2"), no digit grouping
+([research.md](research.md) R7).
 
 ## Entities
 
@@ -72,6 +82,9 @@ No quantity (FR-013). The catalog is the set of all articles; it starts empty.
 Lists are never deleted in this feature, so at least one always exists.
 
 ### ListItem
+
+Items are created, changed and removed only on the current list (FR-008); the use cases take
+a `listId`, and the UI adapter always passes the current list's id.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -177,7 +190,7 @@ CREATE TABLE list_item (
   list_id         TEXT NOT NULL REFERENCES shopping_list(id),
   article_id      TEXT NOT NULL REFERENCES article(id),
   in_cart         INTEGER NOT NULL DEFAULT 0 CHECK (in_cart IN (0, 1)),
-  quantity_amount REAL CHECK (quantity_amount IS NULL OR quantity_amount > 0),
+  quantity_amount REAL CHECK (quantity_amount IS NULL OR (quantity_amount > 0 AND quantity_amount <= 9999)),
   quantity_unit   TEXT CHECK (quantity_unit IS NULL OR length(quantity_unit) BETWEEN 1 AND 15),
   PRIMARY KEY (list_id, article_id),
   CHECK (quantity_unit IS NULL OR quantity_amount IS NOT NULL)
@@ -192,7 +205,9 @@ CREATE TABLE app_state (
 ```
 
 - `PRAGMA user_version` records the applied migration number; migrations run in one transaction at
-  startup before `initializeStore`.
+  startup before `initializeStore`. A failed migration rolls back and leaves the earlier schema
+  and data untouched; the database file is never deleted or recreated to recover (FR-039,
+  [research.md](research.md) R18a).
 - `length()` counts characters, matching the domain's 60 / 15 limits. The domain validates first;
   the constraints are the safety net, and a constraint failure is an unexpected error (reported).
 - The `app_state` single row enforces "exactly one current list" (FR-002).

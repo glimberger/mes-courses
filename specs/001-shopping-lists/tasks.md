@@ -56,7 +56,8 @@ next to the component they show as `*.stories.tsx`; Storybook's config is in
 - **Every write** runs inside `UnitOfWork.run` and is committed before its promise resolves
   (FR-028).
 - **Stories** get their data from `createStoryStore` (real use cases on fakes), never from a
-  hand-built `ScreenState`; their text is French, their titles English
+  hand-built `ScreenState`. The one exception is `Screens/Startup/Error`, which renders before
+  any store exists (T062). Their text is French, their titles English
   ([research.md](research.md) R22).
 - **Journeys** start from a fresh install, find elements by French text and accessibility label
   (no `testID`), use no `sleep` and no retries, and each production fix they force starts with its
@@ -73,7 +74,7 @@ quality gate, Storybook, the Detox workspace and CI in place before any applicat
 - [ ] T002 Add `"engines": { "node": ">=24" }` in the root `package.json` (the Node version itself comes from `flake.lock`; there is no `.nvmrc`).
 - [ ] T003 Extend `.gitignore` with `node_modules/`, `.expo/`, `dist/`, `ios/`, `android/`, `*.jks`, `.env*` and `coverage/`, as patterns that match in any workspace, plus Yarn's entries: `.yarn/*` with `!.yarn/patches`, `!.yarn/plugins`, `!.yarn/releases`, `!.yarn/sdks`, `!.yarn/versions`, `.pnp.*`, and `.direnv/` for direnv. Storybook's generated file and Detox's artifacts are added by the tasks that create them.
 - [ ] T004 Create `.talismanrc` with two `fileignoreconfig` entries, both with `ignore_detectors: [filecontent]`: `flake.lock` with the comment and exact entry required by the workspace `AGENTS.md`, and `yarn.lock` with a comment saying Yarn lockfiles hold package checksums, not secrets. Do this before the first commit that contains either lockfile.
-- [ ] T005 Install the runtime dependencies listed in [research.md](research.md#new-dependencies-principle-iv) into the app workspace, running `yarn expo install` from `apps/mobile/` for Expo-managed versions: `react-native-paper`, `react-native-safe-area-context`, `@expo/vector-icons`, `@react-navigation/native`, `@react-navigation/native-stack`, `react-native-screens`, `zustand`, `expo-sqlite`, `expo-crypto`, `@sentry/react-native`. Register the `expo-sqlite` and `@sentry/react-native/expo` config plugins in `apps/mobile/app.config.ts`.
+- [ ] T005 Install the runtime dependencies listed in [research.md](research.md#new-dependencies-principle-iv) into the app workspace, running `yarn expo install` from `apps/mobile/` for Expo-managed versions: `react-native-paper`, `react-native-safe-area-context`, `@expo/vector-icons`, `@react-navigation/native`, `@react-navigation/native-stack`, `react-native-screens`, `zustand`, `expo-sqlite`, `expo-crypto`, `@sentry/react-native`. Register the `expo-sqlite` and `@sentry/react-native/expo` config plugins in `apps/mobile/app.config.ts`, and set `android.allowBackup: true` there explicitly, with no backup rules excluding the database, so the system backup keeps the data ([research.md](research.md) R18b).
 - [ ] T006 [P] Configure Jest 30 with the `jest-expo` preset and React Native Testing Library in `apps/mobile/jest.config.js` and `apps/mobile/package.json` (scripts `test`, `test:watch`). Add the root script `test` (`yarn workspaces foreach --all --exclude mes-courses run test`). Add a trivial green test in `apps/mobile/src/smoke.test.ts` to prove the runner works, then delete it once the first real test exists.
 - [ ] T007 [P] Configure ESLint 9 flat config in the root `eslint.config.mjs`: `typescript-eslint` strict and `eslint-config-prettier` for every workspace, plus `eslint-config-expo` and `eslint-plugin-react-native` (with `react-native/no-color-literals` and `react-native/no-inline-styles` as errors) scoped to `apps/mobile/**`. Add Prettier 3 in the root `.prettierrc`, the root scripts `lint`, `format` and `format:check`, and `typecheck` (`tsc --noEmit`) in `apps/mobile/package.json` with a root `typecheck` running it in every workspace ([research.md](research.md) R16).
 - [ ] T008 [P] Configure dependency-cruiser in the root `.dependency-cruiser.cjs` with the rules of [research.md](research.md) R15:
@@ -147,21 +148,25 @@ story depends on them.
 - [ ] T018 [P] Write failing tests for `Result` helpers (`ok`, `err`, type narrowing on `ok`) in `apps/mobile/src/domain/result.test.ts`.
 - [ ] T019 [P] Implement `type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }` with `ok()` / `err()` in `apps/mobile/src/domain/result.ts` to turn T018 green.
 - [ ] T020 [P] Write failing tests for name rules in `apps/mobile/src/domain/name.test.ts`, per [data-model.md](data-model.md#name-articles-categories-lists):
-  - `validateName` trims and returns the trimmed name;
+  - `cleanName(text) = text.normalize('NFC').trim().replace(/\s+/gu, ' ')`: "  Pommes \t de   terre " → "Pommes de terre", and "e" followed by U+0301 (combining acute accent) becomes the single character "é" (FR-021, FR-022);
+  - `validateName` returns the clean name;
   - `NameRequired` for empty or blank text (US2-11, US3-6, US4-4);
-  - `NameTooLong` above "At most 60 characters after trimming", and 60 characters accepted;
-  - `normalizedName(name) = name.trim().toLocaleLowerCase('fr')` with accents kept, so "Pâte" ≠ "Pâté";
+  - `NameTooLong` above "At most 60 characters after cleaning, counted in Unicode code points", and 60 characters accepted; the length is `[...name].length`, so 60 emoji are accepted (120 UTF-16 units) and 30 decomposed "é" count as 30 after cleaning;
+  - `normalizedName(name) = cleanName(name).toLocaleLowerCase('fr')` with accents kept, so "Pâte" ≠ "Pâté", while " beurre ", "BEURRE", "Pommes  de terre" and a decomposed "Crème" each equal the normalized form of "Beurre", "Pommes de terre" and "Crème";
   - `searchForm` removes diacritics (`NFD`, combining marks removed), so "Épicerie" → "epicerie".
-- [ ] T021 Implement `validateName`, `normalizedName`, `searchForm` and the `NameError` union (`NameRequired | NameTooLong`) in `apps/mobile/src/domain/name.ts` to turn T020 green.
+- [ ] T021 Implement `cleanName`, `validateName`, `normalizedName`, `searchForm` and the `NameError` union (`NameRequired | NameTooLong`) in `apps/mobile/src/domain/name.ts` to turn T020 green.
 - [ ] T022 [P] Write failing tests for `parseQuantity(amountText, unitText)` in `apps/mobile/src/domain/quantity.test.ts`, per [data-model.md](data-model.md#quantity-value-object):
   - both blank → `null` (no quantity);
-  - "1,5" and "1.5" → amount 1.5;
+  - "1,5" and "1.5" → amount 1.5; "6", "0,125" and "9999" accepted;
   - unit trimmed, and an empty unit becomes `null`;
-  - "abc" → `AmountNotANumber`;
-  - "0" and "-2" → `AmountNotPositive` (US2-12);
+  - the amount text must match `^-?\d+([.,]\d+)?$`: "abc", "1 000", "+2", "1e3", "1,5,2", ",5" and "1," → `AmountNotANumber` (FR-016);
+  - "0", "0,0" and "-2" → `AmountNotPositive` (US2-12);
+  - more than 3 digits after the separator, as typed: "1,2345" and "1,5000" → `AmountTooPrecise`;
+  - above 9 999: "10000" and "9999,5" → `AmountTooLarge`;
+  - errors come in the order of [data-model.md](data-model.md#quantity-value-object): "-1,2345" → `AmountNotPositive`;
   - unit with no amount → `UnitWithoutAmount` (US2-13);
   - unit above "at most 15 characters" → `UnitTooLong`.
-- [ ] T023 Implement the `Quantity` value object `{ amount: number; unit: string | null }`, `parseQuantity` and the `QuantityError` union in `apps/mobile/src/domain/quantity.ts` to turn T022 green.
+- [ ] T023 Implement the `Quantity` value object `{ amount: number; unit: string | null }`, `parseQuantity` and the `QuantityError` union (`AmountNotANumber | AmountNotPositive | AmountTooPrecise | AmountTooLarge | UnitWithoutAmount | UnitTooLong`) in `apps/mobile/src/domain/quantity.ts` to turn T022 green.
 - [ ] T024 [P] Define the entity types and branded ids in `apps/mobile/src/domain/category.ts` (`Category { id, name, position }`), `apps/mobile/src/domain/article.ts` (`Article { id, name, categoryId }`), `apps/mobile/src/domain/shopping-list.ts` (`ShoppingList { id, name }`) and `apps/mobile/src/domain/list-item.ts` (`ListItem { listId, articleId, inCart, quantity: Quantity | null }`). They are types only, with no behavior and so no test yet; behavior arrives test-first in the story phases.
 
 ### Ports and test doubles
@@ -184,9 +189,9 @@ story depends on them.
 - [ ] T031 Write failing migration tests in `apps/mobile/src/adapters/sqlite/migrations.test.ts`:
   - migration 1 creates the tables `category`, `article`, `shopping_list`, `list_item` and `app_state`, and the index `list_item_article`, exactly as in [data-model.md](data-model.md#sqlite-schema-migration-1);
   - `PRAGMA user_version` becomes 1, and running the migrations again is a no-op;
-  - the migration runs in one transaction;
+  - the migration runs in one transaction: a migration that throws (a test migration 2 that fails halfway) leaves `user_version` at 1 and the rows already stored unchanged, and nothing deletes or recreates the database (FR-039);
   - foreign constraints are enforced on open;
-  - the constraints reject a 61-character name, a duplicate `normalized_name`, `quantity_amount <= 0`, a unit without an amount, and a second `app_state` row.
+  - the constraints reject a 61-character name, a duplicate `normalized_name`, `quantity_amount <= 0`, `quantity_amount > 9999`, a unit without an amount, and a second `app_state` row.
 - [ ] T032 Implement `migrate(db)` and migration 1 in `apps/mobile/src/adapters/sqlite/migrations.ts` to turn T031 green.
 - [ ] T033 Write `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`, which runs every T026 suite against the SQLite repositories on a migrated `node:sqlite` database. Confirm it fails.
 - [ ] T034 Implement the SQLite repositories in `apps/mobile/src/adapters/sqlite/`: `category-repository.ts`, `article-repository.ts`, `shopping-list-repository.ts`, `list-item-repository.ts` (`quantity_amount` / `quantity_unit` ↔ `Quantity | null`, `in_cart` 0/1 ↔ boolean) and `app-state-repository.ts`. Implement `SqliteUnitOfWork` (`withTransactionAsync`) in `apps/mobile/src/adapters/sqlite/unit-of-work.ts`. All of them turn T033 green.
@@ -225,8 +230,8 @@ story depends on them.
   - `ErrorState` shows its message and a "Réessayer" button that calls `onRetry`;
   - `ScreenStateView` renders exactly one of the three, or the success renderer, for each `ScreenState` status.
 - [ ] T044 [P] Implement `LoadingState.tsx`, `EmptyState.tsx`, `ErrorState.tsx` and `ScreenStateView.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T043 green.
-- [ ] T045 [P] Write failing tests for `formatQuantity` in `apps/mobile/src/adapters/ui/components/format-quantity.test.ts`: `{1.5, "kg"}` → "1,5 kg", `{6, null}` → "6", `{2, "L"}` → "2 L".
-- [ ] T046 [P] Implement `formatQuantity` with `Intl.NumberFormat('fr-FR')` in `apps/mobile/src/adapters/ui/components/format-quantity.ts` to turn T045 green.
+- [ ] T045 [P] Write failing tests for `formatQuantity` in `apps/mobile/src/adapters/ui/components/format-quantity.test.ts`: `{1.5, "kg"}` → "1,5 kg", `{6, null}` → "6", `{2, "L"}` → "2 L", `{0.125, "kg"}` → "0,125 kg", `{9999, null}` → "9999" (no digit grouping), and the output of `{1.5}` parses back through `parseQuantity` to 1.5 (FR-017).
+- [ ] T046 [P] Implement `formatQuantity` with `Intl.NumberFormat('fr-FR', { maximumFractionDigits: 3, useGrouping: false })` in `apps/mobile/src/adapters/ui/components/format-quantity.ts` to turn T045 green.
 
 ### Application store core ([002 ui-state contract](../002-manage-articles/contracts/ui-state.md))
 
@@ -253,18 +258,18 @@ story depends on them.
   - it builds fresh in-memory fakes holding `seed`, the real use cases, a `RecordingErrorReporter` and `createAppStore`, and returns the store;
   - a use case named in `pending` returns a promise that never settles, and one named in `failing` rejects with an `Error`; the others are the real ones (test with `initializeStore`, the only use case so far);
   - `prepare` runs after the store is built and may call store actions only (for example a failing write that sets `notice`); the scenario offers no way to set state directly, so a story cannot show a state the store cannot reach ([research.md](research.md) R22).
-- [ ] T057 Implement `createStoryStore` in `apps/mobile/src/adapters/ui/testing/story-store.ts` to turn T056 green. Add the French fixtures in `apps/mobile/src/adapters/ui/testing/fixtures.ts`: the default categories from `apps/mobile/src/adapters/ui/seed.ts`; the lists "Ma liste" (current) and "Barbecue"; the articles "Lait" (Crèmerie, 2 L), "Pommes" (Fruits et légumes), "Farine" (Épicerie salée, 1,5 kg), "Beurre" (Crèmerie); and one article whose name is exactly 60 characters, the "At most 60 characters after trimming" limit, to check wrapping. Then refactor `renderWithStore` (T051) to build its store with `createStoryStore`, every test kept green, so stories and screen tests share one set of fixtures.
+- [ ] T057 Implement `createStoryStore` in `apps/mobile/src/adapters/ui/testing/story-store.ts` to turn T056 green. Add the French fixtures in `apps/mobile/src/adapters/ui/testing/fixtures.ts`: the default categories from `apps/mobile/src/adapters/ui/seed.ts`; the lists "Ma liste" (current) and "Barbecue"; the articles "Lait" (Crèmerie, 2 L), "Pommes" (Fruits et légumes), "Farine" (Épicerie salée, 1,5 kg), "Beurre" (Crèmerie); and one article whose name is exactly 60 characters, the "At most 60 characters after cleaning, counted in Unicode code points" limit, to check wrapping. Then refactor `renderWithStore` (T051) to build its store with `createStoryStore`, every test kept green, so stories and screen tests share one set of fixtures.
 - [ ] T058 Write failing tests in `apps/mobile/src/adapters/ui/testing/story-decorator.test.tsx` for `withAppProviders`, the decorator every story uses: it wraps the story in `ThemeProvider` (light or dark from `useColorScheme`), `AppStoreProvider` with the store from `createStoryStore(parameters.scenario ?? {})`, `SafeAreaProvider` and a `NavigationContainer` with a one-screen native stack that renders the story, so screens can call `useNavigation`. Implement it in `apps/mobile/src/adapters/ui/testing/story-decorator.tsx` and register it in `apps/mobile/.rnstorybook/preview.tsx` to turn the tests green. Form errors (a name already used, an invalid quantity) are local form state, not a `ScreenState`: each screen or dialog with a form keeps its fields in a presentational `…Form` component (values, errors and callbacks as props) that it wraps, and error stories render that form with the error.
 - [ ] T059 Add the shared component stories that exist at this point. First add `Components/LoadingState/Default`, `Components/EmptyState/WithAction`, `Components/EmptyState/WithoutAction` and `Components/ErrorState/Default` to `requiredStories` and see the story test fail. Then write `LoadingState.stories.tsx`, `EmptyState.stories.tsx` and `ErrorState.stories.tsx` in `apps/mobile/src/adapters/ui/components/`, with French texts from [contracts/ui-screens.md](contracts/ui-screens.md), to turn it green. Open them with `yarn storybook` in light and dark mode.
 - [ ] T060 Add `apps/mobile/src/adapters/ui/use-cases.ts`, the `UseCases` type the store depends on: one entry per use case in [contracts/driving-ports.md](contracts/driving-ports.md), filled in story by story.
-- [ ] T061 Implement the composition root in `apps/mobile/src/composition/composition-root.ts`:
-  - `openDatabase()`, then the SQLite `UnitOfWork`, `CryptoIdGenerator` and the error reporter (Sentry when `EXPO_PUBLIC_SENTRY_DSN` is set, console otherwise);
-  - build the use cases, run `initializeStore(seed)`, then `createAppStore`.
+- [ ] T061 Implement the composition root in `apps/mobile/src/composition/composition-root.ts` ([research.md](research.md) R18a):
+  - `createErrorReporter()`: Sentry when `EXPO_PUBLIC_SENTRY_DSN` is set, console otherwise. `App.tsx` builds it once, first, so a storage failure at startup can be reported;
+  - `composeApp(reporter)`: `openDatabase()`, then the SQLite `UnitOfWork` and `CryptoIdGenerator`; build the use cases, run `initializeStore(seed)`, then `createAppStore`. If a step after `openDatabase()` throws, it closes the database and rethrows. It never deletes, recreates or overwrites the database file.
 
   It is the only module that knows every adapter.
-- [ ] T062 Write a failing test in `App.test.tsx` with the composition root mocked: `LoadingState` while it initializes, then CurrentList; `ErrorState` and one report when it throws. Then wire `apps/mobile/App.tsx` to call the composition root once and render `ThemeProvider` → `AppStoreProvider` → `SafeAreaProvider` → navigation, with `LoadingState` while the root initializes and `ErrorState` (reported) if initialization throws.
+- [ ] T062 Write a failing test in `App.test.tsx` with `composeApp` mocked ([contracts/ui-screens.md](contracts/ui-screens.md#app-startup-fr-039)): `LoadingState` while it initializes, then CurrentList; when it throws, the full-screen `StartupError` with "L'application n'a pas pu démarrer." and "Réessayer", and one report with `{ operation: 'startup' }`; "Réessayer" shows `LoadingState` and calls `composeApp` again, reaching CurrentList when it succeeds, or `StartupError` and a second report when it throws again (FR-039). Then write `StartupError` in `apps/mobile/src/adapters/ui/screens/StartupError.tsx` on the shared `ErrorState` (it needs no store or navigation, which do not exist yet), and wire `apps/mobile/App.tsx`: build the reporter, call `composeApp` and render `ThemeProvider` → `AppStoreProvider` → `SafeAreaProvider` → navigation, with `LoadingState` while it runs and `StartupError` if it throws. Finally add `Screens/Startup/Error` to `required-stories.ts`, see the story test fail, and write `apps/mobile/src/adapters/ui/screens/StartupError.stories.tsx`, which renders `StartupError` with a no-op retry (no store scenario: the app has no store when it shows), to turn it green.
 - [ ] T063 [P] Add the `apps/mobile/jest.setup.ts` global mocks needed by `jest-expo` (`@sentry/react-native`, `expo-sqlite` never loaded in UI tests), referenced from `apps/mobile/jest.config.js`.
-- [ ] T064 Write a composition test in `apps/mobile/src/composition/composition-root.test.ts` with `openDatabase` replaced by a `node:sqlite` database: a fresh start seeds 11 categories and "Ma liste" as current, and a second start does not seed again.
+- [ ] T064 Write a composition test in `apps/mobile/src/composition/composition-root.test.ts` with `openDatabase` replaced by a `node:sqlite` database: a fresh start seeds 11 categories and "Ma liste" as current, and a second start does not seed again; when `initializeStore` throws, `composeApp` closes the database and rethrows, and a later `composeApp` on the same file finds the earlier data intact (FR-039).
 
 **Checkpoint**: the app launches on a seeded store and shows the CurrentList placeholder; every test (the story test included), the architecture test, the bundle and the launch journey are green; Storybook shows the state components in light and dark.
 
@@ -391,7 +396,7 @@ content matches.
 - [ ] T087 [P] [US2] Write failing use case tests on fakes, one file each in `apps/mobile/src/application/use-cases/`:
   - `get-catalog.test.ts`: the catalog with `onList` marks for the given list, filtered by query;
   - `add-article-to-list.test.ts`: US2-1; US2-2; US2-5, the same article on two lists keeps a quantity per list; `AlreadyOnList`; `ArticleNotFound`;
-  - `create-article-and-add-to-list.test.ts`: US2-7, created and added in one transaction; US2-9, " beurre " → `NameAlreadyUsed` with `existing` = "Beurre" and nothing created; US2-11, `NameRequired`; `NameTooLong`; `CategoryNotFound`;
+  - `create-article-and-add-to-list.test.ts`: US2-7, created and added in one transaction; US2-9, " beurre " → `NameAlreadyUsed` with `existing` = "Beurre" and nothing created, and "pommes  de  terre" → `NameAlreadyUsed` with `existing` = "Pommes de terre" (FR-021); a new name is stored cleaned, so "  Houmous   maison " is created as "Houmous maison" (FR-022); US2-11, `NameRequired`; `NameTooLong`; `CategoryNotFound`;
   - `change-item-quantity.test.ts`: US2-3, the article itself is unchanged; US2-4, cleared; `ItemNotOnList`;
   - `remove-item-from-list.test.ts`: US2-6, the item is gone, the article stays in the catalog, and a `RemovedItem` is returned;
   - `restore-removed-item.test.ts`: US2-16, back ticked with "2 kg"; `AlreadyOnList` / `ListNotFound` / `ArticleNotFound`;
@@ -409,7 +414,7 @@ content matches.
 - [ ] T089 [P] [US2] Write failing component tests:
   - `apps/mobile/src/adapters/ui/components/article-row.test.tsx`: the "Déjà dans la liste" chip appears only when `onList`, and the row is ≥ 48 dp;
   - `apps/mobile/src/adapters/ui/components/quantity-fields.test.tsx`: the labels "Quantité" and "Unité", a decimal numeric input mode, and `HelperText` errors, each announced with its French text as it appears (FR-038);
-  - `apps/mobile/src/adapters/ui/components/name-field.test.tsx`: the label "Nom", a 60-character limit, and a `HelperText` error, announced as it appears (FR-038).
+  - `apps/mobile/src/adapters/ui/components/name-field.test.tsx`: the label "Nom", no native `maxLength` (it counts UTF-16 units; the 60-character limit is the `NameTooLong` error, [research.md](research.md) R6), and a `HelperText` error, announced as it appears (FR-038).
 - [ ] T090 [P] [US2] Write failing tests for `UndoSnackbar` in `apps/mobile/src/adapters/ui/components/undo-snackbar.test.tsx`:
   - `removedItem` shows "« {name} » retiré de la liste" with "Annuler" calling `undo`, and announces that text with "Annuler" as it appears (FR-038);
   - it calls `dismissUndo` after 5 s (Jest fake timers);
@@ -417,8 +422,9 @@ content matches.
   - it stays visible across navigation, because it is rendered at the root.
 - [ ] T091 [US2] Write failing tests for `QuantityDialog` in `apps/mobile/src/adapters/ui/screens/quantity-dialog.test.tsx`:
   - add mode: "Ajouter" with empty fields adds without a quantity (SC-003);
-  - FR-016 errors: "La quantité doit être un nombre positif." for "0", "-1" and "abc" (US2-12); "Indiquez une quantité pour cette unité." (US2-13); "L'unité ne peut pas dépasser 15 caractères.";
-  - "1.5" + "kg" is shown as "1,5 kg" on the list (US2-2);
+  - FR-016 errors: "La quantité doit être un nombre positif écrit en chiffres, par exemple 2 ou 1,5." for "0", "-1", "abc" and "1 000" (US2-12); "La quantité ne peut pas avoir plus de 3 décimales." for "1,2345"; "La quantité ne peut pas dépasser 9999." for "10000"; "Indiquez une quantité pour cette unité." (US2-13); "L'unité ne peut pas dépasser 15 caractères.";
+  - "1.5" + "kg" is shown as "1,5 kg" on the list (US2-2), and "1,50" as "1,5" (FR-017);
+  - edit mode prefills "1,5" for 1.5, and saving it unchanged keeps 1.5;
   - already-on-list mode: "« {name} » est déjà dans la liste." with the fields prefilled and the buttons "Fermer" and "Modifier la quantité" (US2-8);
   - edit mode: "Effacer la quantité" (US2-4);
   - FR-037: opening moves focus to the dialog title, and closing gives it back to the row that opened it.
@@ -578,7 +584,7 @@ validation of [quickstart.md](quickstart.md).
 - [ ] T134 [P] Configure the Sentry Expo plugin options (organization, project, source map upload through EAS Build) in `apps/mobile/app.config.ts` and document in `README.md` the EAS environment variables the maintainer sets: the DSN and the build credential, never committed.
 - [ ] T135 Add the measurement seed to `apps/mobile/src/composition/measurement-seed.ts`: when `EXPO_PUBLIC_SEED_ITEMS=<n>` is set at build time, fill an empty current list with n articles through the use cases. It works in release builds too, so SC-008 can be measured there (like the Sentry smoke test, T133); builds for users never set it. Test-first in `apps/mobile/src/composition/measurement-seed.test.ts`: ignored when the variable is unset or the list is not empty.
 - [ ] T136 Update `README.md` with what the app does, the architecture in one paragraph (hexagonal layers, Zustand store in the UI adapter), how to review screens in Storybook and when to run the iOS journeys (before a release and on pull requests that change native configuration), how to run the device checks of [quickstart.md](quickstart.md), and the build-time flags `EXPO_PUBLIC_SEED_ITEMS` and `EXPO_PUBLIC_SENTRY_SMOKE_TEST`, which builds for users never set.
-- [ ] T137 Run [quickstart.md](quickstart.md) sections 1–7 on an Android device or emulator and on an iOS simulator: every required story reviewed in Storybook in light and dark mode and at 200% text size (§2), every journey green with `yarn test:e2e:android` and `yarn test:e2e:ios` (§3), and the 12 hands-on scenarios, including airplane mode, kill and restart, TalkBack/VoiceOver, 200% text, 200 items and start time on a release build (§5). Record the results, and anything not checked, in the pull request's test plan.
+- [ ] T137 Run [quickstart.md](quickstart.md) sections 1–7 on an Android device or emulator and on an iOS simulator: every required story reviewed in Storybook in light and dark mode and at 200% text size (§2), every journey green with `yarn test:e2e:android` and `yarn test:e2e:ios` (§3), and the 13 hands-on scenarios (the system backup check of step 13 on Android only), including airplane mode, kill and restart, TalkBack/VoiceOver, 200% text, 200 items and start time on a release build (§5). Record the results, and anything not checked, in the pull request's test plan.
 
 ---
 

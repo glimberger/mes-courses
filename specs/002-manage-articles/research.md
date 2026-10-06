@@ -109,8 +109,8 @@ constitution v2.0.0, which makes a remote server the source of truth.
 
 - **Decision**: reuse `validateName` and `normalizedName` (001 R6). The rename is refused with
   `NameAlreadyUsed` only when `findByNormalizedName` returns a **different** article. Renaming
-  "Lait" to "lait" or " Lait " finds the article itself and is accepted; the name is stored as
-  typed after trimming.
+  "Lait" to "lait" or " Lait " finds the article itself and is accepted; the name is stored
+  cleaned (001 R6).
 - **Rationale**: the rule stays in the domain/use case; the `UNIQUE` index on `normalized_name`
   remains the safety net.
 
