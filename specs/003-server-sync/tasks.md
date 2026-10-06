@@ -608,3 +608,8 @@ Each pull request is merged only when `gh pr checks` is all green (constitution,
   Tasks only check them (T107).
 - A deletion or removal that is undone never reaches the server (FR-008): held outbox entries
   are the only mechanism, so any new undoable change must record its changes held.
+- Test gates (constitution v2.1.1, Quality Gates): before each commit, `yarn test` (the fast
+  suite) is green; before each push, `yarn test:e2e:android` (the device suite) is green; the
+  iOS journeys (`yarn test:e2e:ios`) run before each release and before merging a pull request
+  that changes native configuration (`apps/mobile/app.config.ts`, a config plugin or a native
+  dependency), and that pull request's test plan records the run.

@@ -674,3 +674,8 @@ extracted from `CreateArticleScreen`.
 - A flaky test is a failing test: fix it before anything else (Principle III). This holds for the
   journeys: no retries, no sleeps.
 - Commit after each Green + Refactor step, with Conventional Commits.
+- Test gates (constitution v2.1.1, Quality Gates): before each commit, `yarn test` (the fast
+  suite) is green; before each push, `yarn test:e2e:android` (the device suite) is green; the
+  iOS journeys (`yarn test:e2e:ios`) run before each release and before merging a pull request
+  that changes native configuration (`apps/mobile/app.config.ts`, a config plugin or a native
+  dependency), and that pull request's test plan records the run.
