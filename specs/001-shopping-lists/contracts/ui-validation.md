@@ -41,6 +41,7 @@ or in their own `contracts/ui-screens.md` ([002](../../002-manage-articles/contr
 
 | Story id | State or variant | Scenarios |
 |---|---|---|
+| `Screens/Startup/Error` | "L'application n'a pas pu démarrer." and "Réessayer"; rendered without a store, like the app before startup ends | FR-039 |
 | `Screens/CurrentList/Loading` | loading | US1-11 |
 | `Screens/CurrentList/Error` | error | US1-12 |
 | `Screens/CurrentList/Empty` | empty | US1-10 |

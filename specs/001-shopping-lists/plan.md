@@ -1,7 +1,8 @@
 # Implementation Plan: Shopping Lists
 
 **Branch**: `feat/001-shopping-lists` | **Date**: 2026-10-05 (amended 2026-10-06 for constitution
-v2.1.0, monorepo, then for Storybook and Detox, then for constitution v2.1.1) | **Spec**: [spec.md](spec.md)
+v2.1.0, monorepo, then for Storybook and Detox, then for constitution v2.1.1, then for the
+data clarifications) | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/001-shopping-lists/spec.md`
 
@@ -60,7 +61,8 @@ release build on an entry-level Android phone about five years old and the maint
 synchronization in this feature (deferred, R19, Complexity Tracking); every change
 committed to storage before it is shown as saved (FR-028); French-only UI with no i18n layer
 (Principle X); accessibility per FR-032 to FR-035; no list content in error reports
-(Principle VIII)
+(Principle VIII); stored data never deleted or reset to recover from a startup failure
+(FR-039); data kept in the system backup, not encrypted beyond the system's own (Assumptions)
 
 **Scale/Scope**: one user, one device; 4 screens and 4 dialogs; hundreds of articles at most,
 around 200 items per list at most; 5 tables
@@ -111,6 +113,10 @@ justified. The design adds no layer, port or dependency beyond those above. Poin
 - Detox adds native test hooks through a config plugin, and only Detox's builds use the Android
   test APK. Release builds for users are unchanged apart from the plugin's ProGuard keep rules.
   E2E builds have no Sentry DSN, so no test reports to the real service (Principle VIII).
+- The data clarifications of 2026-10-06 add no port, layer or dependency: name cleaning and
+  the quantity grammar are pure domain rules (R6, R7); the startup error is the existing
+  `ErrorState` shown by `App.tsx` (R18a); the backup choice is one Expo config key (R18b).
+  Editing only the current list (FR-008) is a UI rule: the use cases keep their `listId`.
 - Nothing in the design blocks the sync feature: ids are device UUIDs that never change, each
   change is one `UnitOfWork` transaction (where a later outbox write can join it), and no read
   model assumes the device holds the only copy. The open questions for that feature (first-launch
@@ -234,6 +240,18 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
   contract tests → screen tests, adds its screen stories to the required list, and ends when its
   journey is green on Android and iOS
   ([contracts/ui-validation.md](contracts/ui-validation.md)).
+- **Data clarifications (2026-10-06)**, to be reflected in the existing tasks:
+  - names: `cleanName` (NFC, trim, inner spaces reduced), length in code points, and
+    `normalizedName` built on it, with tests for "Pommes  de terre" and a decomposed "é"
+    ([data-model.md](data-model.md#name-articles-categories-lists), R6); `NameField` without a
+    native `maxLength`;
+  - quantities: the amount grammar and the `AmountTooPrecise` and `AmountTooLarge` errors,
+    the `quantity_amount <= 9999` check in migration 1, and `formatQuantity` without trailing
+    zeros or grouping ([data-model.md](data-model.md#quantity-value-object), R7);
+  - startup: `App.tsx` shows `StartupError` with "Réessayer", which reruns the composition
+    root, and its required story (R18a, [contracts/ui-screens.md](contracts/ui-screens.md#app-startup-fr-039));
+  - `app.config.ts` sets `android.allowBackup: true` (R18b);
+  - US2-5 makes "Gâteau" current before adding to it (FR-008).
 - No task touches the network or the server: synchronization belongs to the sync feature (R19).
 - The Sentry project is in place (done by the maintainer). The Sentry DSN and build credential
   live in EAS environment variables, set by the maintainer, and are never committed.

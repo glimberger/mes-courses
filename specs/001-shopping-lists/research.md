@@ -94,9 +94,19 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
 ## R6. Name rules, search and sorting (FR-009, FR-021, FR-022, Assumptions)
 
 - **Decision**:
-  - *Normalized name*, used for uniqueness (articles, categories, lists):
-    `name.trim().toLocaleLowerCase('fr')`. Accents are kept: "Pâte" and "Pâté" are different
-    names. It is stored in a `normalized_name`
+  - *Clean name*, the form that is validated, stored and shown (FR-022, clarified 2026-10-06):
+    `text.normalize('NFC').trim().replace(/\s+/gu, ' ')`. NFC turns a letter followed by a
+    combining accent into the single composed character, so "é" is stored the same however it
+    was typed; runs of inner white space become one space. `validateName` returns the clean
+    name.
+  - *Length*: counted in Unicode code points of the clean name (`[...name].length`), which is
+    what SQLite's `length()` counts on text, so the domain check and the `CHECK` constraint
+    agree (data checklist CHK014). A string's `.length` (UTF-16 units) is never used: an emoji
+    would count twice. For the same reason the name field sets no native `maxLength`, which
+    counts UTF-16 units; `NameTooLong` is the only limit.
+  - *Normalized name*, used for uniqueness (articles, categories, lists, FR-021):
+    `cleanName(name).toLocaleLowerCase('fr')`. Accents are kept: "Pâte" and "Pâté" are
+    different names. It is stored in a `normalized_name`
     column with a `UNIQUE` constraint, and the domain checks it first so the user gets a typed
     error, not a constraint failure.
   - *Search form*: the normalized name with diacritics removed
@@ -108,19 +118,38 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
     each group sorted by name with `Intl.Collator('fr', { sensitivity: 'base' })` (supported by
     Hermes).
 - **Rationale**: these are business rules from the spec, so they live in the domain as pure
-  functions; the database constraint is the safety net.
+  functions; the database constraint is the safety net. Cleaning before storing, not only before
+  comparing, keeps what the user sees in line with the uniqueness rule: two names that look the
+  same are the same.
+- **Alternatives considered**: NFKC (would also fold ligatures and full-width forms, which a
+  French typing does not produce, and changes some characters the user did type); counting
+  grapheme clusters with `Intl.Segmenter` (matches what the eye sees for emoji sequences, but
+  SQLite cannot count the same way, so the two checks would disagree again).
 
 ## R7. Quantities (FR-013 to FR-017)
 
 - **Decision**: a `Quantity` value object `{ amount: number; unit: string | null }`. The domain
-  function `parseQuantity(amountText, unitText)` trims both, accepts `,` or `.` as the decimal
-  separator, and returns either no quantity (both empty), a quantity, or a typed error:
-  `AmountNotANumber`, `AmountNotPositive`, `UnitWithoutAmount`, `UnitTooLong`. Amounts are
-  stored as SQLite `REAL`. The UI adapter formats them with `Intl.NumberFormat('fr-FR')`
-  ("1,5 kg").
+  function `parseQuantity(amountText, unitText)` trims both and returns either no quantity
+  (both empty), a quantity, or a typed error, checked in this order (FR-016, clarified
+  2026-10-06):
+  1. the amount text must match `^-?\d+([.,]\d+)?$`: digits, at most one decimal comma or
+     point with digits on both sides. Anything else ("1 000", "+2", "1e3", "1,5,2", ",5",
+     "abc") is `AmountNotANumber`;
+  2. a leading `-` or a value of zero is `AmountNotPositive`;
+  3. more than 3 digits after the separator is `AmountTooPrecise` ("1,5000" included: the
+     rule is on what was typed, so the message matches the user's input);
+  4. a value above 9 999 is `AmountTooLarge`;
+  5. then the unit rules: `UnitWithoutAmount`, `UnitTooLong`.
+
+  Amounts are stored as SQLite `REAL`. The UI adapter formats them with
+  `Intl.NumberFormat('fr-FR', { maximumFractionDigits: 3, useGrouping: false })`: a decimal
+  comma, no trailing zeros ("1,50" is shown "1,5", "2,0" is shown "2", FR-017) and no digit
+  grouping, so the text prefilled in the quantity dialog parses back unchanged ("9999", never
+  the "9 999" that rule 1 refuses).
 - **Rationale**: parsing and validation are rules, so they live in the domain. Display formatting
   is presentation, so it lives in the UI adapter (Principle X). Shopping quantities are small and
-  never summed, so binary floating point is harmless.
+  never summed, and with at most 3 decimals and 4 integer digits every amount survives the
+  `REAL` round trip and formats back to what was typed, so binary floating point is harmless.
 - **Alternatives considered**: storing the text as typed (pushes validation into the UI);
   integer thousandths (needless here).
 
@@ -318,6 +347,46 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
 - **Rationale**: the "only on an empty store" rule is tested with in-memory fakes, and running it
   in one transaction means an interrupted first launch never leaves half a seed.
 
+## R18a. Startup failure (FR-039)
+
+- **Decision**: the composition root (open the database, run the migrations, build the use
+  cases, `initializeStore`) runs once when `App.tsx` mounts. While it runs, the app shows
+  `LoadingState`. If any step throws, the app shows a full-screen `StartupError` view built on
+  the shared `ErrorState`: "L'application n'a pas pu démarrer." and "Réessayer"; the error is
+  reported with `{ operation: 'startup' }`. "Réessayer" closes the database if it was opened
+  and runs the composition root again from the start; each failure is reported. The root
+  reports through the error reporter, which it builds first and which never throws, so a
+  storage failure can always be reported (offline, Sentry's own cache holds it).
+- **Data is never wiped**: no code path deletes, recreates or overwrites the database file to
+  recover. Each migration runs in one transaction, so a failed migration leaves the previous
+  schema and data as they were; `initializeStore` seeds in one transaction (R18), so an
+  interrupted seed leaves an empty store that the next start seeds again.
+- **Rationale**: the error state and retry are the pattern every data screen already uses
+  (US1-12), so the user meets nothing new. A failure at startup may be temporary (storage
+  full, a file locked by a backup), and the device holds the only copy of the data until 003
+  (R18b), so resetting would trade a temporary failure for a permanent loss.
+- **Alternatives considered**: offering to reset storage after a failure (rejected in the
+  spec's clarification: a permanent loss to fix what may be temporary); restarting the app
+  instead of retrying in place (React Native cannot restart itself without a native module).
+
+## R18b. Backup and data protection (Assumptions)
+
+- **Decision**: the device holds the only copy of the data until 003; losing it with the phone
+  is an accepted risk (spec Assumptions, clarified 2026-10-06). The system backup stays on as
+  a fallback: `app.config.ts` sets `android.allowBackup: true` explicitly (Expo's default,
+  written down so a later change is deliberate), with no backup rules that exclude the
+  database. Android Auto Backup then includes the expo-sqlite file (well under its 25 MB
+  limit), and on iOS the file lives in the app's Documents folder, which the iCloud device
+  backup includes; quickstart step 13 checks both platforms before the first release. No
+  encryption is added (no SQLCipher): the data is not sensitive, and the
+  system already encrypts the phone's storage.
+- **Rationale**: the fallback costs one config line, and a phone restored from backup gets its
+  lists back. Encrypting non-sensitive data would add a native dependency and a key to manage
+  for no gain (Principle IV).
+- **Alternatives considered**: excluding the data from backups so a restored phone cannot bring
+  back old data that later clashes with sync (that case belongs to 003, see R19); a manual
+  export and import (not in the spec).
+
 ## R19. Synchronization deferred (Principle VII)
 
 > **Resolved by [003-server-sync](../003-server-sync/research.md)**, which answers each open
@@ -348,6 +417,10 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
   - *Deletions and undo* (R8): a removed item leaves no trace to send, and its undo re-inserts it;
     the same questions as 002's article deletion.
   - *Category order*: positions assigned on two devices can collide.
+  - *Restored backups* (R18b): a phone restored from a system backup comes back with the data
+    and ids of the day of the backup, possibly older than what the server holds. Answered by
+    [003 FR-018b](../003-server-sync/spec.md): the device credential is not restored, so the
+    phone pairs again and its restored changes are merged by the usual rules.
 - **Alternatives considered**: synchronize in this feature (rules not in the spec, server API
   undecided); add an outbox or sync metadata columns now (code and schema no test requires while
   nothing reads them, and the sync feature's migration can add them).

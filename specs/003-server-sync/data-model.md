@@ -51,7 +51,7 @@ Rules (pure functions in `sync-core`, tested in isolation):
 | An item's `present = false` is not reset by `inCart` or `quantity` changes | field independence | FR-011, US2-6 |
 | Same `normalizedName` in a kind → survivor = smaller `(createdHlc, id)` | `pickSurvivor` | FR-012, research R8 |
 | Categories ordered by `(position, createdHlc, id)` | `compareCategories` | FR-014 |
-| `normalizedName(name) = name.trim().toLocaleLowerCase('fr')` | moved here from 001's domain | 001 R6 |
+| `cleanName(text) = text.normalize('NFC').trim().replace(/\s+/gu, ' ')`; `normalizedName(name) = cleanName(name).toLocaleLowerCase('fr')` | moved here from 001's domain | 001 R6, 001 FR-021 |
 
 ## Device: local additions (app SQLite, migration 2)
 

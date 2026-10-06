@@ -12,7 +12,7 @@ Same fields as in 001 (`id`, `name`, `categoryId`). Two transitions are added:
 
 | Transition | Rules | Domain errors |
 |---|---|---|
-| Edit (name and category together) | Name rules of 001 (trimmed, non-blank, ≤ 60 characters). Unique by `normalizedName` among **other** articles: the article's own name with a different case or surrounding spaces is accepted (FR-002, US1-5). The category must exist (FR-008). Both are validated before anything is written (US3-3). | `NameRequired`, `NameTooLong`, `NameAlreadyUsed` (carries the other article), `CategoryNotFound`, `ArticleNotFound` |
+| Edit (name and category together) | Name rules of 001 (cleaned, non-blank, ≤ 60 characters). Unique by `normalizedName` among **other** articles: the article's own name with a different case or spacing is accepted (FR-002, US1-5). The category must exist (FR-008). Both are validated before anything is written (US3-3). | `NameRequired`, `NameTooLong`, `NameAlreadyUsed` (carries the other article), `CategoryNotFound`, `ArticleNotFound` |
 | Delete | Removes the article and every list item that refers to it; its category and the lists stay (FR-005, FR-006). | `ArticleNotFound` |
 
 `id` never changes, so list items keep pointing at the article through any edit, and their

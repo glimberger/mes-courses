@@ -67,6 +67,22 @@
   release build, on an entry-level Android phone about five years old and on the maintainer's
   iPhone; SC-008 means at least 55 frames per second while scrolling and ticking, with each
   tick shown within 100 ms.
+- Q: Can items be added, removed or changed only on the current list, or also on a list that
+  is not current? → A: Only on the current list; to edit another list, the user makes it
+  current first.
+- Q: When are two article, category or list names the same name? → A: Ignoring case, leading
+  and trailing spaces, repeated inner spaces and how an accented letter was typed (composed or
+  not); accents still count, so "Pâte" and "Pâté" are different names.
+- Q: What does the user see when the application cannot open, update or set up its storage at
+  startup? → A: A full-screen French error state ("L'application n'a pas pu démarrer.") with
+  "Réessayer"; the error is reported, and stored data is never deleted or reset automatically.
+- Q: Until server synchronization (003) ships, what happens to the data if the phone is lost,
+  reset or the application uninstalled? → A: The loss is an accepted risk until 003; the system
+  backup (Android Auto Backup, iCloud device backup) stays on as a fallback, and no encryption
+  is added beyond the system's own, because the data is not sensitive.
+- Q: What limits and format apply to a quantity's number? → A: Digits with at most one decimal
+  comma or point, at most 3 decimals and at most 9 999; spaces, signs and exponents are
+  refused; shown without trailing zeros ("1,50" → "1,5").
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -145,8 +161,9 @@ matches.
    unit "kg", **Then** it shows "2 kg", and the article in the catalog is unchanged.
 4. **Given** "Farine" is on the list with "2 kg", **When** I clear its quantity, **Then** it is
    shown with no quantity.
-5. **Given** "Farine" is on the list "Courses de la semaine" with "2 kg", **When** I add
-   "Farine" to the list "Gâteau" with "500 g", **Then** each list keeps its own quantity.
+5. **Given** "Farine" is on the list "Courses de la semaine" with "2 kg", **When** I make
+   "Gâteau" current and add "Farine" to it with "500 g", **Then** each list keeps its own
+   quantity.
 6. **Given** "Beurre" is on the current list, **When** I remove it, **Then** it no longer
    appears on the current list but stays in the catalog, and an "Annuler" action is offered
    for 5 seconds.
@@ -262,10 +279,15 @@ the new heading.
 - The application is closed or killed right after a tick or a quantity change: the change is
   kept on reopening.
 - Quantities with a decimal part are entered and shown with a decimal comma ("1,5 kg");
-  a decimal point typed by the user is accepted and shown as a comma.
+  a decimal point typed by the user is accepted and shown as a comma. Trailing zeros are
+  dropped ("1,50" is shown "1,5"); more than 3 decimals or a value above 9 999 is refused
+  (FR-016).
 - Very long article, category or list names: names are limited to 60 characters and shown in
   full by wrapping, never cut off silently. Units are limited to 15 characters.
 - Many items (200 or more) on one list: the list stays smooth to scroll and to tick.
+- The application cannot open, update or set up its storage at startup: a full-screen error
+  state says "L'application n'a pas pu démarrer." and offers "Réessayer", the error is
+  reported, and stored data is never deleted or reset automatically (FR-039).
 - Device storage fails while saving a change: the change is not shown as saved, a French
   error message is shown, and the error is reported. A tick or untick is the exception: it is
   shown at once (FR-004), then returns to its previous state when the save fails, with the
@@ -291,8 +313,10 @@ the new heading.
 
 **Editing a list**
 
-- **FR-008**: Users MUST be able to add an existing article to a list, by browsing the catalog
-  by category or by searching by name.
+- **FR-008**: Users MUST be able to add an existing article to the current list, by browsing the
+  catalog by category or by searching by name. Items are added, removed, ticked and have their
+  quantity changed only on the current list; to edit another list, the user makes it current
+  first (FR-025).
 - **FR-009**: Search MUST match articles whose name contains the typed text, ignoring case
   and accents.
 - **FR-010**: Users MUST be able to remove an item from a list without deleting the article
@@ -317,9 +341,12 @@ the new heading.
   quantity: a positive number (decimals allowed) with an optional free-text unit.
 - **FR-015**: Users MUST be able to change or clear the quantity of an item already on a list.
 - **FR-016**: A unit MUST NOT be accepted without a quantity; a quantity of zero, a negative
-  quantity or a non-numeric quantity MUST be refused with a French message.
+  quantity or a non-numeric quantity MUST be refused with a French message. A quantity MUST be
+  written with digits and at most one decimal comma or point, with at most 3 decimals and a
+  value of at most 9 999; spaces, signs and exponents ("1 000", "+2", "1e3") MUST be refused
+  with a French message stating the rule.
 - **FR-017**: Quantities MUST be entered and displayed following French conventions (decimal
-  comma).
+  comma), without trailing zeros: "1,50" is shown "1,5", and "2,0" is shown "2".
 
 **Articles and categories**
 
@@ -328,9 +355,12 @@ the new heading.
 - **FR-020**: The application MUST provide the default categories listed in Assumptions on
   first launch.
 - **FR-021**: Article names MUST be unique in the catalog, and category names unique among
-  categories, comparing names case-insensitively and ignoring leading and trailing spaces.
-- **FR-022**: Names (articles, categories, lists) MUST be non-blank, trimmed, and at most 60
-  characters long; units at most 15 characters.
+  categories. Two names are the same when they match ignoring case, leading and trailing
+  spaces, repeated inner spaces, and how an accented letter was typed (one composed character
+  or a letter followed by an accent mark). Accents count: "Pâte" and "Pâté" are different
+  names.
+- **FR-022**: Names (articles, categories, lists) MUST be non-blank, trimmed, with repeated
+  inner spaces reduced to one, and at most 60 characters long; units at most 15 characters.
 
 **Named lists**
 
@@ -378,6 +408,9 @@ the new heading.
 - **FR-038**: The screen reader MUST announce in French every snackbar (removal with
   "Annuler", article added, failed save) and every form error message as soon as it appears.
   The remaining count is not announced when it changes; it stays readable on the screen.
+- **FR-039**: When the application cannot open, update or set up its storage at startup, it
+  MUST show a full-screen error state in French with a "Réessayer" action and report the
+  error. It MUST NOT delete, reset or overwrite stored data to recover.
 
 ### Key Entities
 
@@ -422,6 +455,11 @@ entry-level Android phone about five years old, and the maintainer's iPhone.
 
 - Single user on a single device; no account, sign-in, sharing or synchronization in this
   feature. Sharing a list with other people may come in a later feature.
+- Until server synchronization ([003-server-sync](../003-server-sync/spec.md)) ships, the
+  device holds the only copy of the data: losing, resetting the phone or uninstalling the
+  application loses it, an accepted risk. The application's data stays included in the system
+  backup (Android Auto Backup, iCloud device backup) as a fallback. Lists hold no sensitive
+  data, so no encryption is added beyond the system's own.
 - Default categories, in this order: Fruits et légumes, Boucherie et poissonnerie, Crèmerie,
   Boulangerie, Épicerie salée, Épicerie sucrée, Surgelés, Boissons, Hygiène et beauté,
   Entretien, Divers.

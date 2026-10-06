@@ -14,7 +14,8 @@ function in `apps/mobile/src/application/use-cases/`, built by the composition r
   state or a French snackbar, and reports them through `ErrorReporter` (Principle VIII).
 - Every write is committed to storage before the promise resolves (FR-028).
 - `NameError = NameRequired | NameTooLong`;
-  `QuantityError = AmountNotANumber | AmountNotPositive | UnitWithoutAmount | UnitTooLong`.
+  `QuantityError = AmountNotANumber | AmountNotPositive | AmountTooPrecise | AmountTooLarge |
+  UnitWithoutAmount | UnitTooLong`.
   Quantities reach use cases already parsed: the UI adapter calls the domain's `parseQuantity`
   and shows its errors next to the fields.
 
@@ -33,6 +34,11 @@ function in `apps/mobile/src/application/use-cases/`, built by the composition r
 | `finishShopping` | `(listId) => Promise<Result<void, NothingInCart>>` | Sets every item of the list to `inCart = false`; items and quantities kept (FR-007). The confirmation dialog is UI-only. |
 
 ## Editing a list (User Story 2)
+
+Lists are edited only while current (FR-008): the UI adapter calls these use cases, and
+`toggleItemInCart` and `finishShopping`, with the current list's id only. The use cases keep
+their `listId` parameter, which their tests use to check that each list keeps its own items
+(FR-026, US2-5).
 
 | Use case | Signature | Behavior |
 |---|---|---|
@@ -64,3 +70,4 @@ Pure functions with no side effects, so calling them from the UI does not break 
 
 - `parseQuantity(amountText, unitText): Result<Quantity | null, QuantityError>`
 - `validateName(text): Result<string, NameError>`: lets forms show errors before submitting.
+  It returns the clean name (NFC, trimmed, inner spaces reduced, [../data-model.md](../data-model.md#name-articles-categories-lists)).

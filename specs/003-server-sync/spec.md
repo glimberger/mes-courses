@@ -31,6 +31,29 @@
   error tracking tool as the app, with the same privacy rules: no list content, no names, with
   the server version and environment.
 
+### Session 2026-10-06
+
+- Q: When a phone is restored from a system backup (Android backup or iCloud), what happens to
+  sync? → A: It works on its restored copy but counts as not connected, because its device
+  credential is not restored; it says in French that it must be connected again, and once
+  paired again it sends its pending changes and full copy, merged by the usual rules.
+- Q: When a device's current list is merged into a list with the same name, which list does it
+  show? → A: Its current list silently becomes the list it was merged into, which now holds the
+  items of both.
+- Q: While a dialog or form is open on something, what happens when a sync brings a change to it
+  or removes it? → A: The form keeps what the user typed and saving applies it as a new change,
+  merged by the usual rules; if the item or article was removed or deleted meanwhile, the form
+  closes with a French message.
+- Q: With a screen reader on, which sync events are announced, and where does focus go when a
+  sync changes the rows on screen? → A: Only "Échec de la synchronisation" and the return to
+  "Synchronisé" after a failure are announced; the routine cycle, the waiting count and rows
+  changed by a sync are not. Focus stays put; if its row is removed, it moves as after a
+  removal in 001.
+- Q: While "Annuler" is offered for a removal on this device, what happens if a sync deletes that
+  article on another device? → A: The undo offer ends when the deletion arrives and the snackbar
+  disappears; if "Annuler" was just tapped, nothing is restored and a French message says the
+  article was deleted on another device.
+
 **Depends on**: [001-shopping-lists](../001-shopping-lists/spec.md) and
 [002-manage-articles](../002-manage-articles/spec.md). This feature closes the deviation both
 plans record from constitution v2.0.0, Principle VII: the home server's database becomes the
@@ -64,6 +87,7 @@ check every list, item, tick and quantity is back.
 5. **Given** my data is on the server, **When** I install the app on a new phone and connect it to the server, **Then** all my lists, items, ticks, quantities, articles and categories appear, and no default category or "Ma liste" is created twice.
 6. **Given** I used the app before this feature existed, so my data is only on the phone, **When** I connect it to an empty server, **Then** all my existing data is sent to the server.
 7. **Given** I delete an article and tap "Annuler" while it is offered (002), **When** the device syncs, **Then** the server never sees the article as deleted.
+8. **Given** I removed "Pain" from "Ma liste" and "Annuler" is offered, **When** a sync brings the deletion of the article "Pain" made on another device, **Then** the offer ends and its snackbar disappears; if I tap "Annuler" at that moment, "Pain" is not restored and "Cet article a été supprimé sur un autre appareil." is shown.
 
 ---
 
@@ -93,6 +117,7 @@ data, following the reconciliation rules below.
 7. **Given** A finishes shopping on "Ma liste" (every item unticked), **When** B, offline, had ticked "Œufs" after A finished, **Then** once both have synced, "Œufs" is ticked and every other item is unticked.
 8. **Given** A and B each create a category while offline, **When** both have synced, **Then** both categories exist, after the existing ones, in the same order on every device.
 9. **Given** A has "Ma liste" as current and B chooses "Barbecue" as current, **When** both sync, **Then** each device keeps its own current list.
+10. **Given** A and B each created a list "Barbecue" offline, and B has its own "Barbecue" as current, **When** both have synced and B's list is the one merged away, **Then** B shows the surviving "Barbecue" as current, holding the items of both, with no message.
 
 ---
 
@@ -115,7 +140,8 @@ offline (waiting), and with the server refusing changes (could not be sent, with
 3. **Given** changes are being sent, **When** I look, **Then** the status says so ("Synchronisation…").
 4. **Given** the server refuses or fails to save changes several times in a row, **When** I look, **Then** the status says sync failed ("Échec de la synchronisation") with a "Réessayer" action, and the failure is reported to error tracking.
 5. **Given** the server is reachable, **When** I choose "Synchroniser maintenant", **Then** a sync starts at once.
-6. **Given** a screen reader is on, **When** the status changes, **Then** the new status is announced in French.
+6. **Given** a screen reader is on, **When** sync fails, **Then** "Échec de la synchronisation" is announced in French, and the next "Synchronisé" is announced too; the routine change between "Synchronisation…" and "Synchronisé", and the waiting count, are not announced and stay readable in the status.
+7. **Given** a screen reader is on and focus is on the row "Pain", **When** a sync removes "Pain" from the list (removed on another device), **Then** focus moves to the next row, or the previous one if none, or the empty state, as after a removal in 001 (001 FR-037), and nothing is announced for the rows a sync changed.
 
 ---
 
@@ -164,6 +190,15 @@ from another one and check it can no longer sync while it keeps working on its l
 - The server holds data from a newer version of the app: the older app does not damage it and says in French that it needs an update.
 - A device is revoked while it has changes waiting: those changes are not accepted by the server; the device keeps them locally and sends them if it is connected again with a new pairing code.
 - The server lost its data and was reinstalled empty: each device behaves as revoked (US4-10) until it is paired again; the first one repopulates the server, and the next ones merge their copies into it (FR-018a). Data that existed only on the lost server, with no device holding it, is lost.
+- A phone is restored from a system backup (Android backup or iCloud, 001 Assumptions): it opens
+  on the restored local copy, older than the server's data, with the pending changes it held at
+  backup time. Its device credential is not restored, so it is not connected: it says so in
+  French and offers to connect again (FR-018b). Once paired again, the restored changes are
+  merged by FR-009 to FR-014; changes made since on other devices are more recent, so they win.
+- A dialog or form is open (quantity, rename, category) when a sync changes what it edits: the
+  form keeps what the user typed, and saving it is a new change, merged by FR-009 to FR-014
+  (FR-020a). If what it edits was deleted or removed on another device meanwhile, it closes
+  with a French message instead.
 - The home's IP address changes: the domain name follows it, and devices keep syncing with no action from the user.
 - The server's certificate is expired or invalid (for example a failed renewal): devices refuse to sync and behave as offline; after several failed attempts the status shows "Échec de la synchronisation" and the failure is reported (US3-4), with nothing sent to an unverified server.
 - The domain name itself changes: devices cannot reach the server and behave as offline until the user enters the new address in the settings; their authorization is kept.
@@ -184,7 +219,7 @@ from another one and check it can no longer sync while it keeps working on its l
 - **FR-005**: Changes not yet confirmed by the server MUST be kept across restarts, app updates and killed apps, and sent in the order they were made.
 - **FR-006**: Each change MUST be applied on the server exactly once, even when it is sent more than once.
 - **FR-007**: Changes made on other devices MUST be received when the app opens, when it comes back to the foreground, and periodically while it is open and the server is reachable.
-- **FR-008**: A deletion (002) or an item removal (001) that is undone with "Annuler" MUST never reach the server; it is sent only once it is final.
+- **FR-008**: A deletion (002) or an item removal (001) that is undone with "Annuler" MUST never reach the server; it is sent only once it is final. When a sync brings the deletion of the article concerned by the undo offer (deleted on another device), the offer MUST end at once and its snackbar disappear; an "Annuler" that arrives after it restores nothing and shows the French message "Cet article a été supprimé sur un autre appareil." (FR-011).
 
 **Reconciliation** (deterministic: every device ends with the same data)
 
@@ -194,7 +229,10 @@ from another one and check it can no longer sync while it keeps working on its l
 - **FR-012**: Articles, categories or lists whose names are equal under the uniqueness rule of 001 (FR-021) MUST be merged into one. The merged entity keeps the list items of both; if both were on the same list, the item's tick and quantity follow FR-010.
 - **FR-013**: "Terminer les courses" MUST untick the items that were ticked when it was done; a tick made after it, on any device, MUST be kept.
 - **FR-014**: Category order MUST be the same on every device: categories created concurrently are placed after the existing ones, in a fixed order.
-- **FR-015**: The current list MUST stay a per-device choice and is not synchronized.
+- **FR-015**: The current list MUST stay a per-device choice and is not synchronized. When a
+  device's current list is merged into another list (FR-012), that device's current list MUST
+  become the surviving list, with no message, so exactly one existing list stays current
+  (001 FR-002).
 
 **Connecting a device**
 
@@ -202,6 +240,12 @@ from another one and check it can no longer sync while it keeps working on its l
 - **FR-017**: A device connected to a server that already holds data MUST take that data, merging its own local data into it by FR-012, and MUST NOT create the default categories or "Ma liste" a second time.
 - **FR-018**: A device connected to an empty server MUST send all its local data to it.
 - **FR-018a**: When a device finds that the server no longer knows it (the server was reset or reinstalled), it MUST keep its local copy and its pending changes, show in French that it must be connected again, and, once paired again, send its full local copy, merged by FR-009 to FR-014 with what other re-paired devices already sent. The feature provides no server backup.
+- **FR-018b**: A device credential MUST NOT be restored from a system backup. A device whose
+  local copy says it was connected but that holds no credential (a phone restored from a
+  backup) MUST keep its local copy and pending changes, show in French that it must be
+  connected again, and, once paired again with a new pairing code, send its pending changes
+  and full local copy, merged by FR-009 to FR-014. The authorization of the device it was
+  restored from is left as it is.
 - **FR-019**: The server MUST be reachable from the Internet under the maintainer's domain name, which keeps pointing to the home when its IP address changes. Every exchange between a device and the server MUST be encrypted, and devices MUST verify the server through a publicly trusted certificate that is renewed automatically, never through an exception they accept. A device that cannot verify the server MUST NOT send or receive data and behaves as offline.
 - **FR-019a**: Only authorized devices MUST be able to read or change data on the server. A device MUST be authorized with a pairing code that is single-use, valid for 10 minutes, and provided either by the server itself (first device) or by an already authorized device.
 - **FR-019b**: The server MUST limit failed pairing attempts so that a code cannot be guessed (at most 5 wrong attempts per 10 minutes).
@@ -210,10 +254,16 @@ from another one and check it can no longer sync while it keeps working on its l
 **Status, errors, language, accessibility**
 
 - **FR-020**: Every screen showing user data MUST show a synchronization status with four values (saved, waiting with a count, sending, failed), through one shared component, as required by constitution Principle IX. Offline is a normal waiting status.
+- **FR-020a**: Changes received from the server MUST NOT overwrite what the user is typing in an
+  open dialog or form; saving it records a new change, merged by FR-009 to FR-014, and an
+  entity merged meanwhile (FR-012) is saved on the surviving one. When what the form edits was
+  deleted or removed on another device meanwhile, the form MUST close and a French message MUST
+  say so: "Cet article a été supprimé sur un autre appareil." for a deleted article, "Cet
+  article a été retiré de la liste sur un autre appareil." for a removed item.
 - **FR-021**: Users MUST be able to start a sync now and to retry after a failure.
 - **FR-022**: Repeated sync failures MUST be reported to error tracking without any list content or name (001 FR-030). Being offline or the server being unreachable MUST NOT be reported.
 - **FR-022a**: The server MUST report its own unexpected errors (failed writes, crashes, failed certificate renewal) to the same error tracking tool as the app, with its version and environment and without any list content, name or device name. Refused pairing attempts and refused unauthorized requests are expected events, not errors, and are not reported individually.
-- **FR-023**: All user-facing text MUST be in French, and the status MUST be announced by screen readers when it changes.
+- **FR-023**: All user-facing text MUST be in French. Screen readers MUST announce the status only when sync fails ("Échec de la synchronisation") and when it is back to "Synchronisé" after a failure; the routine change between sending and saved, the waiting count, and rows added, changed or removed by a sync MUST NOT be announced. A sync MUST NOT move screen reader focus, except when the focused row is removed: focus then moves as after a removal (001 FR-037).
 
 ### Key Entities
 
