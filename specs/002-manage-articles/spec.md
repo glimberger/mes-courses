@@ -189,8 +189,10 @@ under the new category heading on the list and in the catalog.
 - **FR-009**: Each rename, category change, deletion or undo MUST be applied completely or not at
   all, and kept across application restarts.
 - **FR-010**: All of these actions MUST work without a network connection.
-- **FR-011**: Failures MUST be shown in plain French and reported to error tracking without
-  any article name or list content.
+- **FR-011**: Failures MUST be shown in plain French and reported to error tracking following
+  [001 FR-030 and FR-030a](../001-shopping-lists/spec.md) (001 FR-030b): no article name, list
+  content or identifier, the same report fields and the same offline queue. This feature adds
+  no expected situation of its own beyond those of 001 FR-030.
 - **FR-012**: All user-facing text MUST be in French.
 
 ### Key Entities

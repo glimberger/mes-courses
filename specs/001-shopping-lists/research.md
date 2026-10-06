@@ -8,6 +8,8 @@ Versions are those current on 2026-10-05; the scaffold pins the exact versions i
 `apps/mobile/package.json` and the single root `yarn.lock`. R20 was added on 2026-10-06
 for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox) were added on
 2026-10-06 at the maintainer's request, to validate screens and run end-to-end tests on a device.
+R13 was amended and R13a added on 2026-10-06 for the observability clarifications (FR-030,
+FR-030a, FR-039a).
 
 ## R1. Platform and framework
 
@@ -303,41 +305,171 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
 
 - **Decision**: Sentry, through `@sentry/react-native` 8 and its Expo config plugin, behind an
   `ErrorReporter` driven port.
-  - The Sentry adapter calls `Sentry.init` with `sendDefaultPii: false` and a `beforeSend` /
-    `beforeBreadcrumb` that drops breadcrumb messages and request data. Reports carry only the
-    fields FR-030 lists (see "Every report filtered" below). User-facing text and list
-    content are never attached; the UI adapter reports errors with a fixed, content-free context
-    (screen and operation name).
-  - Uncaught exceptions and unhandled rejections are captured by the SDK's global handlers.
-  - Offline: the SDK stores envelopes on disk and sends them when connectivity returns, in a
-    bounded cache (`maxCacheItems`, default 30). Reporting is asynchronous and its failures are
-    swallowed by the SDK, so it never blocks or breaks the app.
-  - Symbolication: the Expo plugin uploads source maps and native debug files during EAS Build
-    (the Sentry build credential is stored by the maintainer as an EAS environment variable
-    with `secret` visibility).
-  - The DSN comes from `EXPO_PUBLIC_SENTRY_DSN`. When it is absent (tests, local development),
-    the composition root uses a console reporter, so nothing reaches the real service.
-    Tests use an in-memory `RecordingErrorReporter`.
-- **No storage error text in reports** (FR-030, clarified 2026-10-06): the SQLite adapter catches
-  every error thrown by the database (in `openDatabase`, `migrate`, the repositories and
-  `SqliteUnitOfWork`) and rethrows a `StorageError` whose message is fixed and content-free
-  ("Storage operation failed"), carrying only the SQLite result code when the original error has
-  one. Its stack trace is its own, captured where the adapter rethrows, which points at the
-  failing repository call; the original stack is not copied, because a JavaScript stack string
-  starts with the original message. The original error is not attached as `cause` either, so
-  its text never reaches a report. Every storage failure the UI adapter or the global handlers report is
+  - The Sentry adapter calls `Sentry.init` with `sendDefaultPii: false`, `maxBreadcrumbs: 0`
+    and a `beforeBreadcrumb` that returns `null`, so no JavaScript breadcrumb is ever kept or
+    copied to the native layer. Reports carry only the fields FR-030 lists (see "Every report
+    filtered" below). User-facing text and list content are never attached; the UI adapter
+    reports errors with a fixed, content-free context (screen and operation name).
+  - Uncaught exceptions and unhandled rejections are captured by the SDK's global handlers
+    (FR-039a); a failure while drawing a screen is caught by the app's error boundary (R13a);
+    crashes in native code are captured by the native SDKs (`enableNativeCrashHandling: true`,
+    the default, see "Native crashes" below).
+  - The DSN comes from `EXPO_PUBLIC_SENTRY_DSN`. When it is absent, the composition root uses a
+    console reporter, so nothing reaches the real service. Tests use an in-memory
+    `RecordingErrorReporter`.
+  - Offline (FR-030a): the SDK stores envelopes on disk and sends them when connectivity
+    returns. The adapter sets `maxCacheItems: 30` explicitly, the SDK default, so the spec's
+    bound is visible in code and tested; when the cache is full, the SDK deletes the oldest
+    envelope, as FR-030a requires. The cache is a folder of files, so it survives the app being
+    stopped and the device restarting. Reporting is asynchronous and its failures are swallowed
+    by the SDK, so it never blocks or breaks the app.
+  - Symbolication (FR-030): the Expo plugin uploads source maps and native debug files during
+    EAS Build, so a release build's stack trace names source files and functions (the Sentry
+    build credential is stored by the maintainer as an EAS environment variable with `secret`
+    visibility). No automated test sees a real report, so this is a manual check before release
+    ([quickstart.md](quickstart.md) §6).
+- **Environments** (FR-030, clarified 2026-10-06): each EAS Build profile sets
+  `EXPO_PUBLIC_APP_ENVIRONMENT` in `eas.json`: `production` for store releases, `preview` for
+  internal builds installed on a phone. The DSN is an EAS environment variable defined for the
+  EAS `production` and `preview` environments only. Development runs, Jest and the Detox builds
+  have no DSN, so they use the console reporter and send nothing (the Detox build command also
+  unsets it, T012). The adapter passes `EXPO_PUBLIC_APP_ENVIRONMENT` as Sentry's `environment`,
+  and refuses to start Sentry (console reporter instead) when a DSN is present without one of
+  the two values, so a report never carries an unknown environment.
+- **Version** (FR-030, clarified 2026-10-06): the release is `mes-courses@<version>+<build>` and
+  `dist` is the build number, both read by the SDK from the native app at startup, its default
+  for a native build, so no code and no dependency is added. Every EAS build gets its own number: `eas.json` sets `cli.appVersionSource: remote` and
+  `autoIncrement: true` on the `production` and `preview` profiles. Sentry shows it as
+  "1.2.0 (42)", and source maps are uploaded for that release and `dist`, so each report finds
+  the maps of its own build.
+- **No identifier and no device name** (FR-030): `beforeSend` removes `event.user` whole and
+  keeps from the device context only the model and, from the OS context, the name and version;
+  the device's own name, which the owner sets, is never kept. Release health sessions carry a
+  per-installation id and are not events, so `beforeSend` never sees them: the adapter sets
+  `enableAutoSessionTracking: false`. App hang reports are native events too and add nothing
+  FR-030 asks for: `enableAppHangTracking: false`.
+- **Native crashes** (FR-030, clarified 2026-10-06): they are reported, as the spec's one
+  exception to "no identifier".
+  - They are built by the Android and iOS SDKs, not in JavaScript, so they do not pass through
+    the JavaScript `beforeSend`; on Android, the SDK fills `user.id` with a random installation
+    id when none is set
+    ([sentry-react-native#2209](https://github.com/getsentry/sentry-react-native/issues/2209)),
+    which FR-030 now allows. That id is regenerated when the app is reinstalled.
+  - The device name stays out without native code: the Android SDK does not send it by
+    default, and since iOS 16 an app reads the owner's device name only with an entitlement
+    this app does not request, so iOS gives the SDK the generic model name.
+  - No list content can reach them: the app writes no JavaScript breadcrumb (above), and the
+    only scope data it sets is the two global tags below, both fixed identifiers, which the SDK
+    copies to the native scope.
+  - Operation and screen: the adapter sets a global `operation` tag to `uncaught` at init and a
+    global `screen` tag on every `setScreen`; native crashes carry both. A `report` call passes
+    its own tags for that one event, which take precedence.
+  The manual check in quickstart §6 crashes a release build in native code and confirms the
+  report holds no device name, no list content and no identifier other than the installation
+  one.
+- **One report per failure, and its operation and screen** (FR-030): the UI adapter catches an
+  unexpected error, reports it and does not rethrow it, so the global handlers never see it a
+  second time; the error boundary does the same (R13a). Every report names an operation and a
+  screen: the UI adapter passes both; an error the global handlers catch carries the global
+  `operation` (`uncaught`) and `screen` tags, the screen being the route shown, which the
+  navigation container passes to the reporter on every route change (`setScreen`,
+  [contracts/driven-ports.md](contracts/driven-ports.md#errorreporter)).
+- **Once per opening** (FR-030, clarified 2026-10-06): the last step of `beforeSend` computes the
+  signature `type | code | operation | screen` of the filtered event and drops the event when
+  that signature was already sent; the signatures live in a `Set` in memory. The reporter is built once, before the
+  composition root (T061), and "Réessayer" (R18a, R13a) reruns only the composition root, so the
+  set lasts exactly from opening to stop, as the spec requires. Because the rule sits in
+  `beforeSend`, it covers `report` calls and the global handlers alike. Native crashes end the
+  process, so the next report comes from a new opening. The application code still calls
+  `report` on every failure; the adapter alone decides not to send. `RecordingErrorReporter`
+  records every call, so application tests keep asserting that each failure is passed to the
+  reporter, and the adapter's tests assert the drop.
+- **Expected situations** (FR-030, clarified 2026-10-06): exactly the three the spec lists, each
+  already handled without a report: `StorageFull` (R12a), `DataFromNewerVersion` (R18c), and the
+  `Result` errors that use cases return for refused input (`NameEmpty`, `NameTooLong`,
+  `NameAlreadyUsed` and the `QuantityError` union), which the store returns to the form without
+  calling `report` (T049). Anything thrown is unexpected and reported. For a JavaScript error,
+  the error type is its `name` and the error code its `code` property when it has one (the
+  SQLite result code for `StorageError`), and no code otherwise.
+- **Delivery within 1 minute** (SC-010, clarified 2026-10-06): with the network on, the SDK sends
+  an event as soon as it is captured. A report stored offline is sent by the native SDKs, which
+  send their stored envelopes at startup and, while the app runs, when the system says the
+  network is back (connection status on Android, reachability on iOS); a native crash is stored
+  when it happens and sent at the next startup. The app adds no code for this. That the SDK
+  version used meets the 1-minute limit in each case is measured by the manual check
+  (quickstart §6, steps 1, 4 and 5). If a platform misses it, the fix is an explicit flush when
+  the network returns, which needs a network status dependency: it is proposed to the
+  maintainer then (Principle IV), not added in advance.
+- **Alerts** (FR-030c, clarified 2026-10-06): configured in Sentry, not in the app. The project
+  has two issue alert rules, both filtered on the `production` environment and sending an email
+  to the maintainer: "a new issue is created" and "an issue changes state from resolved to
+  unresolved". Sentry groups events into issues by stack trace and type, close to the spec's
+  "same kind of failure"; the adapter also sets the fingerprint to the FR-030 key
+  (`type | code | operation | screen`), so one kind of failure is exactly one issue. The default
+  alert rule Sentry creates with a project is deleted, and the maintainer's personal workflow
+  notifications are turned off, so no other email is sent; `preview` matches no rule. The
+  README lists these settings, and quickstart §6 step 7 checks them once.
+- **Every feature, one reporter** (FR-030b, clarified 2026-10-06): 002 and 003 report through the
+  same `ErrorReporter` and the same Sentry adapter, so FR-030 and FR-030a hold for them with no
+  extra code. A later feature adds its expected situations by not calling `report` for them
+  (for example 003's offline sync), never by changing the filter.
+- **Disclosure** (spec Assumptions): the app shows no notice and no setting. If it is published
+  on a store, its privacy details declare crash data and a random installation identifier,
+  neither linked to the user nor used for tracking (Google Play "Crash logs" and "Device or
+  other IDs", App Store "Crash Data" and "Device ID", not linked to the user); the README tells
+  the maintainer.
+- **No storage error text in reports** (FR-030): the SQLite adapter catches every error thrown by
+  the database (in `openDatabase`, `migrate`, the repositories and `SqliteUnitOfWork`) and
+  rethrows a `StorageError` whose message is fixed and content-free ("Storage operation
+  failed"), carrying only the SQLite result code when the original error has one. Its stack
+  trace is its own, captured where the adapter rethrows, which points at the failing repository
+  call; the original stack is not copied, because a JavaScript stack string starts with the
+  original message. The original error is not attached as `cause` either, so its text never
+  reaches a report. Every storage failure the UI adapter or the global handlers report is
   therefore already clean.
-- **Every report filtered** (FR-030, clarified 2026-10-06): uncaught exceptions and display errors
-  keep their own message, which may quote a value being shown, so the Sentry adapter still
-  filters every event in `beforeSend`. It empties `exception.values[].value` and `message`, and
-  keeps only the fields FR-030 lists: error type, error code, stack trace, operation, screen,
-  app version (release), device model and system version, and environment. Every other context,
-  extra, tag, user field and breadcrumb is removed.
+- **Every report filtered** (FR-030): uncaught exceptions and display errors keep their own
+  message, which may quote a value being shown, so the Sentry adapter filters every JavaScript
+  event in `beforeSend`. It empties `exception.values[].value` and `message`, and keeps only the
+  fields FR-030 lists: error type, error code, stack trace, operation, screen, app version
+  (release and `dist`), device model and system version, and environment. Every other context,
+  extra, tag, user field and breadcrumb is removed, the device's own name included.
 - **Rationale**: Sentry has first-party React Native and Expo support covering every Principle
   VIII requirement (offline cache, symbolication, release tagging) and a free tier fitting a
-  personal app.
+  personal app. Native crashes need no native code of ours: the spec accepts their installation
+  id, and the platforms already keep the device name out.
 - **Alternatives considered**: Bugsnag (similar, less integrated with Expo); Firebase Crashlytics
-  (needs a Firebase project and native setup; weaker on JS errors).
+  (needs a Firebase project and native setup; weaker on JS errors). For native crashes: a
+  `beforeSend` written in Kotlin and Swift through a config plugin would remove the
+  installation id too, but adds native code the spec does not require; turning native crash
+  handling off (this plan's first choice) was rejected in the spec's clarification. For the
+  once-per-opening rule: Sentry's `Dedupe` integration only drops an event identical to the one
+  just before it, so a failure alternating with another would still be sent many times; a
+  wrapper around `report` would miss the global handlers.
+
+## R13a. A screen that fails while drawing, and errors nothing catches (FR-039a)
+
+- **Decision**: `App.tsx` wraps the navigation in `AppErrorBoundary`, a React error boundary in
+  the UI adapter (`apps/mobile/src/adapters/ui/components/app-error-boundary.tsx`). When a
+  screen throws while rendering, it reports the error through `ErrorReporter` with
+  `{ operation: 'render', screen }`, the screen being the route shown, and replaces the whole
+  app with `CrashError`, a full-screen view built on the shared `ErrorState`: "Une erreur est
+  survenue." and "Réessayer". "Réessayer" goes through the same restart as the startup error
+  (R18a): close the database, then run the composition root again from the start, with
+  `LoadingState` meanwhile; it never deletes or resets data. If the screen fails again, the
+  error is passed to the reporter again and `CrashError` shows again; the reporter sends the
+  same failure only once per opening (R13).
+  - Errors thrown outside rendering (an event handler, a promise nobody awaits) do not reach an
+    error boundary. They are reported by the SDK's global handlers with `operation: 'uncaught'`
+    (R13) and show nothing new: the user goes on with the app, as FR-039a only requires the
+    report.
+  - A failure during startup is still the startup error (R18a), shown before the navigation and
+    its boundary exist.
+- **Rationale**: React offers no other way to catch a rendering failure, and a boundary at the
+  root is the smallest one that covers every screen. Reusing the startup restart gives one
+  recovery path and one "no data deleted" rule to test.
+- **Alternatives considered**: `Sentry.ErrorBoundary` (would put the SDK in the UI adapter and
+  report outside the port, untestable with `RecordingErrorReporter`); one boundary per screen
+  (rejected in the spec's clarification: the whole app is replaced).
 
 ## R14. Testing stack (Principles I, II, III)
 
@@ -431,7 +563,8 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
   full-screen `StartupError` view built on
   the shared `ErrorState`: "L'application n'a pas pu démarrer." and "Réessayer"; the error is
   reported with `{ operation: 'startup' }`. "Réessayer" closes the database if it was opened
-  and runs the composition root again from the start; each failure is reported. The root
+  and runs the composition root again from the start; each failure is passed to the reporter,
+  which sends the same failure only once per opening (R13). The root
   reports through the error reporter, which it builds first and which never throws, so a
   storage failure can always be reported (offline, Sentry's own cache holds it).
 - **Data is never wiped**: no code path deletes, recreates or overwrites the database file to

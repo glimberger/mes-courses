@@ -149,7 +149,7 @@
 - Q: Does the fixed list of report fields apply to every error report, not only storage errors?
   → A: Yes: every report keeps only the error type, error code, stack trace, operation, screen,
   application version, device model and system version, and the environment (production or
-  development); the error's own text is removed
+  preview, as clarified below); the error's own text is removed
   from every report, and no list, article or category name ever appears (FR-030).
 - Q: How does search treat a blank query, spaces in the query, and "œ" and "æ"? → A: The query
   is cleaned like a name (trimmed, inner spaces reduced); a query left empty shows the full
@@ -204,6 +204,52 @@
 - Q: Which device settings does a scenario assume unless it says otherwise? → A: Screen reader
   off, network on, system text at 100% and the light theme; a scenario that depends on another
   setting states it in its "Given".
+- Q: Besides the error itself, may a report identify the person or the device? → A: No: a report
+  carries no user identifier, no installation identifier and no device name; the device model
+  (for example "Pixel 6") is the only device detail kept (FR-030). A crash in native code is the
+  one exception, clarified below.
+- Q: When an error happens without network, what happens to its report? → A: It is stored on
+  the phone, at most 30 reports, kept across application stops and device restarts, and sent
+  when the network returns; when the queue is full, the oldest report is dropped (FR-030a).
+- Q: When a screen fails unexpectedly while it is being drawn, what does the user see? → A: A
+  full-screen French error "Une erreur est survenue." with "Réessayer", which starts the
+  application again as in FR-039; the error is reported and stored data is never deleted
+  (FR-039a).
+- Q: Must a report from a release build show a readable stack trace, and is that checked by
+  hand? → A: Yes: the stack trace names the source files and functions, not minified code; a
+  manual check before release sends a test report, then one raised in airplane mode, and finds
+  both readable after reconnection (FR-030, FR-030a).
+- Q: Are users told that errors are sent to an outside service, and can they turn it off? → A:
+  No notice and no setting in the application; if it is published on a store, its privacy
+  details declare crash data collected without identifiers (Assumptions).
+- Q: Must crashes in the phone's native code (outside the application's JavaScript) be
+  reported, given their reports cannot be stripped of identifiers? → A: Yes, as an exception to
+  FR-030: such a report may carry the random installation identifier the error tracking tool
+  sets, which changes when the application is reinstalled; it still carries no list content,
+  no user identifier and no device name (FR-030, Assumptions).
+- Q: Which builds send reports, and under which environment name? → A: Store releases send as
+  "production" and test builds installed on a phone (internal or preview) as "preview";
+  development runs and automated test builds never send anything (FR-030).
+- Q: When the same failure repeats many times, is each occurrence reported? → A: No: a failure
+  with the same error type, error code, operation and screen is reported at most once from the
+  moment the application is opened until it is stopped ("Réessayer" does not reopen it); any
+  other failure is always reported, and nothing is sampled (FR-030).
+- Q: Does the spec list every expected situation, which is never reported? → A: Yes, a closed
+  list in FR-030: a full device storage, data saved by a newer version (FR-040), and input
+  refused with a French message (a name empty, too long or already used, an invalid quantity or
+  unit); every other failure is unexpected and reported (FR-030).
+- Q: How does a report identify the application version? → A: By the version and the build
+  number together, for example "1.2.0 (42)"; each build has its own number (FR-030).
+- Q: Do these report rules apply to every report the application sends, including those added
+  by 002 and 003? → A: Yes: FR-030 and FR-030a are the rules for every report the application
+  sends, whatever the feature; later features cite them and only add their own expected
+  situations; the server's reports keep their own rules (003 FR-022a) (FR-030b).
+- Q: How does the maintainer find out that a new error has appeared? → A: By email, the first
+  time a new kind of failure appears in "production" and when a failure marked as fixed comes
+  back; repeats and "preview" reports send nothing (FR-030c).
+- Q: How quickly must a report reach error tracking? → A: Within 1 minute of the error with the
+  network on, of the network returning while the application is open, or of the next opening
+  after a native crash (SC-010).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -438,6 +484,9 @@ the new heading.
 - The device storage is full when saving a change: the save fails as above, but the message is
   "Espace de stockage insuffisant. Libérez de la place sur votre téléphone." instead of the
   usual failed-save message, and the error is not reported (FR-030).
+- A screen fails unexpectedly while it is being drawn (not while loading data or saving): a
+  full-screen error state says "Une erreur est survenue." and offers "Réessayer", the error is
+  reported, and stored data is never deleted (FR-039a).
 
 ## Requirements *(mandatory)*
 
@@ -561,18 +610,49 @@ the new heading.
   filter the catalog already loaded on the add screen: they share its loading and error
   states and have only their own empty and success states. The error state's "Réessayer" MUST
   read again: when reading succeeds, the loaded screen (empty or success) replaces the error
-  state; when it fails again, the error state stays and the error is reported again.
+  state; when it fails again, the error state stays and the error is reported again, unless
+  FR-030's once-per-opening rule applies.
 - **FR-030**: Every unexpected error MUST be shown to the user in plain French when it affects
   them, and reported to error tracking without any list content or personal data. Every report
   MUST keep only the error type, the error code, the stack trace, the operation, the screen, the
-  application version, the device model and system version, and the environment (production or
-  development): the error's own text, which may quote a value being saved or shown, MUST be
-  removed before sending, and no list, article or category name may appear in a report. Each
+  application version (the version and the build number, for example "1.2.0 (42)", each build
+  having its own number), the device model and system version, and the environment: "production"
+  for a store release, "preview" for a test build installed on a phone. Development runs and
+  automated test builds MUST NOT send any report. In a release build, the stack trace MUST name
+  the source files and functions, not minified code. The error's own text, which may quote a value being saved or shown, MUST be
+  removed before sending, and no list, article or category name may appear in a report. A
+  report MUST NOT carry any user identifier, installation identifier or device name (the name
+  the owner gave the phone); the device model is the only device detail kept. The one exception
+  is a crash in native code (outside the application's JavaScript): it MUST be reported too,
+  and its report may carry a random installation identifier, which changes when the application
+  is reinstalled, but no other identifier, no device name and no list content. A failure with
+  the same error type, error code, operation and screen as one already reported MUST NOT be
+  reported again until the application is stopped and opened again ("Réessayer" does not reopen
+  it); any other failure is always reported, and reports are never sampled. Each
   report names the failed operation and the screen it happened on; their exact names are set in
   [contracts/ui-screens.md](contracts/ui-screens.md). A save that fails because the device
   storage is full (the storage itself reports that no space is left; any other storage failure
   is unexpected) is an expected situation, not an unexpected error: it MUST show "Espace de
   stockage insuffisant. Libérez de la place sur votre téléphone." and MUST NOT be reported.
+  In this feature, the expected situations, never reported, are exactly these three: a full device storage,
+  data saved by a newer version of the application (FR-040), and input refused with a French
+  message (a name empty, too long or already used, FR-021 and FR-022; an invalid quantity or
+  unit, FR-016 and FR-022). Every other failure is an unexpected error.
+- **FR-030a**: A report raised without network MUST be stored on the device and sent when the
+  network returns. At most 30 reports are kept; when a new report would exceed that, the oldest
+  one is dropped. Stored reports MUST survive the application being stopped and the device
+  being restarted.
+- **FR-030b**: FR-030 and FR-030a apply to every report the application sends, including those
+  of later features ([002-manage-articles](../002-manage-articles/spec.md),
+  [003-server-sync](../003-server-sync/spec.md)). A later feature MUST cite them rather than
+  restate them, and MAY only add expected situations of its own, each named in its spec (for
+  example being offline or the server being unreachable, 003 FR-022). Reports sent by the
+  server follow 003 FR-022a.
+- **FR-030c**: The maintainer MUST receive an email the first time a new kind of failure (same
+  error type, error code, operation and screen) is reported from a "production" build, and when
+  a failure the maintainer marked as fixed is reported again. Further reports of a known
+  failure and every "preview" report MUST NOT send an email. This is a setting of the error
+  tracking service, checked once when it is set up.
 - **FR-031**: All user-facing text MUST be in French.
 - **FR-032**: Every screen MUST be usable with the system screen reader: each interactive
   element has a French label, and each list item announces its name, its quantity when it has
@@ -600,8 +680,14 @@ the new heading.
 - **FR-039**: When the application cannot open, update or set up its storage at startup, it
   MUST show a full-screen error state in French with a "Réessayer" action and report the
   error. "Réessayer" MUST start the application again: when it succeeds, the current list is
-  shown; when it fails again, the error state stays and the error is reported again. It MUST
+  shown; when it fails again, the error state stays and the error is reported again, unless
+  FR-030's once-per-opening rule applies. It MUST
   NOT delete, reset or overwrite stored data to recover.
+- **FR-039a**: When a screen fails unexpectedly while it is being drawn, the application MUST
+  show a full-screen error state in French, "Une erreur est survenue.", with a "Réessayer"
+  action, and report the error. "Réessayer" MUST start the application again as in FR-039, and
+  stored data MUST NOT be deleted, reset or overwritten. Unexpected errors that no screen or use
+  case catches (uncaught exceptions, unhandled promise rejections) MUST be reported too.
 - **FR-040**: Every update of the application MUST keep all stored data (lists, items, ticks,
   quantities, articles, categories, current list), upgrading how it is stored in place when
   needed; a failed upgrade is handled by FR-039. When an older version finds data saved by a
@@ -654,15 +740,22 @@ the new heading.
   are shown within 100 ms.
 - **SC-009**: Every action of this spec (listed below) can be completed with the screen reader
   alone, and with the system text size at 200%.
+- **SC-010**: A report reaches error tracking within 1 minute: of the error, when the network is
+  on; of the network returning, while the application is open; of the next opening of the
+  application, after a crash in native code (FR-030, FR-030a).
 
 SC-001, SC-002 and SC-008 are measured on a release build, on two reference phones: an
 entry-level Android phone about five years old, and the maintainer's iPhone.
 
 Every requirement and acceptance scenario of this spec is proven by an automated test, except
 the following, which each get a written manual check (steps and expected result) run on the
-reference phones before release: SC-001, SC-002, SC-004, SC-008 and SC-009; the device restart
+reference phones before release: SC-001, SC-002, SC-004, SC-008, SC-009 and SC-010; the device restart
 and sudden power loss cases of SC-007; text at 200% (FR-033); contrast as seen on screen
-(FR-036); and screen reader focus and announcements (FR-037, FR-038). Parts of these that an
+(FR-036); screen reader focus and announcements (FR-037, FR-038); and error tracking on a
+release build: a test report arrives with a readable stack trace, a report raised in airplane
+mode arrives after reconnection, and a test crash in native code arrives with no device name
+and no identifier other than the installation one (FR-030, FR-030a); and, once when error
+tracking is set up, the email alerts of FR-030c. Parts of these that an
 automated test can check (for example French labels or the contrast of theme colors) are still
 tested automatically.
 
@@ -697,6 +790,11 @@ The actions of this spec, checked one by one by SC-006 and SC-009:
   application loses it, an accepted risk. The application's data stays included in the system
   backup (Android Auto Backup, iCloud device backup) as a fallback. Lists hold no sensitive
   data, so no encryption is added beyond the system's own.
+- Error reports go to an outside error tracking service without the user being told in the
+  application, and cannot be turned off: they hold no list content and no personal data, and
+  only native crash reports carry an identifier, a random one per installation (FR-030). If the
+  application is published on a store, its privacy details declare crash data and that random
+  installation identifier, neither linked to the user nor used for tracking.
 - Default categories, in this order: Fruits et légumes, Boucherie et poissonnerie, Crèmerie,
   Boulangerie, Épicerie salée, Épicerie sucrée, Surgelés, Boissons, Hygiène et beauté,
   Entretien, Divers.
