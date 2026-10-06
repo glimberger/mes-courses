@@ -369,7 +369,9 @@ the new heading.
   at least 4.5:1 for text and 3:1 for icons, checkboxes and other meaningful graphics. Ticked
   rows are dimmed within these limits, never below them.
 - **FR-037**: Screen reader focus MUST never be lost to the top of the screen after an action:
-  an opening dialog takes focus, and on closing gives it back to the element that opened it;
+  an opening dialog takes focus, and on closing gives it back to the element that opened it,
+  or to the screen title when that element is gone (for example "Terminer les courses", hidden
+  once every item is unticked);
   after an item is removed, focus moves to the next item of the list, or the previous one when
   there is no next, or the empty state when the list becomes empty; an item keeps focus when
   ticking or unticking it moves it within its category.

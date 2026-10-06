@@ -218,7 +218,7 @@ story depends on them.
   - the contrast variants are mapped;
   - FR-036: in light and dark, the text roles the screens use (`onSurface`, `onSurfaceVariant` for ticked rows, `primary`) reach 4.5:1 on `surface` and the `surfaceContainer*` roles, and `outline` and icon roles reach 3:1 (WCAG contrast ratio computed in the test);
   - the `spacing` tokens are `xs = 4` … `xl = 32` on the 4 dp grid.
-- [ ] T042 Implement the light and dark themes from the JSON in `apps/mobile/src/adapters/ui/theme/theme.ts` and the `spacing` tokens in `apps/mobile/src/adapters/ui/theme/spacing.ts`, and add `ThemeProvider` (follows `useColorScheme`, wraps `PaperProvider`) in `apps/mobile/src/adapters/ui/theme/theme-provider.tsx`, to turn T041 green.
+- [ ] T042 Implement the light and dark themes from the JSON in `apps/mobile/src/adapters/ui/theme/theme.ts` and the `spacing` tokens in `apps/mobile/src/adapters/ui/theme/spacing.ts`, and add `ThemeProvider` (follows `useColorScheme`, wraps `PaperProvider`) in `apps/mobile/src/adapters/ui/theme/theme-provider.tsx`, to turn T041 green. If a contrast pair of T041 fails with the colors of `design/material-theme.json`, export the theme again from Material Theme Builder, or use a role of the same scheme that passes and record the choice in [research.md](research.md) R12; never lower the threshold.
 - [ ] T043 [P] Write failing component tests in `apps/mobile/src/adapters/ui/components/screen-state.test.tsx`:
   - `LoadingState` has the accessibility label "Chargement";
   - `EmptyState` shows its message and optional action button;
@@ -242,7 +242,7 @@ story depends on them.
   - a `Result` error is returned unchanged and not reported.
 - [ ] T050 Implement the internal `runWrite` helper and `refresh()` in `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T049 green.
 - [ ] T051 Implement `AppStoreProvider` (React context) in `apps/mobile/src/adapters/ui/state/app-store-provider.tsx` and `useAppStore(selector)` (wraps `useStore`) in `apps/mobile/src/adapters/ui/state/use-app-store.ts`, with a test rendering a component that selects a slice. Add the `renderWithStore(ui, { seed? })` helper in `apps/mobile/src/adapters/ui/testing/render-with-store.tsx`: it builds fresh fakes, use cases, store, theme and navigation container for each test.
-- [ ] T052 [P] Write failing tests for `NoticeSnackbar` in `apps/mobile/src/adapters/ui/components/notice-snackbar.test.tsx`: `writeFailed` shows "La modification n'a pas pu être enregistrée.", `articleAdded` shows "« {name} » ajouté", and dismissing calls `dismissNotice`.
+- [ ] T052 [P] Write failing tests for `NoticeSnackbar` in `apps/mobile/src/adapters/ui/components/notice-snackbar.test.tsx`: `writeFailed` shows "La modification n'a pas pu être enregistrée.", `articleAdded` shows "« {name} » ajouté", and dismissing calls `dismissNotice`. Each notice is announced with its French text as it appears (`AccessibilityInfo.announceForAccessibility` mocked, FR-038).
 - [ ] T053 [P] Implement `NoticeSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T052 green.
 
 ### App shell and composition
@@ -276,8 +276,8 @@ story depends on them.
 untick at once; the remaining count; "Terminer les courses"; explicit loading, empty and error
 states; works offline.
 
-**Independent Test**: seed a current list with a few items (fakes in tests, or the dev seed of
-T135 on a device). Open the app, tick and untick, kill and reopen, check the ticks were kept, then
+**Independent Test**: seed a current list with a few items (fakes in tests; on a device, items
+added through US2). Open the app, tick and untick, kill and reopen, check the ticks were kept, then
 finish shopping and check every item is unticked and still present.
 
 ### Tests for User Story 1 ⚠️ (write first, confirm they fail)
@@ -305,6 +305,7 @@ finish shopping and check every item is unticked and still present.
   - role `checkbox` with the `checked` state;
   - the label "Lait, 2 L, dans le caddie" or "Pommes, pas dans le caddie" (FR-032);
   - a ticked row shows a check mark and struck-through text, not only a color (FR-035);
+  - a ticked row's text uses `theme.colors.onSurfaceVariant` and the row has no `opacity` style, so its contrast is the one T041 checks (FR-036);
   - the row has `minHeight` 48 (FR-034);
   - the name has no `numberOfLines`, so long names wrap (FR-033);
   - tapping calls `onToggle`.
@@ -317,11 +318,13 @@ finish shopping and check every item is unticked and still present.
   - US1-11: `LoadingState` shows while the use case is pending;
   - US1-12: "Impossible de charger la liste." with "Réessayer" retrying, and the error reported;
   - US4-5: an empty category heading is not shown;
-  - "Terminer les courses" is absent when nothing is ticked.
+  - "Terminer les courses" is absent when nothing is ticked;
+  - FR-037: with `AccessibilityInfo` mocked, a row keeps screen reader focus when ticking moves it below the unticked rows, and the remaining count is not announced (FR-038).
 - [ ] T072 [US1] Write failing tests for finishing in `apps/mobile/src/adapters/ui/screens/finish-shopping-dialog.test.tsx`:
   - the dialog text is "Terminer les courses ?" / "Tous les articles seront décochés et resteront dans la liste.";
   - US1-8: "Terminer" unticks all, and items and quantities stay;
-  - US1-9: "Annuler" changes nothing.
+  - US1-9: "Annuler" changes nothing;
+  - FR-037: opening moves focus to the dialog title; "Annuler" gives it back to "Terminer les courses", and "Terminer", which hides that action, gives it to the Appbar title.
 - [ ] T073 [US1] Write a failing offline test for US1-5 in `apps/mobile/src/adapters/ui/screens/current-list-offline.test.tsx`: with `global.fetch` replaced by a function that throws, open the app and tick items. Everything works and no error is shown or reported.
 
 ### Implementation for User Story 1
@@ -336,10 +339,11 @@ finish shopping and check every item is unticked and still present.
   - Appbar title and subtitle;
   - the "Terminer les courses" action, shown only when `hasItemsInCart`;
   - the "Mes listes" action and the FAB "Ajouter", wired to placeholder routes;
-  - `ScreenStateView` for the states.
+  - `ScreenStateView` for the states;
+  - a ticked row keeps focus when it moves (FR-037): rows keyed by article id keep their native view.
 
   Replace the placeholder in `navigation.tsx`. It turns T071 and T073 green.
-- [ ] T080 [US1] Implement `FinishShoppingDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` (Paper `Dialog` in a `Portal`) and open it from CurrentList, to turn T072 green.
+- [ ] T080 [US1] Implement `FinishShoppingDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` (Paper `Dialog` in a `Portal`) and open it from CurrentList, with the focus moves of FR-037, to turn T072 green.
 - [ ] T081 [US1] Add the US1 ids of [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) to `apps/mobile/src/adapters/ui/required-stories.ts`: `Components/ListItemRow/NotInCart`, `.../InCart`, `.../WithQuantity`, `.../LongName`, `Components/NoticeSnackbar/WriteFailed`, `Screens/CurrentList/Loading`, `.../Error`, `.../Empty`, `.../Success`, `.../AllInCart` and `Dialogs/FinishShoppingDialog/Default`. Run the story test and confirm it fails on each missing story.
 - [ ] T082 [US1] Write the stories to turn T081 green:
   - `apps/mobile/src/adapters/ui/components/ListItemRow.stories.tsx`, from the fixtures (the long-name story uses the 60-character article);
@@ -350,7 +354,7 @@ finish shopping and check every item is unticked and still present.
   Review them with `yarn storybook` on Android and iOS, in light and dark mode and at 200% text size.
 - [ ] T083 [US1] Make `first-launch.e2e.ts` (T065) green with `yarn test:e2e:android` and `yarn test:e2e:ios`. Any production fix it forces starts with its own failing unit or screen test.
 
-**Checkpoint**: on a device with items seeded by the dev seed (T135) or by US2, US1 works end to end, offline included; its stories are in Storybook and `first-launch.e2e.ts` is green on both platforms. This is the first half of the MVP. The US1 journeys that need items (ticking, persistence, finishing) are written in US2, which adds them.
+**Checkpoint**: on a device with items added through US2, US1 works end to end, offline included; its stories are in Storybook and `first-launch.e2e.ts` is green on both platforms. This is the first half of the MVP. The US1 journeys that need items (ticking, persistence, finishing) are written in US2, which adds them.
 
 ---
 
@@ -358,7 +362,7 @@ finish shopping and check every item is unticked and still present.
 
 **Goal**: browse or search the catalog, add with an optional quantity, create an article on the
 spot, mark articles already on the list, change or clear a quantity, remove with a 5-second
-"Annuler".
+"Annuler" (no timeout while a screen reader is on).
 
 **Independent Test**: from an empty current list, add existing articles with and without a
 quantity, create a new article, change a quantity, remove one item and undo, and check the list
@@ -400,13 +404,14 @@ content matches.
   - `undo()` clears `pendingUndo`, restores and refreshes; on failure the item stays removed, `notice = writeFailed`, and the error is reported;
   - `dismissUndo()` clears the offer;
   - any write clears a pending offer first;
-  - a new removal replaces the previous offer.
+  - a new removal replaces the previous offer;
+  - a store built afresh on the same fakes, standing for a closed app, has `pendingUndo = null`: the removal is final (FR-010).
 - [ ] T089 [P] [US2] Write failing component tests:
   - `apps/mobile/src/adapters/ui/components/article-row.test.tsx`: the "Déjà dans la liste" chip appears only when `onList`, and the row is ≥ 48 dp;
-  - `apps/mobile/src/adapters/ui/components/quantity-fields.test.tsx`: the labels "Quantité" and "Unité", a decimal numeric input mode, and `HelperText` errors;
-  - `apps/mobile/src/adapters/ui/components/name-field.test.tsx`: the label "Nom", a 60-character limit, and a `HelperText` error.
+  - `apps/mobile/src/adapters/ui/components/quantity-fields.test.tsx`: the labels "Quantité" and "Unité", a decimal numeric input mode, and `HelperText` errors, each announced with its French text as it appears (FR-038);
+  - `apps/mobile/src/adapters/ui/components/name-field.test.tsx`: the label "Nom", a 60-character limit, and a `HelperText` error, announced as it appears (FR-038).
 - [ ] T090 [P] [US2] Write failing tests for `UndoSnackbar` in `apps/mobile/src/adapters/ui/components/undo-snackbar.test.tsx`:
-  - `removedItem` shows "« {name} » retiré de la liste" with "Annuler" calling `undo`;
+  - `removedItem` shows "« {name} » retiré de la liste" with "Annuler" calling `undo`, and announces that text with "Annuler" as it appears (FR-038);
   - it calls `dismissUndo` after 5 s (Jest fake timers);
   - with a screen reader on (mocked `AccessibilityInfo`), it does not call `dismissUndo` after 5 s and stays until dismissed or the next write (FR-010);
   - it stays visible across navigation, because it is rendered at the root.
@@ -415,7 +420,8 @@ content matches.
   - FR-016 errors: "La quantité doit être un nombre positif." for "0", "-1" and "abc" (US2-12); "Indiquez une quantité pour cette unité." (US2-13); "L'unité ne peut pas dépasser 15 caractères.";
   - "1.5" + "kg" is shown as "1,5 kg" on the list (US2-2);
   - already-on-list mode: "« {name} » est déjà dans la liste." with the fields prefilled and the buttons "Fermer" and "Modifier la quantité" (US2-8);
-  - edit mode: "Effacer la quantité" (US2-4).
+  - edit mode: "Effacer la quantité" (US2-4);
+  - FR-037: opening moves focus to the dialog title, and closing gives it back to the row that opened it.
 - [ ] T092 [US2] Write failing screen tests for `AddArticles` in `apps/mobile/src/adapters/ui/screens/add-articles-screen.test.tsx`:
   - Appbar "Ajouter des articles" and the Searchbar placeholder "Rechercher un article";
   - US2-15: an empty category shows "Aucun article dans cette catégorie" with "Créer un article";
@@ -439,6 +445,7 @@ content matches.
   - "Retirer de la liste" removes at once and shows "« Beurre » retiré de la liste" with "Annuler" (US2-6);
   - "Annuler" restores the item ticked with "2 kg" (US2-16);
   - after 5 s the offer is gone;
+  - FR-037: after a removal, focus moves to the next row, or the previous one when the removed row was last, or the `EmptyState` when the list becomes empty;
   - the FAB "Ajouter" opens AddArticles, and coming back shows the added items.
 
 ### Implementation for User Story 2
@@ -449,10 +456,10 @@ content matches.
 - [ ] T098 [US2] Add the `catalog` region and the `searchCatalog`, `addArticleToList`, `createArticleAndAddToList`, `changeItemQuantity`, `removeItem`, `undo` and `dismissUndo` actions to `apps/mobile/src/adapters/ui/state/app-store.ts`, to turn T088 green.
 - [ ] T099 [P] [US2] Implement `ArticleRow.tsx`, `QuantityFields.tsx` and `NameField.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T089 green.
 - [ ] T100 [P] [US2] Implement `UndoSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` (no timeout while a screen reader is on, per [contracts/ui-screens.md](contracts/ui-screens.md#undo-offer)) and render it once at the root in `apps/mobile/src/adapters/ui/navigation.tsx`, to turn T090 green.
-- [ ] T101 [US2] Implement `QuantityDialog.tsx` in `apps/mobile/src/adapters/ui/screens/`, with modes add / already-on-list / edit, parsing through the domain's `parseQuantity`, to turn T091 green.
+- [ ] T101 [US2] Implement `QuantityDialog.tsx` in `apps/mobile/src/adapters/ui/screens/`, with modes add / already-on-list / edit, parsing through the domain's `parseQuantity`, with the focus moves of FR-037, to turn T091 green.
 - [ ] T102 [US2] Implement `AddArticlesScreen.tsx` in `apps/mobile/src/adapters/ui/screens/` and replace its placeholder in `navigation.tsx`, to turn T092 green.
 - [ ] T103 [US2] Implement `CreateArticleScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`, validating the name through the domain's `validateName` before submitting. The category picker lists categories only; "Nouvelle catégorie" comes with US4. Replace the placeholder in `navigation.tsx`. It turns T093 green.
-- [ ] T104 [US2] Fill the trailing actions and accessibility actions of `ListItemRow` ("Modifier la quantité", "Retirer de la liste") and wire them in `CurrentListScreen.tsx` to turn T094 green.
+- [ ] T104 [US2] Fill the trailing actions and accessibility actions of `ListItemRow` ("Modifier la quantité", "Retirer de la liste") and wire them in `CurrentListScreen.tsx`, moving focus after a removal (FR-037), to turn T094 green.
 - [ ] T105 [US2] Add the US2 ids of [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) to `required-stories.ts`: `Components/ArticleRow/Default`, `.../AlreadyOnList`, `Components/QuantityFields/Empty`, `.../Filled`, `.../WithError`, `Components/NameField/Empty`, `.../WithError`, `Components/UndoSnackbar/RemovedItem`, `Screens/AddArticles/Loading`, `.../Error`, `.../NoQuery`, `.../SearchMatches`, `.../SearchNoMatch`, `Screens/CreateArticle/Empty`, `.../NameAlreadyUsed`, `Dialogs/QuantityDialog/Add`, `.../Edit`, `.../AlreadyOnList` and `.../InvalidAmount`. Confirm the story test fails on each.
 - [ ] T106 [US2] Write the stories to turn T105 green: `ArticleRow.stories.tsx`, `QuantityFields.stories.tsx`, `NameField.stories.tsx` and `UndoSnackbar.stories.tsx` (a `prepare` that removes an item) in `apps/mobile/src/adapters/ui/components/`; `AddArticlesScreen.stories.tsx` (pending and failing `getCatalog`, an empty category, a `prepare` searching "pom" with "Pommes" already on the list, a search for "xyz"), `CreateArticleScreen.stories.tsx` (the `NameAlreadyUsed` story renders the form with the error "« Lait » existe déjà.", T058) and `QuantityDialog.stories.tsx` in `apps/mobile/src/adapters/ui/screens/`. Review them in Storybook on both platforms, light and dark.
 - [ ] T107 [US2] Make the T084 journeys green with `yarn test:e2e:android` and `yarn test:e2e:ios`. Any production fix starts with its own failing unit or screen test.
@@ -502,14 +509,15 @@ current.
   - title "Nouvelle liste", buttons "Annuler" / "Créer";
   - US3-2: the list appears empty in Lists;
   - US3-5: "Une liste porte déjà ce nom.";
-  - US3-6: "Indiquez un nom.".
+  - US3-6: "Indiquez un nom.";
+  - FR-037: opening moves focus to the dialog title, and closing gives it back to the FAB "Nouvelle liste".
 
 ### Implementation for User Story 3
 
 - [ ] T113 [US3] Implement `get-lists.ts`, `create-list.ts` and `set-current-list.ts` in `apps/mobile/src/application/use-cases/` to turn T109 green, per [contracts/driving-ports.md](contracts/driving-ports.md#named-lists-user-story-3). Add them to `UseCases` and to the composition root.
 - [ ] T114 [US3] Add the `lists` region and the `loadLists`, `createList` and `setCurrentList` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T110 green.
 - [ ] T115 [US3] Implement `ListsScreen.tsx` (with the FAB "Nouvelle liste") in `apps/mobile/src/adapters/ui/screens/` and replace its placeholder in `navigation.tsx`, to turn T111 green.
-- [ ] T116 [US3] Implement `CreateListDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` to turn T112 green.
+- [ ] T116 [US3] Implement `CreateListDialog.tsx` in `apps/mobile/src/adapters/ui/screens/`, with the focus moves of FR-037, to turn T112 green.
 - [ ] T117 [US3] Add `Screens/Lists/Loading`, `.../Error`, `.../Success`, `Dialogs/CreateListDialog/Default` and `.../NameAlreadyUsed` to `required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/screens/ListsScreen.stories.tsx` (pending and failing `getLists`, two lists with the current one marked) and `CreateListDialog.stories.tsx` (the error story renders the form with "Une liste porte déjà ce nom.") to turn it green. Review them in Storybook.
 - [ ] T118 [US3] Make the T108 journeys green with `yarn test:e2e:android` and `yarn test:e2e:ios`.
 
@@ -537,7 +545,8 @@ create an article in it, add it to the current list, and check it appears under 
 - [ ] T121 [US4] Write failing dialog tests in `apps/mobile/src/adapters/ui/screens/create-category-dialog.test.tsx`:
   - title "Nouvelle catégorie", buttons "Annuler" / "Créer";
   - US4-3: "Cette catégorie existe déjà.";
-  - US4-4: "Indiquez un nom.".
+  - US4-4: "Indiquez un nom.";
+  - FR-037: opening moves focus to the dialog title, and closing gives it back to "Nouvelle catégorie".
 - [ ] T122 [US4] Extend `apps/mobile/src/adapters/ui/screens/create-article-screen.test.tsx` with failing tests:
   - US4-1: the 11 default categories are offered in the spec's order;
   - US4-2: "Nouvelle catégorie" opens CreateCategoryDialog, and on success "Bébé" is offered and preselected;
@@ -547,7 +556,7 @@ create an article in it, add it to the current list, and check it appears under 
 
 - [ ] T123 [US4] Implement `create-category.ts` in `apps/mobile/src/application/use-cases/` to turn T119 green, and add it to `UseCases` and to the composition root.
 - [ ] T124 [US4] Add the `createCategory` action to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T120 green.
-- [ ] T125 [US4] Implement `CreateCategoryDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` to turn T121 green.
+- [ ] T125 [US4] Implement `CreateCategoryDialog.tsx` in `apps/mobile/src/adapters/ui/screens/`, with the focus moves of FR-037, to turn T121 green.
 - [ ] T126 [US4] Add the "Nouvelle catégorie" entry to the category picker of `CreateArticleScreen.tsx` and preselect the new category, to turn T122 green.
 - [ ] T127 [US4] Add `Dialogs/CreateCategoryDialog/Default` and `.../NameAlreadyUsed` to `required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/screens/CreateCategoryDialog.stories.tsx` (the error story renders the form with "Cette catégorie existe déjà.") to turn it green. Review it in Storybook. Run every journey again: `first-launch.e2e.ts` covers US4-1.
 
@@ -562,13 +571,13 @@ validation of [quickstart.md](quickstart.md).
 
 - [ ] T128 Write the full offline UI scenario in `apps/mobile/src/adapters/ui/offline.test.tsx`: with `global.fetch` replaced by a function that throws, open, tick, add, create, change the quantity, remove and undo, switch list, and finish. Every step succeeds and nothing is reported (Principle VII, FR-027, SC-006). Make it green with no production change; any change it forces gets its own failing test first.
 - [ ] T129 [P] Write a test in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx` that renders a 200-item list through `renderWithStore`, ticks the last item, and checks that only that row re-renders (memoized rows identified by article id, [research.md](research.md) R11, SC-008). If it fails, fix the memoization in `ListItemRow.tsx` and `CurrentListScreen.tsx`.
-- [ ] T130 [P] Extend `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx` to render a ticked row under the dark theme and each contrast variant of T042: the check mark and the struck-through text are present in every theme, not only a color change (FR-035).
+- [ ] T130 [P] Extend `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx` to render a ticked row under the dark theme and each contrast variant of T041/T042: the check mark and the struck-through text are present in every theme, not only a color change (FR-035).
 - [ ] T131 [P] Write a test in `apps/mobile/src/adapters/ui/state/error-context.test.ts` that every `report` call made during the US1–US4 store tests carries only the `operation` and `screen` fields, never names or quantities (FR-030, Principle VIII).
-- [ ] T132 [P] Write accessibility tests in `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx`: every interactive element on the four screens and four dialogs has a French `accessibilityLabel` or a visible French text (FR-032), and every touch target is ≥ 48 dp (FR-034). With `AccessibilityInfo` mocked: opening a dialog moves focus to its title and closing it gives focus back to the opener, removing an item moves focus to the next row, the previous one or the empty state, and a ticked row keeps focus (FR-037); each snackbar and each `HelperText` error is announced with its French text, and a tick does not announce the remaining count (FR-038).
-- [ ] T133 Add the dev-only Sentry smoke test to `apps/mobile/src/composition/composition-root.ts`: when `EXPO_PUBLIC_SENTRY_SMOKE_TEST=1`, report one test error at startup. Test-first in `apps/mobile/src/composition/composition-root.test.ts`, including that it is ignored when the flag is unset.
+- [ ] T132 [P] Write accessibility tests in `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx`: every interactive element on the four screens and four dialogs has a French `accessibilityLabel` or a visible French text (FR-032), and every touch target is ≥ 48 dp (FR-034). The focus moves (FR-037) and announcements (FR-038) are driven by the tests of the components that make them: T052, T071, T072, T089, T090, T091, T094, T112 and T121.
+- [ ] T133 Add the build-time Sentry smoke test to `apps/mobile/src/composition/composition-root.ts`: when `EXPO_PUBLIC_SENTRY_SMOKE_TEST=1`, report one test error at startup. Test-first in `apps/mobile/src/composition/composition-root.test.ts`, including that it is ignored when the flag is unset.
 - [ ] T134 [P] Configure the Sentry Expo plugin options (organization, project, source map upload through EAS Build) in `apps/mobile/app.config.ts` and document in `README.md` the EAS environment variables the maintainer sets: the DSN and the build credential, never committed.
 - [ ] T135 Add the measurement seed to `apps/mobile/src/composition/dev-seed.ts`: when `EXPO_PUBLIC_DEV_SEED_ITEMS=<n>` is set at build time, fill an empty current list with n articles through the use cases. It works in release builds too, so SC-008 can be measured there (like the Sentry smoke test, T133); builds for users never set it. Test-first in `apps/mobile/src/composition/dev-seed.test.ts`: ignored when the variable is unset or the list is not empty.
-- [ ] T136 Update `README.md` with what the app does, the architecture in one paragraph (hexagonal layers, Zustand store in the UI adapter), how to review screens in Storybook and when to run the iOS journeys (before a release and on pull requests that change native configuration), how to run the device checks of [quickstart.md](quickstart.md), and the dev flags `EXPO_PUBLIC_DEV_SEED_ITEMS` and `EXPO_PUBLIC_SENTRY_SMOKE_TEST`.
+- [ ] T136 Update `README.md` with what the app does, the architecture in one paragraph (hexagonal layers, Zustand store in the UI adapter), how to review screens in Storybook and when to run the iOS journeys (before a release and on pull requests that change native configuration), how to run the device checks of [quickstart.md](quickstart.md), and the build-time flags `EXPO_PUBLIC_DEV_SEED_ITEMS` and `EXPO_PUBLIC_SENTRY_SMOKE_TEST`, which builds for users never set.
 - [ ] T137 Run [quickstart.md](quickstart.md) sections 1–7 on an Android device or emulator and on an iOS simulator: every required story reviewed in Storybook in light and dark mode and at 200% text size (§2), every journey green with `yarn test:e2e:android` and `yarn test:e2e:ios` (§3), and the 12 hands-on scenarios, including airplane mode, kill and restart, TalkBack/VoiceOver, 200% text, 200 items and start time on a release build (§5). Record the results, and anything not checked, in the pull request's test plan.
 
 ---
