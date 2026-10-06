@@ -168,7 +168,7 @@ A removal whose offer has ended is final.
 | Event | Screen reader focus | Announced |
 |---|---|---|
 | A dialog opens | The dialog (its title) | The title |
-| A dialog closes | Back to the element that opened it | |
+| A dialog closes | Back to the element that opened it; the Appbar title when it is gone ("Terminer les courses" after finishing) | |
 | An item is removed | The next row; the previous one if none; the `EmptyState` if the list is empty | The undo snackbar text |
 | An item is ticked or unticked | Stays on the row, which may move within its category | The row's new label (its `checked` state) |
 | A snackbar appears (`UndoSnackbar`, `NoticeSnackbar`, "« {name} » ajouté") | Unchanged | Its text, with "Annuler" when offered |

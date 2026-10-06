@@ -92,7 +92,7 @@ CurrentListView = {
   list: { id, name }
   remainingCount: number                    // items with inCart = false (FR-006)
   totalCount: number
-  hasItemsInCart: boolean                   // enables "Terminer les courses"
+  hasItemsInCart: boolean                   // shows "Terminer les courses"
   sections: Array<{
     category: { id, name }
     items: Array<{ articleId, name, inCart, quantity }>

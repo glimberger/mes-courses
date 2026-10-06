@@ -198,7 +198,8 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
   `primary` on `surface` and `surfaceContainer*`; `outline` for the checkbox), in light and
   dark: at least 4.5:1 for text roles and 3:1 for icon and outline roles.
 - **Focus (FR-037)**: `AccessibilityInfo.setAccessibilityFocus` on the target's native node,
-  after the layout settles: the dialog title when a dialog opens, the opener when it closes,
+  after the layout settles: the dialog title when a dialog opens, the opener when it closes (the
+  Appbar title when the opener is gone),
   the next row (or previous, or the `EmptyState`) after a removal. Rows are keyed by article
   id (R11), so a ticked row keeps its native view, and focus, when it moves.
 - **Announcements (FR-038)**: snackbars and `HelperText` errors call

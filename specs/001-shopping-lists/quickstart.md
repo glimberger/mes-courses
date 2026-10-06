@@ -99,7 +99,9 @@ release. Steps 4, 10, 11 and 12 need a person.
    French messages. Create "Farine" with "1.5" "kg" and check it shows "1,5 kg".
 3. **Search and duplicates** (US2-10, US2-8, US2-9, US2-14): create "Pommes" and
    "Pommes de terre"; search "pom" and "POM"; tap "Lait", check "Déjà dans la liste"; try to
-   create " lait "; search "xyz" and check the "no match" state.
+   create " lait "; search "xyz" and check the "no match" state. Count the gestures (SC-003):
+   adding "Pommes" by browsing takes at most 3 taps, and by searching at most 3 taps and 3
+   letters, tapping the search field and "Ajouter" included.
 4. **Tick in airplane mode** (US1-2 to US1-7, US1-5, SC-002, SC-006): turn on airplane mode, go
    back to the list, tick and untick items. Ticks show at once, ticked items move to the bottom
    of their category, the remaining count updates, no error appears.
