@@ -46,7 +46,7 @@ or in their own `contracts/ui-screens.md` ([002](../../002-manage-articles/contr
 | `Screens/CurrentList/Empty` | empty | US1-10 |
 | `Screens/CurrentList/Success` | several categories, ticked and unticked items, quantities | US1-1, US1-6, US1-7 |
 | `Screens/CurrentList/AllInCart` | "Tout est dans le caddie", "Terminer les courses" offered | US1-8 |
-| `Screens/AddArticles/Loading`, `.../Error` | loading, error | |
+| `Screens/AddArticles/Loading`, `.../Error` | loading, error | US2-17, US2-18 |
 | `Screens/AddArticles/NoQuery` | every category, one empty | US2-15 |
 | `Screens/AddArticles/SearchMatches` | grouped matches, one "Déjà dans la liste" | US2-10, US2-8 |
 | `Screens/AddArticles/SearchNoMatch` | "Aucun article ne correspond à « xyz »" | US2-14 |

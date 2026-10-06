@@ -32,6 +32,25 @@
   without loss of content, touch targets of at least 48 dp, and ticked state never conveyed
   by color alone.
 
+### Session 2026-10-06
+
+- Q: When saving a tick fails, is the item shown ticked at once and then reverted, or only once
+  the save is confirmed? → A: Shown at once; if the save fails, the item returns to its
+  previous state, a French message is shown and the error is reported.
+- Q: How long is "Annuler" offered after removing an item, and does it change with a screen
+  reader? → A: 5 seconds; while a screen reader is on, the offer stays until the user
+  dismisses it or makes another change.
+- Q: When no item of the list is ticked, what happens to "Terminer les courses"? → A: It is
+  hidden, and shown as soon as at least one item is ticked.
+- Q: Does the add screen get its own loading and error scenarios, and does search have states
+  of its own? → A: The add screen gets loading and error scenarios like the current list's;
+  search filters the already loaded catalog and has no loading or error state of its own.
+- Q: What happens to the "Annuler" offer on a second removal, or when the user leaves the
+  screen, switches the current list or closes the app? → A: Only the last removal can be
+  undone: any other change (including a new removal or switching the current list) ends the
+  offer and makes the removal final, and so does closing the app; moving between screens
+  does not end it.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Tick items off the current list while shopping (Priority: P1)
@@ -113,7 +132,7 @@ matches.
    "Farine" to the list "Gâteau" with "500 g", **Then** each list keeps its own quantity.
 6. **Given** "Beurre" is on the current list, **When** I remove it, **Then** it no longer
    appears on the current list but stays in the catalog, and an "Annuler" action is offered
-   for a few seconds.
+   for 5 seconds.
 7. **Given** no article named "Houmous" exists, **When** I type "Houmous", choose the category
    "Épicerie salée" and confirm, **Then** the article is created in the catalog and added to
    the current list.
@@ -140,6 +159,11 @@ matches.
     **Then** an empty state says so and offers to create an article.
 16. **Given** I removed "Farine" (ticked, "2 kg") from the current list, **When** I choose
     "Annuler" while it is offered, **Then** "Farine" is back on the list, ticked, with "2 kg".
+17. **Given** the catalog is still being read from the device, **When** the add screen
+    appears, **Then** a loading state is shown, never a blank screen.
+18. **Given** the catalog cannot be read from the device, **When** the add screen appears,
+    **Then** an error state says in French that the articles could not be loaded, offers to
+    retry, and the error is reported.
 
 ---
 
@@ -210,10 +234,12 @@ the new heading.
 
 ### Edge Cases
 
+- An item is removed while "Annuler" is still offered for another one: the offer now concerns
+  the new removal only, and the earlier removal is final.
 - Every item on the current list is ticked: the list stays as is until I finish shopping or
   untick items myself.
-- "Terminer les courses" on a list with no ticked item: the action is unavailable or does
-  nothing; no confirmation is asked.
+- No item of the list is ticked (including an empty list): "Terminer les courses" is hidden;
+  it is shown as soon as at least one item is ticked.
 - An article or a list is created while the device has no network: it is saved and shown
   immediately.
 - The application is closed or killed right after a tick or a quantity change: the change is
@@ -224,7 +250,9 @@ the new heading.
   full by wrapping, never cut off silently. Units are limited to 15 characters.
 - Many items (200 or more) on one list: the list stays smooth to scroll and to tick.
 - Device storage fails while saving a change: the change is not shown as saved, a French
-  error message is shown, and the error is reported.
+  error message is shown, and the error is reported. A tick or untick is the exception: it is
+  shown at once (FR-004), then returns to its previous state when the save fails, with the
+  same message and report.
 
 ## Requirements *(mandatory)*
 
@@ -241,7 +269,8 @@ the new heading.
 - **FR-005**: Within a category, unticked items MUST be shown before ticked items.
 - **FR-006**: A list MUST show how many of its items are left to put in the cart.
 - **FR-007**: Users MUST be able to finish shopping on a list: after a confirmation, every item
-  of that list is unticked and kept with its quantity.
+  of that list is unticked and kept with its quantity. The action MUST be offered only while
+  at least one item of the list is ticked.
 
 **Editing a list**
 
@@ -251,8 +280,12 @@ the new heading.
   and accents.
 - **FR-010**: Users MUST be able to remove an item from a list without deleting the article
   from the catalog or from other lists. Removal MUST take effect immediately, without
-  confirmation, and MUST be undoable for a few seconds through an "Annuler" action that
-  restores the item with its quantity and ticked state.
+  confirmation, and MUST be undoable through an "Annuler" action that restores the item with
+  its quantity and ticked state. "Annuler" MUST be offered for 5 seconds; while a screen
+  reader is on, it MUST stay offered until the user dismisses it or makes another change.
+  Only the last removal can be undone: any other change (including a new removal or switching
+  the current list) and closing the application end the offer, while moving between screens
+  does not. A removal whose offer has ended is final.
 - **FR-011**: An article MUST appear at most once on a given list; it may appear on several
   lists. When browsing or searching the catalog to add articles, articles already on the list
   MUST stay visible with an "already on the list" mark; choosing one MUST NOT duplicate or
@@ -301,7 +334,9 @@ the new heading.
 - **FR-028**: Every change MUST be saved on the device as soon as it is made, with no explicit
   save action, and kept across application restarts.
 - **FR-029**: Each screen showing data (current list, catalog by category, search results,
-  lists) MUST implement explicit loading, empty, error and success states.
+  lists) MUST implement explicit loading, empty, error and success states. Search results
+  filter the catalog already loaded on the add screen: they share its loading and error
+  states and have only their own empty and success states.
 - **FR-030**: Every unexpected error MUST be shown to the user in plain French when it affects
   them, and reported to error tracking without any list content or personal data.
 - **FR-031**: All user-facing text MUST be in French.

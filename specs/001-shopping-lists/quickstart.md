@@ -117,7 +117,8 @@ release. Steps 4, 10, 11 and 12 need a person.
    create an article in it; only categories with items show on the list.
 10. **Accessibility** (FR-032 to FR-035, SC-009): with TalkBack (Android) or VoiceOver (iOS),
     repeat steps 2, 4 and 6 using the screen reader only; each row announces e.g. "Lait, 2 L,
-    dans le caddie". Set the system text size to the maximum (200%) and check nothing is cut off
+    dans le caddie". Remove an item and wait more than 5 s: "Annuler" is still offered until
+    you dismiss it or make another change (FR-010). Set the system text size to the maximum (200%) and check nothing is cut off
     or overlaps. Check ticked rows show a check mark and struck-through text in light and dark
     mode.
 11. **Long list** (SC-008): start a development build with `EXPO_PUBLIC_DEV_SEED_ITEMS=200`

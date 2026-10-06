@@ -131,7 +131,11 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
   single `pendingUndo` slot while the app-wide undo snackbar shows "« {name} » retiré de la liste"
   with an "Annuler" action for 5 seconds; `restoreRemovedItem(snapshot)` re-inserts it as it was.
   Any other write ends the offer, and a new undoable change replaces it (the same rule as
-  [002's deleted articles](../002-manage-articles/research.md) R5).
+  [002's deleted articles](../002-manage-articles/research.md) R5). Moving between screens does
+  not end it. While a screen reader is on (`AccessibilityInfo.isScreenReaderEnabled` and its
+  `screenReaderChanged` event), the snackbar has no timeout: it stays until dismissed or the
+  next write (FR-010), because 5 seconds is too short to reach "Annuler" with TalkBack or
+  VoiceOver.
 - **Rationale**: removal is real and immediate, so a killed app never resurrects an item, and
   undo reuses ordinary persistence. Tests control the snackbar timeout with Jest fake timers.
 

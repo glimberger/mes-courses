@@ -407,6 +407,7 @@ content matches.
 - [ ] T090 [P] [US2] Write failing tests for `UndoSnackbar` in `apps/mobile/src/adapters/ui/components/undo-snackbar.test.tsx`:
   - `removedItem` shows "« {name} » retiré de la liste" with "Annuler" calling `undo`;
   - it calls `dismissUndo` after 5 s (Jest fake timers);
+  - with a screen reader on (mocked `AccessibilityInfo`), it does not call `dismissUndo` after 5 s and stays until dismissed or the next write (FR-010);
   - it stays visible across navigation, because it is rendered at the root.
 - [ ] T091 [US2] Write failing tests for `QuantityDialog` in `apps/mobile/src/adapters/ui/screens/quantity-dialog.test.tsx`:
   - add mode: "Ajouter" with empty fields adds without a quantity (SC-003);
@@ -421,8 +422,8 @@ content matches.
   - US2-14: "Aucun article ne correspond à « xyz »" with "Créer « xyz »";
   - US2-8: the "Déjà dans la liste" mark, and tapping opens already-on-list mode without duplicating;
   - adding keeps the screen open and shows "« {name} » ajouté";
-  - loading;
-  - error "Impossible de charger les articles." with "Réessayer", reported;
+  - US2-17: loading;
+  - US2-18: error "Impossible de charger les articles." with "Réessayer", reported;
   - the "Nouvel article" action opens CreateArticle with the query prefilled.
 - [ ] T093 [US2] Write failing screen tests for `CreateArticle` in `apps/mobile/src/adapters/ui/screens/create-article-screen.test.tsx`:
   - Appbar "Nouvel article";
@@ -446,7 +447,7 @@ content matches.
 - [ ] T097 [US2] Implement the use cases in `apps/mobile/src/application/use-cases/` to turn T087 green, per [contracts/driving-ports.md](contracts/driving-ports.md#editing-a-list-user-story-2): `get-catalog.ts`, `add-article-to-list.ts`, `create-article-and-add-to-list.ts`, `change-item-quantity.ts`, `remove-item-from-list.ts`, `restore-removed-item.ts`, `get-categories.ts`. Every write runs in `UnitOfWork.run`. Add them to `UseCases` and to the composition root.
 - [ ] T098 [US2] Add the `catalog` region and the `searchCatalog`, `addArticleToList`, `createArticleAndAddToList`, `changeItemQuantity`, `removeItem`, `undo` and `dismissUndo` actions to `apps/mobile/src/adapters/ui/state/app-store.ts`, to turn T088 green.
 - [ ] T099 [P] [US2] Implement `ArticleRow.tsx`, `QuantityFields.tsx` and `NameField.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T089 green.
-- [ ] T100 [P] [US2] Implement `UndoSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` and render it once at the root in `apps/mobile/src/adapters/ui/navigation.tsx`, to turn T090 green.
+- [ ] T100 [P] [US2] Implement `UndoSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` (no timeout while a screen reader is on, per [contracts/ui-screens.md](contracts/ui-screens.md#undo-offer)) and render it once at the root in `apps/mobile/src/adapters/ui/navigation.tsx`, to turn T090 green.
 - [ ] T101 [US2] Implement `QuantityDialog.tsx` in `apps/mobile/src/adapters/ui/screens/`, with modes add / already-on-list / edit, parsing through the domain's `parseQuantity`, to turn T091 green.
 - [ ] T102 [US2] Implement `AddArticlesScreen.tsx` in `apps/mobile/src/adapters/ui/screens/` and replace its placeholder in `navigation.tsx`, to turn T092 green.
 - [ ] T103 [US2] Implement `CreateArticleScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`, validating the name through the domain's `validateName` before submitting. The category picker lists categories only; "Nouvelle catégorie" comes with US4. Replace the placeholder in `navigation.tsx`. It turns T093 green.
