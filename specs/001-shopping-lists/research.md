@@ -657,8 +657,23 @@ FR-030a, FR-039a).
   `prettier --check`), `test` (Jest, including the architecture test and the offline scenario),
   `build` (`yarn build`; for the app this is
   `expo export --platform android --platform ios`, which bundles the JS for both platforms). The repository is private on a GitHub plan without branch protection, so the
-  merge rule of constitution v1.7.0 applies: no pull request is merged until `gh pr checks`
-  shows every job green. Detox adds a fifth job, `e2e-android` (R23).
+  merge rule of the constitution's Quality Gates (v2.1.1) applies: no pull request is merged
+  while any job is failing, pending or skipped, as `gh pr checks` shows. Detox adds a fifth job,
+  `e2e-android` (R23).
+- **Time limits** (clarified 2026-10-06): every job sets `timeout-minutes`: 15 for `typecheck`,
+  `lint`, `test` and `build`, 45 for `e2e-android`. A job that runs out of time is a failing
+  job, fixed in the pull request like any other.
+- **What `build` proves**: the JavaScript bundles for both platforms, not a native build. An
+  Android native build failure is caught by `e2e-android`, which builds the release APK; an iOS
+  native build failure is caught by the iOS device suite, run on the maintainer's Mac on every
+  pull request that changes native configuration and before each release (R23, R24).
+- **Third-party actions**: `nix-installer-action`, `magic-nix-cache-action` and
+  `android-emulator-runner` are assumed available. If the cache action stops working, its step
+  is removed and the jobs run without a Nix cache, slower but unchanged; the others have no
+  replacement planned until needed (Principle IV).
+- **Not in CI, by decision**: scanning for leaked credentials stays the local Talisman pre-commit hook required
+  by the workspace `AGENTS.md`, and dependencies are updated by hand (an Expo SDK upgrade is its
+  own pull request through every gate), with no update bot (Principle IV).
 - **Rationale**: the constitution requires CI before the first application code is merged. `expo export` checks that the app bundles without the cost of a
   native build on every pull request; native builds go through EAS Build when releasing.
 - **Alternatives considered**: EAS Build on every pull request (slow, uses build credits).
@@ -987,6 +1002,49 @@ FR-030a, FR-039a).
   `apps/mobile/` (Detox's Jest 29 would conflict with the app's Jest 30 config and `yarn test`
   would pick the journeys up); iOS in CI on `macos-latest` (cost, see above; it can be added if the
   repository becomes public, where macOS minutes are free).
+
+## R24. Releases and distribution (spec Success Criteria, Assumptions)
+
+- **Decision** (clarified 2026-10-06):
+  - **A release** is every `production` build from EAS (`eas build --profile production`), the
+    only builds meant for users. Before one is built, every manual check of the spec's Success
+    Criteria and the iOS device suite have succeeded on the last commit of the pull request that
+    last changed the application, recorded in its test plan. The release is built from that pull
+    request's squash commit on `main`, with no other change merged after it, so it holds the
+    same code the checks ran on. `preview` and `development` builds are not releases.
+  - **Distribution**: no public listing. The `production` profile builds an Android App Bundle
+    and an iOS App Store build, sent by `eas submit` to Google Play's internal testing track and
+    to TestFlight, from where the maintainer's phones install and update the app. Google Play
+    requires the very first upload of an app to be made by hand in the Play Console; every later
+    one goes through `eas submit`. The credentials (a Google Play service account and an App
+    Store Connect API access file) live in EAS, set by the maintainer, never committed, and no CI job
+    reads them.
+  - **Version**: `version` in `apps/mobile/app.config.ts` follows semantic versioning, changed by
+    hand in the pull request that leads to a release: MINOR for a new feature, PATCH for fixes
+    only. This feature ships as 1.0.0. The build number stays remote and auto-incremented (R13).
+  - **Test-only options guard**: `app.config.ts` calls a pure function
+    `assertNoTestOptionsInProduction(env)` from `apps/mobile/build-config/release-guard.ts`.
+    When `EXPO_PUBLIC_APP_ENVIRONMENT` is `production` and any of `EXPO_PUBLIC_SEED_ITEMS`,
+    `EXPO_PUBLIC_SENTRY_SMOKE_TEST` or `STORYBOOK_ENABLED` is set (non-empty), it throws an
+    error naming each one, so the build stops while reading its configuration. The function is
+    tested first under Jest, with no build.
+  - **Node on EAS**: every profile in `eas.json` sets `"node"` to the version the flake
+    provides (Node 24, R21), so native builds use the same Node as local work and CI.
+  - **A faulty release** is fixed forward: a new `production` build with the fix, through a pull
+    request and every pre-release check. No rollback is offered: neither testing channel rolls an
+    installed app back, and an older version does not open newer data (FR-040).
+- **Rationale**: tying the gates to the `production` build makes "before each release" a step
+  that cannot happen by accident. The stores' testing channels install and update the app like a
+  public listing would, with no review queue and no listing to maintain for a single user. A
+  guard that stops the build turns a README warning into something that cannot be missed, and
+  keeping it a pure function keeps it testable first (Principle I). Fixing forward is the only
+  path both channels and FR-040 allow.
+- **Alternatives considered**: the version change or the store submission as the release event
+  (both leave builds meant for users ungated); installing directly (Android APK, iOS ad hoc
+  through EAS internal distribution: needs each iPhone's device id registered and gives no
+  update path); a runtime check that ignores the options in `production` (too late: the build
+  already holds them); a shortened check for urgent fixes (a faulty release is exactly when the
+  checks matter).
 
 ## New dependencies (Principle IV)
 

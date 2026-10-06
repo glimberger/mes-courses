@@ -3,7 +3,8 @@
 **Branch**: `feat/001-shopping-lists` | **Date**: 2026-10-05 (amended 2026-10-06 for constitution
 v2.1.0, monorepo, then for Storybook and Detox, then for constitution v2.1.1, then for the
 data clarifications, the failure-flow clarifications, the data checklist review, the
-observability clarifications and the two passes of performance clarifications) |
+observability clarifications, the two rounds of performance clarifications and the CI and
+delivery clarifications) |
 **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/001-shopping-lists/spec.md`
@@ -83,7 +84,10 @@ and build number (FR-030, R13); the same rules for every feature's reports (FR-0
 alerts on new and returning `production` failures, set in Sentry (FR-030c); every report in
 Sentry within 1 minute (SC-010), measured by hand; reports raised offline kept on
 the device, at most 30 (FR-030a); a screen failing while drawing replaced by a full-screen error
-that restarts the app (FR-039a, R13a)
+that restarts the app (FR-039a, R13a); a release is a `production` build, sent to Google Play
+internal testing and TestFlight with no public listing, gated by every pre-release check,
+versioned by hand (1.0.0 for this feature), refusing to build with a test-only option set, and
+fixed forward, never rolled back (R24)
 
 **Scale/Scope**: one user, one device; 4 screens and 4 dialogs; up to 1 000 articles in the
 catalog, 20 lists and 200 items per list (spec Assumptions), with SC-001, SC-002, SC-008 and SC-011
@@ -109,7 +113,7 @@ and every other unknown is resolved in [research.md](research.md).
 | IX | Explicit screen states | One `ScreenState` union per data region, held in the store, rendered by shared `LoadingState` / `EmptyState` / `ErrorState`; each state tested ([contracts/ui-screens.md](contracts/ui-screens.md)) and has a required story, built through the real store ([contracts/ui-validation.md](contracts/ui-validation.md)). No synchronization status yet: no data is synchronized until the sync feature (R19), which adds it to every data screen. | ✅ (sync status deferred with VII) |
 | X | French interface, no i18n | French text only in `apps/mobile/src/adapters/ui/`; domain and use cases return tagged errors; seed names passed in from the UI adapter; tests assert French text; `Intl` formats quantities with a decimal comma. | ✅ |
 | XI | Single repository (monorepo) | Yarn 4 workspaces (pinned by `packageManager`, run through Corepack), root `package.json` with `"workspaces": ["apps/*", "packages/*"]`, one `yarn.lock`, one `yarn install --immutable`, one CI. Shared bases at the root: `tsconfig.base.json`, ESLint flat config, Prettier, dependency-cruiser. The app is `@mes-courses/mobile` in `apps/mobile/`. No shared package exists yet, so `packages/` is not created (Principle IV); dependency-cruiser already forbids relative imports across workspaces ([research.md](research.md) R15, R20). The e2e tests are the test-only `tests/e2e/` workspace (`@mes-courses/e2e-tests`), so `"workspaces"` gains `"tests/*"`; its Jest 29 stays local to it, in the same `yarn.lock` (R23). | ✅ |
-| QG | Quality gates and CI | CI runs in the same Nix dev shell as local work (R21). `typecheck`, `lint` (+ Prettier check), `test` (+ architecture + story test), `build` (`expo export`), run from the root across every workspace, plus `e2e-android` (Detox on an emulator), on every PR and push to `main`, in place before the first application code is merged; no PR merged until `gh pr checks` shows every job green (no branch protection on this GitHub plan). "Works with the server unreachable" holds trivially: no code path reaches a server. Per constitution v2.1.1, `yarn test` is the fast suite, run before every commit; the Detox journeys are the device suite, run on Android before each push and in CI, and on iOS on the maintainer's Mac before each release and before merging a pull request that changes native configuration (R23). | ✅ |
+| QG | Quality gates and CI | CI runs in the same Nix dev shell as local work (R21). `typecheck`, `lint` (+ Prettier check), `test` (+ architecture + story test), `build` (`expo export`), run from the root across every workspace, plus `e2e-android` (Detox on an emulator), on every PR and push to `main`, in place before the first application code is merged; no PR merged until `gh pr checks` shows every job green (no branch protection on this GitHub plan). "Works with the server unreachable" holds trivially: no code path reaches a server. Per constitution v2.1.1, `yarn test` is the fast suite, run before every commit; the Detox journeys are the device suite, run on Android before each push and in CI, and on iOS on the maintainer's Mac before each release and before merging a pull request that changes native configuration (R23). Every job has a time limit (R17). A release is a `production` build, gated by every manual check and the iOS device suite recorded in a pull request, and a `production` build stops if a test-only option is set (R24). | ✅ |
 | WF | Development workflow | The spec states offline behavior (FR-027) but excludes synchronization and reconciliation; deferred with VII (R19). | ⚠️ deviation |
 
 **Gate result before research**: one deviation, Principle VII (and the matching workflow rule):
@@ -161,6 +165,10 @@ justified. The design adds no layer, port or dependency beyond those above. Poin
   filters it as the user types (R11a); measurement is a quickstart procedure on the existing
   measurement seed and `preview` profile (R11). FlashList stays out until SC-008 is missed
   (Principle IV).
+- The CI and delivery clarifications add no port, layer or runtime dependency: the release guard
+  is a pure build-time function called by `app.config.ts`, and distribution is `eas.json` and
+  `eas submit`, both already part of Expo's tooling (R24). Credential scanning in CI and an update
+  bot stay out (Principle IV, R17).
 - Nothing in the design blocks the sync feature: ids are device UUIDs that never change, each
   change is one `UnitOfWork` transaction (where a later outbox write can join it), and no read
   model assumes the device holds the only copy. The open questions for that feature (first-launch
@@ -204,10 +212,12 @@ apps/
 └── mobile/                           # @mes-courses/mobile, the Expo app
     ├── package.json                  # app dependencies and scripts (start, build: expo export, test, storybook)
     ├── App.tsx                       # Expo entry: builds the composition root, renders the UI
-    ├── app.config.ts                 # Expo config (Sentry, SQLite and Detox plugins)
+    ├── app.config.ts                 # Expo config (Sentry, SQLite and Detox plugins), version, release guard (R24)
+    ├── build-config/
+    │   └── release-guard.ts          # assertNoTestOptionsInProduction(env), tested by Jest (R24)
     ├── metro.config.js               # Expo default config wrapped with withStorybook (research R22)
     ├── .rnstorybook/                 # Storybook config: main.ts (story globs), preview.tsx (theme, store decorators)
-    ├── eas.json                      # EAS Build profiles (EAS runs from this folder)
+    ├── eas.json                      # EAS Build and Submit profiles, Node 24 on every profile (R13, R24)
     ├── tsconfig.json                 # extends ../../tsconfig.base.json, adds Expo types
     ├── jest.config.js                # jest-expo preset
     ├── src/
@@ -388,6 +398,19 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
     characters; 200 items on the current list, every other one ticked and every other pair with
     a quantity, so the four combinations of ticked and quantity occur; 50 items on each of the
     19 other lists; quickstart steps 11 and 15 state the tap and typing pace.
+- **CI and delivery clarifications (2026-10-06)**, to be reflected in the existing tasks:
+  - `timeout-minutes` on every CI job: 15 for `typecheck`, `lint`, `test` and `build`, 45 for
+    `e2e-android` (R17, T015, T016);
+  - `assertNoTestOptionsInProduction(env)` in `apps/mobile/build-config/release-guard.ts`,
+    test-first, called by `app.config.ts`: with `EXPO_PUBLIC_APP_ENVIRONMENT=production` it
+    throws, naming each of `EXPO_PUBLIC_SEED_ITEMS`, `EXPO_PUBLIC_SENTRY_SMOKE_TEST` and
+    `STORYBOOK_ENABLED` that is set; any other environment, or none set, returns normally (R24);
+  - `app.config.ts` sets `version: '1.0.0'`; `eas.json` sets `"node"` to Node 24 on every
+    profile and adds a `submit.production` profile for Google Play's internal track and
+    TestFlight (R24, T134);
+  - the README explains the release steps of quickstart §8, the versioning rule, the store
+    credentials kept in EAS, and the one-time manual first upload to Google Play (T136);
+  - research R17 and quickstart §7 cite the constitution's current merge rule.
 - No task touches the network or the server: synchronization belongs to the sync feature (R19).
 - The Sentry project is in place (done by the maintainer). The Sentry DSN and build credential
   live in EAS environment variables, set by the maintainer, and are never committed.

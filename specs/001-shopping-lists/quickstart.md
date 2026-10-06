@@ -221,4 +221,28 @@ Time each delivery: every report must appear in Sentry within 1 minute (SC-010).
 ## 7. Continuous integration
 
 Open a pull request: the `typecheck`, `lint`, `test`, `build` and `e2e-android` jobs run, and
-`gh pr checks <pr>` shows them all green before the pull request is merged (constitution v1.7.0).
+`gh pr checks <pr>` shows them all green, none failing, pending or skipped, before the pull
+request is merged (constitution v2.1.1, Quality Gates).
+
+## 8. Release (spec Success Criteria, [research.md](research.md) R24)
+
+A release is a `production` build. Run these steps in order; stop at the first that fails.
+
+1. The pull request that leads to the release sets `version` in `apps/mobile/app.config.ts`
+   (MINOR for a new feature, PATCH for fixes only; this feature ships as 1.0.0), and its test
+   plan records, on its last commit: every manual check of §5 and §6 on the reference phones,
+   and the iOS device suite (`yarn test:e2e:ios`) on the maintainer's Mac.
+2. Once it is merged with every CI job green, from `main` at its squash commit, with nothing
+   merged after it (otherwise run the checks again on a new pull request):
+   `eas build --profile production --platform all`. A build with `EXPO_PUBLIC_SEED_ITEMS`,
+   `EXPO_PUBLIC_SENTRY_SMOKE_TEST` or `STORYBOOK_ENABLED` set stops with an error naming it;
+   unset it and build again.
+3. `eas submit --profile production --platform all`: the Android build goes to Google Play's
+   internal testing track, the iOS build to TestFlight. The very first Android upload is made
+   by hand in the Play Console, once.
+4. Install the update on both phones from Google Play (internal testing) and TestFlight, open
+   it: the lists are still there, and the system's app settings show the new version and build
+   number.
+
+A faulty release is fixed forward: a new pull request with the fix, then these steps again.
+There is no rollback (FR-040).

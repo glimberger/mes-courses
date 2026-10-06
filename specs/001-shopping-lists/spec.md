@@ -357,6 +357,22 @@
   letter being typed (SC-011).
 - Q: Does this feature set limits on memory use, battery drain or download size? → A: No: none
   of them has a target in this feature; a later feature may add one (Assumptions).
+- Q: What counts as a release, the event the pre-release checks are tied to? → A: Every
+  `production` build meant for users; each one has succeeded at every pre-release check, recorded in
+  the pull request that last changed the application before that build; `preview` builds are
+  not releases (Success Criteria).
+- Q: Where do `production` builds go: a public store, the stores' private testing channels, or
+  straight onto the phones? → A: The stores' private testing channels, Google Play internal
+  testing and TestFlight; no public listing in this feature, a later decision (Assumptions).
+- Q: How is a faulty release put right? → A: Fixed forward: a new `production` build with the
+  fix, through a pull request and every pre-release check; no rollback, since an older version
+  does not open newer data (FR-040, Success Criteria).
+- Q: How is a release kept from carrying the test-only build options? → A: A `production` build
+  fails at build time when the measurement data, the test error report or crash, or the screen
+  catalog is turned on, naming the option (Success Criteria).
+- Q: When does the user-facing version number change? → A: Semantic versioning, set by hand in
+  the pull request that leads to a release: MINOR for a new feature, PATCH for fixes only; this
+  feature ships as 1.0.0; the build number still goes up by itself (Success Criteria).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -918,6 +934,18 @@ tracking is set up, the email alerts of FR-030c. Parts of these that an
 automated test can check (for example French labels or the contrast of theme colors) are still
 tested automatically.
 
+A release is every `production` build meant for users. Before each one, every manual check
+above and the iOS device suite have succeeded on the code it is built from, and their results are
+recorded in the test plan of the pull request that last changed the application before that
+build. `preview` and `development` builds are not releases. A faulty release is fixed forward:
+a new `production` build with the fix, through a pull request and every pre-release check like
+any release. No rollback to an earlier build is offered, since an older version does not open
+data saved by a newer one (FR-040). A release cannot be built with a test-only option turned
+on (the measurement data, the test error report or crash, the screen catalog): the build fails
+and names the option. The version shown in error reports follows semantic versioning, set by
+hand in the pull request that leads to a release: MINOR when a feature is added, PATCH for
+fixes only; this feature ships as 1.0.0. The build number goes up by itself with every build.
+
 A functional requirement is a test anchor just like an acceptance scenario: every FR and every
 scenario MUST be cited by at least one test name ("FR-016 …", "US2-12 …"), or by a manual check
 for the exceptions above. A scenario may be proven by several tests, each citing its id, as
@@ -954,6 +982,9 @@ The actions of this spec, checked one by one by SC-006 and SC-009:
   only native crash reports carry an identifier, a random one per installation (FR-030). If the
   application is published on a store, its privacy details declare crash data and that random
   installation identifier, neither linked to the user nor used for tracking.
+- No public store listing in this feature: releases (`production` builds) reach the maintainer's
+  phones through Google Play internal testing and TestFlight. Publishing on a public store is a
+  later decision; the privacy details above apply then.
 - Default categories, in this order: Fruits et légumes, Boucherie et poissonnerie, Crèmerie,
   Boulangerie, Épicerie salée, Épicerie sucrée, Surgelés, Boissons, Hygiène et beauté,
   Entretien, Divers.
