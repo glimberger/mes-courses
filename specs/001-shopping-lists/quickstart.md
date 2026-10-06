@@ -126,7 +126,7 @@ release. Steps 4, 10, 11 and 12 need a person.
     (FR-038). Set the system text size to the maximum (200%) and check nothing is cut off
     or overlaps. Check ticked rows show a check mark and struck-through text in light and dark
     mode.
-11. **Long list** (SC-008): build a release with `EXPO_PUBLIC_DEV_SEED_ITEMS=200` (the
+11. **Long list** (SC-008): build a release with `EXPO_PUBLIC_SEED_ITEMS=200` (the
     composition root then fills an empty current list with 200 articles through the use cases;
     builds for users never set it). Open React Native's Perf Monitor, then scroll and tick:
     55 frames per second or more, and each tick shown at once.
