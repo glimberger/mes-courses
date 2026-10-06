@@ -1,7 +1,7 @@
 # Implementation Plan: Shopping Lists
 
 **Branch**: `feat/001-shopping-lists` | **Date**: 2026-10-05 (amended 2026-10-06 for constitution
-v2.1.0, monorepo, then for Storybook and Detox) | **Spec**: [spec.md](spec.md)
+v2.1.0, monorepo, then for Storybook and Detox, then for constitution v2.1.1) | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/001-shopping-lists/spec.md`
 
@@ -84,13 +84,14 @@ and every other unknown is resolved in [research.md](research.md).
 | IX | Explicit screen states | One `ScreenState` union per data region, held in the store, rendered by shared `LoadingState` / `EmptyState` / `ErrorState`; each state tested ([contracts/ui-screens.md](contracts/ui-screens.md)) and has a required story, built through the real store ([contracts/ui-validation.md](contracts/ui-validation.md)). No synchronization status yet: no data is synchronized until the sync feature (R19), which adds it to every data screen. | ✅ (sync status deferred with VII) |
 | X | French interface, no i18n | French text only in `apps/mobile/src/adapters/ui/`; domain and use cases return tagged errors; seed names passed in from the UI adapter; tests assert French text; `Intl` formats quantities with a decimal comma. | ✅ |
 | XI | Single repository (monorepo) | Yarn 4 workspaces (pinned by `packageManager`, run through Corepack), root `package.json` with `"workspaces": ["apps/*", "packages/*"]`, one `yarn.lock`, one `yarn install --immutable`, one CI. Shared bases at the root: `tsconfig.base.json`, ESLint flat config, Prettier, dependency-cruiser. The app is `@mes-courses/mobile` in `apps/mobile/`. No shared package exists yet, so `packages/` is not created (Principle IV); dependency-cruiser already forbids relative imports across workspaces ([research.md](research.md) R15, R20). The e2e tests are the test-only `tests/e2e/` workspace (`@mes-courses/e2e-tests`), so `"workspaces"` gains `"tests/*"`; its Jest 29 stays local to it, in the same `yarn.lock` (R23). | ✅ |
-| QG | Quality gates and CI | CI runs in the same Nix dev shell as local work (R21). `typecheck`, `lint` (+ Prettier check), `test` (+ architecture + story test), `build` (`expo export`), run from the root across every workspace, plus `e2e-android` (Detox on an emulator), on every PR and push to `main`, in place before the first application code is merged; no PR merged until `gh pr checks` shows every job green (no branch protection on this GitHub plan). "Works with the server unreachable" holds trivially: no code path reaches a server. **Two gaps**: the iOS journeys run on the maintainer's Mac, not in CI; and the "whole test suite green before any commit" gate is read as `yarn test` (unit, story and architecture tests), with the device journeys run before each push. Both are justified in Complexity Tracking. | ⚠️ deviation |
+| QG | Quality gates and CI | CI runs in the same Nix dev shell as local work (R21). `typecheck`, `lint` (+ Prettier check), `test` (+ architecture + story test), `build` (`expo export`), run from the root across every workspace, plus `e2e-android` (Detox on an emulator), on every PR and push to `main`, in place before the first application code is merged; no PR merged until `gh pr checks` shows every job green (no branch protection on this GitHub plan). "Works with the server unreachable" holds trivially: no code path reaches a server. Per constitution v2.1.1, `yarn test` is the fast suite, run before every commit; the Detox journeys are the device suite, run on Android before each push and in CI, and on iOS on the maintainer's Mac before each release and before merging a pull request that changes native configuration (R23). | ✅ |
 | WF | Development workflow | The spec states offline behavior (FR-027) but excludes synchronization and reconciliation; deferred with VII (R19). | ⚠️ deviation |
 
 **Gate result before research**: one deviation, Principle VII (and the matching workflow rule):
 the feature does not synchronize with the server. It is justified in Complexity Tracking. The
-Storybook and Detox amendment adds a second one, on the Quality Gates (iOS journeys outside CI,
-device journeys outside the per-commit gate), also justified there.
+Storybook and Detox amendment first recorded a second one, on the Quality Gates (iOS journeys
+outside CI, device journeys outside the per-commit gate); constitution v2.1.1 now defines the fast
+and device suites and their gates, so it is no longer a deviation.
 
 **Second check, after Phase 1 design**: no new violation; the Principle VII deviation stands as
 justified. The design adds no layer, port or dependency beyond those above. Points checked:
@@ -240,8 +241,6 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| Quality Gates: the iOS journeys run on the maintainer's Mac before each release and on pull requests that touch native configuration, not in CI | Detox needs a simulator, so a macOS runner; on a private repository GitHub counts macOS minutes at ten times the Linux rate, and a Detox build and run takes about 20 to 30 minutes. Android in CI runs the same journeys against the same JS bundle, so only iOS-specific native problems can slip past CI. | Running iOS on every pull request would use the plan's included minutes within a few pull requests. Dropping iOS journeys altogether leaves the iOS binary untested. |
-| Quality Gates: "the whole test suite is green before any commit" covers `yarn test` (unit, story and architecture tests); the device journeys run before each push and in CI, not before each commit | A Detox run builds a release binary and drives an emulator for minutes. Running it after every Red-Green-Refactor step would break the fast cycle that Principle III protects. | Running journeys before every commit makes TDD steps take minutes. Leaving them out of the gates altogether loses the device check. A constitution amendment (`/speckit-constitution`, PATCH) can state this split between the fast suite and the device suite explicitly. |
 | Principle VII and its workflow rule: no synchronization with the Pi server, no reconciliation rule in the spec (FR-027 excludes synchronization) | Constitution v2.0.0 was adopted after this spec; the spec defines a single-device app. A dedicated sync feature (next `/speckit-specify`) defines the server port, the queue of offline changes, reconciliation and the synchronization status for 001 and 002 together. | Adding sync here would invent reconciliation rules the spec does not state and need the server's technology and API, still undecided. Holding the first feature until sync is specified delays the foundations (stack, CI, local storage, screens) that sync builds on and does not change. |
 
 **Migration note** (constitution Governance): [003-server-sync](../003-server-sync/plan.md) closes
