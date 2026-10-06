@@ -120,7 +120,10 @@ Appbar title "Ajouter des articles", `Searchbar` with placeholder "Rechercher un
 | empty, query, no match | "Aucun article ne correspond à « {query} »" + "Créer « {query} »" (US2-14) |
 
 Search filters the catalog already loaded on this screen, so it has no loading or error state of
-its own (FR-029).
+its own (FR-029): each letter typed filters the loaded catalog in memory with `filterCatalog`,
+with no storage read and no debounce, so results update within 300 ms of each letter, and the
+articles show within 1 second of opening, with 1 000 articles (SC-011,
+[research.md](../research.md) R11a).
 
 | Action | Behavior |
 |---|---|

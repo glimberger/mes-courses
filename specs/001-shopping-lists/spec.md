@@ -65,8 +65,8 @@
   and stays readable in the subtitle.
 - Q: On which device and with which figure are SC-001, SC-002 and SC-008 measured? → A: On a
   release build, on an entry-level Android phone about five years old and on the maintainer's
-  iPhone; SC-008 means at least 55 frames per second while scrolling and ticking, with each
-  tick shown within 100 ms.
+  iPhone; SC-008 means at least 55 frames per second while scrolling and ticking, with ticks
+  shown within 100 ms (the share is set below, in SC-002).
 - Q: Can items be added, removed or changed only on the current list, or also on a list that
   is not current? → A: Only on the current list; to edit another list, the user makes it
   current first.
@@ -156,7 +156,8 @@
   catalog as if nothing were typed; "œ" and "æ" match "oe" and "ae" both ways (FR-009).
 - Q: When does SC-001's 2-second clock start and stop? → A: Cold start only: from the icon tap,
   with the application fully stopped, until the current list (200 items, 1 000-article
-  catalog) is shown and a tap ticks an item; at least 9 of 10 launches under 2 seconds.
+  catalog) is shown and accepts taps; at least 9 of 10 launches under 2 seconds (stop point
+  refined below).
 - Q: Do scenarios keep their numbers when one is added or removed? → A: Yes: a scenario is cited
   as "US<story>-<n>" and its number never changes; a new scenario takes the next free number at
   the end of its story, and a removed one leaves its number unused, marked "Removed".
@@ -285,7 +286,7 @@
   same name? → A: Yes: these pairs are equal for uniqueness, as for search, so "Oeufs" and
   "Œufs" cannot both exist; accents still count ("Pâte" ≠ "Pâté") (FR-021, FR-009).
 - Q: Are the expected data sizes limits the application enforces? → A: No: they are the sizes
-  SC-001, SC-002 and SC-008 are measured at; nothing is refused beyond them, and performance is
+  SC-001, SC-002, SC-008 and SC-011 are measured at; nothing is refused beyond them, and performance is
   not promised beyond them (Assumptions).
 - Q: From the add screen, can the user always start creating an article, even when the search
   finds matches, and is the search text used as its name? → A: Yes: creating an article is
@@ -324,6 +325,38 @@
 - Q: What happens when a confirmed "Terminer les courses" runs after the only tick's save
   failed, so no item is ticked any more? → A: It changes nothing and is not a failure: nothing
   more is shown and nothing is reported (FR-007).
+- Q: Do the add screen and its search, and actions shown only after their save, get a time
+  target at full catalog size? → A: The add screen and its search do: articles shown within
+  1 second of opening and results updated within 300 ms of each letter, with 1 000 articles,
+  on the reference phones; no other action gets a time target (SC-011).
+- Q: Must a list of more than 200 items still meet SC-008? → A: No: SC-008 is promised up to 200
+  items; above that, items are accepted and shown, but no frame rate or tick time is promised
+  (Edge Cases, Assumptions).
+- Q: Where does SC-001's clock stop, and does the tester's reaction time count? → A: It stops
+  when the current list is fully drawn and accepts taps; the tester's reaction time is not
+  counted, and the first tap then meets SC-002; timed on a slow-motion video, from the finger
+  touching the icon (SC-001).
+- Q: How are SC-008's 55 frames per second and dropped frames read on a 90 or 120 Hz screen?
+  → A: Both reference phones are measured with the screen set to 60 Hz; a dropped frame is one
+  that misses its display deadline (Android "janky frames", iOS hitches) (SC-008).
+- Q: When SC-001, SC-002, SC-008 or SC-011 is missed on a reference phone, is the release
+  blocked? → A: Yes: the release waits until every target is met on both phones; the miss and
+  its fix are recorded in the pull request's test plan (Success Criteria).
+- Q: What does the data used to measure performance look like, beyond its counts? → A:
+  Realistic French article names (common products, completed with numbered variants), 10% of
+  them at the 60-character limit; on the current list, half the items ticked and half with a
+  quantity; each of the 19 other lists holding 50 items (Assumptions).
+- Q: Do the first launch and the first launch after an update have a start-time target? → A:
+  No: SC-001 applies to launches with existing data; the first launch and the first launch
+  after an update have no time target (SC-001).
+- Q: At what pace are the 50 ticks and unticks of SC-002 and SC-008 made? → A: As fast as the
+  tester can tap (about 3 per second), on different items, so earlier saves are still waiting
+  when later taps land; SC-008's ticks are those of SC-002 (SC-002, SC-008).
+- Q: At what pace are the 30 search letters of SC-011 typed? → A: As whole words at normal
+  typing speed (about 3 letters per second); each letter's results show within 300 ms of the
+  letter being typed (SC-011).
+- Q: Does this feature set limits on memory use, battery drain or download size? → A: No: none
+  of them has a target in this feature; a later feature may add one (Assumptions).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -547,7 +580,8 @@ the new heading.
 - Very long article, category or list names: names are limited to 60 characters and shown in
   full by wrapping, never cut off silently. Units are limited to 15 characters (FR-022,
   FR-033).
-- Many items (200 or more) on one list: scrolling and ticking meet SC-008.
+- Many items on one list: up to 200 items, scrolling and ticking meet SC-008; above 200, items
+  are still accepted and shown, but no frame rate or tick time is promised (Assumptions).
 - The application cannot open, update or set up its storage at startup: a full-screen error
   state says "L'application n'a pas pu démarrer." and offers "Réessayer", the error is
   reported, and stored data is never deleted or reset automatically (FR-039).
@@ -825,12 +859,16 @@ the new heading.
 
 ### Measurable Outcomes
 
-- **SC-001**: From the tap on the application icon, with the application fully stopped (cold
-  start), the current list is shown and a tap ticks an item in under 2 seconds, for at least
-  9 of 10 launches, with a 200-item current list and a 1 000-article catalog.
+- **SC-001**: From the finger touching the application icon, with the application fully
+  stopped (cold start), the current list is fully drawn and accepts taps in under 2 seconds,
+  for at least 9 of 10 launches, with a 200-item current list and a 1 000-article catalog. The
+  tester's reaction time is not counted; the first tap on an item then meets SC-002. Timed on
+  a slow-motion video of the screen. SC-001 applies to launches with existing data: the first
+  launch (FR-023) and the first launch after an update have no time target.
 - **SC-002**: A tick or untick is visible within 100 ms of the tap, with or without network,
   for at least 95% of 50 ticks and unticks in a row, on a 200-item current list with a
-  1 000-article catalog.
+  1 000-article catalog. The taps are made as fast as the tester can (about 3 per second), on
+  different items, so earlier saves are still waiting when later taps land.
 - **SC-003**: From the add screen, adding an existing article to a list without a quantity
   takes at most 3 taps when browsing by category, or at most 3 taps and 3 typed letters when
   searching. Every tap counts, including the confirmation and tapping the search field;
@@ -847,21 +885,30 @@ the new heading.
   changed or cleared, creation of an article, a category or a list, finishing shopping, current
   list choice) whose save on the device has finished is lost after the application is closed,
   killed, the device restarted or its power suddenly lost.
-- **SC-008**: On a list of 200 items, a 10-second scroll and 50 ticks run at 55 frames per
-  second or more on average, with at most 5% of frames dropped, and at least 95% of the ticks
-  are shown within 100 ms.
+- **SC-008**: On a list of 200 items, a 10-second scroll and the 50 ticks of SC-002 run at 55
+  frames per second or more on average, with at most 5% of frames dropped, and the ticks meet
+  SC-002. Measured with the screen set to 60 Hz on both reference phones; a
+  dropped frame is one that misses its display deadline (Android "janky frames", iOS hitches).
 - **SC-009**: Every action of this spec (listed below) can be completed with the screen reader
   alone, and with the system text size at 200%.
 - **SC-010**: A report reaches error tracking within 1 minute: of the error, when the network is
   on; of the network returning, while the application is open; of the next opening of the
   application, after a crash in native code (FR-030, FR-030a).
+- **SC-011**: With a 1 000-article catalog, the add screen shows its articles within 1 second
+  of tapping "Ajouter" on the current list, for at least 9 of 10 openings, and the search
+  results update within 300 ms of each letter typed, for at least 95% of 30 letters typed,
+  as whole words at normal typing speed (about 3 letters per second).
+  No other action of this spec has a time target beyond SC-001, SC-002, SC-004, SC-008 and
+  SC-010.
 
-SC-001, SC-002 and SC-008 are measured on a release build, on two reference phones: an
-entry-level Android phone about five years old, and the maintainer's iPhone.
+SC-001, SC-002, SC-008 and SC-011 are measured on a release build, on two reference phones: an
+entry-level Android phone about five years old, and the maintainer's iPhone. A miss of any of
+them on either phone blocks the release until it is met; the miss and its fix are recorded in
+the pull request's test plan.
 
 Every requirement and acceptance scenario of this spec is proven by an automated test, except
 the following, which each get a written manual check (steps and expected result) run on the
-reference phones before release: SC-001, SC-002, SC-004, SC-008, SC-009 and SC-010; the device restart
+reference phones before release: SC-001, SC-002, SC-004, SC-008, SC-009, SC-010 and SC-011; the device restart
 and sudden power loss cases of SC-007; text at 200% (FR-033); contrast as seen on screen
 (FR-036); screen reader focus and announcements (FR-037, FR-038); and error tracking on a
 release build: a test report arrives with a readable stack trace, a report raised in airplane
@@ -912,8 +959,14 @@ The actions of this spec, checked one by one by SC-006 and SC-009:
   Entretien, Divers.
 - The catalog starts empty: no default articles are provided, only default categories.
 - Expected data size: up to 1 000 articles in the catalog, 20 lists and 200 items per list;
-  SC-001, SC-002 and SC-008 must hold at that size. These are measurement sizes, not limits:
-  nothing is refused beyond them, and performance is not promised beyond them.
+  SC-001, SC-002, SC-008 and SC-011 must hold at that size. These are measurement sizes, not limits:
+  nothing is refused beyond them, and performance is not promised beyond them. The data they
+  are measured on looks like real use: realistic French article names (common products,
+  completed with numbered variants such as "Pommes 2"), 10% of them 60 characters long; on the
+  current list, half the items ticked and half with a quantity; each of the 19 other lists
+  holding 50 items.
+- This feature sets no target for memory use, battery drain or download size; a later feature
+  may add one.
 - The unit is free text (for example "g", "kg", "L", "paquets"); no unit conversion and no
   merging of quantities is done. Items carry no price or note in this feature.
 - Renaming or deleting articles, categories and lists, and reordering categories, are out of

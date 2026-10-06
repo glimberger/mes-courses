@@ -129,7 +129,7 @@ CurrentListView = {
 CatalogView = {
   sections: Array<{
     category: { id, name }
-    articles: Array<{ id, name, onList: boolean, quantity: Quantity | null }>   // quantity on the target list
+    articles: Array<{ id, name, searchText: string, onList: boolean, quantity: Quantity | null }>   // quantity on the target list; searchText = searchForm(name), computed once per view
   }>
 }
 ```
@@ -141,6 +141,11 @@ CatalogView = {
   still grouped by category, with empty categories omitted; no section at all means "no match"
   (US2-14).
 - `onList` marks articles already on the target list (FR-011, US2-8).
+- The query filter is the pure domain function `filterCatalog(view, query)`: it matches each
+  article's `searchText` against `searchForm(query)`, keeps the order of the full view and drops
+  empty sections. The add screen loads the full view once and
+  filters it in memory as the user types, without reading storage again (SC-011,
+  [research.md](research.md) R11a).
 
 ```text
 ListSummary = { id, name, itemCount: number, isCurrent: boolean }   // US3-8

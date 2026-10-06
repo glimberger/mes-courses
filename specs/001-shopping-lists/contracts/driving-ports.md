@@ -56,7 +56,7 @@ their `listId` parameter, which their tests use to check that each list keeps it
 
 | Use case | Signature | Behavior |
 |---|---|---|
-| `getCatalog` | `(listId, query?: string) => Promise<CatalogView>` | Catalog grouped by category with `onList` marks; filtered by `query` when given (FR-008, FR-009, FR-011). |
+| `getCatalog` | `(listId, query?: string) => Promise<CatalogView>` | Catalog grouped by category with `onList` marks; filtered by `query` when given, with the domain's `filterCatalog` (FR-008, FR-009, FR-011). The add screen calls it without a query and filters the result in memory as the user types (SC-011, [research.md](../research.md) R11a). |
 | `addArticleToList` | `(listId, articleId, quantity: Quantity \| null) => Promise<Result<void, AlreadyOnList \| ArticleNotFound>>` | Adds an unticked item (FR-012). `AlreadyOnList` carries the current quantity, so the UI can offer to change it (US2-8). |
 | `createArticleAndAddToList` | `(listId, { name, categoryId }, quantity: Quantity \| null) => Promise<Result<{ articleId }, NameError \| NameAlreadyUsed \| CategoryNotFound>>` | Creates the article and adds it, in one transaction (US2-7). `NameAlreadyUsed.existing` is the matching article (US2-9). |
 | `changeItemQuantity` | `(listId, articleId, quantity: Quantity \| null) => Promise<Result<void, ItemNotOnList>>` | Sets or clears the quantity of this list item only (FR-015, US2-3, US2-4, US2-5). |

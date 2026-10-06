@@ -146,7 +146,8 @@ FR-030a, FR-039a).
     folding. The query is matched as a substring. Searching
     runs in the domain over the catalog read into memory: the spec measures the catalog at up to
     1 000 articles (Assumptions), so filtering in memory takes about a millisecond and keeps
-    the rule in tested domain code. That size is a measurement size, not a limit: nothing is
+    the rule in tested domain code. The add screen loads the catalog once and filters it as the
+    user types, without reading storage again (R11a, SC-011). That size is a measurement size, not a limit: nothing is
     refused beyond it (clarified 2026-10-06).
   - *Sorting*: categories by `position`; items within a category unticked first, then ticked,
     each group sorted by name with one shared `compareNames`, built on
@@ -285,13 +286,68 @@ FR-030a, FR-039a).
 - **Decision**: React Native `SectionList` (one section per category), with memoized rows and a
   `keyExtractor` on article id.
 - **Rationale**: 200 rows is well within `SectionList`'s range. FlashList would be a new
-  dependency with no measured need; it can replace `SectionList` if profiling shows lag.
-- **Measurement**: SC-008 (55 frames per second or more while scrolling and ticking) is read
-  from React Native's Perf Monitor, on a release build filled by the measurement seed (T135) to
-  the spec's data size: 1 000 articles in the catalog, 20 lists, and 200 items on the current
-  list (Assumptions). SC-001 is measured on the same build. Both run on the two
-  reference phones of the spec: an entry-level Android phone about five years old and the
+  dependency with no measured need; it replaces `SectionList` only if SC-008 is missed on a
+  reference phone and profiling shows the list itself is the cause (not a re-render the
+  memoization should prevent, T129).
+- **Measurement build** (clarified 2026-10-06): SC-001, SC-002, SC-008 and SC-011 are measured on
+  one `preview` build from EAS (`eas build --profile preview`, Hermes release bundle, with the
+  Sentry DSN, so startup pays the same Sentry initialization as a user's build), built with
+  `EXPO_PUBLIC_SEED_ITEMS=200`: the measurement seed (T135) fills it to the spec's data size,
+  1 000 articles in the catalog, 20 lists, and 200 items on the current list (Assumptions).
+- **Measurement data** (clarified 2026-10-06): shaped like real use, as the spec's Assumptions
+  require. The seed holds a base list of 100 common French products spread over the 11
+  default categories ("Pommes", "Lait demi-écrémé", "Farine de blé" …) and makes 10 numbered
+  variants of each ("Pommes", "Pommes 2" … "Pommes 10"), so the names stay unique and the
+  searches of quickstart step 15 find real matches. 100 of the 1 000 names (one variant of
+  each product) are lengthened to exactly 60 characters, so rows wrap as long names do. On the
+  current list, every other item is ticked and every other pair has a quantity, so ticked
+  rows, quantities and both together all appear on screen; each of the 19 other lists holds 50
+  items. Everything goes through the use cases, about 2 300 transactions, each synced to
+  storage (R4): seeding takes several seconds, once, on the first launch of the measurement
+  build, which is not timed (SC-001 applies to launches with existing data).
+- **Measurement pace**: the 50 ticks are tapped as fast as the tester can, about 3 per second,
+  on different items, so saves are still queued behind each other (R9); the 30 search letters
+  are typed as whole words at about 3 letters per second (SC-002, SC-011).
+  Both reference phones run it: an entry-level Android phone about five years old and the
   maintainer's iPhone.
+- **Measurement conditions**: the screen set to 60 Hz (Android: developer option or the
+  display's refresh rate setting; iOS: Accessibility → Motion → Limit Frame Rate, needed only on
+  a ProMotion iPhone), airplane mode on, battery saver off, screen reader off, default text size,
+  light theme, other apps closed (SC-008, clarified 2026-10-06).
+- **Measurement tools**: frames are read with the platform's own tools, not React Native's Perf
+  Monitor (which shows only the JavaScript and UI thread rates, not frames missing their display
+  deadline): Android's `adb shell dumpsys gfxinfo <package>` ("Janky frames") and Xcode
+  Instruments' Animation Hitches on iOS. A dropped frame is one that misses its display deadline
+  (SC-008). Tick latency and start time are read on a slow-motion video of the screen, 240
+  frames per second, so one video frame is about 4 ms (SC-001, SC-002).
+- **A missed target**: any of SC-001, SC-002, SC-008 or SC-011 missed on either phone blocks the
+  release until it is met; the miss, its cause and the measurement after the fix are recorded
+  in the pull request's test plan (spec Success Criteria, clarified 2026-10-06).
+
+## R11a. The add screen at full catalog size (SC-011)
+
+- **Decision**: the add screen reads the catalog from storage once when it opens (and again
+  after a successful write, as every region does, R10), with no query, and keeps that full
+  `CatalogView` in the store. Typing in the search field does not read storage again: the store
+  filters the loaded view in memory with a pure domain function `filterCatalog(view, query)`,
+  synchronously, on every letter, with no debounce and no `loading` state. Each article's
+  search form (`searchForm(name)`, R6) is computed once per load, not per letter. Filtering keeps
+  the order of the full view, so nothing is sorted again while typing. `getCatalog(listId,
+  query?)` stays as specified and applies the same `filterCatalog`, so the use-case tests and the
+  store use one rule.
+- **Rationale**: SC-011 asks for results within 300 ms of each letter on a five-year-old Android
+  phone. Re-reading 1 000 articles through expo-sqlite and sorting them again with the French
+  collator on every letter would spend most of that budget on work whose result does not
+  change, and could show results of an older query if two reads finished out of order. Filtering
+  1 000 precomputed strings by substring takes about a millisecond. It also matches the
+  contract, which already says search filters the catalog loaded on the screen and has no
+  loading or error state of its own (FR-029). Opening within 1 second covers one read of the
+  catalog and one sort, a few tens of milliseconds, and the first screen of a `SectionList`,
+  which draws only the rows in view.
+- **Alternatives considered**: a debounced storage query (adds a delay every letter pays, and
+  still re-sorts); a search index in SQLite (FTS5 does not fold accents and ligatures the way
+  FR-009 requires, and duplicates the domain rule in SQL); filtering in the screen component
+  (keeps the rule out of the domain, against Principle VI).
 
 ## R12. Accessibility (FR-032 to FR-035)
 
