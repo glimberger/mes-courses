@@ -18,6 +18,11 @@ Expected: everything passes. Every acceptance scenario has a test named after it
 "002 US1-", "002 US2-", "002 US3-"). The offline UI scenario (001) is extended with edit, delete
 and undo, still with `fetch` throwing.
 
+Screens and journeys (001 quickstart §2 and §3): the stories listed in
+[contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-end-journeys) appear in
+Storybook and meet the review checklist; `yarn test:e2e:android` (and `yarn test:e2e:ios` on a
+Mac) runs `rename-article` and `delete-article` green with 001's journeys.
+
 ## 2. Hands-on scenarios on a device
 
 Start from a build with at least "Ma liste" and a second list "Barbecue".

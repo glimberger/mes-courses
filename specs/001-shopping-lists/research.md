@@ -6,7 +6,8 @@ This is the project's first feature plan, so it chooses the technology stack as 
 feature design. Each entry gives the decision, why it was made, and what else was considered.
 Versions are those current on 2026-10-05; the scaffold pins the exact versions in
 `apps/mobile/package.json` and the single root `yarn.lock`. R20 was added on 2026-10-06
-for constitution v2.1.0 (Principle XI, monorepo).
+for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox) were added on
+2026-10-06 at the maintainer's request, to validate screens and run end-to-end tests on a device.
 
 ## R1. Platform and framework
 
@@ -230,10 +231,13 @@ for constitution v2.1.0 (Principle XI, monorepo).
     domain and application layers.
   - Each acceptance scenario in the spec maps to at least one named test (Principle II); the
     tasks list keeps that mapping.
-- **End-to-end on device**: not automated in this feature. Device-level checks (expo-sqlite
-  binding, kill and restart, airplane mode, TalkBack/VoiceOver, 200% text) are in
-  [quickstart.md](quickstart.md). Maestro flows can be added later if manual passes become a
-  bottleneck (Principle IV).
+- **Screen catalog**: every shared component and every state of every screen has a Storybook
+  story, and a Jest test renders each story in the light and dark schemes (R22).
+- **End-to-end on device**: Detox journeys drive the release build on an emulator or simulator,
+  with the real expo-sqlite binding, navigation and kill-and-relaunch (R23). They run in their own
+  test-only workspace, outside `yarn test`, so the unit suite stays fast (Principle III).
+  Checks that need a human stay manual in [quickstart.md](quickstart.md): airplane mode,
+  TalkBack/VoiceOver, 200% text and the visual review of the stories.
 
 ## R15. Architecture test (Principle VI)
 
@@ -246,6 +250,9 @@ for constitution v2.1.0 (Principle XI, monorepo).
   - anything outside `apps/mobile/src/adapters/**` and `apps/mobile/src/composition/**` imports from `apps/mobile/src/adapters/**`;
   - anything outside `apps/mobile/src/adapters/ui/**` imports `zustand` (R10);
   - anything imports `zustand/middleware` or `immer` (R10, [002 research](../002-manage-articles/research.md#r1b-no-zustand-middleware) R1b);
+  - `@storybook/*` is imported outside story files, `.rnstorybook/` and the story test, or a
+    story file or testing helper is imported by production code (R22);
+  - `tests/e2e/**` imports any other workspace (R23);
   - any circular dependency exists.
   It runs from the root as `yarn test:architecture` and in CI. Later workspaces (the server,
   shared packages) add their own layer rules to the same file.
@@ -276,7 +283,7 @@ for constitution v2.1.0 (Principle XI, monorepo).
   `build` (`yarn build`; for the app this is
   `expo export --platform android --platform ios`, which bundles the JS for both platforms). The repository is private on a GitHub plan without branch protection, so the
   merge rule of constitution v1.7.0 applies: no pull request is merged until `gh pr checks`
-  shows all four jobs green.
+  shows every job green. Detox adds a fifth job, `e2e-android` (R23).
 - **Rationale**: the constitution requires CI before the first application code is merged. `expo export` checks that the app bundles without the cost of a
   native build on every pull request; native builds go through EAS Build when releasing.
 - **Alternatives considered**: EAS Build on every pull request (slow, uses build credits).
@@ -346,7 +353,9 @@ for constitution v2.1.0 (Principle XI, monorepo).
   - the Expo app is the workspace `@mes-courses/mobile` in `apps/mobile/`, with its own
     `package.json`, `tsconfig.json` (extends the base), `jest.config.js` (`jest-expo`),
     `app.config.ts` and `eas.json`. Expo's Metro config detects Yarn workspaces on its own (SDK 52
-    and later, with the `node-modules` linker), so no custom `metro.config.js` is needed; EAS Build runs from `apps/mobile/`;
+    and later, with the `node-modules` linker). The only `metro.config.js` is the one Storybook
+    needs (R22): it wraps Expo's `getDefaultConfig` with `withStorybook` and adds nothing for
+    workspaces. EAS Build runs from `apps/mobile/`;
   - the server ([003](../003-server-sync/research.md#r1-repository-layout-yarn-workspaces)) will
     be `apps/server/`, and shared code `packages/<name>/`. No shared package exists in this
     feature, so `packages/` is not created yet (Principle IV).
@@ -396,6 +405,146 @@ for constitution v2.1.0 (Principle XI, monorepo).
   needs anyway; can be added later if a headless Android build is needed); devenv or Devbox on
   top of Nix (another tool for what a plain flake does, Principle IV).
 
+## R22. Screen validation with Storybook
+
+- **Decision**: **Storybook for React Native 10** (`@storybook/react-native`), chosen by the
+  maintainer, runs on the device inside the app workspace and catalogs the UI adapter:
+  - **What has a story**: every component of the shared module
+    (`apps/mobile/src/adapters/ui/components/`), and every screen and dialog in each of its
+    states (Principle IX): loading, empty, error, success, the main variants of each (for example
+    "Tout est dans le caddie", an error message under a field) and, once 003 adds it, each
+    synchronization status. The required list is in
+    [contracts/ui-validation.md](contracts/ui-validation.md#required-stories).
+  - **Where**: stories sit next to their component as `*.stories.tsx`. Storybook's own config is
+    in `apps/mobile/.rnstorybook/` (`main.ts` lists `../src/adapters/ui/**/*.stories.tsx`;
+    `preview.tsx` holds the decorators).
+  - **How a screen story gets its data**: screens read the application store (R10), so a screen
+    story renders the screen inside `AppStoreProvider` with a store built by
+    `createStoryStore(scenario)` (`apps/mobile/src/adapters/ui/testing/`). It wires the real
+    use cases on 001's in-memory fakes, seeded with French fixture data. The loading state uses a
+    query that never resolves, the error state a query that rejects. No story builds a
+    `ScreenState` by hand, so a story cannot show a state the store cannot reach.
+    `renderWithStore` in the RNTL tests uses the same helper, so stories and screen tests share
+    one set of fixtures.
+  - **Theme**: `preview.tsx` wraps every story in `PaperProvider` with the theme built from
+    `design/material-theme.json`. The theme follows the system scheme as the app does, so a
+    reviewer checks dark mode by switching the device to dark (Principle V). There is no theme
+    addon.
+  - **Enabling**: `apps/mobile/metro.config.js` wraps Expo's default config with `withStorybook`.
+    `STORYBOOK_ENABLED=true` swaps the app's entry point for Storybook's UI. Without it, which is
+    the case for release builds, EAS builds and Detox builds, the bundle holds no Storybook code
+    and no story. Script: `yarn storybook` in `apps/mobile/` (`STORYBOOK_ENABLED=true expo start`)
+    on a development build.
+  - **No add-ons**: no on-device controls, actions or backgrounds add-on. Stories are fixed
+    scenarios, and actions are checked by the screen tests (Principle IV).
+- **Automated check (Principles II and III)**: one Jest test,
+  `apps/mobile/src/adapters/ui/stories.test.tsx`, finds every `*.stories.tsx` (`fs.globSync`,
+  Node 24), composes its stories with Storybook's portable stories API (`composeStories`, with the
+  project annotations of `preview.tsx`) and renders each one with RNTL in both schemes. It fails
+  when a story throws or logs a React error or warning. It also fails when a story listed in
+  [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) is missing, so a new
+  screen state cannot ship without its story. It runs inside `yarn test`, with no device, in
+  seconds. Behavior stays in the screen tests, which can render a composed story as their
+  starting point.
+- **Visual review (manual)**: Storybook is where a person validates what a screen looks like.
+  A pull request that adds or changes a shared component or a screen state lists the stories
+  it touches in its description. The maintainer opens them in Storybook on Android and on iOS, in
+  light and dark mode, and at 200% text size for the screens with long names, before merging
+  ([quickstart.md](quickstart.md#2-review-the-screens-in-storybook)). A new shared component is
+  reviewed this way, as Principle V requires.
+- **Architecture (Principle VI)**: dependency-cruiser (R15) gains rules: `@storybook/*` is
+  imported only by `*.stories.tsx`, `.rnstorybook/**` and `stories.test.tsx`; `*.stories.tsx`,
+  `adapters/ui/testing/**` and `application/testing/**` are imported only by tests, stories and
+  other testing helpers, never by production code.
+- **Rationale**: one place shows every screen state with realistic French data, without walking
+  the app into an error or a loading state by hand. Building story data through the real store
+  and use cases keeps stories honest. Rendering every story in Jest catches a broken story on the
+  next run instead of at the next review. On-device Storybook renders with the same native
+  components and fonts as the app, which is what a visual review needs.
+- **Alternatives considered**: Storybook for the web through `@storybook/react-native-web-vite`
+  (renders React Native Web, not the native components, and is a second Storybook to configure);
+  automated visual regression, either with Chromatic (an external service that receives
+  screenshots, paid beyond its free tier) or with screenshot diffing in Vitest browser mode or
+  Detox (a second test runner, and native screenshots are not stable across emulator images,
+  against Principle III). It can be added later if manual review misses regressions. Also
+  considered: a dev-only "gallery" screen in the app (rebuilds Storybook's navigation by hand).
+
+## R23. End-to-end tests with Detox
+
+- **Decision**: **Detox 20** (Wix), chosen by the maintainer, drives the app's release build on an
+  Android emulator and an iOS simulator:
+  - **Workspace**: a test-only workspace `tests/e2e/` (`@mes-courses/e2e-tests`, private). The
+    root `"workspaces"` becomes `["apps/*", "packages/*", "tests/*"]`, which 003's `tests/sync/`
+    also uses (Principle XI). The workspace imports nothing from the other workspaces: it only
+    drives the built binary. It holds `.detoxrc.js`, its own `jest.config.js` and the journeys in
+    `tests/e2e/journeys/*.e2e.ts`.
+  - **Test runner**: Detox's Jest runner, with **Jest 29** pinned in this workspace, because
+    Detox documents Jest 29. The app keeps Jest 30. Yarn installs each version where it is used
+    (`node-modules` linker), still from the one `yarn.lock`. TypeScript goes through `ts-jest`.
+  - **Native projects**: Detox needs native code changes (Android test runner, a network security
+    config for the release build, the iOS pod). Expo no longer ships a Detox config plugin, so the
+    app uses the community `expo-detox-config-plugin` (Expo SDK 54 and later, Detox 20.44 or
+    later), registered in `app.config.ts`. If it does not support SDK 57 when the work starts,
+    a local config plugin in `apps/mobile/plugins/with-detox.ts` makes the same Android changes.
+    `ios/` and `android/` stay generated by `expo prebuild` and ignored by Git, as in T003.
+  - **Configurations** (`.detoxrc.js`): `android.emu.release` builds with
+    `expo prebuild --platform android` then
+    `./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release` in
+    `apps/mobile/android/`. `ios.sim.release` builds with `expo prebuild --platform ios` then
+    `xcodebuild` for the Release configuration and the simulator SDK. Release builds embed the JS
+    bundle, so no Metro server is needed and the binary is the one users get.
+  - **Build environment**: no `EXPO_PUBLIC_SENTRY_DSN`, so the composition root uses the console
+    reporter and no test sends anything to Sentry (Principle VIII); `SENTRY_DISABLE_AUTO_UPLOAD=true`,
+    so the build does not upload source maps; `STORYBOOK_ENABLED` unset.
+  - **Isolation**: each journey file starts with
+    `device.launchApp({ delete: true, newInstance: true })`, a fresh install on a fresh store
+    (first-launch seed included), so journeys never depend on each other's data or order
+    (Principle III). Inside a file, steps run in order as one user journey.
+  - **Queries**: journeys find elements by the French text and accessibility labels of
+    [contracts/ui-screens.md](contracts/ui-screens.md) (`by.text`, `by.label`), as the user and the
+    screen reader see them (Principles II and X). `testID` is not used: when text alone is
+    ambiguous, the journey narrows by ancestor (`withAncestor`) or the contract makes the label
+    unique.
+  - **No waiting by time**: Detox waits for the app to be idle. Journeys use no `sleep`; `waitFor`
+    is used only with an explicit timeout on a visible outcome. Jest `retryTimes` is not set: a
+    journey that passes only on retry is a failing journey (Principle III).
+  - **Scope**: a few journeys that cross the layers Jest cannot reach on a device: the real
+    expo-sqlite binding, native navigation and Paper rendering, and persistence after the app
+    process is killed (`device.terminateApp()` then `device.launchApp({ newInstance: true })`).
+    Each journey names the spec scenarios it covers. The list is in
+    [contracts/ui-validation.md](contracts/ui-validation.md#end-to-end-journeys).
+    Every acceptance scenario is still covered by a Jest test; journeys do not replace them.
+  - **Test-first (Principle I)**: a story's journey is written before the story is implemented
+    and fails, as the outer loop of the story. The story's unit, store and screen tests drive the
+    code (inner loop) until the journey passes.
+- **Running**:
+  - Locally: `yarn test:e2e:android` and `yarn test:e2e:ios` at the root (Detox build then test
+    in `tests/e2e/`). Android needs Android Studio with an emulator named in `.detoxrc.js`
+    (`Pixel_API_35` by default, overridable with `DETOX_AVD_NAME`). iOS needs macOS, Xcode and
+    `applesimutils` (Homebrew). These stay outside Nix, like Android Studio and Xcode (R21).
+  - CI: a job `e2e-android` in `.github/workflows/ci.yml` on `ubuntu-latest`, on every pull
+    request and push to `main` like the other jobs. It enables KVM, sets up Java 17
+    (`actions/setup-java`) and uses the runner's Android SDK, caches Gradle, starts an x86_64
+    API 35 emulator with `reactivecircus/android-emulator-runner`, and runs the Detox build and
+    test through `nix develop --command` for Node and Yarn (R21). It uploads Detox artifacts
+    (screenshots and logs of failed steps) when it fails.
+  - iOS end-to-end runs on the maintainer's Mac, not in CI: macOS runners use GitHub minutes at
+    ten times the Linux rate on a private repository. The iOS journeys run before each release
+    and on any pull request that touches native configuration (`app.config.ts`, config plugins,
+    native dependencies). This gap is recorded in the plan's Complexity Tracking.
+- **Rationale**: Jest covers behavior through in-memory fakes and `node:sqlite`, but nothing
+  automated checked the binary itself: that expo-sqlite opens and migrates on a device, that
+  screens navigate, that data survives a killed process (SC-007, FR-028). Detox's gray-box
+  synchronization with the React Native bridge avoids the timing sleeps that make black-box UI
+  tests flaky, and its tests are TypeScript in Jest, like the rest of the codebase.
+- **Alternatives considered**: Maestro (YAML flows, the option Expo documents with EAS Workflows;
+  not chosen by the maintainer, and its black-box waits are less deterministic than Detox's
+  synchronization); Appium (WebDriver setup heavier for a two-platform app); running Detox on
+  debug builds (needs Metro during tests and differs from what users run); the e2e tests inside
+  `apps/mobile/` (Detox's Jest 29 would conflict with the app's Jest 30 config and `yarn test`
+  would pick the journeys up); iOS in CI on `macos-latest` (cost, see above; it can be added if the
+  repository becomes public, where macOS minutes are free).
+
 ## New dependencies (Principle IV)
 
 | Dependency | Why it is needed |
@@ -412,3 +561,7 @@ for constitution v2.1.0 (Principle XI, monorepo).
 | Dev: `jest`, `jest-expo`, `@testing-library/react-native` | Tests (R14, Principle I). |
 | Dev: `dependency-cruiser` | Architecture test (R15, Principle VI). |
 | Dev: `eslint`, `eslint-config-expo`, `typescript-eslint`, `eslint-plugin-react-native`, `prettier`, `eslint-config-prettier`, `typescript` | Lint, format and type checks (R16, Quality Gates). |
+| Dev: `storybook`, `@storybook/react-native`, `@storybook/react` (portable stories), and the on-device UI's peer dependencies listed by its install guide (`react-native-reanimated`, `react-native-gesture-handler`, `react-native-svg`, `@gorhom/bottom-sheet` at the time of writing) | Screen catalog and story tests (R22), chosen by the maintainer. The peers are native modules, so they are compiled into every build, but no Storybook code is bundled without `STORYBOOK_ENABLED`. |
+| `expo-detox-config-plugin` (dev, config plugin) | Native changes Detox needs, applied at `expo prebuild` (R23). |
+| `tests/e2e` dev: `detox`, `jest@29`, `ts-jest`, `@types/jest` | End-to-end journeys on a device (R23), chosen by the maintainer. |
+| CI only: `reactivecircus/android-emulator-runner`, `actions/setup-java` | Android emulator and JDK for the `e2e-android` job (R23). |

@@ -8,7 +8,9 @@ description: "Task list for feature 001-shopping-lists"
 **Input**: Design documents from `specs/001-shopping-lists/`
 
 **Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md),
-[data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md), and the
+[data-model.md](data-model.md), [contracts/](contracts/) (including
+[contracts/ui-validation.md](contracts/ui-validation.md) for the stories and journeys),
+[quickstart.md](quickstart.md), and the
 application store contract shared with 002:
 [002 contracts/ui-state.md](../002-manage-articles/contracts/ui-state.md)
 
@@ -35,8 +37,10 @@ R20). The root holds the workspaces manifest, the lockfile, the shared tool conf
 Expo app is the `apps/mobile/` workspace: `apps/mobile/src/domain/`,
 `apps/mobile/src/application/{ports,use-cases,testing}/`,
 `apps/mobile/src/adapters/{sqlite,error-reporting,id,ui}/`, `apps/mobile/src/composition/`,
-`apps/mobile/test/sqlite/`. Tests sit next to the code they cover as `*.test.ts(x)`. Commands run
-from the repository root.
+`apps/mobile/test/sqlite/`. Tests sit next to the code they cover as `*.test.ts(x)`, and stories
+next to the component they show as `*.stories.tsx`; Storybook's config is in
+`apps/mobile/.rnstorybook/`. The Detox journeys are in the test-only workspace `tests/e2e/`
+(`tests/e2e/journeys/*.e2e.ts`). Commands run from the repository root.
 
 ## Rules that apply to every task
 
@@ -51,17 +55,23 @@ from the repository root.
   (Principle VIII).
 - **Every write** runs inside `UnitOfWork.run` and is committed before its promise resolves
   (FR-028).
+- **Stories** get their data from `createStoryStore` (real use cases on fakes), never from a
+  hand-built `ScreenState`; their text is French, their titles English
+  ([research.md](research.md) R22).
+- **Journeys** start from a fresh install, find elements by French text and accessibility label
+  (no `testID`), use no `sleep` and no retries, and each production fix they force starts with its
+  own failing unit or screen test ([research.md](research.md) R23).
 
 ---
 
 ## Phase 1: Setup (Shared Infrastructure)
 
 **Purpose**: a workspaces root and an empty, buildable Expo app in `apps/mobile/`, with every
-quality gate and CI in place before any application code ([plan.md](plan.md#implementation-notes-for-speckit-tasks), Quality Gates).
+quality gate, Storybook, the Detox workspace and CI in place before any application code ([plan.md](plan.md#implementation-notes-for-speckit-tasks), Quality Gates).
 
-- [ ] T001 Create the Nix dev shell ([research.md](research.md) R21): `flake.nix` with `devShells.default` for `aarch64-darwin`, `x86_64-darwin`, `x86_64-linux` and `aarch64-linux`, providing `nodejs_24`, `corepack_24` and `watchman` from a stable `nixpkgs` branch (if `corepack_24` is missing from that branch, use the `nodejs_24` Corepack with shims installed into a project-local folder added to `PATH` in `shellHook`), and `.envrc` with `use flake`. Run `nix flake lock` to produce `flake.lock`, and check that `node --version` and `yarn --version` inside `nix develop` print Node 24 and Yarn 4. Then create the workspaces root ([research.md](research.md) R20) inside that shell: create a private root `package.json` (name `mes-courses`) with `"packageManager": "yarn@4.x"` (the current Yarn 4 release, exact version) and `"workspaces": ["apps/*", "packages/*"]`, a `.yarnrc.yml` with `nodeLinker: node-modules` (React Native does not support Plug'n'Play), and `tsconfig.base.json` with the strict compiler options. Then scaffold the Expo SDK 57 app in `apps/mobile/` with the blank TypeScript template, keeping the existing `README.md`, `design/`, `specs/` and `.specify/` at the root. Produce `apps/mobile/package.json` (name `@mes-courses/mobile`, private), `apps/mobile/App.tsx`, `apps/mobile/index.ts`, `apps/mobile/app.config.ts` (replace `app.json`: name "Mes courses", slug `mes-courses`, New Architecture on) and `apps/mobile/tsconfig.json` extending `../../tsconfig.base.json` and `expo/tsconfig.base`. Run `yarn install` at the root so there is a single `yarn.lock` and a root `node_modules/`, and check that `yarn expo start` from `apps/mobile/` resolves the hoisted dependencies with Expo's default Metro config.
+- [ ] T001 Create the Nix dev shell ([research.md](research.md) R21): `flake.nix` with `devShells.default` for `aarch64-darwin`, `x86_64-darwin`, `x86_64-linux` and `aarch64-linux`, providing `nodejs_24`, `corepack_24` and `watchman` from a stable `nixpkgs` branch (if `corepack_24` is missing from that branch, use the `nodejs_24` Corepack with shims installed into a project-local folder added to `PATH` in `shellHook`), and `.envrc` with `use flake`. Run `nix flake lock` to produce `flake.lock`, and check that `node --version` and `yarn --version` inside `nix develop` print Node 24 and Yarn 4. Then create the workspaces root ([research.md](research.md) R20) inside that shell: create a private root `package.json` (name `mes-courses`) with `"packageManager": "yarn@4.x"` (the current Yarn 4 release, exact version) and `"workspaces": ["apps/*", "packages/*", "tests/*"]` (`tests/*` holds the e2e workspace, [research.md](research.md) R23), a `.yarnrc.yml` with `nodeLinker: node-modules` (React Native does not support Plug'n'Play), and `tsconfig.base.json` with the strict compiler options. Then scaffold the Expo SDK 57 app in `apps/mobile/` with the blank TypeScript template, keeping the existing `README.md`, `design/`, `specs/` and `.specify/` at the root. Produce `apps/mobile/package.json` (name `@mes-courses/mobile`, private), `apps/mobile/App.tsx`, `apps/mobile/index.ts`, `apps/mobile/app.config.ts` (replace `app.json`: name "Mes courses", slug `mes-courses`, New Architecture on) and `apps/mobile/tsconfig.json` extending `../../tsconfig.base.json` and `expo/tsconfig.base`. Run `yarn install` at the root so there is a single `yarn.lock` and a root `node_modules/`, and check that `yarn expo start` from `apps/mobile/` resolves the hoisted dependencies with Expo's default Metro config.
 - [ ] T002 Add `"engines": { "node": ">=24" }` in the root `package.json` (the Node version itself comes from `flake.lock`; there is no `.nvmrc`).
-- [ ] T003 Extend `.gitignore` with `node_modules/`, `.expo/`, `dist/`, `ios/`, `android/`, `*.jks`, `.env*` and `coverage/`, as patterns that match in any workspace, plus Yarn's entries: `.yarn/*` with `!.yarn/patches`, `!.yarn/plugins`, `!.yarn/releases`, `!.yarn/sdks`, `!.yarn/versions`, `.pnp.*`, and `.direnv/` for direnv.
+- [ ] T003 Extend `.gitignore` with `node_modules/`, `.expo/`, `dist/`, `ios/`, `android/`, `*.jks`, `.env*` and `coverage/`, as patterns that match in any workspace, plus Yarn's entries: `.yarn/*` with `!.yarn/patches`, `!.yarn/plugins`, `!.yarn/releases`, `!.yarn/sdks`, `!.yarn/versions`, `.pnp.*`, and `.direnv/` for direnv. Storybook's generated file and Detox's artifacts are added by the tasks that create them.
 - [ ] T004 Create `.talismanrc` with two `fileignoreconfig` entries, both with `ignore_detectors: [filecontent]`: `flake.lock` with the comment and exact entry required by the workspace `AGENTS.md`, and `yarn.lock` with a comment saying Yarn lockfiles hold package checksums, not secrets. Do this before the first commit that contains either lockfile.
 - [ ] T005 Install the runtime dependencies listed in [research.md](research.md#new-dependencies-principle-iv) into the app workspace, running `yarn expo install` from `apps/mobile/` for Expo-managed versions: `react-native-paper`, `react-native-safe-area-context`, `@expo/vector-icons`, `@react-navigation/native`, `@react-navigation/native-stack`, `react-native-screens`, `zustand`, `expo-sqlite`, `expo-crypto`, `@sentry/react-native`. Register the `expo-sqlite` and `@sentry/react-native/expo` config plugins in `apps/mobile/app.config.ts`.
 - [ ] T006 [P] Configure Jest 30 with the `jest-expo` preset and React Native Testing Library in `apps/mobile/jest.config.js` and `apps/mobile/package.json` (scripts `test`, `test:watch`). Add the root script `test` (`yarn workspaces foreach --all --exclude mes-courses run test`). Add a trivial green test in `apps/mobile/src/smoke.test.ts` to prove the runner works, then delete it once the first real test exists.
@@ -76,33 +86,74 @@ quality gate and CI in place before any application code ([plan.md](plan.md#impl
   - no circular dependency.
 
   Add the script `test:architecture` in the root `package.json`. Prove each rule fails on a deliberate violation in a throwaway file, then delete the file.
-- [ ] T009 Add the GitHub Actions workflow `.github/workflows/ci.yml`, triggered on `pull_request` and on `push` to `main`, `ubuntu-latest`. Each job installs Nix with `DeterminateSystems/nix-installer-action`, caches the store with `DeterminateSystems/magic-nix-cache-action`, and runs every command as `nix develop --command …`, starting with `yarn install --immutable` at the root ([research.md](research.md) R21). Jobs: `typecheck`; `lint` (ESLint + `yarn format:check`); `test` (`yarn test` + `yarn test:architecture`); `build` (root `yarn build`, running `build` in every workspace; the app's `build` is `expo export --platform android --platform ios`) ([research.md](research.md) R17).
-- [ ] T010 Replace the "Install, run and test" section of `README.md` with the repository layout (`apps/mobile/`, later `apps/server/` and `packages/`), the prerequisites (Nix with flakes enabled, optionally `direnv` with `nix-direnv`; Android Studio or Xcode for device builds), entering the dev shell (`direnv allow` or `nix develop`), `yarn install` at the root, the check commands, `yarn expo run:android` / `run:ios` from `apps/mobile/` with a development build, the optional `EXPO_PUBLIC_SENTRY_DSN`, and the merge rule: `gh pr checks` must be all green before merging.
+- [ ] T009 Install Storybook for React Native 10 in the app workspace ([research.md](research.md) R22). From `apps/mobile/`, run `yarn expo install storybook @storybook/react-native @storybook/react` and the on-device UI's peer dependencies listed by the `@storybook/react-native` 10 install guide (at the time of writing `react-native-reanimated`, `react-native-gesture-handler`, `react-native-svg`, `@gorhom/bottom-sheet`), each as a dependency or dev dependency as the guide says. Then:
+  - create `apps/mobile/metro.config.js`: Expo's `getDefaultConfig(__dirname)` from `expo/metro-config`, wrapped with `withStorybook` from `@storybook/react-native/withStorybook`, enabled only when `STORYBOOK_ENABLED` is set, with nothing else added (Expo detects the workspaces on its own, R20);
+  - create `apps/mobile/.rnstorybook/main.ts` (stories `../src/adapters/ui/**/*.stories.tsx`, no add-ons), `apps/mobile/.rnstorybook/preview.tsx` (no decorator yet) and the entry file the guide asks for;
+  - add the script `"storybook": "STORYBOOK_ENABLED=true expo start"` to `apps/mobile/package.json`;
+  - add the file Storybook generates (`apps/mobile/.rnstorybook/storybook.requires.ts`, if the guide's version generates it) to `.gitignore`.
 
-**Checkpoint**: `yarn typecheck && yarn lint && yarn format:check && yarn test && yarn test:architecture && yarn build` is green locally from the root, and CI is green on the setup pull request.
+  Check that `yarn build` is still green and that `grep -ril storybook apps/mobile/dist` finds nothing, so a bundle built without `STORYBOOK_ENABLED` holds no Storybook code.
+- [ ] T010 Add the story test ([research.md](research.md) R22). Create `apps/mobile/src/adapters/ui/required-stories.ts` exporting `requiredStories: readonly string[]`, empty for now, filled with the ids of [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) as each story phase adds them. Then write `apps/mobile/src/adapters/ui/stories.test.tsx`:
+  - it finds every `src/adapters/ui/**/*.stories.tsx` of the app with `fs.globSync` (Node 24), `require`s each file and composes its stories with `composeStories` from `@storybook/react`, using the project annotations of `apps/mobile/.rnstorybook/preview.tsx`;
+  - it renders each story with React Native Testing Library twice, with `useColorScheme` mocked to `'light'` then `'dark'`, and fails if rendering throws or if `console.error` or `console.warn` is called;
+  - one test fails for every id in `requiredStories` that no story has, the id being `<title>/<export name>`;
+  - with no story file yet, the suite still runs: its "required stories exist" test is green on an empty list.
+
+  Prove it with a throwaway `apps/mobile/src/adapters/ui/smoke.stories.tsx` that renders a Paper `Text`: it is green; a story that throws fails; a required id with no story fails. Then delete the throwaway story and id.
+- [ ] T011 Extend the root `.dependency-cruiser.cjs` with the rules of [research.md](research.md) R15 for Storybook and the e2e workspace, scanning `apps/mobile/.rnstorybook/` too:
+  - `@storybook/*` is imported only by `**/*.stories.tsx`, `apps/mobile/.rnstorybook/**` and `apps/mobile/src/adapters/ui/stories.test.tsx`;
+  - `**/*.stories.tsx`, `apps/mobile/src/adapters/ui/testing/**` and `apps/mobile/src/application/testing/**` are imported only by `*.test.ts(x)` files, `*.stories.tsx` files, `apps/mobile/.rnstorybook/**` and other files in those testing folders, never by production code;
+  - `tests/e2e/**` imports no other workspace, by package name or by path.
+
+  Prove each rule fails on a deliberate violation in a throwaway file, then delete the file.
+- [ ] T012 Scaffold the test-only workspace `tests/e2e/` ([research.md](research.md) R23):
+  - `tests/e2e/package.json`: name `@mes-courses/e2e-tests`, private; devDependencies `detox` (20.44 or later), `jest@^29`, `ts-jest@^29`, `@types/jest@^29`, `typescript`; scripts `e2e:build:android` (`detox build -c android.emu.release`), `e2e:test:android` (`detox test -c android.emu.release`), `e2e:build:ios`, `e2e:test:ios` (same with `ios.sim.release`) and `typecheck`. It has **no `test` script**, so the root `yarn test` never starts a device;
+  - `tests/e2e/tsconfig.json` extending `../../tsconfig.base.json` with the `jest` and `detox` types;
+  - `tests/e2e/jest.config.js`: `testMatch: ['<rootDir>/journeys/**/*.e2e.ts']`, `ts-jest` transform, `testTimeout: 120000`, `maxWorkers: 1`, Detox's `globalSetup`, `globalTeardown`, `reporters` and `testEnvironment` from `detox/runners/jest`, and no `retryTimes`;
+  - `tests/e2e/.detoxrc.js`: app `android.release` (build: `cd ../../apps/mobile && env -u EXPO_PUBLIC_SENTRY_DSN -u STORYBOOK_ENABLED SENTRY_DISABLE_AUTO_UPLOAD=true yarn expo prebuild --platform android && cd android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release`, with `binaryPath` and `testBinaryPath` pointing at the release and androidTest APKs under `../../apps/mobile/android/app/build/outputs/apk/`); app `ios.release` (`expo prebuild --platform ios` with the same environment, then `xcodebuild` on the generated workspace and scheme, `-configuration Release -sdk iphonesimulator -derivedDataPath ios/build`, with `binaryPath` at the built `.app`; take the workspace and scheme names from the prebuild output); device `emulator` with `avdName: process.env.DETOX_AVD_NAME ?? 'Pixel_API_35'`; device `simulator` of type `iPhone 16`; configurations `android.emu.release` and `ios.sim.release`; artifacts in `artifacts/`, keeping screenshots and logs of failing tests only;
+  - the root scripts `test:e2e:android` and `test:e2e:ios`, each running the workspace's build then test scripts through `yarn workspace @mes-courses/e2e-tests`;
+  - `tests/e2e/artifacts/` in `.gitignore`.
+
+  Run `yarn install` at the root and check that `yarn.lock` holds Jest 29 for this workspace and Jest 30 for the app, and that `yarn test` from the root does not enter `tests/e2e/`.
+- [ ] T013 Add Detox's native configuration to the app ([research.md](research.md) R23). From `apps/mobile/`, run `yarn expo install --dev expo-detox-config-plugin` and register it in `apps/mobile/app.config.ts`. Run `yarn expo prebuild --clean` and check the generated `android/` holds the Detox test runner, the `androidTest` entry, the network security config allowing cleartext to `localhost` and `10.0.2.2` only, and the ProGuard keep rules; and that `ios/` holds the Detox pod. If the plugin does not support Expo SDK 57, write `apps/mobile/plugins/with-detox.ts` making the same changes instead, and register it. Check that `apps/mobile/ios/` and `apps/mobile/android/` stay ignored by Git (T003).
+- [ ] T014 Write the first journey `tests/e2e/journeys/launch.e2e.ts`: `beforeAll` calls `device.launchApp({ delete: true, newInstance: true })`, then it expects the text shown by the scaffold's `apps/mobile/App.tsx` to be visible. Run `yarn test:e2e:android` (and `yarn test:e2e:ios` on a Mac) and check it is green on the first try. It proves the build, install and launch chain; `first-launch.e2e.ts` replaces it in US1 (T065).
+- [ ] T015 Add the GitHub Actions workflow `.github/workflows/ci.yml`, triggered on `pull_request` and on `push` to `main`, `ubuntu-latest`. Each job installs Nix with `DeterminateSystems/nix-installer-action`, caches the store with `DeterminateSystems/magic-nix-cache-action`, and runs every command as `nix develop --command …`, starting with `yarn install --immutable` at the root ([research.md](research.md) R21). Jobs: `typecheck`; `lint` (ESLint + `yarn format:check`); `test` (`yarn test` + `yarn test:architecture`); `build` (root `yarn build`, running `build` in every workspace; the app's `build` is `expo export --platform android --platform ios`) ([research.md](research.md) R17).
+- [ ] T016 Add the job `e2e-android` to `.github/workflows/ci.yml`, with the same triggers as the other jobs ([research.md](research.md) R23), on `ubuntu-latest` with `timeout-minutes: 45`:
+  - enable KVM (the udev rule given in the `reactivecircus/android-emulator-runner` documentation);
+  - set up Java 17 with `actions/setup-java` (Temurin); the runner's preinstalled Android SDK is used, outside Nix (R21). `nix develop` keeps `JAVA_HOME` and `ANDROID_HOME` from the environment;
+  - install Nix and its cache as in the other jobs, and cache `~/.gradle/caches` and `~/.gradle/wrapper` with `actions/cache`, keyed on `yarn.lock` and `apps/mobile/app.config.ts`;
+  - `nix develop --command yarn install --immutable`, then `nix develop --command yarn workspace @mes-courses/e2e-tests e2e:build:android`;
+  - start an emulator with `reactivecircus/android-emulator-runner` (API level 35, `google_apis`, `x86_64`, `avd-name: Pixel_API_35`, animations disabled) whose `script` runs `nix develop --command yarn workspace @mes-courses/e2e-tests e2e:test:android`;
+  - on failure, upload `tests/e2e/artifacts/` with `actions/upload-artifact`.
+
+  Open the setup pull request and check `e2e-android` runs green with the other jobs.
+- [ ] T017 Replace the "Install, run and test" section of `README.md` with the repository layout (`apps/mobile/`, `tests/e2e/`, later `apps/server/` and `packages/`), the prerequisites (Nix with flakes enabled, optionally `direnv` with `nix-direnv`; Android Studio or Xcode for device builds; for the journeys an emulator named `Pixel_API_35` or `DETOX_AVD_NAME`, a JDK 17, and `applesimutils` on macOS), `yarn storybook` from `apps/mobile/` on a development build, `yarn test:e2e:android` and `yarn test:e2e:ios`, entering the dev shell (`direnv allow` or `nix develop`), `yarn install` at the root, the check commands, `yarn expo run:android` / `run:ios` from `apps/mobile/` with a development build, the optional `EXPO_PUBLIC_SENTRY_DSN`, and the merge rule: `gh pr checks` must be all green before merging.
+
+**Checkpoint**: `yarn typecheck && yarn lint && yarn format:check && yarn test && yarn test:architecture && yarn build` is green locally from the root, `yarn test:e2e:android` (and `yarn test:e2e:ios` on a Mac) runs the launch journey green, `yarn storybook` opens Storybook on a development build, and CI is green on the setup pull request, `e2e-android` included.
 
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
 **Purpose**: domain rules, ports, fakes, SQLite storage, error reporting, theme, shared state
-components, the application store core, and the app shell that launches on a seeded store. Every
+components, the application store core, the story store and decorator, and the app shell that
+launches on a seeded store. Every
 story depends on them.
 
 **⚠️ CRITICAL**: no user story work can begin until this phase is complete.
 
 ### Domain foundations
 
-- [ ] T011 [P] Write failing tests for `Result` helpers (`ok`, `err`, type narrowing on `ok`) in `apps/mobile/src/domain/result.test.ts`.
-- [ ] T012 [P] Implement `type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }` with `ok()` / `err()` in `apps/mobile/src/domain/result.ts` to turn T011 green.
-- [ ] T013 [P] Write failing tests for name rules in `apps/mobile/src/domain/name.test.ts`, per [data-model.md](data-model.md#name-articles-categories-lists):
+- [ ] T018 [P] Write failing tests for `Result` helpers (`ok`, `err`, type narrowing on `ok`) in `apps/mobile/src/domain/result.test.ts`.
+- [ ] T019 [P] Implement `type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }` with `ok()` / `err()` in `apps/mobile/src/domain/result.ts` to turn T018 green.
+- [ ] T020 [P] Write failing tests for name rules in `apps/mobile/src/domain/name.test.ts`, per [data-model.md](data-model.md#name-articles-categories-lists):
   - `validateName` trims and returns the trimmed name;
   - `NameRequired` for empty or blank text (US2-11, US3-6, US4-4);
   - `NameTooLong` above "At most 60 characters after trimming", and 60 characters accepted;
   - `normalizedName(name) = name.trim().toLocaleLowerCase('fr')` with accents kept, so "Pâte" ≠ "Pâté";
   - `searchForm` removes diacritics (`NFD`, combining marks removed), so "Épicerie" → "epicerie".
-- [ ] T014 Implement `validateName`, `normalizedName`, `searchForm` and the `NameError` union (`NameRequired | NameTooLong`) in `apps/mobile/src/domain/name.ts` to turn T013 green.
-- [ ] T015 [P] Write failing tests for `parseQuantity(amountText, unitText)` in `apps/mobile/src/domain/quantity.test.ts`, per [data-model.md](data-model.md#quantity-value-object):
+- [ ] T021 Implement `validateName`, `normalizedName`, `searchForm` and the `NameError` union (`NameRequired | NameTooLong`) in `apps/mobile/src/domain/name.ts` to turn T020 green.
+- [ ] T022 [P] Write failing tests for `parseQuantity(amountText, unitText)` in `apps/mobile/src/domain/quantity.test.ts`, per [data-model.md](data-model.md#quantity-value-object):
   - both blank → `null` (no quantity);
   - "1,5" and "1.5" → amount 1.5;
   - unit trimmed, and an empty unit becomes `null`;
@@ -110,104 +161,111 @@ story depends on them.
   - "0" and "-2" → `AmountNotPositive` (US2-12);
   - unit with no amount → `UnitWithoutAmount` (US2-13);
   - unit above "at most 15 characters" → `UnitTooLong`.
-- [ ] T016 Implement the `Quantity` value object `{ amount: number; unit: string | null }`, `parseQuantity` and the `QuantityError` union in `apps/mobile/src/domain/quantity.ts` to turn T015 green.
-- [ ] T017 [P] Define the entity types and branded ids in `apps/mobile/src/domain/category.ts` (`Category { id, name, position }`), `apps/mobile/src/domain/article.ts` (`Article { id, name, categoryId }`), `apps/mobile/src/domain/shopping-list.ts` (`ShoppingList { id, name }`) and `apps/mobile/src/domain/list-item.ts` (`ListItem { listId, articleId, inCart, quantity: Quantity | null }`). They are types only, with no behavior and so no test yet; behavior arrives test-first in the story phases.
+- [ ] T023 Implement the `Quantity` value object `{ amount: number; unit: string | null }`, `parseQuantity` and the `QuantityError` union in `apps/mobile/src/domain/quantity.ts` to turn T022 green.
+- [ ] T024 [P] Define the entity types and branded ids in `apps/mobile/src/domain/category.ts` (`Category { id, name, position }`), `apps/mobile/src/domain/article.ts` (`Article { id, name, categoryId }`), `apps/mobile/src/domain/shopping-list.ts` (`ShoppingList { id, name }`) and `apps/mobile/src/domain/list-item.ts` (`ListItem { listId, articleId, inCart, quantity: Quantity | null }`). They are types only, with no behavior and so no test yet; behavior arrives test-first in the story phases.
 
 ### Ports and test doubles
 
-- [ ] T018 Declare the driven ports exactly as in [contracts/driven-ports.md](contracts/driven-ports.md): `UnitOfWork` and `Repositories` in `apps/mobile/src/application/ports/unit-of-work.ts`; `CategoryRepository`, `ArticleRepository`, `ShoppingListRepository`, `ListItemRepository`, `AppStateRepository` in `apps/mobile/src/application/ports/repositories.ts`; `IdGenerator` in `apps/mobile/src/application/ports/id-generator.ts`; `ErrorReporter` in `apps/mobile/src/application/ports/error-reporter.ts`.
-- [ ] T019 [P] Write the shared repository contract suites, as functions taking a factory that returns fresh `Repositories`, in `apps/mobile/src/application/testing/contracts/`:
+- [ ] T025 Declare the driven ports exactly as in [contracts/driven-ports.md](contracts/driven-ports.md): `UnitOfWork` and `Repositories` in `apps/mobile/src/application/ports/unit-of-work.ts`; `CategoryRepository`, `ArticleRepository`, `ShoppingListRepository`, `ListItemRepository`, `AppStateRepository` in `apps/mobile/src/application/ports/repositories.ts`; `IdGenerator` in `apps/mobile/src/application/ports/id-generator.ts`; `ErrorReporter` in `apps/mobile/src/application/ports/error-reporter.ts`.
+- [ ] T026 [P] Write the shared repository contract suites, as functions taking a factory that returns fresh `Repositories`, in `apps/mobile/src/application/testing/contracts/`:
   - `category-repository.contract.ts`: `all` ordered by position, `findById`, `findByNormalizedName`, `nextPosition` = max + 1 (0 when empty), `add`;
   - `article-repository.contract.ts`: `all`, `findById`, `findByNormalizedName`, `add`;
   - `shopping-list-repository.contract.ts`: `all`, `findById`, `findByNormalizedName`, `count`, `add`, `itemCounts`;
   - `list-item-repository.contract.ts`: `forList`, `find`, `save` inserts then updates, `remove`, `takeAllOutOfCart` keeps quantities;
   - `app-state-repository.contract.ts`: `currentListId` is `null` before any set, then `setCurrentListId` replaces it;
   - `unit-of-work.contract.ts`: a `run` that throws leaves no partial write.
-- [ ] T020 Write `apps/mobile/src/application/testing/in-memory-repositories.test.ts`, which runs every T019 suite against the in-memory fakes. Confirm it fails because the fakes do not exist yet.
-- [ ] T021 Implement the in-memory fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts` (`InMemoryRepositories`, `InMemoryUnitOfWork` with snapshot-and-rollback on throw) to turn T020 green.
-- [ ] T022 [P] Implement `SequentialIdGenerator` (`"id-1"`, `"id-2"`, …) in `apps/mobile/src/application/testing/sequential-id-generator.ts` and `RecordingErrorReporter` (keeps `{ error, context }` in memory) in `apps/mobile/src/application/testing/recording-error-reporter.ts`, each with a small test next to it written first.
+- [ ] T027 Write `apps/mobile/src/application/testing/in-memory-repositories.test.ts`, which runs every T026 suite against the in-memory fakes. Confirm it fails because the fakes do not exist yet.
+- [ ] T028 Implement the in-memory fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts` (`InMemoryRepositories`, `InMemoryUnitOfWork` with snapshot-and-rollback on throw) to turn T027 green.
+- [ ] T029 [P] Implement `SequentialIdGenerator` (`"id-1"`, `"id-2"`, …) in `apps/mobile/src/application/testing/sequential-id-generator.ts` and `RecordingErrorReporter` (keeps `{ error, context }` in memory) in `apps/mobile/src/application/testing/recording-error-reporter.ts`, each with a small test next to it written first.
 
 ### SQLite adapter
 
-- [ ] T023 Define the `SqlDatabase` interface (`execAsync`, `runAsync`, `getAllAsync`, `getFirstAsync`, `withTransactionAsync`) in `apps/mobile/src/adapters/sqlite/sql-database.ts`. Then write the `node:sqlite` (`DatabaseSync`) wrapper implementing it in `apps/mobile/test/sqlite/node-sql-database.ts`, using in-memory databases and running under `@jest-environment node`. If Jest cannot load `node:sqlite`, use `better-sqlite3` as a dev dependency behind the same wrapper ([research.md](research.md) R4).
-- [ ] T024 Write failing migration tests in `apps/mobile/src/adapters/sqlite/migrations.test.ts`:
+- [ ] T030 Define the `SqlDatabase` interface (`execAsync`, `runAsync`, `getAllAsync`, `getFirstAsync`, `withTransactionAsync`) in `apps/mobile/src/adapters/sqlite/sql-database.ts`. Then write the `node:sqlite` (`DatabaseSync`) wrapper implementing it in `apps/mobile/test/sqlite/node-sql-database.ts`, using in-memory databases and running under `@jest-environment node`. If Jest cannot load `node:sqlite`, use `better-sqlite3` as a dev dependency behind the same wrapper ([research.md](research.md) R4).
+- [ ] T031 Write failing migration tests in `apps/mobile/src/adapters/sqlite/migrations.test.ts`:
   - migration 1 creates the tables `category`, `article`, `shopping_list`, `list_item` and `app_state`, and the index `list_item_article`, exactly as in [data-model.md](data-model.md#sqlite-schema-migration-1);
   - `PRAGMA user_version` becomes 1, and running the migrations again is a no-op;
   - the migration runs in one transaction;
   - foreign constraints are enforced on open;
   - the constraints reject a 61-character name, a duplicate `normalized_name`, `quantity_amount <= 0`, a unit without an amount, and a second `app_state` row.
-- [ ] T025 Implement `migrate(db)` and migration 1 in `apps/mobile/src/adapters/sqlite/migrations.ts` to turn T024 green.
-- [ ] T026 Write `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`, which runs every T019 suite against the SQLite repositories on a migrated `node:sqlite` database. Confirm it fails.
-- [ ] T027 Implement the SQLite repositories in `apps/mobile/src/adapters/sqlite/`: `category-repository.ts`, `article-repository.ts`, `shopping-list-repository.ts`, `list-item-repository.ts` (`quantity_amount` / `quantity_unit` ↔ `Quantity | null`, `in_cart` 0/1 ↔ boolean) and `app-state-repository.ts`. Implement `SqliteUnitOfWork` (`withTransactionAsync`) in `apps/mobile/src/adapters/sqlite/unit-of-work.ts`. All of them turn T026 green.
-- [ ] T028 Add `openDatabase()` in `apps/mobile/src/adapters/sqlite/open-database.ts`: it opens the expo-sqlite database `mes-courses.db`, enforces foreign constraints and runs `migrate`. It is thin wiring over expo-sqlite, which does not load in Jest: the composition test (T053) covers the same steps on `node:sqlite`, and quickstart step 5 covers the real binding on a device.
+- [ ] T032 Implement `migrate(db)` and migration 1 in `apps/mobile/src/adapters/sqlite/migrations.ts` to turn T031 green.
+- [ ] T033 Write `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`, which runs every T026 suite against the SQLite repositories on a migrated `node:sqlite` database. Confirm it fails.
+- [ ] T034 Implement the SQLite repositories in `apps/mobile/src/adapters/sqlite/`: `category-repository.ts`, `article-repository.ts`, `shopping-list-repository.ts`, `list-item-repository.ts` (`quantity_amount` / `quantity_unit` ↔ `Quantity | null`, `in_cart` 0/1 ↔ boolean) and `app-state-repository.ts`. Implement `SqliteUnitOfWork` (`withTransactionAsync`) in `apps/mobile/src/adapters/sqlite/unit-of-work.ts`. All of them turn T033 green.
+- [ ] T035 Add `openDatabase()` in `apps/mobile/src/adapters/sqlite/open-database.ts`: it opens the expo-sqlite database `mes-courses.db`, enforces foreign constraints and runs `migrate`. It is thin wiring over expo-sqlite, which does not load in Jest: the composition test (T064) covers the same steps on `node:sqlite`, and quickstart step 5 covers the real binding on a device.
 
 ### Startup seed
 
-- [ ] T029 Write failing tests for `initializeStore` in `apps/mobile/src/application/use-cases/initialize-store.test.ts`, on fakes:
+- [ ] T036 Write failing tests for `initializeStore` in `apps/mobile/src/application/use-cases/initialize-store.test.ts`, on fakes:
   - on an empty store it creates the given categories with positions 0..n-1 in order, then the first list, and makes it current (US3-1, US4-1);
   - on a store that already has a list it does nothing;
   - a failure midway leaves nothing behind (one transaction).
-- [ ] T030 Implement `initializeStore(seed: { categoryNames; firstListName })` in `apps/mobile/src/application/use-cases/initialize-store.ts` to turn T029 green.
+- [ ] T037 Implement `initializeStore(seed: { categoryNames; firstListName })` in `apps/mobile/src/application/use-cases/initialize-store.ts` to turn T036 green.
 
 ### Error reporting and ids
 
-- [ ] T031 [P] Write failing tests for the Sentry reporter in `apps/mobile/src/adapters/error-reporting/sentry-error-reporter.test.ts`, with `@sentry/react-native` mocked:
+- [ ] T038 [P] Write failing tests for the Sentry reporter in `apps/mobile/src/adapters/error-reporting/sentry-error-reporter.test.ts`, with `@sentry/react-native` mocked:
   - `init` is called with `sendDefaultPii: false`, the DSN, the release and the environment;
   - `beforeSend` / `beforeBreadcrumb` drop breadcrumb messages and request data;
   - `report(error, { operation, screen })` calls `captureException` with only those tags;
   - `report` never throws, even when the SDK throws.
-- [ ] T032 [P] Implement `createSentryErrorReporter` in `apps/mobile/src/adapters/error-reporting/sentry-error-reporter.ts` and `ConsoleErrorReporter` in `apps/mobile/src/adapters/error-reporting/console-error-reporter.ts` (the console one is also written test-first) to turn T031 green.
-- [ ] T033 [P] Implement `CryptoIdGenerator` (`expo-crypto` `randomUUID()`) in `apps/mobile/src/adapters/id/crypto-id-generator.ts`, with a test that mocks `expo-crypto` and checks `next()` returns its value.
+- [ ] T039 [P] Implement `createSentryErrorReporter` in `apps/mobile/src/adapters/error-reporting/sentry-error-reporter.ts` and `ConsoleErrorReporter` in `apps/mobile/src/adapters/error-reporting/console-error-reporter.ts` (the console one is also written test-first) to turn T038 green.
+- [ ] T040 [P] Implement `CryptoIdGenerator` (`expo-crypto` `randomUUID()`) in `apps/mobile/src/adapters/id/crypto-id-generator.ts`, with a test that mocks `expo-crypto` and checks `next()` returns its value.
 
 ### Design system foundations (Principle V)
 
-- [ ] T034 Write failing tests in `apps/mobile/src/adapters/ui/theme/theme.test.ts`:
+- [ ] T041 Write failing tests in `apps/mobile/src/adapters/ui/theme/theme.test.ts`:
   - every MD3 color role of the light and dark Paper themes equals the matching role of `schemes.light` and `schemes.dark` in `design/material-theme.json`;
   - `elevation.level0..5` derive from `surfaceContainerLowest..Highest`;
   - the contrast variants are mapped;
   - the `spacing` tokens are `xs = 4` … `xl = 32` on the 4 dp grid.
-- [ ] T035 Implement the light and dark themes from the JSON in `apps/mobile/src/adapters/ui/theme/theme.ts` and the `spacing` tokens in `apps/mobile/src/adapters/ui/theme/spacing.ts`, and add `ThemeProvider` (follows `useColorScheme`, wraps `PaperProvider`) in `apps/mobile/src/adapters/ui/theme/theme-provider.tsx`, to turn T034 green.
-- [ ] T036 [P] Write failing component tests in `apps/mobile/src/adapters/ui/components/screen-state.test.tsx`:
+- [ ] T042 Implement the light and dark themes from the JSON in `apps/mobile/src/adapters/ui/theme/theme.ts` and the `spacing` tokens in `apps/mobile/src/adapters/ui/theme/spacing.ts`, and add `ThemeProvider` (follows `useColorScheme`, wraps `PaperProvider`) in `apps/mobile/src/adapters/ui/theme/theme-provider.tsx`, to turn T041 green.
+- [ ] T043 [P] Write failing component tests in `apps/mobile/src/adapters/ui/components/screen-state.test.tsx`:
   - `LoadingState` has the accessibility label "Chargement";
   - `EmptyState` shows its message and optional action button;
   - `ErrorState` shows its message and a "Réessayer" button that calls `onRetry`;
   - `ScreenStateView` renders exactly one of the three, or the success renderer, for each `ScreenState` status.
-- [ ] T037 [P] Implement `LoadingState.tsx`, `EmptyState.tsx`, `ErrorState.tsx` and `ScreenStateView.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T036 green.
-- [ ] T038 [P] Write failing tests for `formatQuantity` in `apps/mobile/src/adapters/ui/components/format-quantity.test.ts`: `{1.5, "kg"}` → "1,5 kg", `{6, null}` → "6", `{2, "L"}` → "2 L".
-- [ ] T039 [P] Implement `formatQuantity` with `Intl.NumberFormat('fr-FR')` in `apps/mobile/src/adapters/ui/components/format-quantity.ts` to turn T038 green.
+- [ ] T044 [P] Implement `LoadingState.tsx`, `EmptyState.tsx`, `ErrorState.tsx` and `ScreenStateView.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T043 green.
+- [ ] T045 [P] Write failing tests for `formatQuantity` in `apps/mobile/src/adapters/ui/components/format-quantity.test.ts`: `{1.5, "kg"}` → "1,5 kg", `{6, null}` → "6", `{2, "L"}` → "2 L".
+- [ ] T046 [P] Implement `formatQuantity` with `Intl.NumberFormat('fr-FR')` in `apps/mobile/src/adapters/ui/components/format-quantity.ts` to turn T045 green.
 
 ### Application store core ([002 ui-state contract](../002-manage-articles/contracts/ui-state.md))
 
-- [ ] T040 Write failing store-core tests in `apps/mobile/src/adapters/ui/state/app-store.test.ts`, on a store built by `createAppStore({ useCases, errorReporter })` with use cases on in-memory fakes and a `RecordingErrorReporter`:
+- [ ] T047 Write failing store-core tests in `apps/mobile/src/adapters/ui/state/app-store.test.ts`, on a store built by `createAppStore({ useCases, errorReporter })` with use cases on in-memory fakes and a `RecordingErrorReporter`:
   - every region starts `idle`;
   - `notice` starts `null`, and `dismissNotice()` clears it;
   - `pendingUndo` starts `null`.
-- [ ] T041 Implement `createAppStore` with `createStore` from `zustand/vanilla` and the `AppState`, `ScreenState<T, E>` (`idle | loading | error | empty | success`) and `Notice` types in `apps/mobile/src/adapters/ui/state/app-store.ts`, to turn T040 green. Use no middleware.
-- [ ] T042 Write failing tests in `apps/mobile/src/adapters/ui/state/app-store.write-rules.test.ts` for the shared write rules, through a test-only write action:
+- [ ] T048 Implement `createAppStore` with `createStore` from `zustand/vanilla` and the `AppState`, `ScreenState<T, E>` (`idle | loading | error | empty | success`) and `Notice` types in `apps/mobile/src/adapters/ui/state/app-store.ts`, to turn T047 green. Use no middleware.
+- [ ] T049 Write failing tests in `apps/mobile/src/adapters/ui/state/app-store.write-rules.test.ts` for the shared write rules, through a test-only write action:
   - a write clears `pendingUndo` before it starts;
   - after success, `refresh()` reloads every region that is not `idle`, keeping `success` / `empty` data on screen while it reloads;
   - an unexpected throw is reported with `{ operation, screen }` only, sets `notice = { type: 'writeFailed' }`, leaves state unchanged and resolves to `{ ok: false, error: { type: 'WriteFailed' } }`;
   - a `Result` error is returned unchanged and not reported.
-- [ ] T043 Implement the internal `runWrite` helper and `refresh()` in `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T042 green.
-- [ ] T044 Implement `AppStoreProvider` (React context) in `apps/mobile/src/adapters/ui/state/app-store-provider.tsx` and `useAppStore(selector)` (wraps `useStore`) in `apps/mobile/src/adapters/ui/state/use-app-store.ts`, with a test rendering a component that selects a slice. Add the `renderWithStore(ui, { seed? })` helper in `apps/mobile/src/adapters/ui/testing/render-with-store.tsx`: it builds fresh fakes, use cases, store, theme and navigation container for each test.
-- [ ] T045 [P] Write failing tests for `NoticeSnackbar` in `apps/mobile/src/adapters/ui/components/notice-snackbar.test.tsx`: `writeFailed` shows "La modification n'a pas pu être enregistrée.", `articleAdded` shows "« {name} » ajouté", and dismissing calls `dismissNotice`.
-- [ ] T046 [P] Implement `NoticeSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T045 green.
+- [ ] T050 Implement the internal `runWrite` helper and `refresh()` in `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T049 green.
+- [ ] T051 Implement `AppStoreProvider` (React context) in `apps/mobile/src/adapters/ui/state/app-store-provider.tsx` and `useAppStore(selector)` (wraps `useStore`) in `apps/mobile/src/adapters/ui/state/use-app-store.ts`, with a test rendering a component that selects a slice. Add the `renderWithStore(ui, { seed? })` helper in `apps/mobile/src/adapters/ui/testing/render-with-store.tsx`: it builds fresh fakes, use cases, store, theme and navigation container for each test.
+- [ ] T052 [P] Write failing tests for `NoticeSnackbar` in `apps/mobile/src/adapters/ui/components/notice-snackbar.test.tsx`: `writeFailed` shows "La modification n'a pas pu être enregistrée.", `articleAdded` shows "« {name} » ajouté", and dismissing calls `dismissNotice`.
+- [ ] T053 [P] Implement `NoticeSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T052 green.
 
 ### App shell and composition
 
-- [ ] T047 Add the French seed in `apps/mobile/src/adapters/ui/seed.ts`: `categoryNames` = Fruits et légumes, Boucherie et poissonnerie, Crèmerie, Boulangerie, Épicerie salée, Épicerie sucrée, Surgelés, Boissons, Hygiène et beauté, Entretien, Divers (this order), and `firstListName` = "Ma liste". Test that the order matches the spec's Assumptions.
-- [ ] T048 Write a failing test in `apps/mobile/src/adapters/ui/navigation.test.tsx`: through `renderWithStore`, the initial route is `CurrentList` and a `notice` set in the store shows in the root `NoticeSnackbar`. Then add the navigation in `apps/mobile/src/adapters/ui/navigation.tsx` (React Navigation 7 native stack): `CurrentList` (initial), `Lists`, `AddArticles` and `CreateArticle` as typed placeholder screens, replaced in the story phases, and `NoticeSnackbar` rendered once at the root.
-- [ ] T049 Add `apps/mobile/src/adapters/ui/use-cases.ts`, the `UseCases` type the store depends on: one entry per use case in [contracts/driving-ports.md](contracts/driving-ports.md), filled in story by story.
-- [ ] T050 Implement the composition root in `apps/mobile/src/composition/composition-root.ts`:
+- [ ] T054 Add the French seed in `apps/mobile/src/adapters/ui/seed.ts`: `categoryNames` = Fruits et légumes, Boucherie et poissonnerie, Crèmerie, Boulangerie, Épicerie salée, Épicerie sucrée, Surgelés, Boissons, Hygiène et beauté, Entretien, Divers (this order), and `firstListName` = "Ma liste". Test that the order matches the spec's Assumptions.
+- [ ] T055 Write a failing test in `apps/mobile/src/adapters/ui/navigation.test.tsx`: through `renderWithStore`, the initial route is `CurrentList` and a `notice` set in the store shows in the root `NoticeSnackbar`. Then add the navigation in `apps/mobile/src/adapters/ui/navigation.tsx` (React Navigation 7 native stack): `CurrentList` (initial), `Lists`, `AddArticles` and `CreateArticle` as typed placeholder screens, replaced in the story phases, and `NoticeSnackbar` rendered once at the root.
+- [ ] T056 Write failing tests for `createStoryStore(scenario)` in `apps/mobile/src/adapters/ui/testing/story-store.test.ts`. The scenario is `{ seed?: Fixture; pending?: UseCaseName[]; failing?: UseCaseName[]; prepare?: (store) => Promise<void> }`, where `UseCaseName` is the union of the entry names of `UseCases`:
+  - it builds fresh in-memory fakes holding `seed`, the real use cases, a `RecordingErrorReporter` and `createAppStore`, and returns the store;
+  - a use case named in `pending` returns a promise that never settles, and one named in `failing` rejects with an `Error`; the others are the real ones (test with `initializeStore`, the only use case so far);
+  - `prepare` runs after the store is built and may call store actions only (for example a failing write that sets `notice`); the scenario offers no way to set state directly, so a story cannot show a state the store cannot reach ([research.md](research.md) R22).
+- [ ] T057 Implement `createStoryStore` in `apps/mobile/src/adapters/ui/testing/story-store.ts` to turn T056 green. Add the French fixtures in `apps/mobile/src/adapters/ui/testing/fixtures.ts`: the default categories from `apps/mobile/src/adapters/ui/seed.ts`; the lists "Ma liste" (current) and "Barbecue"; the articles "Lait" (Crèmerie, 2 L), "Pommes" (Fruits et légumes), "Farine" (Épicerie salée, 1,5 kg), "Beurre" (Crèmerie); and one article whose name is exactly 60 characters, the "At most 60 characters after trimming" limit, to check wrapping. Then refactor `renderWithStore` (T051) to build its store with `createStoryStore`, every test kept green, so stories and screen tests share one set of fixtures.
+- [ ] T058 Write failing tests in `apps/mobile/src/adapters/ui/testing/story-decorator.test.tsx` for `withAppProviders`, the decorator every story uses: it wraps the story in `ThemeProvider` (light or dark from `useColorScheme`), `AppStoreProvider` with the store from `createStoryStore(parameters.scenario ?? {})`, `SafeAreaProvider` and a `NavigationContainer` with a one-screen native stack that renders the story, so screens can call `useNavigation`. Implement it in `apps/mobile/src/adapters/ui/testing/story-decorator.tsx` and register it in `apps/mobile/.rnstorybook/preview.tsx` to turn the tests green. Form errors (a name already used, an invalid quantity) are local form state, not a `ScreenState`: each screen or dialog with a form keeps its fields in a presentational `…Form` component (values, errors and callbacks as props) that it wraps, and error stories render that form with the error.
+- [ ] T059 Add the shared component stories that exist at this point. First add `Components/LoadingState/Default`, `Components/EmptyState/WithAction`, `Components/EmptyState/WithoutAction` and `Components/ErrorState/Default` to `requiredStories` and see the story test fail. Then write `LoadingState.stories.tsx`, `EmptyState.stories.tsx` and `ErrorState.stories.tsx` in `apps/mobile/src/adapters/ui/components/`, with French texts from [contracts/ui-screens.md](contracts/ui-screens.md), to turn it green. Open them with `yarn storybook` in light and dark mode.
+- [ ] T060 Add `apps/mobile/src/adapters/ui/use-cases.ts`, the `UseCases` type the store depends on: one entry per use case in [contracts/driving-ports.md](contracts/driving-ports.md), filled in story by story.
+- [ ] T061 Implement the composition root in `apps/mobile/src/composition/composition-root.ts`:
   - `openDatabase()`, then the SQLite `UnitOfWork`, `CryptoIdGenerator` and the error reporter (Sentry when `EXPO_PUBLIC_SENTRY_DSN` is set, console otherwise);
   - build the use cases, run `initializeStore(seed)`, then `createAppStore`.
 
   It is the only module that knows every adapter.
-- [ ] T051 Write a failing test in `App.test.tsx` with the composition root mocked: `LoadingState` while it initializes, then CurrentList; `ErrorState` and one report when it throws. Then wire `apps/mobile/App.tsx` to call the composition root once and render `ThemeProvider` → `AppStoreProvider` → `SafeAreaProvider` → navigation, with `LoadingState` while the root initializes and `ErrorState` (reported) if initialization throws.
-- [ ] T052 [P] Add the `apps/mobile/jest.setup.ts` global mocks needed by `jest-expo` (`@sentry/react-native`, `expo-sqlite` never loaded in UI tests), referenced from `apps/mobile/jest.config.js`.
-- [ ] T053 Write a composition test in `apps/mobile/src/composition/composition-root.test.ts` with `openDatabase` replaced by a `node:sqlite` database: a fresh start seeds 11 categories and "Ma liste" as current, and a second start does not seed again.
+- [ ] T062 Write a failing test in `App.test.tsx` with the composition root mocked: `LoadingState` while it initializes, then CurrentList; `ErrorState` and one report when it throws. Then wire `apps/mobile/App.tsx` to call the composition root once and render `ThemeProvider` → `AppStoreProvider` → `SafeAreaProvider` → navigation, with `LoadingState` while the root initializes and `ErrorState` (reported) if initialization throws.
+- [ ] T063 [P] Add the `apps/mobile/jest.setup.ts` global mocks needed by `jest-expo` (`@sentry/react-native`, `expo-sqlite` never loaded in UI tests), referenced from `apps/mobile/jest.config.js`.
+- [ ] T064 Write a composition test in `apps/mobile/src/composition/composition-root.test.ts` with `openDatabase` replaced by a `node:sqlite` database: a fresh start seeds 11 categories and "Ma liste" as current, and a second start does not seed again.
 
-**Checkpoint**: the app launches on a seeded store and shows the CurrentList placeholder; every test, the architecture test and the bundle pass.
+**Checkpoint**: the app launches on a seeded store and shows the CurrentList placeholder; every test (the story test included), the architecture test, the bundle and the launch journey are green; Storybook shows the state components in light and dark.
 
 ---
 
@@ -218,37 +276,38 @@ untick at once; the remaining count; "Terminer les courses"; explicit loading, e
 states; works offline.
 
 **Independent Test**: seed a current list with a few items (fakes in tests, or the dev seed of
-T112 on a device). Open the app, tick and untick, kill and reopen, check the ticks were kept, then
+T135 on a device). Open the app, tick and untick, kill and reopen, check the ticks were kept, then
 finish shopping and check every item is unticked and still present.
 
 ### Tests for User Story 1 ⚠️ (write first, confirm they fail)
 
-- [ ] T054 [P] [US1] Write failing domain tests for the current list view in `apps/mobile/src/domain/current-list-view.test.ts`:
+- [ ] T065 [US1] Write the failing journey `tests/e2e/journeys/first-launch.e2e.ts` ([contracts/ui-validation.md](contracts/ui-validation.md#end-to-end-journeys)): on a fresh install (`device.launchApp({ delete: true, newInstance: true })`), the app opens on "Ma liste" with "Votre liste est vide" and "Ajouter des articles" (US3-1, US1-10), found by text only. Delete `launch.e2e.ts` (T014), whose check this one includes. Run `yarn test:e2e:android` and confirm it fails on the placeholder screen.
+- [ ] T066 [P] [US1] Write failing domain tests for the current list view in `apps/mobile/src/domain/current-list-view.test.ts`:
   - sections only for categories holding an item of the list, ordered by `position` (FR-003, US4-5);
   - within a section, unticked items first, then ticked, each group sorted with `Intl.Collator('fr', { sensitivity: 'base' })` (US1-6);
   - `remainingCount` = unticked items (US1-7: 5 items with 2 ticked → 3);
   - `totalCount`, and `hasItemsInCart`.
-- [ ] T055 [P] [US1] Write failing domain tests for the list item transitions in `apps/mobile/src/domain/list-item.test.ts`:
+- [ ] T067 [P] [US1] Write failing domain tests for the list item transitions in `apps/mobile/src/domain/list-item.test.ts`:
   - `toggle` flips `inCart` (US1-2, US1-3);
   - `finish` sets every `inCart = false` and keeps quantities and items (US1-8);
   - `finish` on a list with nothing in the cart → `NothingInCart`.
-- [ ] T056 [P] [US1] Write failing use case tests on fakes:
+- [ ] T068 [P] [US1] Write failing use case tests on fakes:
   - `apps/mobile/src/application/use-cases/get-current-list.test.ts`: it returns the `CurrentListView` of the current list (US1-1);
   - `apps/mobile/src/application/use-cases/toggle-item-in-cart.test.ts`: it flips and persists (US1-4), and returns `ItemNotOnList` for an unknown item;
   - `apps/mobile/src/application/use-cases/finish-shopping.test.ts`: it unticks all and keeps quantities (US1-8), and returns `NothingInCart` with no change.
-- [ ] T057 [P] [US1] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.current-list.test.ts`:
+- [ ] T069 [P] [US1] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.current-list.test.ts`:
   - `loadCurrentList()` goes `loading` → `success` / `empty`, and on a throw goes `error` and reports `{ operation: 'getCurrentList', screen: 'CurrentList' }` (US1-12);
   - `toggleItem` updates the region immediately (optimistic) before the use case resolves, then keeps it (US1-2, US1-3);
   - a failed toggle reverts the item, sets `notice = writeFailed` and reports (edge case "storage fails");
   - `finishShopping` refreshes the list.
-- [ ] T058 [P] [US1] Write failing component tests for `ListItemRow` in `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx`:
+- [ ] T070 [P] [US1] Write failing component tests for `ListItemRow` in `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx`:
   - role `checkbox` with the `checked` state;
   - the label "Lait, 2 L, dans le caddie" or "Pommes, pas dans le caddie" (FR-032);
   - a ticked row shows a check mark and struck-through text, not only a color (FR-035);
   - the row has `minHeight` 48 (FR-034);
   - the name has no `numberOfLines`, so long names wrap (FR-033);
   - tapping calls `onToggle`.
-- [ ] T059 [US1] Write failing screen tests for `CurrentList` in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx`, through `renderWithStore`:
+- [ ] T071 [US1] Write failing screen tests for `CurrentList` in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx`, through `renderWithStore`:
   - US1-1: the list name is in the Appbar, items sit under category headings, and "Lait" shows "2 L";
   - US1-2 / US1-3: tapping ticks and unticks immediately;
   - US1-6: ticked items move after unticked ones;
@@ -258,30 +317,39 @@ finish shopping and check every item is unticked and still present.
   - US1-12: "Impossible de charger la liste." with "Réessayer" retrying, and the error reported;
   - US4-5: an empty category heading is not shown;
   - "Terminer les courses" is absent when nothing is ticked.
-- [ ] T060 [US1] Write failing tests for finishing in `apps/mobile/src/adapters/ui/screens/finish-shopping-dialog.test.tsx`:
+- [ ] T072 [US1] Write failing tests for finishing in `apps/mobile/src/adapters/ui/screens/finish-shopping-dialog.test.tsx`:
   - the dialog text is "Terminer les courses ?" / "Tous les articles seront décochés et resteront dans la liste.";
   - US1-8: "Terminer" unticks all, and items and quantities stay;
   - US1-9: "Annuler" changes nothing.
-- [ ] T061 [US1] Write a failing offline test for US1-5 in `apps/mobile/src/adapters/ui/screens/current-list-offline.test.tsx`: with `global.fetch` replaced by a function that throws, open the app and tick items. Everything works and no error is shown or reported.
+- [ ] T073 [US1] Write a failing offline test for US1-5 in `apps/mobile/src/adapters/ui/screens/current-list-offline.test.tsx`: with `global.fetch` replaced by a function that throws, open the app and tick items. Everything works and no error is shown or reported.
 
 ### Implementation for User Story 1
 
-- [ ] T062 [P] [US1] Implement `buildCurrentListView` in `apps/mobile/src/domain/current-list-view.ts` to turn T054 green.
-- [ ] T063 [P] [US1] Implement `toggle` and `finish` with the `ItemNotOnList` and `NothingInCart` errors in `apps/mobile/src/domain/list-item.ts` to turn T055 green.
-- [ ] T064 [US1] Implement `getCurrentList`, `toggleItemInCart` and `finishShopping` in `apps/mobile/src/application/use-cases/get-current-list.ts`, `toggle-item-in-cart.ts` and `finish-shopping.ts`, per [contracts/driving-ports.md](contracts/driving-ports.md#current-list-user-story-1), to turn T056 green. Add them to `UseCases` (`apps/mobile/src/adapters/ui/use-cases.ts`) and to the composition root.
-- [ ] T065 [US1] Add the `currentList` region and the `loadCurrentList`, `toggleItem` (optimistic, revert on failure) and `finishShopping` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T057 green.
-- [ ] T066 [P] [US1] Implement `ListItemRow.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T058 green. Leave the trailing action slots empty for now; US2 fills them.
-- [ ] T067 [US1] Implement `CurrentListScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`:
+- [ ] T074 [P] [US1] Implement `buildCurrentListView` in `apps/mobile/src/domain/current-list-view.ts` to turn T066 green.
+- [ ] T075 [P] [US1] Implement `toggle` and `finish` with the `ItemNotOnList` and `NothingInCart` errors in `apps/mobile/src/domain/list-item.ts` to turn T067 green.
+- [ ] T076 [US1] Implement `getCurrentList`, `toggleItemInCart` and `finishShopping` in `apps/mobile/src/application/use-cases/get-current-list.ts`, `toggle-item-in-cart.ts` and `finish-shopping.ts`, per [contracts/driving-ports.md](contracts/driving-ports.md#current-list-user-story-1), to turn T068 green. Add them to `UseCases` (`apps/mobile/src/adapters/ui/use-cases.ts`) and to the composition root.
+- [ ] T077 [US1] Add the `currentList` region and the `loadCurrentList`, `toggleItem` (optimistic, revert on failure) and `finishShopping` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T069 green.
+- [ ] T078 [P] [US1] Implement `ListItemRow.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T070 green. Leave the trailing action slots empty for now; US2 fills them.
+- [ ] T079 [US1] Implement `CurrentListScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`:
   - a `SectionList` with one section per category, memoized rows identified by article id ([research.md](research.md) R11);
   - Appbar title and subtitle;
   - the "Terminer les courses" action, shown only when `hasItemsInCart`;
   - the "Mes listes" action and the FAB "Ajouter", wired to placeholder routes;
   - `ScreenStateView` for the states.
 
-  Replace the placeholder in `navigation.tsx`. It turns T059 and T061 green.
-- [ ] T068 [US1] Implement `FinishShoppingDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` (Paper `Dialog` in a `Portal`) and open it from CurrentList, to turn T060 green.
+  Replace the placeholder in `navigation.tsx`. It turns T071 and T073 green.
+- [ ] T080 [US1] Implement `FinishShoppingDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` (Paper `Dialog` in a `Portal`) and open it from CurrentList, to turn T072 green.
+- [ ] T081 [US1] Add the US1 ids of [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) to `apps/mobile/src/adapters/ui/required-stories.ts`: `Components/ListItemRow/NotInCart`, `.../InCart`, `.../WithQuantity`, `.../LongName`, `Components/NoticeSnackbar/WriteFailed`, `Screens/CurrentList/Loading`, `.../Error`, `.../Empty`, `.../Success`, `.../AllInCart` and `Dialogs/FinishShoppingDialog/Default`. Run the story test and confirm it fails on each missing story.
+- [ ] T082 [US1] Write the stories to turn T081 green:
+  - `apps/mobile/src/adapters/ui/components/ListItemRow.stories.tsx`, from the fixtures (the long-name story uses the 60-character article);
+  - `apps/mobile/src/adapters/ui/components/NoticeSnackbar.stories.tsx`: scenario with `failing: ['toggleItemInCart']` and a `prepare` that loads the current list and toggles an item;
+  - `apps/mobile/src/adapters/ui/screens/CurrentListScreen.stories.tsx`: `pending: ['getCurrentList']` (Loading), `failing: ['getCurrentList']` (Error), an empty "Ma liste" (Empty), several categories with ticked, unticked and quantified items (Success), every item ticked (AllInCart);
+  - `apps/mobile/src/adapters/ui/screens/FinishShoppingDialog.stories.tsx`.
 
-**Checkpoint**: on a device with items seeded by the dev seed (T112) or by US2, US1 works end to end, offline included. This is the first half of the MVP.
+  Review them with `yarn storybook` on Android and iOS, in light and dark mode and at 200% text size.
+- [ ] T083 [US1] Make `first-launch.e2e.ts` (T065) green with `yarn test:e2e:android` and `yarn test:e2e:ios`. Any production fix it forces starts with its own failing unit or screen test.
+
+**Checkpoint**: on a device with items seeded by the dev seed (T135) or by US2, US1 works end to end, offline included; its stories are in Storybook and `first-launch.e2e.ts` is green on both platforms. This is the first half of the MVP. The US1 journeys that need items (ticking, persistence, finishing) are written in US2, which adds them.
 
 ---
 
@@ -297,17 +365,25 @@ content matches.
 
 ### Tests for User Story 2 ⚠️ (write first, confirm they fail)
 
-- [ ] T069 [P] [US2] Write failing domain tests for the catalog view in `apps/mobile/src/domain/catalog-view.test.ts`:
+- [ ] T084 [US2] Write the failing journeys of [contracts/ui-validation.md](contracts/ui-validation.md#end-to-end-journeys) that need items to be added, each in `tests/e2e/journeys/`, starting from a fresh install, finding elements by French text and accessibility label only:
+  - extend `first-launch.e2e.ts`: "Ajouter" shows the 11 default categories in the spec's order (US4-1);
+  - `add-and-tick.e2e.ts`: create "Lait" in Crèmerie with "2" "L" and add it, add an existing article, go back, tick "Lait": the row's label becomes "Lait, 2 L, dans le caddie", it moves below the unticked items, and the remaining count updates (US2-7, US2-2, US1-2, US1-6, US1-7);
+  - `persistence.e2e.ts`: add and tick an item, `device.terminateApp()`, `device.launchApp({ newInstance: true })`: the tick and the items are kept (US1-4, SC-007, FR-028);
+  - `remove-and-undo.e2e.ts`: remove a ticked item with a quantity, tap "Annuler" in the snackbar: it is back, ticked, with its quantity (US2-6, US2-16);
+  - `finish-shopping.e2e.ts`: "Terminer les courses" then "Annuler" changes nothing; again with "Terminer": every item is unticked and kept (US1-8, US1-9).
+
+  Run `yarn test:e2e:android` and confirm each fails for a missing screen or action.
+- [ ] T085 [P] [US2] Write failing domain tests for the catalog view in `apps/mobile/src/domain/catalog-view.test.ts`:
   - without a query: every category ordered by `position`, including empty ones (US2-15);
   - with a query: only articles whose `searchForm(name)` contains `searchForm(query)`, so "pom" finds "Pommes" and "Pommes de terre" and "POM" finds them too, ignoring case and accents (FR-009, US2-10);
   - empty categories are omitted under a query, and no section at all means no match (US2-14);
   - `onList` and the target-list `quantity` are set for articles already on the list (US2-8);
   - articles are sorted by name with the French collator.
-- [ ] T070 [P] [US2] Write failing domain tests for adding to a list in `apps/mobile/src/domain/list-item.test.ts`:
+- [ ] T086 [P] [US2] Write failing domain tests for adding to a list in `apps/mobile/src/domain/list-item.test.ts`:
   - `add` creates an unticked item (FR-012) with the given quantity or none (US2-1, US2-2);
   - adding an article already on the list → `AlreadyOnList` carrying the current quantity (FR-011);
   - `changeQuantity` keeps `inCart` and sets or clears the quantity (US2-3, US2-4).
-- [ ] T071 [P] [US2] Write failing use case tests on fakes, one file each in `apps/mobile/src/application/use-cases/`:
+- [ ] T087 [P] [US2] Write failing use case tests on fakes, one file each in `apps/mobile/src/application/use-cases/`:
   - `get-catalog.test.ts`: the catalog with `onList` marks for the given list, filtered by query;
   - `add-article-to-list.test.ts`: US2-1; US2-2; US2-5, the same article on two lists keeps a quantity per list; `AlreadyOnList`; `ArticleNotFound`;
   - `create-article-and-add-to-list.test.ts`: US2-7, created and added in one transaction; US2-9, " beurre " → `NameAlreadyUsed` with `existing` = "Beurre" and nothing created; US2-11, `NameRequired`; `NameTooLong`; `CategoryNotFound`;
@@ -315,7 +391,7 @@ content matches.
   - `remove-item-from-list.test.ts`: US2-6, the item is gone, the article stays in the catalog, and a `RemovedItem` is returned;
   - `restore-removed-item.test.ts`: US2-16, back ticked with "2 kg"; `AlreadyOnList` / `ListNotFound` / `ArticleNotFound`;
   - `get-categories.test.ts`: ordered by `position`.
-- [ ] T072 [P] [US2] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.edit-list.test.ts`:
+- [ ] T088 [P] [US2] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.edit-list.test.ts`:
   - `searchCatalog(query)` sets `catalog.query` and loads `catalog.view` with the region states, reporting `{ operation: 'getCatalog', screen: 'AddArticles' }` on failure;
   - `addArticleToList` and `createArticleAndAddToList` return their `Result`, refresh, and set `notice = { type: 'articleAdded', name }` on success;
   - `changeItemQuantity` refreshes;
@@ -324,21 +400,21 @@ content matches.
   - `dismissUndo()` clears the offer;
   - any write clears a pending offer first;
   - a new removal replaces the previous offer.
-- [ ] T073 [P] [US2] Write failing component tests:
+- [ ] T089 [P] [US2] Write failing component tests:
   - `apps/mobile/src/adapters/ui/components/article-row.test.tsx`: the "Déjà dans la liste" chip appears only when `onList`, and the row is ≥ 48 dp;
   - `apps/mobile/src/adapters/ui/components/quantity-fields.test.tsx`: the labels "Quantité" and "Unité", a decimal numeric input mode, and `HelperText` errors;
   - `apps/mobile/src/adapters/ui/components/name-field.test.tsx`: the label "Nom", a 60-character limit, and a `HelperText` error.
-- [ ] T074 [P] [US2] Write failing tests for `UndoSnackbar` in `apps/mobile/src/adapters/ui/components/undo-snackbar.test.tsx`:
+- [ ] T090 [P] [US2] Write failing tests for `UndoSnackbar` in `apps/mobile/src/adapters/ui/components/undo-snackbar.test.tsx`:
   - `removedItem` shows "« {name} » retiré de la liste" with "Annuler" calling `undo`;
   - it calls `dismissUndo` after 5 s (Jest fake timers);
   - it stays visible across navigation, because it is rendered at the root.
-- [ ] T075 [US2] Write failing tests for `QuantityDialog` in `apps/mobile/src/adapters/ui/screens/quantity-dialog.test.tsx`:
+- [ ] T091 [US2] Write failing tests for `QuantityDialog` in `apps/mobile/src/adapters/ui/screens/quantity-dialog.test.tsx`:
   - add mode: "Ajouter" with empty fields adds without a quantity (SC-003);
   - FR-016 errors: "La quantité doit être un nombre positif." for "0", "-1" and "abc" (US2-12); "Indiquez une quantité pour cette unité." (US2-13); "L'unité ne peut pas dépasser 15 caractères.";
   - "1.5" + "kg" is shown as "1,5 kg" on the list (US2-2);
   - already-on-list mode: "« {name} » est déjà dans la liste." with the fields prefilled and the buttons "Fermer" and "Modifier la quantité" (US2-8);
   - edit mode: "Effacer la quantité" (US2-4).
-- [ ] T076 [US2] Write failing screen tests for `AddArticles` in `apps/mobile/src/adapters/ui/screens/add-articles-screen.test.tsx`:
+- [ ] T092 [US2] Write failing screen tests for `AddArticles` in `apps/mobile/src/adapters/ui/screens/add-articles-screen.test.tsx`:
   - Appbar "Ajouter des articles" and the Searchbar placeholder "Rechercher un article";
   - US2-15: an empty category shows "Aucun article dans cette catégorie" with "Créer un article";
   - US2-10: search results grouped by category;
@@ -348,7 +424,7 @@ content matches.
   - loading;
   - error "Impossible de charger les articles." with "Réessayer", reported;
   - the "Nouvel article" action opens CreateArticle with the query prefilled.
-- [ ] T077 [US2] Write failing screen tests for `CreateArticle` in `apps/mobile/src/adapters/ui/screens/create-article-screen.test.tsx`:
+- [ ] T093 [US2] Write failing screen tests for `CreateArticle` in `apps/mobile/src/adapters/ui/screens/create-article-screen.test.tsx`:
   - Appbar "Nouvel article";
   - the "Nom" field, the category radio list from `getCategories`, the optional quantity, and "Créer et ajouter";
   - US2-7: "Houmous" + "Épicerie salée" is created and added, the screen goes back to AddArticles, and the snackbar shows "« Houmous » ajouté";
@@ -356,7 +432,7 @@ content matches.
   - "Le nom ne peut pas dépasser 60 caractères.";
   - US2-9: "« Beurre » existe déjà." with "Ajouter « Beurre »" adding the existing article;
   - "Choisissez une catégorie." when no category is chosen.
-- [ ] T078 [US2] Extend `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx` with failing tests:
+- [ ] T094 [US2] Extend `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx` with failing tests:
   - the row action and accessibility action "Modifier la quantité" opens QuantityDialog prefilled, and saving shows the new quantity (US2-3, US2-4);
   - "Retirer de la liste" removes at once and shows "« Beurre » retiré de la liste" with "Annuler" (US2-6);
   - "Annuler" restores the item ticked with "2 kg" (US2-16);
@@ -365,19 +441,22 @@ content matches.
 
 ### Implementation for User Story 2
 
-- [ ] T079 [P] [US2] Implement `buildCatalogView` in `apps/mobile/src/domain/catalog-view.ts` to turn T069 green.
-- [ ] T080 [P] [US2] Implement `add` and `changeQuantity` with the `AlreadyOnList` error in `apps/mobile/src/domain/list-item.ts` to turn T070 green.
-- [ ] T081 [US2] Implement the use cases in `apps/mobile/src/application/use-cases/` to turn T071 green, per [contracts/driving-ports.md](contracts/driving-ports.md#editing-a-list-user-story-2): `get-catalog.ts`, `add-article-to-list.ts`, `create-article-and-add-to-list.ts`, `change-item-quantity.ts`, `remove-item-from-list.ts`, `restore-removed-item.ts`, `get-categories.ts`. Every write runs in `UnitOfWork.run`. Add them to `UseCases` and to the composition root.
-- [ ] T082 [US2] Add the `catalog` region and the `searchCatalog`, `addArticleToList`, `createArticleAndAddToList`, `changeItemQuantity`, `removeItem`, `undo` and `dismissUndo` actions to `apps/mobile/src/adapters/ui/state/app-store.ts`, to turn T072 green.
-- [ ] T083 [P] [US2] Implement `ArticleRow.tsx`, `QuantityFields.tsx` and `NameField.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T073 green.
-- [ ] T084 [P] [US2] Implement `UndoSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` and render it once at the root in `apps/mobile/src/adapters/ui/navigation.tsx`, to turn T074 green.
-- [ ] T085 [US2] Implement `QuantityDialog.tsx` in `apps/mobile/src/adapters/ui/screens/`, with modes add / already-on-list / edit, parsing through the domain's `parseQuantity`, to turn T075 green.
-- [ ] T086 [US2] Implement `AddArticlesScreen.tsx` in `apps/mobile/src/adapters/ui/screens/` and replace its placeholder in `navigation.tsx`, to turn T076 green.
-- [ ] T087 [US2] Implement `CreateArticleScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`, validating the name through the domain's `validateName` before submitting. The category picker lists categories only; "Nouvelle catégorie" comes with US4. Replace the placeholder in `navigation.tsx`. It turns T077 green.
-- [ ] T088 [US2] Fill the trailing actions and accessibility actions of `ListItemRow` ("Modifier la quantité", "Retirer de la liste") and wire them in `CurrentListScreen.tsx` to turn T078 green.
+- [ ] T095 [P] [US2] Implement `buildCatalogView` in `apps/mobile/src/domain/catalog-view.ts` to turn T085 green.
+- [ ] T096 [P] [US2] Implement `add` and `changeQuantity` with the `AlreadyOnList` error in `apps/mobile/src/domain/list-item.ts` to turn T086 green.
+- [ ] T097 [US2] Implement the use cases in `apps/mobile/src/application/use-cases/` to turn T087 green, per [contracts/driving-ports.md](contracts/driving-ports.md#editing-a-list-user-story-2): `get-catalog.ts`, `add-article-to-list.ts`, `create-article-and-add-to-list.ts`, `change-item-quantity.ts`, `remove-item-from-list.ts`, `restore-removed-item.ts`, `get-categories.ts`. Every write runs in `UnitOfWork.run`. Add them to `UseCases` and to the composition root.
+- [ ] T098 [US2] Add the `catalog` region and the `searchCatalog`, `addArticleToList`, `createArticleAndAddToList`, `changeItemQuantity`, `removeItem`, `undo` and `dismissUndo` actions to `apps/mobile/src/adapters/ui/state/app-store.ts`, to turn T088 green.
+- [ ] T099 [P] [US2] Implement `ArticleRow.tsx`, `QuantityFields.tsx` and `NameField.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T089 green.
+- [ ] T100 [P] [US2] Implement `UndoSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` and render it once at the root in `apps/mobile/src/adapters/ui/navigation.tsx`, to turn T090 green.
+- [ ] T101 [US2] Implement `QuantityDialog.tsx` in `apps/mobile/src/adapters/ui/screens/`, with modes add / already-on-list / edit, parsing through the domain's `parseQuantity`, to turn T091 green.
+- [ ] T102 [US2] Implement `AddArticlesScreen.tsx` in `apps/mobile/src/adapters/ui/screens/` and replace its placeholder in `navigation.tsx`, to turn T092 green.
+- [ ] T103 [US2] Implement `CreateArticleScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`, validating the name through the domain's `validateName` before submitting. The category picker lists categories only; "Nouvelle catégorie" comes with US4. Replace the placeholder in `navigation.tsx`. It turns T093 green.
+- [ ] T104 [US2] Fill the trailing actions and accessibility actions of `ListItemRow` ("Modifier la quantité", "Retirer de la liste") and wire them in `CurrentListScreen.tsx` to turn T094 green.
+- [ ] T105 [US2] Add the US2 ids of [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) to `required-stories.ts`: `Components/ArticleRow/Default`, `.../AlreadyOnList`, `Components/QuantityFields/Empty`, `.../Filled`, `.../WithError`, `Components/NameField/Empty`, `.../WithError`, `Components/UndoSnackbar/RemovedItem`, `Screens/AddArticles/Loading`, `.../Error`, `.../NoQuery`, `.../SearchMatches`, `.../SearchNoMatch`, `Screens/CreateArticle/Empty`, `.../NameAlreadyUsed`, `Dialogs/QuantityDialog/Add`, `.../Edit`, `.../AlreadyOnList` and `.../InvalidAmount`. Confirm the story test fails on each.
+- [ ] T106 [US2] Write the stories to turn T105 green: `ArticleRow.stories.tsx`, `QuantityFields.stories.tsx`, `NameField.stories.tsx` and `UndoSnackbar.stories.tsx` (a `prepare` that removes an item) in `apps/mobile/src/adapters/ui/components/`; `AddArticlesScreen.stories.tsx` (pending and failing `getCatalog`, an empty category, a `prepare` searching "pom" with "Pommes" already on the list, a search for "xyz"), `CreateArticleScreen.stories.tsx` (the `NameAlreadyUsed` story renders the form with the error "« Lait » existe déjà.", T058) and `QuantityDialog.stories.tsx` in `apps/mobile/src/adapters/ui/screens/`. Review them in Storybook on both platforms, light and dark.
+- [ ] T107 [US2] Make the T084 journeys green with `yarn test:e2e:android` and `yarn test:e2e:ios`. Any production fix starts with its own failing unit or screen test.
 
 **Checkpoint**: US1 and US2 together form the MVP: a usable single-list app, offline, with
-undo.
+undo; every story so far is in Storybook and every journey so far is green on Android and iOS.
 
 ---
 
@@ -392,7 +471,12 @@ current.
 
 ### Tests for User Story 3 ⚠️ (write first, confirm they fail)
 
-- [ ] T089 [P] [US3] Write failing use case tests on fakes in `apps/mobile/src/application/use-cases/`:
+- [ ] T108 [US3] Write the failing journeys:
+  - `tests/e2e/journeys/several-lists.e2e.ts`: with "Lait" ticked on "Ma liste", create "Barbecue", make it current from "Mes listes", add "Lait" (unticked there), switch back: "Ma liste" is untouched and "Lait" is still ticked on it (US3-2, US3-3, US3-4, US3-8, US2-5);
+  - extend `tests/e2e/journeys/persistence.e2e.ts`: make "Barbecue" current, terminate and relaunch: "Barbecue" is still the current list.
+
+  Confirm they fail.
+- [ ] T109 [P] [US3] Write failing use case tests on fakes in `apps/mobile/src/application/use-cases/`:
   - `get-lists.test.ts`: lists sorted by name with the French collator, each with `itemCount` and `isCurrent` (US3-8);
   - `create-list.test.ts`:
     - US3-2: an empty list is created and is not made current;
@@ -401,18 +485,18 @@ current.
     - `NameTooLong`;
   - `set-current-list.test.ts`: US3-3, persisted across a new store instance on the same fakes; `ListNotFound`;
   - FR-026 / US3-4: ticking "Lait" on one list leaves it unticked on another.
-- [ ] T090 [P] [US3] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.lists.test.ts`:
+- [ ] T110 [P] [US3] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.lists.test.ts`:
   - `loadLists()` uses the region states and reports `{ operation: 'getLists', screen: 'Lists' }` on failure (US3-7);
   - `createList` returns its `Result` and refreshes;
   - `setCurrentList` refreshes, so `currentList` shows the new list.
-- [ ] T091 [US3] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/lists-screen.test.tsx`:
+- [ ] T111 [US3] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/lists-screen.test.tsx`:
   - Appbar "Mes listes";
   - US3-7: loading; the error "Impossible de charger vos listes." with "Réessayer", reported;
   - US3-8: rows show the name, "{n} articles" / "1 article", and "Liste actuelle" with a check icon and text;
   - row accessibility: "Barbecue, 0 articles, liste actuelle";
   - US3-3: tapping a list makes it current and returns to CurrentList, which shows "Barbecue";
   - SC-005: two taps from CurrentList ("Mes listes", then the list).
-- [ ] T092 [US3] Write failing dialog tests in `apps/mobile/src/adapters/ui/screens/create-list-dialog.test.tsx`:
+- [ ] T112 [US3] Write failing dialog tests in `apps/mobile/src/adapters/ui/screens/create-list-dialog.test.tsx`:
   - title "Nouvelle liste", buttons "Annuler" / "Créer";
   - US3-2: the list appears empty in Lists;
   - US3-5: "Une liste porte déjà ce nom.";
@@ -420,10 +504,12 @@ current.
 
 ### Implementation for User Story 3
 
-- [ ] T093 [US3] Implement `get-lists.ts`, `create-list.ts` and `set-current-list.ts` in `apps/mobile/src/application/use-cases/` to turn T089 green, per [contracts/driving-ports.md](contracts/driving-ports.md#named-lists-user-story-3). Add them to `UseCases` and to the composition root.
-- [ ] T094 [US3] Add the `lists` region and the `loadLists`, `createList` and `setCurrentList` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T090 green.
-- [ ] T095 [US3] Implement `ListsScreen.tsx` (with the FAB "Nouvelle liste") in `apps/mobile/src/adapters/ui/screens/` and replace its placeholder in `navigation.tsx`, to turn T091 green.
-- [ ] T096 [US3] Implement `CreateListDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` to turn T092 green.
+- [ ] T113 [US3] Implement `get-lists.ts`, `create-list.ts` and `set-current-list.ts` in `apps/mobile/src/application/use-cases/` to turn T109 green, per [contracts/driving-ports.md](contracts/driving-ports.md#named-lists-user-story-3). Add them to `UseCases` and to the composition root.
+- [ ] T114 [US3] Add the `lists` region and the `loadLists`, `createList` and `setCurrentList` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T110 green.
+- [ ] T115 [US3] Implement `ListsScreen.tsx` (with the FAB "Nouvelle liste") in `apps/mobile/src/adapters/ui/screens/` and replace its placeholder in `navigation.tsx`, to turn T111 green.
+- [ ] T116 [US3] Implement `CreateListDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` to turn T112 green.
+- [ ] T117 [US3] Add `Screens/Lists/Loading`, `.../Error`, `.../Success`, `Dialogs/CreateListDialog/Default` and `.../NameAlreadyUsed` to `required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/screens/ListsScreen.stories.tsx` (pending and failing `getLists`, two lists with the current one marked) and `CreateListDialog.stories.tsx` (the error story renders the form with "Une liste porte déjà ce nom.") to turn it green. Review them in Storybook.
+- [ ] T118 [US3] Make the T108 journeys green with `yarn test:e2e:android` and `yarn test:e2e:ios`.
 
 **Checkpoint**: several lists, each with its own items and ticks; the current list survives a
 restart.
@@ -440,27 +526,28 @@ create an article in it, add it to the current list, and check it appears under 
 
 ### Tests for User Story 4 ⚠️ (write first, confirm they fail)
 
-- [ ] T097 [P] [US4] Write failing use case tests in `apps/mobile/src/application/use-cases/create-category.test.ts`:
+- [ ] T119 [P] [US4] Write failing use case tests in `apps/mobile/src/application/use-cases/create-category.test.ts`:
   - US4-2: the category is appended with `position = max + 1` and `getCategories` lists it last;
   - US4-3: "boissons" → `NameAlreadyUsed`;
   - US4-4: `NameRequired`;
   - `NameTooLong`.
-- [ ] T098 [P] [US4] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.categories.test.ts`: `createCategory` returns its `Result` (with `categoryId`) and refreshes.
-- [ ] T099 [US4] Write failing dialog tests in `apps/mobile/src/adapters/ui/screens/create-category-dialog.test.tsx`:
+- [ ] T120 [P] [US4] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.categories.test.ts`: `createCategory` returns its `Result` (with `categoryId`) and refreshes.
+- [ ] T121 [US4] Write failing dialog tests in `apps/mobile/src/adapters/ui/screens/create-category-dialog.test.tsx`:
   - title "Nouvelle catégorie", buttons "Annuler" / "Créer";
   - US4-3: "Cette catégorie existe déjà.";
   - US4-4: "Indiquez un nom.".
-- [ ] T100 [US4] Extend `apps/mobile/src/adapters/ui/screens/create-article-screen.test.tsx` with failing tests:
+- [ ] T122 [US4] Extend `apps/mobile/src/adapters/ui/screens/create-article-screen.test.tsx` with failing tests:
   - US4-1: the 11 default categories are offered in the spec's order;
   - US4-2: "Nouvelle catégorie" opens CreateCategoryDialog, and on success "Bébé" is offered and preselected;
   - an article created in "Bébé" and added appears under a "Bébé" heading on CurrentList.
 
 ### Implementation for User Story 4
 
-- [ ] T101 [US4] Implement `create-category.ts` in `apps/mobile/src/application/use-cases/` to turn T097 green, and add it to `UseCases` and to the composition root.
-- [ ] T102 [US4] Add the `createCategory` action to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T098 green.
-- [ ] T103 [US4] Implement `CreateCategoryDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` to turn T099 green.
-- [ ] T104 [US4] Add the "Nouvelle catégorie" entry to the category picker of `CreateArticleScreen.tsx` and preselect the new category, to turn T100 green.
+- [ ] T123 [US4] Implement `create-category.ts` in `apps/mobile/src/application/use-cases/` to turn T119 green, and add it to `UseCases` and to the composition root.
+- [ ] T124 [US4] Add the `createCategory` action to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T120 green.
+- [ ] T125 [US4] Implement `CreateCategoryDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` to turn T121 green.
+- [ ] T126 [US4] Add the "Nouvelle catégorie" entry to the category picker of `CreateArticleScreen.tsx` and preselect the new category, to turn T122 green.
+- [ ] T127 [US4] Add `Dialogs/CreateCategoryDialog/Default` and `.../NameAlreadyUsed` to `required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/screens/CreateCategoryDialog.stories.tsx` (the error story renders the form with "Cette catégorie existe déjà.") to turn it green. Review it in Storybook. Run every journey again: `first-launch.e2e.ts` covers US4-1.
 
 **Checkpoint**: all four stories work independently and together.
 
@@ -471,16 +558,16 @@ create an article in it, add it to the current list, and check it appears under 
 **Purpose**: the full offline scenario, development hooks, documentation and the device
 validation of [quickstart.md](quickstart.md).
 
-- [ ] T105 Write the full offline UI scenario in `apps/mobile/src/adapters/ui/offline.test.tsx`: with `global.fetch` replaced by a function that throws, open, tick, add, create, change the quantity, remove and undo, switch list, and finish. Every step succeeds and nothing is reported (Principle VII, FR-027, SC-006). Make it green with no production change; any change it forces gets its own failing test first.
-- [ ] T106 [P] Write a test in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx` that renders a 200-item list through `renderWithStore`, ticks the last item, and checks that only that row re-renders (memoized rows identified by article id, [research.md](research.md) R11, SC-008). If it fails, fix the memoization in `ListItemRow.tsx` and `CurrentListScreen.tsx`.
-- [ ] T107 [P] Extend `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx` to render a ticked row under the dark theme and each contrast variant of T035: the check mark and the struck-through text are present in every theme, not only a color change (FR-035).
-- [ ] T108 [P] Write a test in `apps/mobile/src/adapters/ui/state/error-context.test.ts` that every `report` call made during the US1–US4 store tests carries only the `operation` and `screen` fields, never names or quantities (FR-030, Principle VIII).
-- [ ] T109 [P] Write accessibility tests in `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx`: every interactive element on the four screens and four dialogs has a French `accessibilityLabel` or a visible French text (FR-032), and every touch target is ≥ 48 dp (FR-034).
-- [ ] T110 Add the dev-only Sentry smoke test to `apps/mobile/src/composition/composition-root.ts`: when `EXPO_PUBLIC_SENTRY_SMOKE_TEST=1`, report one test error at startup. Test-first in `apps/mobile/src/composition/composition-root.test.ts`, including that it is ignored when the flag is unset.
-- [ ] T111 [P] Configure the Sentry Expo plugin options (organization, project, source map upload through EAS Build) in `apps/mobile/app.config.ts` and document in `README.md` the EAS environment variables the maintainer sets: the DSN and the build credential, never committed.
-- [ ] T112 Add the dev-only seed to `apps/mobile/src/composition/dev-seed.ts`: when `EXPO_PUBLIC_DEV_SEED_ITEMS=<n>` and `__DEV__`, fill an empty current list with n articles through the use cases. Test-first in `apps/mobile/src/composition/dev-seed.test.ts`: ignored when `__DEV__` is false or the list is not empty.
-- [ ] T113 Update `README.md` with what the app does, the architecture in one paragraph (hexagonal layers, Zustand store in the UI adapter), how to run the device checks of [quickstart.md](quickstart.md), and the dev flags `EXPO_PUBLIC_DEV_SEED_ITEMS` and `EXPO_PUBLIC_SENTRY_SMOKE_TEST`.
-- [ ] T114 Run [quickstart.md](quickstart.md) sections 1–5 on an Android device or emulator and on an iOS simulator: the 12 hands-on scenarios, including airplane mode, kill and restart, TalkBack/VoiceOver, 200% text, 200 items and start time on a release build. Record the results, and anything not checked, in the pull request's test plan.
+- [ ] T128 Write the full offline UI scenario in `apps/mobile/src/adapters/ui/offline.test.tsx`: with `global.fetch` replaced by a function that throws, open, tick, add, create, change the quantity, remove and undo, switch list, and finish. Every step succeeds and nothing is reported (Principle VII, FR-027, SC-006). Make it green with no production change; any change it forces gets its own failing test first.
+- [ ] T129 [P] Write a test in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx` that renders a 200-item list through `renderWithStore`, ticks the last item, and checks that only that row re-renders (memoized rows identified by article id, [research.md](research.md) R11, SC-008). If it fails, fix the memoization in `ListItemRow.tsx` and `CurrentListScreen.tsx`.
+- [ ] T130 [P] Extend `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx` to render a ticked row under the dark theme and each contrast variant of T042: the check mark and the struck-through text are present in every theme, not only a color change (FR-035).
+- [ ] T131 [P] Write a test in `apps/mobile/src/adapters/ui/state/error-context.test.ts` that every `report` call made during the US1–US4 store tests carries only the `operation` and `screen` fields, never names or quantities (FR-030, Principle VIII).
+- [ ] T132 [P] Write accessibility tests in `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx`: every interactive element on the four screens and four dialogs has a French `accessibilityLabel` or a visible French text (FR-032), and every touch target is ≥ 48 dp (FR-034).
+- [ ] T133 Add the dev-only Sentry smoke test to `apps/mobile/src/composition/composition-root.ts`: when `EXPO_PUBLIC_SENTRY_SMOKE_TEST=1`, report one test error at startup. Test-first in `apps/mobile/src/composition/composition-root.test.ts`, including that it is ignored when the flag is unset.
+- [ ] T134 [P] Configure the Sentry Expo plugin options (organization, project, source map upload through EAS Build) in `apps/mobile/app.config.ts` and document in `README.md` the EAS environment variables the maintainer sets: the DSN and the build credential, never committed.
+- [ ] T135 Add the dev-only seed to `apps/mobile/src/composition/dev-seed.ts`: when `EXPO_PUBLIC_DEV_SEED_ITEMS=<n>` and `__DEV__`, fill an empty current list with n articles through the use cases. Test-first in `apps/mobile/src/composition/dev-seed.test.ts`: ignored when `__DEV__` is false or the list is not empty.
+- [ ] T136 Update `README.md` with what the app does, the architecture in one paragraph (hexagonal layers, Zustand store in the UI adapter), how to review screens in Storybook and when to run the iOS journeys (before a release and on pull requests that change native configuration), how to run the device checks of [quickstart.md](quickstart.md), and the dev flags `EXPO_PUBLIC_DEV_SEED_ITEMS` and `EXPO_PUBLIC_SENTRY_SMOKE_TEST`.
+- [ ] T137 Run [quickstart.md](quickstart.md) sections 1–7 on an Android device or emulator and on an iOS simulator: every required story reviewed in Storybook in light and dark mode and at 200% text size (§2), every journey green with `yarn test:e2e:android` and `yarn test:e2e:ios` (§3), and the 12 hands-on scenarios, including airplane mode, kill and restart, TalkBack/VoiceOver, 200% text, 200 items and start time on a release build (§5). Record the results, and anything not checked, in the pull request's test plan.
 
 ---
 
@@ -488,34 +575,37 @@ validation of [quickstart.md](quickstart.md).
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: no dependencies. T004 must land before any commit that contains `flake.lock` or `yarn.lock`.
+- **Setup (Phase 1)**: no dependencies. T004 must land before any commit that contains `flake.lock` or `yarn.lock`. Storybook (T009–T011) needs Jest and dependency-cruiser (T006, T008); the e2e chain T012 → T013 → T014 → T016 needs the app scaffold and the CI workflow (T015).
 - **Foundational (Phase 2)**: depends on Setup. It blocks every user story. Inside it:
-  - domain (T011–T017) → ports (T018) → contract suites and fakes (T019–T022) → SQLite (T023–T028) → seed (T029–T030);
-  - theme and shared components (T034–T039) can run beside the SQLite work;
-  - the store core (T040–T046) needs the fakes;
-  - the composition (T047–T053) comes last.
-- **US1 (Phase 3)** and **US2 (Phase 4)**: both start after Foundational. US2's T078 and T088 extend the CurrentList screen built in US1, so finish T067 first.
-- **US3 (Phase 5)**: after Foundational. SC-005's two-tap test (T091) needs the "Mes listes" action of T067.
-- **US4 (Phase 6)**: after US2, because it extends `CreateArticleScreen` (T087).
-- **Polish (Phase 7)**: after the stories it covers. T105 needs all four.
+  - domain (T018–T024) → ports (T025) → contract suites and fakes (T026–T029) → SQLite (T030–T035) → seed (T036–T037);
+  - theme and shared components (T041–T046) can run beside the SQLite work;
+  - the store core (T047–T053) needs the fakes;
+  - the composition (T054–T064) comes last, with the story store, decorator and component stories (T056–T059) after the navigation (T055), because the decorator wraps stories in a navigation container.
+- **US1 (Phase 3)** and **US2 (Phase 4)**: both start after Foundational. US2's T094 and T104 extend the CurrentList screen built in US1, so finish T079 first.
+- **US3 (Phase 5)**: after Foundational. SC-005's two-tap test (T111) needs the "Mes listes" action of T079.
+- **US4 (Phase 6)**: after US2, because it extends `CreateArticleScreen` (T103).
+- **Polish (Phase 7)**: after the stories it covers. T128 needs all four.
 
 ### Within Each User Story
 
+- The story's journey first (red), as the outer loop; it turns green at the end of the story.
 - Tests first; run them and see them fail (Red) before the matching implementation task.
+- Stories after the screens they show: required ids first (the story test goes red), then the story files.
 - Then domain → use cases → store actions → components → screens.
 - Each Green step is followed by a refactor with the suite green, and a commit.
 
 ### Parallel Opportunities
 
-- Setup: T006, T007 and T008 touch different config files.
+- Setup: T006, T007 and T008 touch different config files; the Storybook tasks (T009–T010) and the e2e scaffold (T012) touch different workspaces.
 - Foundational:
-  - T011 / T013 / T015 and their implementations, three domain files;
-  - T031–T033 (error reporting, ids);
-  - T034–T039 (theme, state components, `formatQuantity`);
-  - T045–T046 (`NoticeSnackbar`), once the store core exists.
-- US1: T054–T058 are five independent test files; T062, T063 and T066 in parallel after them.
-- US2: T069–T074 are independent test files; T079, T080, T083 and T084 in parallel after them.
-- US3 and US4 test files (T089, T090, T097, T098) can be written in parallel.
+  - T018 / T020 / T022 and their implementations, three domain files;
+  - T038–T040 (error reporting, ids);
+  - T041–T046 (theme, state components, `formatQuantity`);
+  - T052–T053 (`NoticeSnackbar`), once the store core exists.
+- US1: T066–T070 are five independent test files; T074, T075 and T078 in parallel after them.
+- US2: T085–T090 are independent test files; T095, T096, T099 and T100 in parallel after them.
+- US3 and US4 test files (T109, T110, T119, T120) can be written in parallel.
+- Within a story, the journey file and the unit test files are independent and can be written together.
 
 ---
 
@@ -523,25 +613,25 @@ validation of [quickstart.md](quickstart.md).
 
 ```bash
 # Red: write these failing tests together (different files)
-Task: "T054 current list view tests in apps/mobile/src/domain/current-list-view.test.ts"
-Task: "T055 list item transition tests in apps/mobile/src/domain/list-item.test.ts"
-Task: "T056 use case tests in apps/mobile/src/application/use-cases/{get-current-list,toggle-item-in-cart,finish-shopping}.test.ts"
-Task: "T057 store tests in apps/mobile/src/adapters/ui/state/app-store.current-list.test.ts"
-Task: "T058 ListItemRow tests in apps/mobile/src/adapters/ui/components/list-item-row.test.tsx"
+Task: "T066 current list view tests in apps/mobile/src/domain/current-list-view.test.ts"
+Task: "T067 list item transition tests in apps/mobile/src/domain/list-item.test.ts"
+Task: "T068 use case tests in apps/mobile/src/application/use-cases/{get-current-list,toggle-item-in-cart,finish-shopping}.test.ts"
+Task: "T069 store tests in apps/mobile/src/adapters/ui/state/app-store.current-list.test.ts"
+Task: "T070 ListItemRow tests in apps/mobile/src/adapters/ui/components/list-item-row.test.tsx"
 
 # Green: then these in parallel
-Task: "T062 buildCurrentListView in apps/mobile/src/domain/current-list-view.ts"
-Task: "T063 toggle and finish in apps/mobile/src/domain/list-item.ts"
-Task: "T066 ListItemRow in apps/mobile/src/adapters/ui/components/ListItemRow.tsx"
+Task: "T074 buildCurrentListView in apps/mobile/src/domain/current-list-view.ts"
+Task: "T075 toggle and finish in apps/mobile/src/domain/list-item.ts"
+Task: "T078 ListItemRow in apps/mobile/src/adapters/ui/components/ListItemRow.tsx"
 ```
 
 ## Parallel Example: User Story 2
 
 ```bash
-Task: "T069 catalog view tests in apps/mobile/src/domain/catalog-view.test.ts"
-Task: "T071 use case tests in apps/mobile/src/application/use-cases/*.test.ts"
-Task: "T073 ArticleRow / QuantityFields / NameField tests"
-Task: "T074 UndoSnackbar tests in apps/mobile/src/adapters/ui/components/undo-snackbar.test.tsx"
+Task: "T085 catalog view tests in apps/mobile/src/domain/catalog-view.test.ts"
+Task: "T087 use case tests in apps/mobile/src/application/use-cases/*.test.ts"
+Task: "T089 ArticleRow / QuantityFields / NameField tests"
+Task: "T090 UndoSnackbar tests in apps/mobile/src/adapters/ui/components/undo-snackbar.test.tsx"
 ```
 
 ---
@@ -554,7 +644,8 @@ Task: "T074 UndoSnackbar tests in apps/mobile/src/adapters/ui/components/undo-sn
 2. Phase 2: Foundational. The app launches on a seeded, empty "Ma liste".
 3. Phase 3: US1. Ticking works on seeded data.
 4. Phase 4: US2. The list can be filled, so the app is usable on a device.
-5. **Stop and validate**: quickstart steps 1–7 and 10 on a device.
+5. **Stop and validate**: the US1 and US2 journeys green on Android and iOS, the stories reviewed
+   in Storybook, then quickstart §5 steps 4 and 10 by hand on a device.
 
 ### Incremental Delivery
 
@@ -580,5 +671,6 @@ extracted from `CreateArticleScreen`.
 - [P] tasks touch different files and depend on no unfinished task.
 - The [Story] label maps each task to its user story for traceability.
 - Never delete, skip or weaken a test to make a change pass (Principle I).
-- A flaky test is a failing test: fix it before anything else (Principle III).
+- A flaky test is a failing test: fix it before anything else (Principle III). This holds for the
+  journeys: no retries, no sleeps.
 - Commit after each Green + Refactor step, with Conventional Commits.

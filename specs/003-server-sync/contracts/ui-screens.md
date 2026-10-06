@@ -93,3 +93,25 @@ appareil." (US4-3)
 Contexts used: `{ operation: 'sync' | 'connectToServer' | 'createPairingCode' | 'listDevices' |
 'renameDevice' | 'revokeDevice', screen?: 'Settings' | 'ConnectServer' }`. They never contain a
 URL, a device name, a code or a credential.
+
+## Stories and end-to-end journeys
+
+Additions to [001's validation contract](../../001-shopping-lists/contracts/ui-validation.md)
+(001 research R22, R23). Stories build the `sync` slice through the real use cases on the
+in-memory `SyncServer` and `CredentialStore` fakes, never by hand.
+
+| Story id | Shows | Scenarios |
+|---|---|---|
+| `Components/SyncStatusBar/Saved`, `.../Waiting`, `.../Sending`, `.../Failed`, `.../DisconnectedByServer`, `.../UpdateRequired` | each row of the SyncStatusBar table; `Waiting` not in error colors | US3-2, US3-4, US4-10 |
+| `Screens/CurrentList/WithSyncStatus` | the bar under the Appbar of a data screen | FR-020 |
+| `Screens/Settings/NotConnected` | the explanation and "Connecter à un serveur" | US4-1 |
+| `Screens/Settings/Connected` | server section and device list, "Cet appareil" marked | US3-5 |
+| `Screens/Settings/DevicesLoading`, `.../DevicesError`, `.../DevicesOffline` | the device list states | |
+| `Screens/ConnectServer/Default` | the three fields | |
+| `Screens/ConnectServer/ServerUnreachable`, `.../InvalidCode`, `.../UntrustedServer`, `.../TooManyAttempts` | the outcome messages | US4-6, US4-5, US4-12 |
+| `Dialogs/PairingCodeDialog/Code`, `.../Offline` | the code and its expiry; the offline message | US4-3 |
+| `Dialogs/RevokeDeviceDialog/Default`, `Dialogs/DisconnectDialog/Default`, `Dialogs/RenameDeviceDialog/Default` | the device dialogs | US4-9, US4-11 |
+
+| File | Journey | Scenarios |
+|---|---|---|
+| `sync-unreachable.e2e.ts` | On a fresh install, no sync bar is shown; "Réglages" shows the not-connected text. In ConnectServer, enter `127.0.0.1:9` (nothing listens there on the device, and no DNS query leaves it) and any code: "Impossible de joindre le serveur. Vérifiez l'adresse et votre connexion." Back on the current list, add and tick an item: it works at once. | US4-1, US4-6, FR-002 |
