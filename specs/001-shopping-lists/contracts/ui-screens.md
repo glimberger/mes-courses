@@ -32,7 +32,7 @@ CreateCategoryDialog.
 | `LoadingState` | Centered `ActivityIndicator`, accessibility label "Chargement". |
 | `EmptyState` | Message and optional action button. |
 | `ErrorState` | Message and "Réessayer" button. |
-| `ListItemRow` | Tappable row: checkbox, name, quantity, trailing actions; ticked style = check mark + struck-through text + muted color; min height 48 dp; text wraps. |
+| `ListItemRow` | Tappable row: checkbox, name, quantity, trailing actions; ticked style = check mark + struck-through text + muted color (`onSurfaceVariant`, still WCAG AA, FR-036); min height 48 dp; text wraps. |
 | `ArticleRow` | Catalog row with optional "Déjà dans la liste" chip. |
 | `QuantityFields` | Two `TextInput`s ("Quantité", "Unité") with `HelperText` errors; numeric keyboard with decimal separator. |
 | `NameField` | `TextInput` with 60-character limit and `HelperText` error. |
@@ -162,6 +162,19 @@ between screens does not end the offer (FR-010):
 - it is never stored, so closing the app ends it.
 
 A removal whose offer has ended is final.
+
+## Focus and announcements (FR-037, FR-038)
+
+| Event | Screen reader focus | Announced |
+|---|---|---|
+| A dialog opens | The dialog (its title) | The title |
+| A dialog closes | Back to the element that opened it | |
+| An item is removed | The next row; the previous one if none; the `EmptyState` if the list is empty | The undo snackbar text |
+| An item is ticked or unticked | Stays on the row, which may move within its category | The row's new label (its `checked` state) |
+| A snackbar appears (`UndoSnackbar`, `NoticeSnackbar`, "« {name} » ajouté") | Unchanged | Its text, with "Annuler" when offered |
+| A `HelperText` error appears | Unchanged | Its text |
+
+The remaining count in the CurrentList subtitle is not announced when it changes.
 
 ## Unexpected write failures (edge case "storage fails")
 

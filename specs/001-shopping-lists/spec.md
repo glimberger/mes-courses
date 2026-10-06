@@ -50,6 +50,23 @@
   undone: any other change (including a new removal or switching the current list) ends the
   offer and makes the removal final, and so does closing the app; moving between screens
   does not end it.
+- Q: What minimum color contrast applies, including dimmed ticked rows and the dark theme?
+  → A: WCAG 2.2 AA everywhere, ticked rows included, in light and dark: 4.5:1 for text, 3:1
+  for icons and the checkbox.
+- Q: How are gestures counted in SC-003, given the "Ajouter" confirmation after choosing an
+  article? → A: Every tap counts, "Ajouter" and tapping the search field included; scrolling
+  does not: at most 3 taps when browsing, at most 3 taps and 3 letters when searching.
+- Q: Where does screen reader focus go when a dialog opens or closes, after a removal, and when
+  a ticked item moves? → A: An opening dialog takes focus and gives it back to the element that
+  opened it; after a removal, focus goes to the next item (the previous one if none, the empty
+  state if the list is empty); a ticked or unticked item keeps focus as it moves.
+- Q: Which changes outside the focused element does the screen reader announce? → A: Every
+  snackbar and every form error message as it appears; the remaining count is not announced
+  and stays readable in the subtitle.
+- Q: On which device and with which figure are SC-001, SC-002 and SC-008 measured? → A: On a
+  release build, on an entry-level Android phone about five years old and on the maintainer's
+  iPhone; SC-008 means at least 55 frames per second while scrolling and ticking, with each
+  tick shown within 100 ms.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -348,6 +365,17 @@ the new heading.
 - **FR-034**: Every interactive element MUST have a touch target of at least 48 × 48 dp.
 - **FR-035**: The ticked state MUST NOT be conveyed by color alone (for example, a check mark
   and struck-through text accompany any color change).
+- **FR-036**: Every screen MUST meet WCAG 2.2 AA contrast in both the light and dark themes:
+  at least 4.5:1 for text and 3:1 for icons, checkboxes and other meaningful graphics. Ticked
+  rows are dimmed within these limits, never below them.
+- **FR-037**: Screen reader focus MUST never be lost to the top of the screen after an action:
+  an opening dialog takes focus, and on closing gives it back to the element that opened it;
+  after an item is removed, focus moves to the next item of the list, or the previous one when
+  there is no next, or the empty state when the list becomes empty; an item keeps focus when
+  ticking or unticking it moves it within its category.
+- **FR-038**: The screen reader MUST announce in French every snackbar (removal with
+  "Annuler", article added, failed save) and every form error message as soon as it appears.
+  The remaining count is not announced when it changes; it stays readable on the screen.
 
 ### Key Entities
 
@@ -369,8 +397,10 @@ the new heading.
 
 - **SC-001**: From launch, the current list is readable and ready to tick in under 2 seconds.
 - **SC-002**: A tick or untick is visible within 100 ms of the tap, with or without network.
-- **SC-003**: Adding an existing article to a list without a quantity takes at most 3 taps
-  after opening the add screen, or typing up to 3 letters of its name and one tap.
+- **SC-003**: From the add screen, adding an existing article to a list without a quantity
+  takes at most 3 taps when browsing by category, or at most 3 taps and 3 typed letters when
+  searching. Every tap counts, including the confirmation and tapping the search field;
+  scrolling does not.
 - **SC-004**: Creating a new article and adding it to a list with a quantity takes under 20
   seconds.
 - **SC-005**: Switching the current list takes at most 2 taps from the current list screen.
@@ -378,9 +408,13 @@ the new heading.
   airplane mode.
 - **SC-007**: No change (tick, addition, removal, quantity, creation, current list choice) is
   lost after the application is closed, killed or the device restarted.
-- **SC-008**: A list of 200 items scrolls and responds to taps without visible lag.
+- **SC-008**: On a list of 200 items, scrolling and ticking stay at 55 frames per second or
+  more, and each tick is shown within 100 ms.
 - **SC-009**: Every action in this spec can be completed with the screen reader alone, and
   with the system text size at 200%.
+
+SC-001, SC-002 and SC-008 are measured on a release build, on two reference phones: an
+entry-level Android phone about five years old, and the maintainer's iPhone.
 
 ## Assumptions
 

@@ -53,7 +53,8 @@ workspace (R23)
 plus the test-only `tests/e2e/` workspace
 
 **Performance Goals**: current list usable within 2 s of launch (SC-001); tick feedback
-within 100 ms (SC-002); 200-item list scrolls without visible lag (SC-008)
+within 100 ms (SC-002); 200-item list at 55 frames per second or more (SC-008); all three on a
+release build on an entry-level Android phone about five years old and the maintainer's iPhone
 
 **Constraints**: fully offline, no network on any path (FR-027, Principle VII); no server
 synchronization in this feature (deferred, R19, Complexity Tracking); every change
@@ -189,7 +190,7 @@ apps/
     │   │       ├── navigation.tsx
     │   │       ├── seed.ts           # French default category names and "Ma liste"
     │   │       └── offline.test.tsx  # full scenario with fetch throwing (Principle VII)
-    │   └── composition/              # wires adapters into use cases; dev-only hooks (seed 200 items, Sentry smoke test)
+    │   └── composition/              # wires adapters into use cases; build-time hooks (seed 200 items, Sentry smoke test)
     └── test/
         └── sqlite/                   # node:sqlite wrapper implementing SqlDatabase for adapter tests
 tests/

@@ -177,6 +177,10 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
   `keyExtractor` on article id.
 - **Rationale**: 200 rows is well within `SectionList`'s range. FlashList would be a new
   dependency with no measured need; it can replace `SectionList` if profiling shows lag.
+- **Measurement**: SC-008 (55 frames per second or more while scrolling and ticking) is read
+  from React Native's Perf Monitor, on a release build filled by the seed (T135), on the two
+  reference phones of the spec: an entry-level Android phone about five years old and the
+  maintainer's iPhone.
 
 ## R12. Accessibility (FR-032 to FR-035)
 
@@ -188,6 +192,18 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
   on (`allowFontScaling` default, no `maxFontSizeMultiplier` below 2), rows grow with their
   content, and names wrap (no `numberOfLines`). Paper's icon buttons and list items already meet
   48 dp; the shared row component enforces `minHeight: 48`.
+- **Contrast (FR-036)**: ticked rows are dimmed with the `onSurfaceVariant` role, not with
+  opacity, so their contrast can be checked from the theme alone. The theme test computes the
+  WCAG contrast ratio of each pair the screens use (`onSurface`, `onSurfaceVariant` and
+  `primary` on `surface` and `surfaceContainer*`; `outline` for the checkbox), in light and
+  dark: at least 4.5:1 for text roles and 3:1 for icon and outline roles.
+- **Focus (FR-037)**: `AccessibilityInfo.setAccessibilityFocus` on the target's native node,
+  after the layout settles: the dialog title when a dialog opens, the opener when it closes,
+  the next row (or previous, or the `EmptyState`) after a removal. Rows are keyed by article
+  id (R11), so a ticked row keeps its native view, and focus, when it moves.
+- **Announcements (FR-038)**: snackbars and `HelperText` errors call
+  `AccessibilityInfo.announceForAccessibility` with their French text when they appear, which
+  works on both platforms; the remaining count does not.
 - **Testing**: React Native Testing Library queries by role and French label (`getByRole`,
   `getByLabelText`), so the UI tests check the accessibility contract too. The 200% text size and
   screen reader passes are part of [quickstart.md](quickstart.md).
