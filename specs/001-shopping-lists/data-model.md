@@ -21,7 +21,8 @@ text appears only in the UI adapter (Principle X).
 - `normalizedName(name) = cleanName(name).toLocaleLowerCase('fr')`: case, outer and repeated
   inner spaces, and composed or decomposed accents are ignored; accents themselves are kept, so
   "Pâte" ≠ "Pâté" ([research.md](research.md) R6).
-- `searchForm(text) = normalizedName(text)` without diacritics (`NFD`, combining marks removed).
+- `searchForm(text) = normalizedName(text)` without diacritics (`NFD`, combining marks removed),
+  with "œ" → "oe" and "æ" → "ae", so "oeuf" and "œuf" have the same search form (FR-009).
 - The name is stored cleaned ("Houmous"; "Pommes  de terre" is stored "Pommes de terre");
   `normalizedName` is stored next to it.
 - The length is counted as `[...name].length`, the unit SQLite's `length()` counts, so the
@@ -39,7 +40,7 @@ Quantity = { amount: number; unit: string | null }
 | `amount > 0` (a leading `-` or zero) | FR-016, US2-12 | `AmountNotPositive` |
 | At most 3 digits after the separator, as typed | FR-016 | `AmountTooPrecise` |
 | `amount <= 9999` | FR-016 | `AmountTooLarge` |
-| `unit` trimmed; empty unit becomes `null` | FR-014 | – |
+| `unit` cleaned like a name (`cleanName`: NFC, trimmed, inner spaces reduced); a unit empty after cleaning becomes `null` | FR-014, FR-022 | – |
 | A unit requires an amount | FR-016, US2-13 | `UnitWithoutAmount` |
 | `unit` at most 15 characters | FR-022 | `UnitTooLong` |
 
@@ -127,6 +128,8 @@ CatalogView = {
 }
 ```
 
+- The query is cleaned first (`cleanName`); a query empty after cleaning counts as no query
+  (FR-009, US2-10).
 - Without a query: every category, ordered by `position`, including empty ones (US2-15).
 - With a query: only articles whose `searchForm(name)` contains `searchForm(query)` (FR-009),
   still grouped by category, with empty categories omitted; no section at all means "no match"

@@ -101,6 +101,10 @@ interface ErrorReporter {
 
 - `context` holds only fixed technical identifiers (for example `{ operation: 'toggleItemInCart',
   screen: 'CurrentList' }`), never names, quantities or other list content (Principle VIII).
+- Whatever the error, a sent report holds only the FR-030 fields (error type, error code, stack
+  trace, operation, screen, app version, device model and system version, environment): the
+  error's own text is removed, including for errors captured by the global handlers
+  ([../research.md](../research.md) R13).
 - `report` never throws and never blocks.
 - Production: Sentry adapter (`apps/mobile/src/adapters/error-reporting/sentry-error-reporter.ts`), or a
   console reporter when `EXPO_PUBLIC_SENTRY_DSN` is unset. Tests: `RecordingErrorReporter`, which

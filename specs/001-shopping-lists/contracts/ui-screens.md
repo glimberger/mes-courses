@@ -59,13 +59,13 @@ CreateCategoryDialog.
 | State | Shown |
 |---|---|
 | loading | `LoadingState` (US1-11) |
-| error | "Impossible de charger la liste." + "Réessayer"; error reported (US1-12) |
+| error | "Impossible de charger la liste." + "Réessayer"; error reported with `{ operation: 'getCurrentList', screen: 'CurrentList' }` (US1-12) |
 | empty | Title = list name; "Votre liste est vide" + "Ajouter des articles" (US1-10) |
 | success | Title = list name; subtitle "{n} article(s) restant(s)" ("3 articles restants", "1 article restant", "Tout est dans le caddie" when 0); one section per category, heading = category name; rows per [data-model](../data-model.md) order (US1-1, US1-6, US1-7) |
 
 | Action | Behavior |
 |---|---|
-| Tap a row | Tick or untick immediately (optimistic); saves are queued per item, in tap order. On a failed save: the item's later queued saves are dropped, the list is reloaded so the item shows its stored state, snackbar "La modification n'a pas pu être enregistrée.", report. (US1-2, US1-3, FR-004, [research.md](../research.md) R9) |
+| Tap a row | Tick or untick immediately (optimistic); saves are queued per item, in tap order. On a failed save: the item's later queued saves are dropped, the list is reloaded so the item shows its stored state, snackbar "La modification n'a pas pu être enregistrée.", report with `{ operation: 'toggleItemInCart', screen: 'CurrentList' }`. (US1-2, US1-3, FR-004, [research.md](../research.md) R9) |
 | Row action "Modifier la quantité" | Opens QuantityDialog prefilled. |
 | Row action "Retirer de la liste" | Removes at once; snackbar "« {name} » retiré de la liste" with action "Annuler" (US2-6, US2-16), offered per [Undo offer](#undo-offer). |
 | Appbar action "Terminer les courses" | Shown only when `hasItemsInCart`. Opens FinishShoppingDialog (US1-8, US1-9). |
@@ -83,7 +83,8 @@ buttons "Annuler" and "Terminer".
 
 If saving fails after "Terminer": no item changes (one transaction), the dialog closes, focus
 goes back to "Terminer les courses" (still offered), and the usual snackbar "La modification
-n'a pas pu être enregistrée." is shown and the error reported (FR-007,
+n'a pas pu être enregistrée." is shown and the error reported with
+`{ operation: 'finishShopping', screen: 'CurrentList' }` (FR-007,
 [research.md](../research.md) R9a).
 
 ## AddArticles
@@ -93,7 +94,7 @@ Appbar title "Ajouter des articles", `Searchbar` with placeholder "Rechercher un
 | State | Shown |
 |---|---|
 | loading | `LoadingState` (US2-17) |
-| error | "Impossible de charger les articles." + "Réessayer"; reported (US2-18) |
+| error | "Impossible de charger les articles." + "Réessayer"; reported with `{ operation: 'getCatalog', screen: 'AddArticles' }` (US2-18) |
 | success, no query | Every category as a section (US2-15 for empty ones: "Aucun article dans cette catégorie" + "Créer un article") |
 | success, query, matches | Matching articles grouped by category (US2-10) |
 | empty, query, no match | "Aucun article ne correspond à « {query} »" + "Créer « {query} »" (US2-14) |
@@ -153,7 +154,7 @@ Appbar title "Mes listes".
 | State | Shown |
 |---|---|
 | loading | `LoadingState` (US3-7) |
-| error | "Impossible de charger vos listes." + "Réessayer"; reported (US3-7) |
+| error | "Impossible de charger vos listes." + "Réessayer"; reported with `{ operation: 'getLists', screen: 'Lists' }` (US3-7) |
 | success | One row per list: name, "{n} article(s)", "Liste actuelle" mark (check icon + text) on the current one (US3-8) |
 
 At least one list always exists, so there is no empty state.
@@ -178,13 +179,20 @@ between screens does not end the offer (FR-010):
 
 - it is dismissed after 5 s, unless a screen reader is on: then it stays until the user
   dismisses it or makes another change;
+- its 5 s are counted from the removal time (`Date.now`, controlled by Jest fake timers in
+  tests), not with a timer that pauses in the background: when the app comes back to the foreground, an offer whose 5 s have passed is
+  dismissed at once (FR-010);
+- it follows the current screen reader setting: turned on during an offer, the offer stays with
+  no limit; turned off, the 5 s count from the removal again, so an offer older than 5 s is
+  dismissed at once (FR-010);
 - any other write, including a new removal or a change of the current list, ends the offer
   first, so only the last removal can be undone;
 - it is never stored, so closing the app ends it.
 
 A removal whose offer has ended is final. If "Annuler" fails to save, the item stays removed,
 the offer ends, and the usual snackbar "La modification n'a pas pu être enregistrée." is shown
-and the error reported (FR-010, [research.md](../research.md) R8).
+and the error reported with `{ operation: 'restoreRemovedItem' }` and the screen shown at that
+moment (FR-010, [research.md](../research.md) R8).
 
 ## Focus and announcements (FR-037, FR-038)
 
@@ -202,7 +210,8 @@ The remaining count in the CurrentList subtitle is not announced when it changes
 ## Unexpected write failures (edge case "storage fails")
 
 Any write that throws: the change is not shown as saved, snackbar
-"La modification n'a pas pu être enregistrée.", error reported with `{ operation, screen }`.
+"La modification n'a pas pu être enregistrée.", error reported with `{ operation, screen }`, the operation being the use case name
+(for example `addArticleToList`) and the screen the route name shown at that moment.
 
 When the error is `StorageFull`: the same handling, but the snackbar reads "Espace de stockage
 insuffisant. Libérez de la place sur votre téléphone." and nothing is reported (FR-030,

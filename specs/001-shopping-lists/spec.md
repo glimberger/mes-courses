@@ -126,8 +126,95 @@
   Tracking and to 003-server-sync, which closes it.
 - Q: What data size must the application handle? → A: Up to 1 000 articles in the catalog, 20
   lists and 200 items per list, with SC-001 and SC-008 holding at that size (Assumptions).
+- Q: In quick taps on one item, when a save in the middle fails, are the later taps still saved?
+  → A: No: taps still waiting behind the failed save are dropped; the item shows the state last
+  saved on the device, and only taps made after the failure are saved (FR-004).
+- Q: Does sending the application to the background end the "Annuler" offer, or only stopping
+  it? → A: Only stopping it (swiped away or killed by the system); in the background the offer
+  stays while its time limit lasts (FR-010).
+- Q: Must a tick survive a kill or power loss that happens before its save has finished, given
+  it is shown at once? → A: No: a change is protected once its save on the device has finished;
+  a tick lost because the application stopped before its save finished is accepted (FR-028,
+  SC-007).
+- Q: In which order are search results shown on the add screen? → A: Like browsing: under their
+  category headings in category order, sorted alphabetically (French collation) within each
+  category; categories with no match are not shown (FR-009).
+- Q: How are criteria that no automated test can check verified (timings, frame rate, screen
+  reader, 200% text, contrast, power loss)? → A: The spec lists them; each gets a written
+  manual check (steps and expected result) run before release; every other requirement and
+  scenario needs an automated test (Success Criteria).
+- Q: Must every tick and every moment of scrolling meet SC-002 and SC-008, or a stated share?
+  → A: A stated share: 95% of 50 ticks shown within 100 ms; over a 10-second scroll of the
+  200-item list, at least 55 frames per second on average with at most 5% of frames dropped.
+- Q: Does the fixed list of report fields apply to every error report, not only storage errors?
+  → A: Yes: every report keeps only the error type, error code, stack trace, operation, screen,
+  application version, device model and system version, and the environment (production or
+  development); the error's own text is removed
+  from every report, and no list, article or category name ever appears (FR-030).
+- Q: How does search treat a blank query, spaces in the query, and "œ" and "æ"? → A: The query
+  is cleaned like a name (trimmed, inner spaces reduced); a query left empty shows the full
+  catalog as if nothing were typed; "œ" and "æ" match "oe" and "ae" both ways (FR-009).
+- Q: When does SC-001's 2-second clock start and stop? → A: Cold start only: from the icon tap,
+  with the application fully stopped, until the current list (200 items, 1 000-article
+  catalog) is shown and a tap ticks an item; at least 9 of 10 launches under 2 seconds.
+- Q: Do scenarios keep their numbers when one is added or removed? → A: Yes: a scenario is cited
+  as "US<story>-<n>" and its number never changes; a new scenario takes the next free number at
+  the end of its story, and a removed one leaves its number unused, marked "Removed".
+- Q: Must every rule stated only in an FR or the Edge Cases get its own Given/When/Then
+  scenario? → A: No: an FR is a test anchor like a scenario; every FR and every scenario is
+  cited by at least one test name (or a manual check for the listed exceptions), and each Edge
+  Case names the FR that holds its rule (Success Criteria).
+- Q: Are the amounts ",5", "5,", "007" and "0,000" accepted? → A: Digits must appear on both
+  sides of the separator: ",5" and "5," are refused with the format message; "007" is accepted
+  as 7; "0,000" is refused as not positive (FR-016).
+- Q: In what order are lists shown on the screen of my lists? → A: Alphabetically by name
+  (French collation), the current list in its place with its mark (US3-8).
+- Q: How is a unit cleaned? → A: Like a name: trimmed, inner spaces reduced to one; a unit
+  empty after cleaning means no unit, with no error; the 15-character limit applies after
+  cleaning (FR-022).
+- Q: How does the "Annuler" offer behave when the screen reader is turned on or off while it
+  shows? → A: It follows the current setting: turned on, the offer stays with no limit; turned
+  off, the 5 seconds count from the removal again, so an offer older than 5 seconds ends at
+  once (FR-010).
+- Q: On how large a list is SC-002 measured? → A: At full data size: a 200-item current list
+  and a 1 000-article catalog, on the same release build as SC-001 and SC-008.
+- Q: Who performs SC-004, and with what? → A: The maintainer, already familiar with the app, on
+  a reference phone, typing included: 3 tries, each with a new article in "Épicerie salée" with
+  "400 g" ("Pois chiches", "Lentilles", "Haricots rouges"), each under 20 seconds.
+- Q: Which color pairs must FR-036's contrast rule be checked on? → A: Every foreground color
+  the screens use (text, icons, checkbox, outline) against every background color it is drawn
+  on, in light and dark; the theme test computes all of them, and a new role a screen uses
+  joins the check (FR-036).
+- Q: Does search ignore every mark on a letter, cedilla and diaeresis included? → A: Yes:
+  accents, cedilla, diaeresis and tilde are all ignored ("francais" finds "Français", "mais"
+  finds "Maïs"), with the œ and æ rule (FR-009).
+- Q: Does the spec name the operation and screen of each reported error? → A: No: each report
+  names the failed operation and the screen it happened on; the exact names are set in the UI
+  contract (contracts/ui-screens.md), which tests use (FR-030).
+- Q: Must scenarios that test two behaviors (US3-7, US2-6) be split? → A: No: a scenario may be
+  proven by several tests, each citing its id, and every behavior in its "Then" is covered by at
+  least one of them.
+- Q: Is a successful "Réessayer" stated as a requirement? → A: Yes, once in FR-029 and FR-039:
+  "Réessayer" reads again, and when reading succeeds the loaded screen replaces the error state;
+  tests cite the FR.
+- Q: How is a full device storage told apart from other storage failures? → A: The device
+  storage itself reports that no space is left; any other storage failure is unexpected and
+  reported. The exact signal is set in the plan, and tests simulate it through a storage double
+  (FR-030).
+- Q: Which device settings does a scenario assume unless it says otherwise? → A: Screen reader
+  off, network on, system text at 100% and the light theme; a scenario that depends on another
+  setting states it in its "Given".
 
 ## User Scenarios & Testing *(mandatory)*
+
+Acceptance scenarios are cited as "US<story>-<n>" (for example US2-16, the sixteenth scenario
+of User Story 2). A scenario's number never changes: a new scenario takes the next free number
+at the end of its story, and a removed scenario keeps its number, marked "Removed", so
+references in contracts, tasks and tests stay valid.
+
+Unless a scenario says otherwise, the device has the screen reader off, the network on, the
+system text size at 100% and the light theme; a scenario that depends on another setting states
+it in its "Given".
 
 ### User Story 1 - Tick items off the current list while shopping (Priority: P1)
 
@@ -222,7 +309,8 @@ matches.
    existing "Beurre" is offered instead.
 10. **Given** I type part of a name, "pom", **When** I search the catalog, **Then** articles
     whose name contains it, ignoring case and accents ("Pommes", "Pommes de terre"), are
-    shown.
+    shown under their category heading, in that order; typing "oeuf" finds "Œufs", and a
+    query of spaces only shows the full catalog.
 11. **Given** I try to create an article with an empty or blank name, **When** I confirm,
     **Then** the article is not created and a French message asks for a name.
 12. **Given** I enter a quantity of "0", a negative number or text that is not a number,
@@ -277,7 +365,8 @@ application and check "Barbecue" is shown if it was current.
    appears, **Then** a loading state is shown; if they cannot be read, an error state offers
    to retry and the error is reported.
 8. **Given** several lists exist, **When** I open the screen of my lists, **Then** each list
-   shows its name, its number of items, and which one is current.
+   shows its name, its number of items, and which one is current, and the lists are sorted
+   alphabetically by name (French collation), the current one included.
 
 ---
 
@@ -312,36 +401,40 @@ the new heading.
 ### Edge Cases
 
 - An item is removed while "Annuler" is still offered for another one: the offer now concerns
-  the new removal only, and the earlier removal is final.
+  the new removal only, and the earlier removal is final (FR-010).
 - Every item on the current list is ticked: the list stays as is until I finish shopping or
-  untick items myself.
+  untick items myself (FR-006, FR-007).
 - No item of the list is ticked (including an empty list): "Terminer les courses" is hidden;
-  it is shown as soon as at least one item is ticked.
+  it is shown as soon as at least one item is ticked (FR-007).
 - An article or a list is created while the device has no network: it is saved and shown
-  immediately.
+  immediately (FR-027).
 - The application is closed or killed right after a tick or a quantity change: the change is
-  kept on reopening.
+  kept on reopening once its save has finished; a tick whose save had not finished yet may be
+  lost (FR-028).
 - Quantities with a decimal part are entered and shown with a decimal comma ("1,5 kg");
   a decimal point typed by the user is accepted and shown as a comma. Trailing zeros are
   dropped ("1,50" is shown "1,5"); more than 3 decimals or a value above 9 999 is refused
-  (FR-016).
+  (FR-016, FR-017).
 - Very long article, category or list names: names are limited to 60 characters and shown in
-  full by wrapping, never cut off silently. Units are limited to 15 characters.
-- Many items (200 or more) on one list: the list stays smooth to scroll and to tick.
+  full by wrapping, never cut off silently. Units are limited to 15 characters (FR-022,
+  FR-033).
+- Many items (200 or more) on one list: scrolling and ticking meet SC-008.
 - The application cannot open, update or set up its storage at startup: a full-screen error
   state says "L'application n'a pas pu démarrer." and offers "Réessayer", the error is
   reported, and stored data is never deleted or reset automatically (FR-039).
 - An older version of the application finds data saved by a newer one (a developer install or
   a restored backup): it leaves the data untouched and shows a full-screen message "Cette
   version de l'application est trop ancienne pour vos données. Mettez-la à jour." (FR-040).
-- Device storage fails while saving a change: the change is not shown as saved, a French
-  error message is shown, and the error is reported. A tick or untick is the exception: it is
-  shown at once (FR-004), then returns to the state last saved on the device when the save
-  fails, with the same message and report. Repeated taps on one item are each shown at once
-  and saved in tap order, so a failure in the middle of quick taps still leaves the item
-  showing what is stored. A failed "Annuler" leaves the item removed and ends the undo offer,
-  with the same message and report (FR-010). A failed "Terminer les courses" changes no item:
-  the dialog closes, with the same message and report, and the action stays offered (FR-007).
+- Device storage fails while saving a change: the change is not shown as saved, a French error
+  message is shown, and the error is reported (FR-028, FR-030). A tick or untick is the
+  exception: it is shown at once (FR-004), then returns to the state last saved on the device
+  when the save fails, with the same message and report. Repeated taps on one item are each
+  shown at once and saved in tap order; when one of them fails, the taps still waiting behind it
+  are dropped, so the item shows what is stored (for example: tick saved, untick fails, a third
+  tap waiting is dropped, and the item shows ticked). A failed "Annuler" leaves the item removed
+  and ends the undo offer, with the same message and report (FR-010). A failed "Terminer les
+  courses" changes no item: the dialog closes, with the same message and report, and the action
+  stays offered (FR-007).
 - The device storage is full when saving a change: the save fails as above, but the message is
   "Espace de stockage insuffisant. Libérez de la place sur votre téléphone." instead of the
   usual failed-save message, and the error is not reported (FR-030).
@@ -361,7 +454,8 @@ the new heading.
 - **FR-004**: Users MUST be able to tick an item (in the cart) and untick it (not in the
   cart) with a single tap, and the new state MUST be shown immediately. Taps MUST be saved in
   the order they were made; when a save fails, the item MUST show the state last saved on the
-  device.
+  device, and taps on that item still waiting to be saved MUST be dropped. Only taps made after
+  the failure are saved.
 - **FR-005**: Within a category, unticked items MUST be shown before ticked items.
 - **FR-006**: A list MUST show how many of its items are left to put in the cart.
 - **FR-007**: Users MUST be able to finish shopping on a list: after a confirmation, every item
@@ -375,17 +469,25 @@ the new heading.
   catalog by category or by searching by name. Items are added, removed, ticked and have their
   quantity changed only on the current list; to edit another list, the user makes it current
   first (FR-025).
-- **FR-009**: Search MUST match articles whose name contains the typed text, ignoring case
-  and accents.
-- **FR-010**: Users MUST be able to remove an item from a list without deleting the article
-  from the catalog or from other lists. Removal MUST take effect immediately, without
-  confirmation, and MUST be undoable through an "Annuler" action that restores the item with
-  its quantity and ticked state. "Annuler" MUST be offered for 5 seconds; while a screen
-  reader is on, it MUST stay offered until the user dismisses it or makes another change.
-  Only the last removal can be undone: any other change (including a new removal or switching
-  the current list) and closing the application end the offer, while moving between screens
-  does not. A removal whose offer has ended is final. If restoring the item fails, it stays
-  removed and the offer ends; the failed save is handled as in Edge Cases.
+- **FR-009**: Search MUST match articles whose name contains the typed text, ignoring case and
+  every mark added to a letter (accents, cedilla, diaeresis, tilde: "francais" finds "Français",
+  "mais" finds "Maïs"), with "œ" and "æ" matching "oe" and "ae" both ways ("oeuf" finds "Œufs").
+  The typed text is first trimmed, with repeated inner spaces reduced to one; when nothing is
+  left, the full catalog is shown as if nothing were typed. Results MUST be shown like the
+  browsed catalog: under their category headings in category order, sorted alphabetically
+  (French collation) within each category, with categories holding no match left out.
+- **FR-010**: Users MUST be able to remove an item from a list without deleting the article from
+  the catalog or from other lists. Removal MUST take effect immediately, without confirmation,
+  and MUST be undoable through an "Annuler" action that restores the item with its quantity and
+  ticked state. "Annuler" MUST be offered for 5 seconds; while a screen reader is on, it MUST
+  stay offered until the user dismisses it or makes another change. The offer follows the
+  current setting: when the screen reader is turned off during an offer, the 5 seconds count
+  from the removal, so an offer older than 5 seconds ends at once. Only the last removal can be
+  undone: any other change (including a new removal or switching the current list) and stopping
+  the application (swiped away or killed by the system) end the offer, while moving between
+  screens or sending the application to the background does not; the 5-second limit keeps
+  running in the background. A removal whose offer has ended is final. If restoring the item
+  fails, it stays removed and the offer ends; the failed save is handled as in Edge Cases.
 - **FR-011**: An article MUST appear at most once on a given list; it may appear on several
   lists. When browsing or searching the catalog to add articles, articles already on the list
   MUST stay visible with an "already on the list" mark; choosing one MUST NOT duplicate or
@@ -401,9 +503,11 @@ the new heading.
 - **FR-015**: Users MUST be able to change or clear the quantity of an item already on a list.
 - **FR-016**: A unit MUST NOT be accepted without a quantity; a quantity of zero, a negative
   quantity or a non-numeric quantity MUST be refused with a French message. A quantity MUST be
-  written with digits and at most one decimal comma or point, with at most 3 decimals and a
-  value of at most 9 999; spaces, signs and exponents ("1 000", "+2", "1e3") MUST be refused
-  with a French message stating the rule.
+  written with digits and at most one decimal comma or point, with digits on both sides of it,
+  at most 3 decimals and a value of at most 9 999; spaces, signs, exponents and a separator
+  with no digit on one side ("1 000", "+2", "1e3", ",5", "5,") MUST be refused with a French
+  message stating the rule. Leading zeros are accepted ("007" is 7), and an amount equal to
+  zero ("0,000") is refused as not positive.
 - **FR-017**: Quantities MUST be entered and displayed following French conventions (decimal
   comma), without trailing zeros: "1,50" is shown "1,5", and "2,0" is shown "2".
 
@@ -419,7 +523,9 @@ the new heading.
   or a letter followed by an accent mark). Accents count: "Pâte" and "Pâté" are different
   names.
 - **FR-022**: Names (articles, categories, lists) MUST be non-blank, trimmed, with repeated
-  inner spaces reduced to one, and at most 60 characters long; units at most 15 characters.
+  inner spaces reduced to one, and at most 60 characters long. Units MUST be cleaned the same
+  way and be at most 15 characters long after cleaning; a unit left empty by cleaning means no
+  unit, with no error.
 
 **Named lists**
 
@@ -444,21 +550,29 @@ the new heading.
   [003-server-sync](../003-server-sync/spec.md).
 - **FR-028**: Every change MUST be saved on the device as soon as it is made, with no explicit
   save action, and kept across application restarts, device restarts and sudden power loss
-  (for example an empty battery): once a change is shown as saved, it is never lost. Every user
+  (for example an empty battery): once its save on the device has finished, a change is never
+  lost. A tick or untick is shown before its save finishes (FR-004); if the application stops
+  in that short time, losing it is accepted. Every user
   action MUST be saved all or nothing: when an action changes several things (for example
   creating an article and adding it to the current list, or finishing shopping), a failed save
   keeps none of its changes.
 - **FR-029**: Each screen showing data (current list, catalog by category, search results,
   lists) MUST implement explicit loading, empty, error and success states. Search results
   filter the catalog already loaded on the add screen: they share its loading and error
-  states and have only their own empty and success states.
+  states and have only their own empty and success states. The error state's "Réessayer" MUST
+  read again: when reading succeeds, the loaded screen (empty or success) replaces the error
+  state; when it fails again, the error state stays and the error is reported again.
 - **FR-030**: Every unexpected error MUST be shown to the user in plain French when it affects
-  them, and reported to error tracking without any list content or personal data. Reports of
-  storage errors MUST keep only the error type, the error code, the stack trace, the operation
-  and the screen: the error's own text, which the storage may fill with the value being saved,
-  MUST be removed before sending. A save that fails because the device storage is full is an
-  expected situation, not an unexpected error: it MUST show "Espace de stockage insuffisant.
-  Libérez de la place sur votre téléphone." and MUST NOT be reported.
+  them, and reported to error tracking without any list content or personal data. Every report
+  MUST keep only the error type, the error code, the stack trace, the operation, the screen, the
+  application version, the device model and system version, and the environment (production or
+  development): the error's own text, which may quote a value being saved or shown, MUST be
+  removed before sending, and no list, article or category name may appear in a report. Each
+  report names the failed operation and the screen it happened on; their exact names are set in
+  [contracts/ui-screens.md](contracts/ui-screens.md). A save that fails because the device
+  storage is full (the storage itself reports that no space is left; any other storage failure
+  is unexpected) is an expected situation, not an unexpected error: it MUST show "Espace de
+  stockage insuffisant. Libérez de la place sur votre téléphone." and MUST NOT be reported.
 - **FR-031**: All user-facing text MUST be in French.
 - **FR-032**: Every screen MUST be usable with the system screen reader: each interactive
   element has a French label, and each list item announces its name, its quantity when it has
@@ -470,7 +584,9 @@ the new heading.
   and struck-through text accompany any color change).
 - **FR-036**: Every screen MUST meet WCAG 2.2 AA contrast in both the light and dark themes:
   at least 4.5:1 for text and 3:1 for icons, checkboxes and other meaningful graphics. Ticked
-  rows are dimmed within these limits, never below them.
+  rows are dimmed within these limits, never below them. The rule applies to every foreground
+  color the screens use (text, icons, checkbox, outline) against every background color it is
+  drawn on, in both themes, and is checked by computing each pair from the theme colors.
 - **FR-037**: Screen reader focus MUST never be lost to the top of the screen after an action:
   an opening dialog takes focus, and on closing gives it back to the element that opened it,
   or to the screen title when that element is gone (for example "Terminer les courses", hidden
@@ -483,7 +599,9 @@ the new heading.
   The remaining count is not announced when it changes; it stays readable on the screen.
 - **FR-039**: When the application cannot open, update or set up its storage at startup, it
   MUST show a full-screen error state in French with a "Réessayer" action and report the
-  error. It MUST NOT delete, reset or overwrite stored data to recover.
+  error. "Réessayer" MUST start the application again: when it succeeds, the current list is
+  shown; when it fails again, the error state stays and the error is reported again. It MUST
+  NOT delete, reset or overwrite stored data to recover.
 - **FR-040**: Every update of the application MUST keep all stored data (lists, items, ticks,
   quantities, articles, categories, current list), upgrading how it is stored in place when
   needed; a failed upgrade is handled by FR-039. When an older version finds data saved by a
@@ -509,28 +627,51 @@ the new heading.
 
 ### Measurable Outcomes
 
-- **SC-001**: From launch, the current list is readable and ready to tick in under 2 seconds.
-- **SC-002**: A tick or untick is visible within 100 ms of the tap, with or without network.
+- **SC-001**: From the tap on the application icon, with the application fully stopped (cold
+  start), the current list is shown and a tap ticks an item in under 2 seconds, for at least
+  9 of 10 launches, with a 200-item current list and a 1 000-article catalog.
+- **SC-002**: A tick or untick is visible within 100 ms of the tap, with or without network,
+  for at least 95% of 50 ticks and unticks in a row, on a 200-item current list with a
+  1 000-article catalog.
 - **SC-003**: From the add screen, adding an existing article to a list without a quantity
   takes at most 3 taps when browsing by category, or at most 3 taps and 3 typed letters when
   searching. Every tap counts, including the confirmation and tapping the search field;
   scrolling does not.
 - **SC-004**: Creating a new article and adding it to a list with a quantity takes under 20
-  seconds.
+  seconds, from tapping "Ajouter" on the current list until the item shows on it, typing
+  included. Measured by the maintainer, already familiar with the app, on a reference phone,
+  with 3 tries, each creating a new article in "Épicerie salée" with "400 g" ("Pois chiches",
+  "Lentilles", "Haricots rouges"), each under 20 seconds.
 - **SC-005**: Switching the current list takes at most 2 taps from the current list screen.
 - **SC-006**: 100% of the actions of this spec (listed below) complete successfully with the
   device in airplane mode.
 - **SC-007**: No change (tick or untick, addition, removal, undo of a removal, quantity set,
   changed or cleared, creation of an article, a category or a list, finishing shopping, current
-  list choice) is lost after the application is closed, killed, the device restarted or its power suddenly
-  lost.
-- **SC-008**: On a list of 200 items, scrolling and ticking stay at 55 frames per second or
-  more, and each tick is shown within 100 ms.
-- **SC-009**: Every action of this spec (listed below) can be completed with the screen reader alone, and
-  with the system text size at 200%.
+  list choice) whose save on the device has finished is lost after the application is closed,
+  killed, the device restarted or its power suddenly lost.
+- **SC-008**: On a list of 200 items, a 10-second scroll and 50 ticks run at 55 frames per
+  second or more on average, with at most 5% of frames dropped, and at least 95% of the ticks
+  are shown within 100 ms.
+- **SC-009**: Every action of this spec (listed below) can be completed with the screen reader
+  alone, and with the system text size at 200%.
 
 SC-001, SC-002 and SC-008 are measured on a release build, on two reference phones: an
 entry-level Android phone about five years old, and the maintainer's iPhone.
+
+Every requirement and acceptance scenario of this spec is proven by an automated test, except
+the following, which each get a written manual check (steps and expected result) run on the
+reference phones before release: SC-001, SC-002, SC-004, SC-008 and SC-009; the device restart
+and sudden power loss cases of SC-007; text at 200% (FR-033); contrast as seen on screen
+(FR-036); and screen reader focus and announcements (FR-037, FR-038). Parts of these that an
+automated test can check (for example French labels or the contrast of theme colors) are still
+tested automatically.
+
+A functional requirement is a test anchor just like an acceptance scenario: every FR and every
+scenario MUST be cited by at least one test name ("FR-016 …", "US2-12 …"), or by a manual check
+for the exceptions above. A scenario may be proven by several tests, each citing its id, as
+long as every behavior in its "Then" is covered by at least one of them. A rule stated only in
+an FR needs no Given/When/Then scenario of its own, and each Edge Case names the FR that holds
+its rule.
 
 The actions of this spec, checked one by one by SC-006 and SC-009:
 
@@ -561,11 +702,15 @@ The actions of this spec, checked one by one by SC-006 and SC-009:
   Entretien, Divers.
 - The catalog starts empty: no default articles are provided, only default categories.
 - Expected data size: up to 1 000 articles in the catalog, 20 lists and 200 items per list;
-  SC-001 and SC-008 must hold at that size.
+  SC-001, SC-002 and SC-008 must hold at that size.
 - The unit is free text (for example "g", "kg", "L", "paquets"); no unit conversion and no
   merging of quantities is done. Items carry no price or note in this feature.
 - Renaming or deleting articles, categories and lists, and reordering categories, are out of
   scope for this feature. Editing and deleting articles is specified in
-  [002-manage-articles](../002-manage-articles/spec.md). Since lists cannot be deleted, at least one list always exists.
-- Categories are displayed in the order described for the Category entity above; items within a category
-  are sorted alphabetically (French collation) inside the unticked and ticked groups.
+  [002-manage-articles](../002-manage-articles/spec.md). Since lists cannot be deleted, at least
+  one list always exists.
+- Categories are displayed in the order described for the Category entity above; items within a
+  category are sorted alphabetically (French collation) inside the unticked and ticked groups.
+  On the add screen, articles within a category are sorted alphabetically (French collation),
+  when browsing and when searching. Lists on the screen of my lists are sorted alphabetically by
+  name (French collation).
