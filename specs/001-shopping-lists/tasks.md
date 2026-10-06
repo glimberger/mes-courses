@@ -18,8 +18,10 @@ application store contract shared with 002:
 every test task comes before the implementation task it drives. Run the new test, confirm it
 fails for the expected reason (Red), then write the minimum code to pass it (Green), then
 refactor with the suite green. Test names state the behavior in domain language and carry the
-spec scenario id when there is one (for example `"US1-6 unticked items come before ticked items
-within a category"`), so `quickstart.md` can find them.
+spec scenario id or FR id they prove (for example `"US1-6 unticked items come before ticked items
+within a category"` or `"FR-016 refuses an amount with no digit after the comma"`), so
+`quickstart.md` can find them. Every FR and every scenario is cited by at least one test name,
+except the manual checks listed under the spec's Success Criteria.
 
 **Organization**: tasks are grouped by user story so each story can be implemented and tested on
 its own.
@@ -153,14 +155,14 @@ story depends on them.
   - `NameRequired` for empty or blank text (US2-11, US3-6, US4-4);
   - `NameTooLong` above "At most 60 characters after cleaning, counted in Unicode code points", and 60 characters accepted; the length is `[...name].length`, so 60 emoji are accepted (120 UTF-16 units) and 30 decomposed "é" count as 30 after cleaning;
   - `normalizedName(name) = cleanName(name).toLocaleLowerCase('fr')` with accents kept, so "Pâte" ≠ "Pâté", while " beurre ", "BEURRE", "Pommes  de terre" and a decomposed "Crème" each equal the normalized form of "Beurre", "Pommes de terre" and "Crème";
-  - `searchForm` removes diacritics (`NFD`, combining marks removed), so "Épicerie" → "epicerie".
+  - `searchForm` removes diacritics (`NFD`, combining marks removed), so "Épicerie" → "epicerie", and expands "œ" and "æ", so "Œufs" → "oeufs" and "Cæsar" → "caesar" (FR-009).
 - [ ] T021 Implement `cleanName`, `validateName`, `normalizedName`, `searchForm` and the `NameError` union (`NameRequired | NameTooLong`) in `apps/mobile/src/domain/name.ts` to turn T020 green.
 - [ ] T022 [P] Write failing tests for `parseQuantity(amountText, unitText)` in `apps/mobile/src/domain/quantity.test.ts`, per [data-model.md](data-model.md#quantity-value-object):
   - both blank → `null` (no quantity);
-  - "1,5" and "1.5" → amount 1.5; "6", "0,125" and "9999" accepted;
-  - unit trimmed, and an empty unit becomes `null`;
+  - "1,5" and "1.5" → amount 1.5; "6", "0,125" and "9999" accepted; "007" → amount 7;
+  - unit cleaned like a name (`cleanName`): " paquets  de 6 " → "paquets de 6"; a unit empty after cleaning becomes `null`, with no error; the 15-character limit counts the cleaned unit (FR-022);
   - the amount text must match `^-?\d+([.,]\d+)?$`: "abc", "1 000", "+2", "1e3", "1,5,2", ",5" and "1," → `AmountNotANumber` (FR-016);
-  - "0", "0,0" and "-2" → `AmountNotPositive` (US2-12);
+  - "0", "0,0", "0,000" and "-2" → `AmountNotPositive` (US2-12, FR-016);
   - more than 3 digits after the separator, as typed: "1,2345" and "1,5000" → `AmountTooPrecise`;
   - above 9 999: "10000" and "9999,5" → `AmountTooLarge`;
   - errors come in the order of [data-model.md](data-model.md#quantity-value-object): "-1,2345" → `AmountNotPositive`;
@@ -211,6 +213,8 @@ story depends on them.
 - [ ] T038 [P] Write failing tests for the Sentry reporter in `apps/mobile/src/adapters/error-reporting/sentry-error-reporter.test.ts`, with `@sentry/react-native` mocked:
   - `init` is called with `sendDefaultPii: false`, the DSN, the release and the environment;
   - `beforeSend` / `beforeBreadcrumb` drop breadcrumb messages and request data;
+  - `beforeSend` on an event whose exception value is "Cannot read 'Houmous maison'" returns an event whose exception value is empty and whose stack frames are kept (FR-030, [research.md](research.md) R13);
+  - `beforeSend` keeps only the FR-030 fields (error type, error code, stack trace, operation, screen, app version, device model and system version, environment): an event with `contexts.device.memory_size`, `extra`, `user` and a custom tag comes out without them;
   - `report(error, { operation, screen })` calls `captureException` with only those tags;
   - `report` never throws, even when the SDK throws.
 - [ ] T039 [P] Implement `createSentryErrorReporter` in `apps/mobile/src/adapters/error-reporting/sentry-error-reporter.ts` and `ConsoleErrorReporter` in `apps/mobile/src/adapters/error-reporting/console-error-reporter.ts` (the console one is also written test-first) to turn T038 green.
@@ -222,7 +226,7 @@ story depends on them.
   - every MD3 color role of the light and dark Paper themes equals the matching role of `schemes.light` and `schemes.dark` in `design/material-theme.json`;
   - `elevation.level0..5` derive from `surfaceContainerLowest..Highest`;
   - the contrast variants are mapped;
-  - FR-036: in light and dark, the text roles the screens use (`onSurface`, `onSurfaceVariant` for ticked rows, `primary`) reach 4.5:1 on `surface` and the `surfaceContainer*` roles, and `outline` and icon roles reach 3:1 (WCAG contrast ratio computed in the test);
+  - FR-036: in light and dark, every foreground role the screens and shared components use (text, icons, checkbox, outline; at least `onSurface`, `onSurfaceVariant` for ticked rows, `primary`, `outline`) against every background role it is drawn on (at least `surface` and the `surfaceContainer*` roles) reaches 4.5:1 for text and 3:1 for the others (WCAG contrast ratio computed in the test). The pairs come from one exported list in `apps/mobile/src/adapters/ui/theme/used-color-pairs.ts`, which each task adding a new role to a screen or component extends;
   - the `spacing` tokens are `xs = 4` … `xl = 32` on the 4 dp grid.
 - [ ] T042 Implement the light and dark themes from the JSON in `apps/mobile/src/adapters/ui/theme/theme.ts` and the `spacing` tokens in `apps/mobile/src/adapters/ui/theme/spacing.ts`, and add `ThemeProvider` (follows `useColorScheme`, wraps `PaperProvider`) in `apps/mobile/src/adapters/ui/theme/theme-provider.tsx`, to turn T041 green. If a contrast pair of T041 fails with the colors of `design/material-theme.json`, export the theme again from Material Theme Builder, or use a role of the same scheme that passes and record the choice in [research.md](research.md) R12; never lower the threshold.
 - [ ] T043 [P] Write failing component tests in `apps/mobile/src/adapters/ui/components/screen-state.test.tsx`:
@@ -392,6 +396,10 @@ content matches.
   - without a query: every category ordered by `position`, including empty ones (US2-15);
   - with a query: only articles whose `searchForm(name)` contains `searchForm(query)`, so "pom" finds "Pommes" and "Pommes de terre" and "POM" finds them too, ignoring case and accents (FR-009, US2-10);
   - empty categories are omitted under a query, and no section at all means no match (US2-14);
+  - "oeuf" and "œuf" both find "Œufs" (US2-10);
+  - "mais" finds "Maïs" and "francais" finds "Pain français": the cedilla and diaeresis are ignored like accents (FR-009);
+  - "   " is treated as no query: every category is shown, empty ones included (US2-10, FR-009);
+  - "pommes  de" (double space) finds "Pommes de terre" (FR-009);
   - `onList` and the target-list `quantity` are set for articles already on the list (US2-8);
   - articles are sorted by name with the French collator.
 - [ ] T086 [P] [US2] Write failing domain tests for adding to a list in `apps/mobile/src/domain/list-item.test.ts`:
@@ -411,7 +419,7 @@ content matches.
   - `addArticleToList` and `createArticleAndAddToList` return their `Result`, refresh, and set `notice = { type: 'articleAdded', name }` on success;
   - `changeItemQuantity` refreshes;
   - `removeItem` sets `pendingUndo = { kind: 'removedItem', removed, name }`;
-  - `undo()` clears `pendingUndo`, restores and refreshes; on failure the item stays removed, the offer stays ended (`pendingUndo` is not set again), `notice = writeFailed`, and `{ operation: 'restoreRemovedItem' }` is reported (FR-010, [research.md](research.md) R8);
+  - `undo()` clears `pendingUndo`, restores and refreshes; on failure the item stays removed, the offer stays ended (`pendingUndo` is not set again), `notice = writeFailed`, and `{ operation: 'restoreRemovedItem', screen }` is reported, with the screen shown at that moment (FR-010, [research.md](research.md) R8);
   - `dismissUndo()` clears the offer;
   - any write clears a pending offer first;
   - a new removal replaces the previous offer;
@@ -423,6 +431,8 @@ content matches.
 - [ ] T090 [P] [US2] Write failing tests for `UndoSnackbar` in `apps/mobile/src/adapters/ui/components/undo-snackbar.test.tsx`:
   - `removedItem` shows "« {name} » retiré de la liste" with "Annuler" calling `undo`, and announces that text with "Annuler" as it appears (FR-038);
   - it calls `dismissUndo` after 5 s (Jest fake timers);
+  - with the fake clock advanced 6 s while `AppState` is `background`, returning to `active` calls `dismissUndo` at once (FR-010);
+  - with a screen reader on, an offer 8 s old stays; turning the screen reader off then calls `dismissUndo` at once, while turning it off 2 s after the removal leaves the offer until 5 s have passed (FR-010);
   - with a screen reader on (mocked `AccessibilityInfo`), it does not call `dismissUndo` after 5 s and stays until dismissed or the next write (FR-010);
   - it stays visible across navigation, because it is rendered at the root.
 - [ ] T091 [US2] Write failing tests for `QuantityDialog` in `apps/mobile/src/adapters/ui/screens/quantity-dialog.test.tsx`:
@@ -436,7 +446,7 @@ content matches.
 - [ ] T092 [US2] Write failing screen tests for `AddArticles` in `apps/mobile/src/adapters/ui/screens/add-articles-screen.test.tsx`:
   - Appbar "Ajouter des articles" and the Searchbar placeholder "Rechercher un article";
   - US2-15: an empty category shows "Aucun article dans cette catégorie" with "Créer un article";
-  - US2-10: search results grouped by category;
+  - US2-10: search results grouped by category; typing only spaces shows the full catalog, not the no-match state;
   - US2-14: "Aucun article ne correspond à « xyz »" with "Créer « xyz »";
   - US2-8: the "Déjà dans la liste" mark, and tapping opens already-on-list mode without duplicating;
   - adding keeps the screen open and shows "« {name} » ajouté";
@@ -466,7 +476,7 @@ content matches.
 - [ ] T097 [US2] Implement the use cases in `apps/mobile/src/application/use-cases/` to turn T087 green, per [contracts/driving-ports.md](contracts/driving-ports.md#editing-a-list-user-story-2): `get-catalog.ts`, `add-article-to-list.ts`, `create-article-and-add-to-list.ts`, `change-item-quantity.ts`, `remove-item-from-list.ts`, `restore-removed-item.ts`, `get-categories.ts`. Every write runs in `UnitOfWork.run`. Add them to `UseCases` and to the composition root.
 - [ ] T098 [US2] Add the `catalog` region and the `searchCatalog`, `addArticleToList`, `createArticleAndAddToList`, `changeItemQuantity`, `removeItem`, `undo` and `dismissUndo` actions to `apps/mobile/src/adapters/ui/state/app-store.ts`, to turn T088 green.
 - [ ] T099 [P] [US2] Implement `ArticleRow.tsx`, `QuantityFields.tsx` and `NameField.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T089 green.
-- [ ] T100 [P] [US2] Implement `UndoSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` (no timeout while a screen reader is on, per [contracts/ui-screens.md](contracts/ui-screens.md#undo-offer)) and render it once at the root in `apps/mobile/src/adapters/ui/navigation.tsx`, to turn T090 green.
+- [ ] T100 [P] [US2] Implement `UndoSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` (no timeout while a screen reader is on, per [contracts/ui-screens.md](contracts/ui-screens.md#undo-offer); the deadline is taken from the removal time and checked again on each `AppState` change to `active` and on each screen reader on/off change (`AccessibilityInfo` `screenReaderChanged`)) and render it once at the root in `apps/mobile/src/adapters/ui/navigation.tsx`, to turn T090 green.
 - [ ] T101 [US2] Implement `QuantityDialog.tsx` in `apps/mobile/src/adapters/ui/screens/`, with modes add / already-on-list / edit, parsing through the domain's `parseQuantity`, with the focus moves of FR-037, to turn T091 green.
 - [ ] T102 [US2] Implement `AddArticlesScreen.tsx` in `apps/mobile/src/adapters/ui/screens/` and replace its placeholder in `navigation.tsx`, to turn T092 green.
 - [ ] T103 [US2] Implement `CreateArticleScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`, validating the name through the domain's `validateName` before submitting. The category picker lists categories only; "Nouvelle catégorie" comes with US4. Replace the placeholder in `navigation.tsx`. It turns T093 green.
@@ -583,13 +593,14 @@ validation of [quickstart.md](quickstart.md).
 - [ ] T128 Write the full offline UI scenario in `apps/mobile/src/adapters/ui/offline.test.tsx`: with `global.fetch` replaced by a function that throws, do each of the 12 actions listed under the spec's Success Criteria, in its order: open, tick and untick, finish, add by browsing and by searching, create and add, set, change and clear a quantity, remove, undo, see the lists, create a list, choose the current list, and create a category. Every step succeeds and nothing is reported (Principle VII, FR-027, SC-006). Make it green with no production change; any change it forces gets its own failing test first.
 - [ ] T129 [P] Write a test in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx` that renders a 200-item list through `renderWithStore`, ticks the last item, and checks that only that row re-renders (memoized rows identified by article id, [research.md](research.md) R11, SC-008). If it fails, fix the memoization in `ListItemRow.tsx` and `CurrentListScreen.tsx`.
 - [ ] T130 [P] Extend `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx` to render a ticked row under the dark theme and each contrast variant of T041/T042: the check mark and the struck-through text are present in every theme, not only a color change (FR-035).
-- [ ] T131 [P] Write a test in `apps/mobile/src/adapters/ui/state/error-context.test.ts` that every `report` call made during the US1–US4 store tests carries only the `operation` and `screen` fields, never names or quantities (FR-030, Principle VIII).
+- [ ] T131 [P] Write a test in `apps/mobile/src/adapters/ui/state/error-context.test.ts` that every `report` call made during the US1–US4 store tests carries only the `operation` and `screen` fields, never names or quantities, and that the Sentry adapter's `beforeSend` output for a thrown `Error('Lait')` contains no "Lait" anywhere in the serialized event (FR-030, Principle VIII).
 - [ ] T132 [P] Write accessibility tests in `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx`: every interactive element on the four screens and four dialogs has a French `accessibilityLabel` or a visible French text (FR-032), and every touch target is ≥ 48 dp (FR-034). The focus moves (FR-037) and announcements (FR-038) are driven by the tests of the components that make them: T052, T071, T072, T089, T090, T091, T094, T112 and T121.
 - [ ] T133 Add the build-time Sentry smoke test to `apps/mobile/src/composition/composition-root.ts`: when `EXPO_PUBLIC_SENTRY_SMOKE_TEST=1`, report one test error at startup. Test-first in `apps/mobile/src/composition/composition-root.test.ts`, including that it is ignored when the flag is unset.
 - [ ] T134 [P] Configure the Sentry Expo plugin options (organization, project, source map upload through EAS Build) in `apps/mobile/app.config.ts` and document in `README.md` the EAS environment variables the maintainer sets: the DSN and the build credential, never committed.
-- [ ] T135 Add the measurement seed to `apps/mobile/src/composition/measurement-seed.ts`: when `EXPO_PUBLIC_SEED_ITEMS=<n>` is set at build time, fill an empty store to the spec's data size through the use cases: 1 000 articles spread over the 11 default categories, 20 lists ("Ma liste" and 19 more), and n items on the current list ([research.md](research.md) R11, spec Assumptions). It works in release builds too, so SC-001 and SC-008 can be measured there (like the Sentry smoke test, T133); builds for users never set it. Test-first in `apps/mobile/src/composition/measurement-seed.test.ts`: with `n = 200` the store holds 1 000 articles, 20 lists and 200 items on the current list; ignored when the variable is unset or the store already holds an article.
+- [ ] T135 Add the measurement seed to `apps/mobile/src/composition/measurement-seed.ts`: when `EXPO_PUBLIC_SEED_ITEMS=<n>` is set at build time, fill an empty store to the spec's data size through the use cases: 1 000 articles spread over the 11 default categories, 20 lists ("Ma liste" and 19 more), and n items on the current list ([research.md](research.md) R11, spec Assumptions). It works in release builds too, so SC-001, SC-002 and SC-008 can be measured there (like the Sentry smoke test, T133); builds for users never set it. Test-first in `apps/mobile/src/composition/measurement-seed.test.ts`: with `n = 200` the store holds 1 000 articles, 20 lists and 200 items on the current list; ignored when the variable is unset or the store already holds an article.
 - [ ] T136 Update `README.md` with what the app does, the architecture in one paragraph (hexagonal layers, Zustand store in the UI adapter), how to review screens in Storybook and when to run the iOS journeys (before a release and on pull requests that change native configuration), how to run the device checks of [quickstart.md](quickstart.md), and the build-time flags `EXPO_PUBLIC_SEED_ITEMS` and `EXPO_PUBLIC_SENTRY_SMOKE_TEST`, which builds for users never set.
 - [ ] T137 Run [quickstart.md](quickstart.md) sections 1–7 on an Android device or emulator and on an iOS simulator: every required story reviewed in Storybook in light and dark mode and at 200% text size (§2), every journey green with `yarn test:e2e:android` and `yarn test:e2e:ios` (§3), and the 14 hands-on scenarios (the power cut of step 13 on an Android emulator, the system backup check of step 14 on both platforms once), including airplane mode and TalkBack/VoiceOver over the spec's 12 actions, kill and restart, 200% text, and the 1 000-article release build for 200 items and start time (§5). Record the results, and anything not checked, in the pull request's test plan.
+- [ ] T138 [P] Write the traceability test `apps/mobile/src/traceability.test.ts` (`@jest-environment node`), once T128 is green and every story is done: it reads `specs/001-shopping-lists/spec.md`, collects every FR id (`FR-001` … `FR-040`) and every scenario id (`US1-1` … `US4-5`, skipping any marked "Removed"), then scans every `*.test.ts(x)` of the app, every `tests/e2e/journeys/*.e2e.ts` and `specs/001-shopping-lists/quickstart.md` for those ids, and fails, naming each one, for any id cited nowhere (spec Success Criteria, Principle II). Prove it red first with a throwaway id added to a copy of the spec read from a temporary folder, then point it at the real spec; any id it reports gets its test written first, or its citation added to an existing test name.
 
 ---
 
@@ -606,7 +617,7 @@ validation of [quickstart.md](quickstart.md).
 - **US1 (Phase 3)** and **US2 (Phase 4)**: both start after Foundational. US2's T094 and T104 extend the CurrentList screen built in US1, so finish T079 first.
 - **US3 (Phase 5)**: after Foundational. SC-005's two-tap test (T111) needs the "Mes listes" action of T079.
 - **US4 (Phase 6)**: after US2, because it extends `CreateArticleScreen` (T103).
-- **Polish (Phase 7)**: after the stories it covers. T128 needs all four.
+- **Polish (Phase 7)**: after the stories it covers. T128 needs all four. T138 runs after T128, once every story's tests exist.
 
 ### Within Each User Story
 

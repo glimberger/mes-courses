@@ -89,7 +89,7 @@ A development build is used (not Expo Go) because of the Sentry native module.
 
 Run on a fresh install (uninstall first). Each step names the spec scenarios it covers. Steps
 1, 5, 6, 7 and 8, and the happy path of step 2, are also automated by the Detox journeys; keep them for a manual pass before a
-release. Steps 4, 10, 11, 12, 13 and 14 need a person.
+release. Steps 4, 10, 11, 12, 13 and 14, the timing of step 2 and the background check of step 6, need a person.
 
 1. **First launch** (US3-1, US4-1, US1-10): the app opens on "Ma liste" with the empty state
    "Votre liste est vide". Open "Ajouter": the 11 default categories appear in the spec's order,
@@ -97,7 +97,11 @@ release. Steps 4, 10, 11, 12, 13 and 14 need a person.
 2. **Create and add** (US2-7, US2-2, US2-11, US2-12, US2-13, FR-016, FR-017): create "Lait" in
    Crèmerie with "2" "L"; try an empty name, quantity "0", "abc", "1 000", "+2", "1e3",
    "1,2345", "10000", and a unit with no quantity, and check the French messages. Create
-   "Farine" with "1.50" "kg" and check it shows "1,5 kg".
+   "Farine" with "1.50" "kg" and check it shows "1,5 kg". Then time creating "Pois chiches" in
+   "Épicerie salée" with "400" "g" and adding it (SC-004), from tapping "Ajouter" on the current
+   list until the item shows on it: under 20 seconds, typing included. Do 3 tries, each with a
+   new article ("Pois chiches", then "Lentilles", then "Haricots rouges"), on a reference phone,
+   by the maintainer.
 3. **Search and duplicates** (US2-10, US2-8, US2-9, US2-14): create "Pommes" and
    "Pommes de terre"; search "pom" and "POM"; tap "Lait", check "Déjà dans la liste"; try to
    create " lait " and "Pommes  de  terre" (double spaces): each is refused as already
@@ -105,13 +109,14 @@ release. Steps 4, 10, 11, 12, 13 and 14 need a person.
    adding "Pommes" by browsing takes at most 3 taps, and by searching at most 3 taps and 3
    letters, tapping the search field and "Ajouter" included.
 4. **Airplane mode** (US1-2 to US1-7, US1-5, SC-002, SC-006): turn on airplane mode, go
-   back to the list, tick and untick items. Ticks show at once, ticked items move to the bottom
+   back to the list, tick and untick items. Ticks show at once (timed in step 11), ticked items move to the bottom
    of their category, the remaining count updates, no error appears. Then do each of the 12
    actions listed under the spec's Success Criteria: every one succeeds.
 5. **Persistence** (US1-4, SC-007): with items ticked, kill the app from the app switcher and
    reopen: ticks are kept. Restart the device once and check again.
 6. **Quantity and removal** (US2-3, US2-4, US2-6, US2-16): change "Farine" to "2 kg", clear it,
-   remove a ticked item and tap "Annuler": it is back, ticked, with its quantity.
+   remove a ticked item and tap "Annuler": it is back, ticked, with its quantity. Remove another
+   item, switch to another app for 10 seconds and come back: "Annuler" is gone (FR-010).
 7. **Finish shopping** (US1-8, US1-9): "Terminer les courses" → "Annuler" changes nothing;
    "Terminer" unticks all and keeps all items. With nothing ticked, the action is not offered.
 8. **Several lists** (US3-2 to US3-6, US3-8, US2-5, SC-005): create "Barbecue", try "barbecue"
@@ -124,7 +129,8 @@ release. Steps 4, 10, 11, 12, 13 and 14 need a person.
     do each of the 12 actions listed under the spec's Success Criteria using the screen reader
     only; each row announces e.g. "Lait, 2 L,
     dans le caddie". Remove an item and wait more than 5 s: "Annuler" is still offered until
-    you dismiss it or make another change (FR-010). Open and close a dialog, remove an item and
+    you dismiss it or make another change (FR-010). Remove another item, then turn the screen
+    reader off more than 5 s later: "Annuler" disappears at once. Open and close a dialog, remove an item and
     tick one: focus goes to the dialog, back to its opener, to the next row, and stays on the
     ticked row (FR-037). Snackbars and form errors are read out; the remaining count is not
     (FR-038). Set the system text size to the maximum (200%) and check nothing is cut off
@@ -133,13 +139,19 @@ release. Steps 4, 10, 11, 12, 13 and 14 need a person.
 11. **Long list** (SC-008): build a release with `EXPO_PUBLIC_SEED_ITEMS=200` (the
     composition root then fills an empty store to the spec's data size through the use cases:
     1 000 articles, 20 lists, and 200 items on the current list; builds for users never set
-    it). Open React Native's Perf Monitor, then scroll and tick:
-    55 frames per second or more, and each tick shown at once.
+    it). Record a 10-second scroll with Android's GPU rendering profile
+    (`adb shell dumpsys gfxinfo <package>`) and with Xcode Instruments' Animation Hitches on
+    iOS: at least 55 frames per second on average, and at most 5% of frames dropped (janky).
+    Film 50 ticks and unticks with the phone's slow-motion camera (240 frames per second): at
+    least 48 of them show within 100 ms (24 frames) of the finger touching the screen
+    (SC-002, SC-008).
 12. **Start time** (SC-001): on the release build of step 11, filled to the spec's data size,
-    from tapping the icon to a tickable list takes under 2 seconds.
+    stop the app completely (swipe it away), then time from tapping the icon until a tap on an
+    item ticks it. Repeat 10 times: at least 9 launches are under 2 seconds.
 
 13. **Power cut** (FR-028, SC-007): on an Android emulator running the release build, tick an
-    item, then right after the tick shows, run `adb emu kill` (the emulator stops like a phone
+    item, then about one second after the tick shows (so its save has finished, SC-007), run
+    `adb emu kill` (the emulator stops like a phone
     losing power) and cold boot it: the tick is still there. Repeat once with a removal and with
     "Terminer les courses".
 14. **System backup** (Assumptions, [research.md](research.md) R18b), once before the first
@@ -156,8 +168,8 @@ an entry-level Android phone about five years old, and the maintainer's iPhone.
 ## 6. Error tracking (Principle VIII)
 
 Build a release with `EXPO_PUBLIC_SENTRY_DSN` and `EXPO_PUBLIC_SENTRY_SMOKE_TEST=1` set (the
-composition root then reports one test error at startup), and open it: the event appears in Sentry with a readable stack trace, the app version, platform and
-environment, and no list content. Repeat in airplane mode, then reconnect: the event arrives
+composition root then reports one test error at startup), and open it: the event appears in Sentry with a readable stack trace, the app version, the device model
+and system version and the environment, and no list content and no error message text. Repeat in airplane mode, then reconnect: the event arrives
 after reconnection.
 
 ## 7. Continuous integration

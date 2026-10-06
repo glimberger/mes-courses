@@ -305,7 +305,7 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
   `ErrorReporter` driven port.
   - The Sentry adapter calls `Sentry.init` with `sendDefaultPii: false` and a `beforeSend` /
     `beforeBreadcrumb` that drops breadcrumb messages and request data. Reports carry only the
-    stack trace, release (app version), platform and environment. User-facing text and list
+    fields FR-030 lists (see "Every report filtered" below). User-facing text and list
     content are never attached; the UI adapter reports errors with a fixed, content-free context
     (screen and operation name).
   - Uncaught exceptions and unhandled rejections are captured by the SDK's global handlers.
@@ -326,7 +326,13 @@ for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox
   failing repository call; the original stack is not copied, because a JavaScript stack string
   starts with the original message. The original error is not attached as `cause` either, so
   its text never reaches a report. Every storage failure the UI adapter or the global handlers report is
-  therefore already clean, and the reporter needs no filtering of its own.
+  therefore already clean.
+- **Every report filtered** (FR-030, clarified 2026-10-06): uncaught exceptions and display errors
+  keep their own message, which may quote a value being shown, so the Sentry adapter still
+  filters every event in `beforeSend`. It empties `exception.values[].value` and `message`, and
+  keeps only the fields FR-030 lists: error type, error code, stack trace, operation, screen,
+  app version (release), device model and system version, and environment. Every other context,
+  extra, tag, user field and breadcrumb is removed.
 - **Rationale**: Sentry has first-party React Native and Expo support covering every Principle
   VIII requirement (offline cache, symbolication, release tagging) and a free tier fitting a
   personal app.
