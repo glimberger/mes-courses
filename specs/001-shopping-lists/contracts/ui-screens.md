@@ -53,7 +53,7 @@ CreateCategoryDialog.
 |---|---|
 | Tap a row | Tick or untick immediately (optimistic); on save failure revert, snackbar "La modification n'a pas pu être enregistrée.", report. (US1-2, US1-3) |
 | Row action "Modifier la quantité" | Opens QuantityDialog prefilled. |
-| Row action "Retirer de la liste" | Removes at once; snackbar "« {name} » retiré de la liste" with action "Annuler" for 5 s (US2-6, US2-16). |
+| Row action "Retirer de la liste" | Removes at once; snackbar "« {name} » retiré de la liste" with action "Annuler" (US2-6, US2-16), offered per [Undo offer](#undo-offer). |
 | Appbar action "Terminer les courses" | Shown only when `hasItemsInCart`. Opens FinishShoppingDialog (US1-8, US1-9). |
 | Appbar action "Mes listes" | Opens Lists (SC-005: 2 taps with the list choice). |
 | FAB "Ajouter" | Opens AddArticles. |
@@ -73,11 +73,14 @@ Appbar title "Ajouter des articles", `Searchbar` with placeholder "Rechercher un
 
 | State | Shown |
 |---|---|
-| loading | `LoadingState` |
-| error | "Impossible de charger les articles." + "Réessayer"; reported |
+| loading | `LoadingState` (US2-17) |
+| error | "Impossible de charger les articles." + "Réessayer"; reported (US2-18) |
 | success, no query | Every category as a section (US2-15 for empty ones: "Aucun article dans cette catégorie" + "Créer un article") |
 | success, query, matches | Matching articles grouped by category (US2-10) |
 | empty, query, no match | "Aucun article ne correspond à « {query} »" + "Créer « {query} »" (US2-14) |
+
+Search filters the catalog already loaded on this screen, so it has no loading or error state of
+its own (FR-029).
 
 | Action | Behavior |
 |---|---|
@@ -146,6 +149,19 @@ Row accessibility: "{name}, {n} articles[, liste actuelle]".
 Title "Nouvelle liste", `NameField`, buttons "Annuler" / "Créer".
 `NameAlreadyUsed` → "Une liste porte déjà ce nom." (US3-5); `NameRequired` → "Indiquez un nom."
 (US3-6).
+
+## Undo offer
+
+The `UndoSnackbar` is rendered once at the app root from the store's `pendingUndo`, so moving
+between screens does not end the offer (FR-010):
+
+- it is dismissed after 5 s, unless a screen reader is on: then it stays until the user
+  dismisses it or makes another change;
+- any other write, including a new removal or a change of the current list, ends the offer
+  first, so only the last removal can be undone;
+- it is never stored, so closing the app ends it.
+
+A removal whose offer has ended is final.
 
 ## Unexpected write failures (edge case "storage fails")
 
