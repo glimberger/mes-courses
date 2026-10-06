@@ -210,13 +210,25 @@ CI run, without the version skew of separate repositories.
 
 ## Quality Gates
 
+The test suite has two parts:
+
+- the **fast suite**: every test that runs without a device, emulator or simulator (domain,
+  application, adapter, architecture, UI and story tests). Principle III applies to it in full;
+- the **device suite**: the end-to-end journeys that drive a built application on an Android
+  emulator or an iOS simulator. Its tests follow Principles II and III as far as a device
+  allows: no fixed waits, no retries, each journey independent of the others.
+
 Before any commit:
 
-- The whole test suite is green; no test is skipped or disabled without a linked, documented reason.
+- The fast suite is green; no test is skipped or disabled without a linked, documented reason.
 - The project's linter and formatter run clean.
 - New or changed behavior is covered by tests written before the code (Principle I).
 - New or changed behavior works with no network available and with the server unreachable
   (Principle VII).
+
+Before pushing a branch:
+
+- The device suite is green on Android.
 
 Before merging a pull request:
 
@@ -227,9 +239,14 @@ Before merging a pull request:
 Continuous integration is blocking for every pull request:
 
 - CI runs on every pull request and on every push to the default branch. It runs at least the
-  full test suite (including the architecture test of Principle VI and the offline tests of
-  Principle VII), the linter, a formatter check and the build, for every workspace of the
-  monorepo (Principle XI).
+  fast suite (including the architecture test of Principle VI and the offline tests of
+  Principle VII), the device suite on Android, the linter, a formatter check and the build, for
+  every workspace of the monorepo (Principle XI).
+- The device suite on iOS runs on the maintainer's Mac, not in CI, because macOS runners cost
+  ten times the Linux rate on a private repository. It MUST be green before each release and
+  before merging any pull request that changes native configuration (the app configuration,
+  config plugins or native dependencies); that pull request's test plan records the run. If
+  the repository becomes public, where macOS runners are free, the iOS device suite joins CI.
 - Every change to the default branch goes through a pull request; no one pushes to it
   directly.
 - A pull request MUST NOT be merged while any CI job is failing, pending or skipped. The
@@ -273,4 +290,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 2.1.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-06
+**Version**: 2.1.1 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-06

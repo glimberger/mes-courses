@@ -72,7 +72,7 @@ No NEEDS CLARIFICATION remains.
 | IX | Explicit screen states | Store regions are `ScreenState` unions rendered by the shared state components; `EditArticle` reads already-loaded data, and its save outcomes are tested and have stories. No synchronization status yet: no data is synchronized until the sync feature (R7), which adds it to every data screen. | ✅ (sync status deferred with VII) |
 | X | French interface, no i18n | Text only in UI components ([contracts/ui-screens.md](contracts/ui-screens.md)); store and use cases return typed results and notices. | ✅ |
 | XI | Single repository (monorepo) | Everything stays in the `apps/mobile/` workspace of 001; no new workspace or shared package. The new dependency-cruiser rules go in the root config. | ✅ |
-| QG | Quality gates and CI | Same CI jobs as 001, `e2e-android` included; architecture test gains the `zustand` rules. 001's Quality Gates deviation (iOS journeys and the device suite outside the per-commit gate) applies unchanged. "Works with the server unreachable" holds trivially: no code path reaches a server. | ✅ |
+| QG | Quality gates and CI | Same CI jobs as 001, `e2e-android` included; architecture test gains the `zustand` rules. The device suite follows the gates of constitution v2.1.1, as in 001. "Works with the server unreachable" holds trivially: no code path reaches a server. | ✅ |
 | WF | Development workflow | The spec states offline behavior (FR-010) but not synchronization or reconciliation; deferred with VII (R7). | ⚠️ deviation |
 
 **Gate result before research**: one deviation, Principle VII (and the matching workflow rule):
