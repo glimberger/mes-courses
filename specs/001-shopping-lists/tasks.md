@@ -136,7 +136,7 @@ quality gate, Storybook, the Detox workspace and CI in place before any applicat
   - on failure, upload `tests/e2e/artifacts/` with `actions/upload-artifact`.
 
   Open the setup pull request and check `e2e-android` runs green with the other jobs. Then, on a throwaway pull request that changes only a Markdown file, check that `e2e-android` shows as skipped while every other job runs, and close it without merging.
-- [ ] T017 Replace the "Install, run and test" section of `README.md` with the repository layout (`apps/mobile/`, `tests/e2e/`, later `apps/server/` and `packages/`), the prerequisites (Nix with flakes enabled, optionally `direnv` with `nix-direnv`; Android Studio or Xcode for device builds; for the journeys an emulator named `Pixel_API_35` or `DETOX_AVD_NAME`, a JDK 17, and `applesimutils` on macOS), `yarn storybook` from `apps/mobile/` on a development build, `yarn test:e2e:android` and `yarn test:e2e:ios`, entering the dev shell (`direnv allow` or `nix develop`), `yarn install` at the root, the check commands, `yarn expo run:android` / `run:ios` from `apps/mobile/` with a development build, the optional `EXPO_PUBLIC_SENTRY_DSN`, and the merge rule: `gh pr checks` must be all green before merging.
+- [ ] T017 Replace the "Install, run and test" section of `README.md` with the repository layout (`apps/mobile/`, `tests/e2e/`, later `apps/server/` and `packages/`), the prerequisites (Nix with flakes enabled, optionally `direnv` with `nix-direnv`; Android Studio or Xcode for device builds; for the journeys an emulator named `Pixel_API_35` or `DETOX_AVD_NAME`, a JDK 17, and `applesimutils` on macOS), `yarn storybook` from `apps/mobile/` on a development build, `yarn test:e2e:android` and `yarn test:e2e:ios`, entering the dev shell (`direnv allow` or `nix develop`), `yarn install` at the root, the check commands, `yarn expo run:android` / `run:ios` from `apps/mobile/` with a development build, the optional `EXPO_PUBLIC_SENTRY_DSN`, and the merge rule: `gh pr checks` must be all green before merging, none failing, pending or skipped, except `e2e-android` skipped on a pull request that changes only documentation (`specs/`, `.specify/`, Markdown files), and when a branch needs `yarn test:e2e:android` before it is pushed (the same rule, `.github/scripts/app-changed.sh`; constitution v2.2.0).
 
 **Checkpoint**: `yarn typecheck && yarn lint && yarn format:check && yarn test && yarn test:architecture && yarn build` is green locally from the root, `yarn test:e2e:android` (and `yarn test:e2e:ios` on a Mac) runs the launch journey green, `yarn storybook` opens Storybook on a development build, and CI is green on the setup pull request, `e2e-android` included.
 
@@ -734,7 +734,7 @@ Task: "T090 UndoSnackbar tests in apps/mobile/src/adapters/ui/components/undo-sn
 5. Polish → full offline scenario, dev hooks, README, device validation.
 
 Each increment is one or more pull requests, merged only when `gh pr checks` is all green
-(constitution, Quality Gates).
+(constitution v2.2.0, Quality Gates); application pull requests always run `e2e-android`.
 
 ### Handover to 002
 
