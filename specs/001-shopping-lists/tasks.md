@@ -155,9 +155,9 @@ story depends on them.
 
 ### Domain foundations
 
-- [ ] T018 [P] Write failing tests for `Result` helpers (`ok`, `err`, type narrowing on `ok`) in `apps/mobile/src/domain/result.test.ts`.
-- [ ] T019 [P] Implement `type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }` with `ok()` / `err()` in `apps/mobile/src/domain/result.ts` to turn T018 green.
-- [ ] T020 [P] Write failing tests for name rules in `apps/mobile/src/domain/name.test.ts`, per [data-model.md](data-model.md#name-articles-categories-lists):
+- [X] T018 [P] Write failing tests for `Result` helpers (`ok`, `err`, type narrowing on `ok`) in `apps/mobile/src/domain/result.test.ts`.
+- [X] T019 [P] Implement `type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }` with `ok()` / `err()` in `apps/mobile/src/domain/result.ts` to turn T018 green.
+- [X] T020 [P] Write failing tests for name rules in `apps/mobile/src/domain/name.test.ts`, per [data-model.md](data-model.md#name-articles-categories-lists):
   - `cleanName(text) = text.normalize('NFC').trim().replace(/\s+/gu, ' ')`: "  Pommes \t de   terre " → "Pommes de terre", and "e" followed by U+0301 (combining acute accent) becomes the single character "é" (FR-021, FR-022);
   - `validateName` returns the clean name;
   - `compareNames` orders with `Intl.Collator('fr', { sensitivity: 'base', numeric: true })`: "Lait 2 L" before "Lait 10 L", "Éclairs" between "Eau" and "Farine" (Assumptions);
@@ -166,8 +166,8 @@ story depends on them.
   - `NameTooLong` above "At most 60 characters after cleaning, counted in Unicode code points", and 60 characters accepted; the length is `[...name].length`, so 60 emoji are accepted (120 UTF-16 units) and 30 decomposed "é" count as 30 after cleaning;
   - `normalizedName(name)` is `cleanName(name).toLocaleLowerCase('fr')` with "œ" → "oe", "æ" → "ae" and "’" → "'", accents kept, so "Pâte" ≠ "Pâté", while " beurre ", "BEURRE", "Pommes  de terre" and a decomposed "Crème" each equal the normalized form of "Beurre", "Pommes de terre" and "Crème", "Oeufs" equals "Œufs", "Caesar" equals "Cæsar" and "Pâte d'amande" equals "Pâte d’amande" (FR-021);
   - `searchForm` removes diacritics (`NFD`, combining marks removed) from the normalized name, so "Épicerie" → "epicerie", "Œufs" → "oeufs", "Cæsar" → "caesar" and "d’amande" → "d'amande" (FR-009).
-- [ ] T021 Implement `cleanName`, `validateName`, `normalizedName`, `searchForm`, `compareNames` and the `NameError` union (`NameRequired | NameTooLong`) in `apps/mobile/src/domain/name.ts` to turn T020 green.
-- [ ] T022 [P] Write failing tests for `parseQuantity(amountText, unitText)` in `apps/mobile/src/domain/quantity.test.ts`, per [data-model.md](data-model.md#quantity-value-object):
+- [X] T021 Implement `cleanName`, `validateName`, `normalizedName`, `searchForm`, `compareNames` and the `NameError` union (`NameRequired | NameTooLong`) in `apps/mobile/src/domain/name.ts` to turn T020 green.
+- [X] T022 [P] Write failing tests for `parseQuantity(amountText, unitText)` in `apps/mobile/src/domain/quantity.test.ts`, per [data-model.md](data-model.md#quantity-value-object):
   - both blank → `null` (no quantity);
   - "1,5" and "1.5" → amount 1.5; "6", "0,125" and "9999" accepted; "007" → amount 7;
   - unit cleaned like a name (`cleanName`): " paquets  de 6 " → "paquets de 6"; a unit empty after cleaning becomes `null`, with no error; the 15-character limit counts the cleaned unit (FR-022);
@@ -178,8 +178,8 @@ story depends on them.
   - errors come in the order of [data-model.md](data-model.md#quantity-value-object): "-1,2345" → `AmountNotPositive`;
   - unit with no amount → `UnitWithoutAmount` (US2-13);
   - unit above "at most 15 characters" → `UnitTooLong`.
-- [ ] T023 Implement the `Quantity` value object `{ amount: number; unit: string | null }`, `parseQuantity` and the `QuantityError` union (`AmountNotANumber | AmountNotPositive | AmountTooPrecise | AmountTooLarge | UnitWithoutAmount | UnitTooLong`) in `apps/mobile/src/domain/quantity.ts` to turn T022 green.
-- [ ] T024 [P] Define the entity types and branded ids in `apps/mobile/src/domain/category.ts` (`Category { id, name, position }`), `apps/mobile/src/domain/article.ts` (`Article { id, name, categoryId }`), `apps/mobile/src/domain/shopping-list.ts` (`ShoppingList { id, name }`) and `apps/mobile/src/domain/list-item.ts` (`ListItem { listId, articleId, inCart, quantity: Quantity | null }`). They are types only, with no behavior and so no test yet; behavior arrives test-first in the story phases.
+- [X] T023 Implement the `Quantity` value object `{ amount: number; unit: string | null }`, `parseQuantity` and the `QuantityError` union (`AmountNotANumber | AmountNotPositive | AmountTooPrecise | AmountTooLarge | UnitWithoutAmount | UnitTooLong`) in `apps/mobile/src/domain/quantity.ts` to turn T022 green.
+- [X] T024 [P] Define the entity types and branded ids in `apps/mobile/src/domain/category.ts` (`Category { id, name, position }`), `apps/mobile/src/domain/article.ts` (`Article { id, name, categoryId }`), `apps/mobile/src/domain/shopping-list.ts` (`ShoppingList { id, name }`) and `apps/mobile/src/domain/list-item.ts` (`ListItem { listId, articleId, inCart, quantity: Quantity | null }`). They are types only, with no behavior and so no test yet; behavior arrives test-first in the story phases.
 
 ### Ports and test doubles
 
