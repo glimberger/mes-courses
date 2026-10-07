@@ -19,7 +19,7 @@ export const AppStoreProvider = ({
 export const useAppStoreApi = (): AppStore => {
   const store = useContext(AppStoreContext);
   if (store === null) {
-    throw new Error('useAppStore must be used inside an AppStoreProvider');
+    throw new Error('App store hooks must be used inside an AppStoreProvider');
   }
   return store;
 };

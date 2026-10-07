@@ -71,7 +71,7 @@ describe('useAppStore', () => {
       .mockImplementation(() => {});
 
     expect(() => render(<Orphan />)).toThrow(
-      'useAppStore must be used inside an AppStoreProvider',
+      'App store hooks must be used inside an AppStoreProvider',
     );
     consoleError.mockRestore();
   });
