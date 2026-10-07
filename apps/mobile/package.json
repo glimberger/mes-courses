@@ -36,6 +36,7 @@
     "@types/node": "^24",
     "@types/react": "~19.2.2",
     "@types/react-test-renderer": "^19",
+    "expo-detox-config-plugin": "^13.0.0",
     "jest": "^30",
     "jest-expo": "~57.0.5",
     "react-test-renderer": "19.2.3",
@@ -43,8 +44,8 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "test": "jest",
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit",

@@ -1,5 +1,9 @@
 import type { ExpoConfig } from 'expo/config';
 
+// Detox's native changes (test runner, cleartext traffic to the emulator host) go only into
+// builds made for the end-to-end tests (research R23, R25).
+const detoxBuild = process.env.DETOX_BUILD === '1';
+
 const config: ExpoConfig = {
   name: 'Mes courses',
   slug: 'mes-courses',
@@ -8,10 +12,17 @@ const config: ExpoConfig = {
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
   ios: {
+    // Store identity: permanent once the app is first uploaded to a store.
+    bundleIdentifier: 'com.glimberger.mescourses',
     supportsTablet: true,
   },
-  plugins: ['expo-sqlite', '@sentry/react-native/expo'],
+  plugins: [
+    'expo-sqlite',
+    '@sentry/react-native/expo',
+    ...(detoxBuild ? ['expo-detox-config-plugin'] : []),
+  ],
   android: {
+    package: 'com.glimberger.mescourses',
     // The system backup keeps the data (research R18b): no backup rule excludes the database.
     allowBackup: true,
     // FR-041: no permission of its own; INTERNET stays because React Native declares it.

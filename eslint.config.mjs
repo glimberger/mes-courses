@@ -74,7 +74,7 @@ export default tseslint.config(
   },
   {
     // CommonJS tool configuration files.
-    files: ['**/*.cjs', '**/*.config.js'],
+    files: ['**/*.cjs', '**/*.config.js', '**/.detoxrc.js'],
     languageOptions: { globals: globals.node },
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
