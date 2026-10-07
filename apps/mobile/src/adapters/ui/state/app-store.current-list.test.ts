@@ -108,7 +108,7 @@ const buildStore = async (
     built.unitOfWork.run(
       async (repos) => (await repos.items.find(maListe, articleId))?.inCart,
     );
-  return { store, errorReporter, calls, stored };
+  return { store, errorReporter, calls, stored, unitOfWork: built.unitOfWork };
 };
 
 /** A store whose `toggleItemInCart` calls wait for the test, with the current list loaded. */
@@ -409,6 +409,29 @@ describe('the current list in the store', () => {
       expect(errorReporter.reports).toEqual([]);
     });
 
+    it('R9 shows a tap still queued on its own list only, not on the list made current after it', async () => {
+      const barbecue = 'list-barbecue' as ListId;
+      const { store, held, unitOfWork } = await buildHeldStore({
+        ...nothingInCart,
+        lists: [...nothingInCart.lists, { id: barbecue, name: 'Barbecue' }],
+        items: [
+          ...nothingInCart.items,
+          { listId: barbecue, articleId: lait, inCart: false, quantity: null },
+        ],
+      });
+
+      void store.getState().toggleItem(lait);
+      await settle();
+      expect(held.calls).toHaveLength(1);
+      await unitOfWork.run((repos) =>
+        repos.appState.setCurrentListId(barbecue),
+      );
+      await store.getState().loadCurrentList();
+
+      expect(view(store).list.name).toBe('Barbecue');
+      expect(shownInCart(store, lait)).toBe(false);
+    });
+
     it('FR-030 handles ItemNotOnList like a failed save, reported as an UnexpectedResult', async () => {
       const { store, errorReporter } = await buildStore(nothingInCart, () => ({
         toggleItemInCart: async () => err({ type: 'ItemNotOnList' as const }),
@@ -433,6 +456,15 @@ describe('the current list in the store', () => {
   });
 
   describe('finishShopping', () => {
+    it('saves nothing and does not succeed when no list is shown', async () => {
+      const { store, calls } = await buildStore(nothingInCart);
+
+      const outcome = await store.getState().finishShopping();
+
+      expect(outcome).toEqual(err({ type: 'WriteFailed' }));
+      expect(calls).toEqual([]);
+    });
+
     it('US1-8 takes every item out of the cart and shows the list reloaded', async () => {
       const { store, held, stored } = await buildHeldStore();
       void store.getState().toggleItem(lait);

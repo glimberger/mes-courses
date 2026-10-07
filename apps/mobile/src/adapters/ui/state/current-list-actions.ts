@@ -3,7 +3,7 @@ import {
   summarizeSections,
   type CurrentListView,
 } from '../../../domain/current-list-view';
-import { err, ok, type Result } from '../../../domain/result';
+import { err, type Result } from '../../../domain/result';
 import type { ListId } from '../../../domain/shopping-list';
 import type { StoreCore, StoreKit, WriteFailed } from './store-kit';
 
@@ -57,14 +57,20 @@ export const createCurrentListActions = ({
   runWrite,
   region,
 }: StoreKit): CurrentListActions => {
-  // Per item, the toggles tapped and not saved yet. A view read from storage is shown with the
-  // items whose count is odd flipped, so a reload never undoes a tick still waiting in the queue.
-  const unsaved = new Map<ArticleId, number>();
-  // Per item, bumped when a save fails: the toggles tapped before it are then dropped.
-  const generations = new Map<ArticleId, number>();
+  // Per item of a list, its taps not saved yet. A view read from storage is shown with the items
+  // whose count is odd flipped, so a reload never undoes a tick still waiting in the queue. A
+  // queued tap holds its entry: once a save of the item fails the entry is dropped, and the taps
+  // still queued with it are not saved. An entry goes once its count is back to 0.
+  const unsaved = new Map<string, { count: number }>();
+  const itemRef = (listId: ListId, articleId: ArticleId) =>
+    JSON.stringify([listId, articleId]);
 
   const withUnsaved = (view: CurrentListView): CurrentListView =>
-    flipItems(view, (articleId) => (unsaved.get(articleId) ?? 0) % 2 === 1);
+    flipItems(
+      view,
+      (articleId) =>
+        (unsaved.get(itemRef(view.list.id, articleId))?.count ?? 0) % 2 === 1,
+    );
 
   const loadCurrentList = region('currentList', 'getCurrentList', async () => {
     const view = await useCases.getCurrentList();
@@ -74,7 +80,6 @@ export const createCurrentListActions = ({
   });
 
   const showToggled = (articleId: ArticleId) => {
-    unsaved.set(articleId, (unsaved.get(articleId) ?? 0) + 1);
     const shown = get().currentList;
     if (shown.status !== 'success') return;
     set({
@@ -85,16 +90,13 @@ export const createCurrentListActions = ({
     });
   };
 
-  /** Forgets the item's unsaved toggles and drops those still queued. */
-  const dropUnsaved = (articleId: ArticleId) => {
-    unsaved.delete(articleId);
-    generations.set(articleId, (generations.get(articleId) ?? 0) + 1);
-  };
-
   const toggleItem = async (articleId: ArticleId) => {
     const listId = shownListId(get().currentList);
     if (listId === null) return;
-    const generation = generations.get(articleId) ?? 0;
+    const ref = itemRef(listId, articleId);
+    const taps = unsaved.get(ref) ?? { count: 0 };
+    taps.count += 1;
+    unsaved.set(ref, taps);
     showToggled(articleId);
 
     const outcome = await runWrite<
@@ -103,22 +105,15 @@ export const createCurrentListActions = ({
     >(
       'toggleItemInCart',
       async () => {
-        if ((generations.get(articleId) ?? 0) !== generation) {
-          return err({ type: 'Dropped' });
-        }
+        if (unsaved.get(ref) !== taps) return err({ type: 'Dropped' });
         // The item's state is settled here, before the next write of the queue starts.
         try {
           const saved = await useCases.toggleItemInCart(listId, articleId);
-          if (saved.ok) {
-            const left = (unsaved.get(articleId) ?? 1) - 1;
-            if (left > 0) unsaved.set(articleId, left);
-            else unsaved.delete(articleId);
-          } else {
-            dropUnsaved(articleId);
-          }
+          taps.count -= 1;
+          if (!saved.ok || taps.count === 0) unsaved.delete(ref);
           return saved;
         } catch (error) {
-          dropUnsaved(articleId);
+          unsaved.delete(ref);
           throw error;
         }
       },
@@ -132,7 +127,8 @@ export const createCurrentListActions = ({
 
   const finishShopping = async (): Promise<Result<void, WriteFailed>> => {
     const listId = shownListId(get().currentList);
-    if (listId === null) return ok(undefined);
+    // Not offered without a list shown: nothing is saved, so nothing succeeds.
+    if (listId === null) return err({ type: 'WriteFailed' });
     return runWrite('finishShopping', () => useCases.finishShopping(listId));
   };
 
