@@ -52,7 +52,16 @@ export class NodeSqlDatabase implements SqlDatabase {
     }
   }
 
+  get isOpen(): boolean {
+    return this.db.isOpen;
+  }
+
   close(): void {
     this.db.close();
+  }
+
+  /** expo-sqlite's name for `close`, called by the adapter's own code. */
+  async closeAsync(): Promise<void> {
+    this.close();
   }
 }

@@ -1,26 +1,11 @@
-import type { ReactElement } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { ReactElement, ReactNode } from 'react';
 import { render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import type { UnitOfWork } from '../../../application/ports/unit-of-work';
-import {
-  InMemoryRepositories,
-  InMemoryUnitOfWork,
-} from '../../../application/testing/in-memory-repositories';
-import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
-import { SequentialIdGenerator } from '../../../application/testing/sequential-id-generator';
-import {
-  createInitializeStore,
-  type Seed,
-} from '../../../application/use-cases/initialize-store';
-import { createAppStore } from '../state/app-store';
 import { AppStoreProvider } from '../state/app-store-provider';
 import { ThemeProvider } from '../theme/theme-provider';
-import type { UseCases } from '../use-cases';
-
-const Stack = createNativeStackNavigator();
+import { AsScreen } from './as-screen';
+import { buildStoryStore, type StoryScenario } from './story-store';
 
 // Jest has no window to measure: a phone-sized frame with no insets.
 const metrics = {
@@ -29,39 +14,26 @@ const metrics = {
 };
 
 /**
- * Renders `ui` as the only screen of a navigator, under the theme and a fresh store whose use
- * cases run on new in-memory fakes, holding `seed` when one is given.
+ * Renders `ui` under the theme and a store built from the scenario as stories build theirs
+ * (`buildStoryStore`), on fresh in-memory fakes. `ui` is the only screen of a navigator, unless
+ * `asScreen` is false for an element that brings its own navigation container. The providers
+ * are RTL's `wrapper`, so `rerender` keeps them.
  */
 export const renderWithStore = async (
   ui: ReactElement,
-  { seed }: { seed?: Seed } = {},
+  { asScreen = true, ...scenario }: StoryScenario & { asScreen?: boolean } = {},
 ) => {
-  const unitOfWork: UnitOfWork = new InMemoryUnitOfWork(
-    new InMemoryRepositories(),
-  );
-  const useCases: UseCases = {
-    initializeStore: createInitializeStore({
-      unitOfWork,
-      ids: new SequentialIdGenerator(),
-    }),
-  };
-  if (seed) await useCases.initializeStore(seed);
-  const errorReporter = new RecordingErrorReporter();
-  const store = createAppStore({ useCases, errorReporter });
-  const Screen = () => ui;
+  const built = await buildStoryStore(scenario);
 
-  const result = render(
+  const Providers = ({ children }: { children: ReactNode }) => (
     <ThemeProvider>
-      <AppStoreProvider store={store}>
+      <AppStoreProvider store={built.store}>
         <SafeAreaProvider initialMetrics={metrics}>
-          <NavigationContainer>
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="Test" component={Screen} />
-            </Stack.Navigator>
-          </NavigationContainer>
+          {asScreen ? <AsScreen>{children}</AsScreen> : children}
         </SafeAreaProvider>
       </AppStoreProvider>
-    </ThemeProvider>,
+    </ThemeProvider>
   );
-  return { ...result, store, errorReporter, unitOfWork };
+  const result = render(ui, { wrapper: Providers });
+  return { ...result, ...built };
 };

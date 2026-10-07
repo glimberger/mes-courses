@@ -302,6 +302,18 @@ describe('createSentryErrorReporter', () => {
     expect(sent?.tags).toEqual({ operation: 'uncaught', screen: 'Lists' });
   });
 
+  it('FR-030 removes the global screen tag on clearScreen, so a later event carries no screen', () => {
+    const { reporter, beforeSend } = start();
+    reporter.setScreen('Lists');
+
+    reporter.clearScreen();
+
+    expect(setTag).toHaveBeenLastCalledWith('screen', undefined);
+    expect(beforeSend(withoutTags(event()))?.tags).toEqual({
+      operation: 'uncaught',
+    });
+  });
+
   it('report with no screen keeps the global screen tag', () => {
     const { reporter, beforeSend } = start();
     reporter.setScreen('Lists');
@@ -463,7 +475,7 @@ describe('createSentryErrorReporter', () => {
     expect(Sentry.nativeCrash).toHaveBeenCalledTimes(1);
   });
 
-  it('report and setScreen never throw, even when the SDK throws', () => {
+  it('report, setScreen and clearScreen never throw, even when the SDK throws', () => {
     const { reporter } = start();
     captureException.mockImplementation(() => {
       throw new Error('SDK failure');
@@ -476,5 +488,6 @@ describe('createSentryErrorReporter', () => {
       reporter.report(new Error('boom'), { operation: 'createList' }),
     ).not.toThrow();
     expect(() => reporter.setScreen('Lists')).not.toThrow();
+    expect(() => reporter.clearScreen()).not.toThrow();
   });
 });

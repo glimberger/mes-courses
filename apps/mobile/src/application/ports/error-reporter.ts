@@ -6,6 +6,8 @@ export interface ErrorReporter {
   report(error: unknown, context: ErrorContext): void;
   /** Records the route shown, carried by later reports that name no screen. */
   setScreen(screen: string): void;
+  /** Forgets the route recorded: later reports that name no screen carry none, until `setScreen`. */
+  clearScreen(): void;
   /** Crashes the app in native code; used only by the smoke test of a release build. */
   crashNatively(): void;
 }

@@ -103,6 +103,7 @@ Production: `expo-crypto` `randomUUID()`. Tests: sequential fake (`"id-1"`, `"id
 interface ErrorReporter {
   report(error: unknown, context: { operation: string; screen?: string }): void;
   setScreen(screen: string): void;
+  clearScreen(): void;
   crashNatively(): void;
 }
 ```
@@ -116,6 +117,9 @@ interface ErrorReporter {
   A report whose context has no `screen`, and every error the global handlers catch (operation
   `uncaught`), carries the last screen recorded, which the Sentry adapter keeps as a global tag
   so native crashes carry it too ([../research.md](../research.md) R13).
+- `clearScreen` forgets the route recorded and removes the global tag: "Réessayer" calls it, so
+  a failure of the next start carries no screen, as on a first launch, and not the screen of
+  the app that crashed (FR-039a).
 
 - `context` holds only fixed technical identifiers (for example `{ operation: 'toggleItemInCart',
   screen: 'CurrentList' }`), never names, quantities or other list content (Principle VIII).
@@ -141,7 +145,7 @@ interface ErrorReporter {
 - The Sentry adapter sets each event's fingerprint to the FR-030 key
   (`type | code | operation | screen`), so one kind of failure is one Sentry issue, which the
   email alerts of FR-030c rely on (R13).
-- `report` and `setScreen` never throw and never block.
+- `report`, `setScreen` and `clearScreen` never throw and never block.
 - Production: Sentry adapter (`apps/mobile/src/adapters/error-reporting/sentry-error-reporter.ts`), or a
   console reporter when `EXPO_PUBLIC_SENTRY_DSN` is unset. Tests: `RecordingErrorReporter`, which
   keeps reports in memory so tests can assert them.

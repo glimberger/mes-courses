@@ -6,9 +6,7 @@ describe('launch', () => {
     await device.launchApp({ delete: true, newInstance: true });
   });
 
-  it('shows the text of the scaffold screen', async () => {
-    await expect(
-      element(by.text('Open up App.tsx to start working on your app!')),
-    ).toBeVisible();
+  it('starts on the placeholder of the current list', async () => {
+    await expect(element(by.text('Liste en cours'))).toBeVisible();
   });
 });

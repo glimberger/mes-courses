@@ -42,6 +42,21 @@ describe('ConsoleErrorReporter', () => {
     );
   });
 
+  it('prints no screen with a report that names none once the screen is cleared', () => {
+    const reporter = new ConsoleErrorReporter();
+    const error = new Error('boom');
+    reporter.setScreen('Lists');
+    reporter.clearScreen();
+
+    reporter.report(error, { operation: 'startup' });
+
+    expect(print).toHaveBeenCalledWith(
+      'Error report',
+      { operation: 'startup', screen: undefined },
+      error,
+    );
+  });
+
   it('setScreen only remembers the screen and prints nothing', () => {
     new ConsoleErrorReporter().setScreen('Lists');
 

@@ -22,6 +22,10 @@ export class ConsoleErrorReporter implements ErrorReporter {
     this.screen = screen;
   }
 
+  clearScreen(): void {
+    this.screen = undefined;
+  }
+
   crashNatively(): void {
     console.error('Native crash requested: no crash without Sentry');
   }

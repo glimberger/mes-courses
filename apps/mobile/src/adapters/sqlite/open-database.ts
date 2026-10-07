@@ -1,5 +1,6 @@
 import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
 
+import { closeOnFailure } from './close-on-failure';
 import { prepareDatabase } from './prepare-database';
 import { withStorageErrors } from './storage-error';
 
@@ -12,12 +13,6 @@ export const DATABASE_NAME = 'mes-courses.db';
  */
 export const openDatabase = async (): Promise<SQLiteDatabase> => {
   const db = await withStorageErrors(() => openDatabaseAsync(DATABASE_NAME));
-  try {
-    await prepareDatabase(db);
-    return db;
-  } catch (error) {
-    // The failure to report is the first one, not a failure to close.
-    await db.closeAsync().catch(() => undefined);
-    throw error;
-  }
+  await closeOnFailure(db, () => prepareDatabase(db));
+  return db;
 };
