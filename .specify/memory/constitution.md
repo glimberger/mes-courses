@@ -247,10 +247,15 @@ Continuous integration is blocking for every pull request:
 
 - CI runs on every pull request and on every push to the default branch. It runs at least the
   fast suite (including the architecture test of Principle VI and the offline tests of
-  Principle VII), the device suite on Android, the linter, a formatter check and the build, for
-  every workspace of the monorepo (Principle XI). The fast suite, the linter, the formatter
-  check and the build run on every pull request; the Android device suite job may be skipped
-  on a documentation-only pull request, by a path rule declared in the workflow itself.
+  Principle VII), the linter, a formatter check and the build, for every workspace of the
+  monorepo (Principle XI), automatically on every pull request.
+- The device suite on Android runs in CI automatically on every push to the default branch,
+  and on demand on a pull request branch, started by hand (a manually dispatched workflow run
+  on the branch). It does not start on its own on every push to a pull request: it takes about
+  thirty minutes, and one run on the pull request's final commit gives the same guarantee
+  before merging at a fraction of the cost on a private repository.
+- Whether a change is documentation-only is decided by one path rule declared in the
+  repository (`.github/scripts/app-changed.sh`), used both locally and before merging.
 - The device suite on iOS runs on the maintainer's Mac, not in CI, because macOS runners cost
   ten times the Linux rate on a private repository. It MUST be green before each release and
   before merging any pull request that changes native configuration (the app configuration,
@@ -258,12 +263,13 @@ Continuous integration is blocking for every pull request:
   the repository becomes public, where macOS runners are free, the iOS device suite joins CI.
 - Every change to the default branch goes through a pull request; no one pushes to it
   directly.
-- A pull request MUST NOT be merged while any CI job is failing, pending or skipped, except the
-  Android device suite job when the workflow's declared path rule skips it on a
-  documentation-only pull request. The repository is private on a GitHub plan without branch protection, so GitHub cannot enforce
-  this rule: whoever merges (the maintainer or an agent) checks the CI status of the pull
-  request (for example with `gh pr checks`) right before merging, and no one makes an
-  exception.
+- A pull request MUST NOT be merged while any automatic CI job is failing, pending or skipped.
+  A pull request that is not documentation-only MUST NOT be merged unless a run of the Android
+  device suite in CI is green on its latest commit. The repository is private on a GitHub plan
+  without branch protection, so GitHub cannot enforce these rules: whoever merges (the
+  maintainer or an agent) checks the CI status of the pull request (for example with
+  `gh pr checks`) and the device suite run of its latest commit right before merging, and no
+  one makes an exception.
 - If the repository gains branch protection (a paid plan or a public repository), the CI jobs
   become required status checks on the default branch, with no exception, administrators
   included.
@@ -300,4 +306,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 2.2.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-07
+**Version**: 2.3.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-07
