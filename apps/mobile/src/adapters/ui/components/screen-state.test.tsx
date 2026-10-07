@@ -114,4 +114,31 @@ describe('ScreenStateView', () => {
 
     expect(shown()).toEqual({ ...none, success: true });
   });
+
+  it('takes no empty renderer for a region that is never empty', () => {
+    render(
+      <ScreenStateView<string>
+        state={{ status: 'success', data: 'Lait' }}
+        errorMessage="Impossible de charger la liste."
+        onRetry={jest.fn()}
+        renderSuccess={(data) => <Text>{data}</Text>}
+      />,
+    );
+
+    expect(screen.getByText('Lait')).toBeOnTheScreen();
+  });
+
+  it('requires an empty renderer for a region that can be empty', () => {
+    render(
+      // @ts-expect-error `empty` is required when the region has an empty detail.
+      <ScreenStateView<string, { query: string }>
+        state={{ status: 'success', data: 'Lait' }}
+        errorMessage="Impossible de charger les articles."
+        onRetry={jest.fn()}
+        renderSuccess={(data) => <Text>{data}</Text>}
+      />,
+    );
+
+    expect(screen.getByText('Lait')).toBeOnTheScreen();
+  });
 });
