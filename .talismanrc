@@ -14,6 +14,8 @@ fileignoreconfig:
   # `key` and `restore-keys` are the cache inputs of actions/cache, not secrets.
   - filename: .github/workflows/ci.yml
     ignore_detectors: [filecontent]
+  - filename: .github/workflows/e2e.yml
+    ignore_detectors: [filecontent]
   # Yarn lockfiles hold package checksums, not secrets.
   - filename: yarn.lock
     ignore_detectors: [filecontent]
