@@ -3,6 +3,8 @@ allowed_patterns:
   - 'PRIMARY KEY'
   # A node:sqlite option name (DatabaseSync), not a secret.
   - 'enableForeignKeyConstraints'
+  # The SQLite pragma that turns foreign constraints on, not a secret.
+  - 'PRAGMA foreign_keys'
 fileignoreconfig:
   # flake.lock pins Nix inputs with content hashes and git revisions, not secrets.
   - filename: flake.lock

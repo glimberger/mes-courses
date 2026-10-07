@@ -50,38 +50,51 @@ const migration1: Migration = (db) =>
 export const MIGRATIONS: readonly Migration[] = [migration1];
 
 /**
- * Brings the schema up to date, each migration in its own transaction, so a failure leaves the
- * previous schema and data as they were (FR-039). Data written by a newer version is refused
- * before any other statement (FR-040, research R18c). Foreign keys are off by default on each
- * connection, so it also turns them on: it runs at every opening. Any other failure is a
- * `StorageError` or `StorageFull`.
+ * The migration `PRAGMA user_version` records, once checked: data written by a newer version is
+ * refused before any other statement (FR-040, research R18c).
  */
-export const migrate = (
+export const checkedVersion = (
   db: SqlDatabase,
   migrations: readonly Migration[] = MIGRATIONS,
-): Promise<void> => withStorageErrors(() => runMigrations(db, migrations));
+): Promise<number> =>
+  withStorageErrors(async () => {
+    const row = await db.getFirstAsync<{ user_version: number }>(
+      'PRAGMA user_version',
+      [],
+    );
+    const version = row?.user_version ?? 0;
+    if (version > migrations.length) throw new DataFromNewerVersion();
+    return version;
+  });
 
-const runMigrations = async (
+/**
+ * Brings the schema up to date, each migration in its own transaction, so a failure leaves the
+ * previous schema and data as they were (FR-039). Foreign constraints are off while migrating,
+ * so a migration can rebuild a table other rows reference; each one checks every reference
+ * before it commits, and they are turned on at the end, as at every opening. Any failure other
+ * than `DataFromNewerVersion` is a `StorageError` or `StorageFull`.
+ */
+export const migrate = async (
   db: SqlDatabase,
-  migrations: readonly Migration[],
+  migrations: readonly Migration[] = MIGRATIONS,
 ): Promise<void> => {
-  const row = await db.getFirstAsync<{ user_version: number }>(
-    'PRAGMA user_version',
-    [],
-  );
-  const version = row?.user_version ?? 0;
-  if (version > migrations.length) throw new DataFromNewerVersion();
-
-  // A no-op inside a transaction, so set before any.
-  await db.execAsync('PRAGMA foreign_keys = ON');
-
-  for (const [index, migration] of migrations.entries()) {
-    const target = index + 1;
-    if (target <= version) continue;
-    await db.withTransactionAsync(async () => {
-      await migration(db);
-      // `target` is a number from this list, never user text.
-      await db.execAsync(`PRAGMA user_version = ${target}`);
-    });
-  }
+  const version = await checkedVersion(db, migrations);
+  await withStorageErrors(async () => {
+    // Both are no-ops inside a transaction, so set around them.
+    await db.execAsync('PRAGMA foreign_keys = OFF');
+    for (const [index, migration] of migrations.entries()) {
+      const target = index + 1;
+      if (target <= version) continue;
+      await db.withTransactionAsync(async () => {
+        await migration(db);
+        const broken = await db.getFirstAsync('PRAGMA foreign_key_check', []);
+        if (broken !== null) {
+          throw new Error(`Migration ${target} left a row referencing nothing`);
+        }
+        // `target` is a number from this list, never user text.
+        await db.execAsync(`PRAGMA user_version = ${target}`);
+      });
+    }
+    await db.execAsync('PRAGMA foreign_keys = ON');
+  });
 };

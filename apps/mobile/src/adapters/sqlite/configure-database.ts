@@ -10,12 +10,12 @@ const SYNCHRONOUS_FULL = 2;
  */
 export const configureDatabase = (db: SqlDatabase): Promise<void> =>
   withStorageErrors(async () => {
-    await db.execAsync('PRAGMA journal_mode = WAL');
-    await db.execAsync('PRAGMA synchronous = FULL');
+    // Setting the journal mode answers with the mode now in use.
     const journal = await db.getFirstAsync<{ journal_mode: string }>(
-      'PRAGMA journal_mode',
+      'PRAGMA journal_mode = WAL',
       [],
     );
+    await db.execAsync('PRAGMA synchronous = FULL');
     const synchronous = await db.getFirstAsync<{ synchronous: number }>(
       'PRAGMA synchronous',
       [],

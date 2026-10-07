@@ -10,13 +10,14 @@ const FULL_MESSAGE = 'database or disk is full';
  * report (FR-030, research R13).
  */
 export class StorageError extends Error {
-  // Set only when there is a code. Babel strips a field with no value, so none is created here.
+  // A field with no value is type-only: Babel emits nothing for it, so an error without a code
+  // has no `code` property at all.
   readonly code?: number;
 
   constructor(code?: number) {
     super('Storage operation failed');
     this.name = 'StorageError';
-    if (code !== undefined) Object.assign(this, { code });
+    if (code !== undefined) this.code = code;
   }
 }
 

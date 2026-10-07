@@ -36,7 +36,7 @@ describe('configureDatabase', () => {
 
   it('FR-028 throws a StorageError when the journal mode does not take', async () => {
     const answers: Record<string, object> = {
-      'PRAGMA journal_mode': { journal_mode: 'memory' },
+      'PRAGMA journal_mode = WAL': { journal_mode: 'memory' },
       'PRAGMA synchronous': { synchronous: 2 },
     };
     const ignoringWal: SqlDatabase = {
@@ -55,7 +55,7 @@ describe('configureDatabase', () => {
 
   it('FR-028 throws a StorageError when the sync level does not take', async () => {
     const answers: Record<string, object> = {
-      'PRAGMA journal_mode': { journal_mode: 'wal' },
+      'PRAGMA journal_mode = WAL': { journal_mode: 'wal' },
       'PRAGMA synchronous': { synchronous: 1 },
     };
     const ignoringFull: SqlDatabase = {

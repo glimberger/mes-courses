@@ -158,6 +158,48 @@ describe('migrate', () => {
     );
   });
 
+  it('FR-040 lets a later migration rebuild a table that other rows reference', async () => {
+    await fillMigrated();
+    const rebuildCategory: Migration = async (database) => {
+      await database.execAsync(`
+        CREATE TABLE category_new (
+          id              TEXT PRIMARY KEY,
+          name            TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 60),
+          normalized_name TEXT NOT NULL UNIQUE,
+          position        INTEGER NOT NULL UNIQUE
+        );
+        INSERT INTO category_new SELECT id, name, normalized_name, position FROM category;
+        DROP TABLE category;
+        ALTER TABLE category_new RENAME TO category;
+      `);
+    };
+
+    await migrate(db, [...MIGRATIONS, rebuildCategory]);
+
+    expect(await userVersion(db)).toBe(2);
+    expect(
+      await db.getFirstAsync('SELECT category_id FROM article', []),
+    ).toEqual({ category_id: 'c-1' });
+    expect(await db.getFirstAsync('PRAGMA foreign_keys', [])).toEqual({
+      foreign_keys: 1,
+    });
+  });
+
+  it('FR-039 rolls back a migration that leaves a row referencing nothing', async () => {
+    await fillMigrated();
+    const before = await storedRows();
+    const breakingMigration: Migration = async (database) => {
+      await database.runAsync('DELETE FROM category', []);
+    };
+
+    await expect(
+      migrate(db, [...MIGRATIONS, breakingMigration]),
+    ).rejects.toThrow();
+
+    expect(await userVersion(db)).toBe(1);
+    expect(await storedRows()).toEqual(before);
+  });
+
   it('FR-040 refuses data from a newer version before any other statement', async () => {
     await db.execAsync('PRAGMA user_version = 99');
     const executed: string[] = [];
