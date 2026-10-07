@@ -64,5 +64,36 @@ export const categoryRepositoryContract = (
 
       expect(await repos.categories.nextPosition()).toBe(11);
     });
+
+    it('rejects a category whose id, normalized name or position is taken, keeping the first', async () => {
+      await repos.categories.add(category('c-1', 'Crèmerie', 0));
+
+      await expect(
+        repos.categories.add(category('c-1', 'Divers', 1)),
+      ).rejects.toThrow();
+      await expect(
+        repos.categories.add(category('c-2', ' CRÈMERIE ', 1)),
+      ).rejects.toThrow();
+      await expect(
+        repos.categories.add(category('c-2', 'Divers', 0)),
+      ).rejects.toThrow();
+
+      expect(await repos.categories.all()).toEqual([
+        category('c-1', 'Crèmerie', 0),
+      ]);
+    });
+
+    it('keeps copies: changing an added or returned category changes nothing stored', async () => {
+      const added = category('c-1', 'Crèmerie', 0);
+      await repos.categories.add(added);
+      added.name = 'Changed';
+
+      const [found] = await repos.categories.all();
+      if (found) found.position = 9;
+
+      expect(await repos.categories.findById(categoryId('c-1'))).toEqual(
+        category('c-1', 'Crèmerie', 0),
+      );
+    });
   });
 };

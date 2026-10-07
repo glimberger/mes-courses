@@ -1,6 +1,6 @@
 import { normalizedName } from '../../../domain/name';
 import type { Repositories } from '../../ports/unit-of-work';
-import { article, articleId, category } from './entities';
+import { article, articleId, category, categoryId } from './entities';
 
 export const articleRepositoryContract = (
   createRepositories: () => Promise<Repositories>,
@@ -50,6 +50,42 @@ export const articleRepositoryContract = (
       expect(
         await repos.articles.findByNormalizedName(normalizedName('Œuf')),
       ).toBeNull();
+    });
+
+    it('rejects an article whose id or normalized name is taken, keeping the first', async () => {
+      await repos.articles.add(article('a-1', 'Lait', 'c-1'));
+
+      await expect(
+        repos.articles.add(article('a-1', 'Pommes', 'c-2')),
+      ).rejects.toThrow();
+      await expect(
+        repos.articles.add(article('a-2', 'LAIT', 'c-2')),
+      ).rejects.toThrow();
+
+      expect(await repos.articles.all()).toEqual([
+        article('a-1', 'Lait', 'c-1'),
+      ]);
+    });
+
+    it('rejects an article in a category that does not exist', async () => {
+      await expect(
+        repos.articles.add(article('a-1', 'Lait', 'unknown')),
+      ).rejects.toThrow();
+
+      expect(await repos.articles.all()).toEqual([]);
+    });
+
+    it('keeps copies: changing an added or returned article changes nothing stored', async () => {
+      const added = article('a-1', 'Lait', 'c-1');
+      await repos.articles.add(added);
+      added.name = 'Changed';
+
+      const [found] = await repos.articles.all();
+      if (found) found.categoryId = categoryId('c-2');
+
+      expect(await repos.articles.findById(articleId('a-1'))).toEqual(
+        article('a-1', 'Lait', 'c-1'),
+      );
     });
   });
 };

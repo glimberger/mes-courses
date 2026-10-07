@@ -124,10 +124,17 @@ export const listItemRepositoryContract = (
       );
     });
 
-    it('returns copies: changing a returned item changes nothing stored', async () => {
-      await repos.items.save(
-        item('l-1', 'a-1', { quantity: { amount: 2, unit: 'L' } }),
-      );
+    it('rejects an item of a list or an article that does not exist', async () => {
+      await expect(repos.items.save(item('unknown', 'a-1'))).rejects.toThrow();
+      await expect(repos.items.save(item('l-1', 'unknown'))).rejects.toThrow();
+
+      expect(await repos.items.forList(listId('l-1'))).toEqual([]);
+    });
+
+    it('keeps copies: changing a saved or returned item changes nothing stored', async () => {
+      const saved = item('l-1', 'a-1', { quantity: { amount: 2, unit: 'L' } });
+      await repos.items.save(saved);
+      if (saved.quantity) saved.quantity.amount = 7;
 
       const found = await repos.items.find(listId('l-1'), articleId('a-1'));
       if (found?.quantity) {

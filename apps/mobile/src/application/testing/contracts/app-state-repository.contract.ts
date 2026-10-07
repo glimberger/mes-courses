@@ -29,5 +29,15 @@ export const appStateRepositoryContract = (
 
       expect(await repos.appState.currentListId()).toBe('l-2');
     });
+
+    it('rejects a current list that does not exist, keeping the current one', async () => {
+      await repos.appState.setCurrentListId(listId('l-1'));
+
+      await expect(
+        repos.appState.setCurrentListId(listId('unknown')),
+      ).rejects.toThrow();
+
+      expect(await repos.appState.currentListId()).toBe('l-1');
+    });
   });
 };

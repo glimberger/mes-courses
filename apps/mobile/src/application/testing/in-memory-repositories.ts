@@ -50,6 +50,25 @@ const findByName = <T extends { name: string }>(
   normalized: string,
 ) => [...entities].find((entity) => normalizedName(entity.name) === normalized);
 
+// The fakes reject what the SQLite schema rejects, so a use case that passes on them does not
+// fail on a device.
+const uniqueFailed = (column: string) =>
+  new Error(`UNIQUE constraint failed: ${column}`);
+const missingReference = () =>
+  new Error('Constraint failed: the referenced row does not exist');
+
+/** Checks the primary key and the `normalized_name UNIQUE` column of a new named entity. */
+const checkNewNamed = <T extends { id: string; name: string }>(
+  table: string,
+  stored: Map<string, T>,
+  entity: T,
+) => {
+  if (stored.has(entity.id)) throw uniqueFailed(`${table}.id`);
+  if (findByName(stored.values(), normalizedName(entity.name))) {
+    throw uniqueFailed(`${table}.normalized_name`);
+  }
+};
+
 /** Repositories kept in memory, for domain, use case and UI tests. */
 export class InMemoryRepositories implements Repositories {
   private state = emptyState();
@@ -73,7 +92,12 @@ export class InMemoryRepositories implements Repositories {
         ...[...this.state.categories.values()].map((c) => c.position),
       ) + 1,
     add: async (category) => {
-      this.state.categories.set(category.id, { ...category });
+      const stored = this.state.categories;
+      checkNewNamed('category', stored, category);
+      if ([...stored.values()].some((c) => c.position === category.position)) {
+        throw uniqueFailed('category.position');
+      }
+      stored.set(category.id, { ...category });
     },
   };
 
@@ -88,6 +112,10 @@ export class InMemoryRepositories implements Repositories {
       return found ? { ...found } : null;
     },
     add: async (article) => {
+      checkNewNamed('article', this.state.articles, article);
+      if (!this.state.categories.has(article.categoryId)) {
+        throw missingReference();
+      }
       this.state.articles.set(article.id, { ...article });
     },
   };
@@ -104,13 +132,15 @@ export class InMemoryRepositories implements Repositories {
     },
     count: async () => this.state.lists.size,
     add: async (list) => {
+      checkNewNamed('shopping_list', this.state.lists, list);
       this.state.lists.set(list.id, { ...list });
     },
     itemCounts: async () => {
       const counts = new Map<ListId, number>();
       for (const list of this.state.lists.values()) counts.set(list.id, 0);
       for (const item of this.state.items.values()) {
-        counts.set(item.listId, (counts.get(item.listId) ?? 0) + 1);
+        const count = counts.get(item.listId);
+        if (count !== undefined) counts.set(item.listId, count + 1);
       }
       return counts;
     },
@@ -126,6 +156,12 @@ export class InMemoryRepositories implements Repositories {
       return found ? copyItem(found) : null;
     },
     save: async (item) => {
+      if (
+        !this.state.lists.has(item.listId) ||
+        !this.state.articles.has(item.articleId)
+      ) {
+        throw missingReference();
+      }
       this.state.items.set(
         itemRef(item.listId, item.articleId),
         copyItem(item),
@@ -144,6 +180,7 @@ export class InMemoryRepositories implements Repositories {
   readonly appState: AppStateRepository = {
     currentListId: async () => this.state.currentListId,
     setCurrentListId: async (id) => {
+      if (!this.state.lists.has(id)) throw missingReference();
       this.state.currentListId = id;
     },
   };
@@ -153,31 +190,60 @@ export class InMemoryRepositories implements Repositories {
     return copyState(this.state);
   }
 
+  /** Takes the snapshot over: give it back once, and keep no reference to it. */
   restore(snapshot: State): void {
-    this.state = copyState(snapshot);
+    this.state = snapshot;
   }
 }
 
+/** Wraps every method so that it rejects once `isOpen` returns false. */
+const guarded = <R extends object>(repository: R, isOpen: () => boolean): R =>
+  Object.fromEntries(
+    Object.entries(repository).map(([name, method]) => [
+      name,
+      (...args: unknown[]) =>
+        isOpen()
+          ? (method as (...args: unknown[]) => Promise<unknown>)(...args)
+          : Promise.reject(
+              new Error(`Repositories used after their run ended (${name})`),
+            ),
+    ]),
+  ) as R;
+
 /**
- * Runs the work on in-memory repositories, one run at a time, and puts back what was stored
- * before a run that throws, as a rolled back transaction would.
+ * Runs the work on in-memory repositories and puts back what was stored before a run that
+ * throws, as a rolled back transaction would. Like a SQLite transaction, it does not nest: a run
+ * started while another is still going rejects at once, where a queue would wait for ever on a
+ * nested run. The repositories given to the work reject once the run has ended.
  */
 export class InMemoryUnitOfWork implements UnitOfWork {
-  private queue: Promise<unknown> = Promise.resolve();
+  private running = false;
 
   constructor(private readonly repositories: InMemoryRepositories) {}
 
-  run<T>(work: (repos: Repositories) => Promise<T>): Promise<T> {
-    const result = this.queue.then(async () => {
-      const before = this.repositories.snapshot();
-      try {
-        return await work(this.repositories);
-      } catch (error) {
-        this.repositories.restore(before);
-        throw error;
-      }
-    });
-    this.queue = result.catch(() => undefined);
-    return result;
+  async run<T>(work: (repos: Repositories) => Promise<T>): Promise<T> {
+    if (this.running) {
+      throw new Error('A run started while another is still running');
+    }
+    this.running = true;
+    let open = true;
+    const isOpen = () => open;
+    const repos = this.repositories;
+    const before = repos.snapshot();
+    try {
+      return await work({
+        categories: guarded(repos.categories, isOpen),
+        articles: guarded(repos.articles, isOpen),
+        lists: guarded(repos.lists, isOpen),
+        items: guarded(repos.items, isOpen),
+        appState: guarded(repos.appState, isOpen),
+      });
+    } catch (error) {
+      repos.restore(before);
+      throw error;
+    } finally {
+      open = false;
+      this.running = false;
+    }
   }
 }

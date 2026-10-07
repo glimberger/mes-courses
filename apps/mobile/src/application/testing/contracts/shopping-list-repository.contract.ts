@@ -52,6 +52,30 @@ export const shoppingListRepositoryContract = (
       ).toBeNull();
     });
 
+    it('rejects a list whose id or normalized name is taken, keeping the first', async () => {
+      await repos.lists.add(list('l-1', 'Ma liste'));
+
+      await expect(repos.lists.add(list('l-1', 'Barbecue'))).rejects.toThrow();
+      await expect(
+        repos.lists.add(list('l-2', '  ma   LISTE ')),
+      ).rejects.toThrow();
+
+      expect(await repos.lists.all()).toEqual([list('l-1', 'Ma liste')]);
+    });
+
+    it('keeps copies: changing an added or returned list changes nothing stored', async () => {
+      const added = list('l-1', 'Ma liste');
+      await repos.lists.add(added);
+      added.name = 'Changed';
+
+      const [found] = await repos.lists.all();
+      if (found) found.name = 'Changed again';
+
+      expect(await repos.lists.findById(listId('l-1'))).toEqual(
+        list('l-1', 'Ma liste'),
+      );
+    });
+
     it('counts the items of every list, 0 included', async () => {
       await repos.categories.add(category('c-1', 'Crèmerie', 0));
       await repos.articles.add(article('a-1', 'Lait', 'c-1'));
