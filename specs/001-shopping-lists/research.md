@@ -443,7 +443,10 @@ FR-030a, FR-039a).
   the device's own name, which the owner sets, is never kept. Release health sessions carry a
   per-installation id and are not events, so `beforeSend` never sees them: the adapter sets
   `enableAutoSessionTracking: false`. App hang reports are native events too and add nothing
-  FR-030 asks for: `enableAppHangTracking: false`.
+  FR-030 asks for: `enableAppHangTracking: false` turns them off on iOS only (the option is marked
+  `@platform ios`, and the Android SDK keeps its ANR reports while native crash handling is on),
+  so the config plugin `apps/mobile/build-config/android-anr-off.cjs` sets the manifest entry
+  `io.sentry.anr.enable` to `false`, which the Android SDK reads before the React Native options.
 - **Native crashes** (FR-030, clarified 2026-10-06): they are reported, as the spec's one
   exception to "no identifier".
   - They are built by the Android and iOS SDKs, not in JavaScript, so they do not pass through
