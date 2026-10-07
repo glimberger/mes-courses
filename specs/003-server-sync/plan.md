@@ -1,6 +1,6 @@
 # Implementation Plan: Server Synchronization
 
-**Branch**: `feat/003-server-sync` | **Date**: 2026-10-05 (amended 2026-10-06 for Storybook and Detox, then for the sync clarifications) | **Spec**: [spec.md](spec.md)
+**Branch**: `feat/003-server-sync` | **Date**: 2026-10-05 (amended 2026-10-06 for Storybook and Detox, then for the sync clarifications, then 2026-10-07 for constitution v2.3.0) | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/003-server-sync/spec.md`
 
@@ -117,7 +117,7 @@ resolved in research.
 | IX | Explicit screen states | `SyncStatusBar` gives every data screen its synchronization state, from one store slice. Settings' device list has loading, error, offline and success states, each tested and each with a required story ([contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-end-journeys)). | ✅ |
 | X | French interface, no i18n | French text only in the app's UI adapter. The server returns error codes. The one French string outside the app is the Pi command's output, read by the maintainer. | ✅ |
 | XI | Single repository (monorepo) | The server joins as `apps/server/` (`@mes-courses/server`) and the shared rules as `packages/sync-core/` (`@mes-courses/sync-core`), both under 001's workspaces root, with the same lockfile, configs and CI. `sync-core` is pure and depends on nothing. The app and the server never import each other: the tests that need both (HTTP adapter, cross-stack scenarios) live in the `tests/sync/` workspace and use each side's `./testing` entry point. dependency-cruiser enforces it. | ✅ |
-| QG | Quality gates and CI | CI runs typecheck, lint, tests and the architecture test across the workspaces, plus the app build and 001's `e2e-android` job. There is no deployment from CI, and no test reaches the Pi; the e2e journey uses `127.0.0.1:9` on the device, where nothing listens. The device suite follows the gates of constitution v2.1.1, as in 001. | ✅ |
+| QG | Quality gates and CI | CI runs typecheck, lint, tests and the architecture test across the workspaces, plus the app build, on every pull request; 001's `e2e-android` (`.github/workflows/e2e.yml`) runs on every push to `main` and on demand on a branch. There is no deployment from CI, and no test reaches the Pi; the e2e journey uses `127.0.0.1:9` on the device, where nothing listens. The device suite follows the gates of constitution v2.3.0, as in 001: a pull request that is not documentation-only (`.github/scripts/app-changed.sh`) is merged only with a green `e2e-android` run on its latest commit. | ✅ |
 | WF | Development workflow | The spec states offline behavior, synchronization and reconciliation (US2, FR-009 to FR-015). | ✅ |
 
 **Gate result before research**: no violation.
@@ -163,7 +163,8 @@ specs/003-server-sync/
 package.json                           # "tests/*" already in "workspaces" (added by 001 for tests/e2e)
 .dependency-cruiser.cjs                # + apps/server/ rules, sync-core purity, sync-core allowed in both
                                        #   domains, tests/* the only importer of the ./testing entries
-.github/workflows/ci.yml               # unchanged jobs (e2e-android included), now covering the new workspaces
+.github/workflows/ci.yml               # unchanged jobs (typecheck, lint, test, build), now covering the new workspaces
+.github/workflows/e2e.yml              # unchanged: e2e-android on push to main and on demand (constitution v2.3.0)
 apps/
 ├── mobile/                            # the app (001 layout), additions:
 │   ├── package.json                   # + expo-secure-store, @mes-courses/sync-core;

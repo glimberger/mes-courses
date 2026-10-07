@@ -398,7 +398,8 @@ FR-030a, FR-039a).
 
 ## R13. Error tracking (Principle VIII)
 
-- **Decision**: Sentry, through `@sentry/react-native` 8 and its Expo config plugin, behind an
+- **Decision**: Sentry, through `@sentry/react-native` (7.11, the version Expo SDK 57 pins with
+  `expo install`; this plan first named 8, updated 2026-10-07) and its Expo config plugin, behind an
   `ErrorReporter` driven port.
   - The Sentry adapter calls `Sentry.init` with `sendDefaultPii: false`, `maxBreadcrumbs: 0`
     and a `beforeBreadcrumb` that returns `null`, so no JavaScript breadcrumb is ever kept or
@@ -652,15 +653,19 @@ FR-030a, FR-039a).
   request and every push to `main`, on `ubuntu-latest`. Each job installs Nix and runs its commands in the flake's dev shell
   (`nix develop --command …`, R21), so CI uses the same Node 24 and Yarn as every developer. It
   runs `yarn install --immutable` once at the root (failing if `yarn.lock` is out of date), then
-  a root script that runs in every workspace (`yarn workspaces foreach`, R20). The Nix store is
-  cached by `magic-nix-cache-action`. Jobs: `typecheck`, `lint` (ESLint +
+  a root script that runs in every workspace (`yarn workspaces foreach`, R20). Nix is installed
+  by `determinate-nix-action` and its store cached by `nix-community/cache-nix-action`, keyed on
+  `flake.nix` and `flake.lock`. Jobs: `typecheck`, `lint` (ESLint +
   `prettier --check`), `test` (Jest, including the architecture test and the offline scenario),
   `build` (`yarn build`; for the app this is
   `expo export --platform android --platform ios`, which bundles the JS for both platforms). The repository is private on a GitHub plan without branch protection, so the
-  merge rule of the constitution's Quality Gates (v2.2.0) applies: no pull request is merged
-  while any job is failing, pending or skipped, as `gh pr checks` shows, except `e2e-android`
-  skipped on a documentation-only pull request (below). Detox adds a fifth job,
-  `e2e-android` (R23).
+  merge rule of the constitution's Quality Gates (v2.3.0) applies: no pull request is merged
+  while any of these jobs is failing, pending or skipped, as `gh pr checks` shows, and a pull
+  request that is not documentation-only (below) is merged only with a green `e2e-android` run
+  on its latest commit. The Android device suite is a separate workflow,
+  `.github/workflows/e2e.yml`, with the job `e2e-android` (R23).
+- **Superseded runs** (clarified 2026-10-07): both workflows set `concurrency` with
+  `cancel-in-progress`, so a new push to a branch cancels the run of its previous commit.
 - **Time limits** (clarified 2026-10-06): every job sets `timeout-minutes`: 15 for `typecheck`,
   `lint`, `test` and `build`, 45 for `e2e-android`. A job that runs out of time is a failing
   job, fixed in the pull request like any other.
@@ -668,21 +673,21 @@ FR-030a, FR-039a).
   Android native build failure is caught by `e2e-android`, which builds the release APK; an iOS
   native build failure is caught by the iOS device suite, run on the maintainer's Mac on every
   pull request that changes native configuration and before each release (R23, R24).
-- **Third-party actions**: `nix-installer-action`, `magic-nix-cache-action` and
-  `android-emulator-runner` are assumed available. If the cache action stops working, its step
-  is removed and the jobs run without a Nix cache, slower but unchanged; the others have no
-  replacement planned until needed (Principle IV).
-- **Documentation-only pull requests** (constitution v2.2.0, Quality Gates): a first job,
-  `changes`, lists the files the pull request changes (`git diff --name-only` against the merge
-  base with the base branch) and gives them to `.github/scripts/app-changed.sh`, which prints
-  `app=false` when every file is documentation-only (under `specs/`, under `.specify/`, or a
-  Markdown file ending in `.md`) and `app=true` otherwise, including for an empty list. On a
-  push to `main` the job sets `app=true` without looking. `e2e-android` declares
-  `needs: changes` and `if: needs.changes.outputs.app == 'true'`, so it is skipped only on a
-  documentation-only pull request; `typecheck`, `lint`, `test` and `build` always run, since the
-  traceability test reads `spec.md`. The same file list decides locally whether a branch needs
-  the Android device suite before it is pushed. The script is plain shell, so no action is added
+- **Third-party actions**: `determinate-nix-action`, `nix-community/cache-nix-action` and
+  `android-emulator-runner` are assumed available. `magic-nix-cache-action`, first chosen, was
+  replaced on 2026-10-07: it no longer authenticates without a FlakeHub account, so it cached
+  nothing. If the cache action stops working, its step is removed and the jobs run without a Nix
+  cache, slower but unchanged; the others have no replacement planned until needed
   (Principle IV).
+- **Documentation-only changes** (constitution v2.3.0, Quality Gates):
+  `.github/scripts/app-changed.sh` reads file paths on standard input and prints `app=false`
+  when every file is documentation-only (under `specs/`, under `.specify/`, or a Markdown file
+  ending in `.md`) and `app=true` otherwise, including for an empty list. Given the files a
+  branch changes (`git diff --name-only` against the merge base with `origin/main`), it decides
+  whether the branch needs the Android device suite locally before it is pushed, and whether
+  its pull request needs a green `e2e-android` run before it is merged. `typecheck`, `lint`,
+  `test` and `build` always run, since the traceability test reads `spec.md`. The script is
+  plain shell, so no action is added (Principle IV).
 - **Not in CI, by decision**: scanning for leaked credentials stays the local Talisman pre-commit hook required
   by the workspace `AGENTS.md`, and dependencies are updated by hand (an Expo SDK upgrade is its
   own pull request through every gate), with no update bot (Principle IV).
@@ -691,7 +696,12 @@ FR-030a, FR-039a).
 - **Alternatives considered**: EAS Build on every pull request (slow, uses build credits);
   `paths-ignore` on the whole workflow (skips every job, the fast suite included, and leaves no
   check to read with `gh pr checks`); a path filter action such as `dorny/paths-filter` (a new
-  dependency for what a short script does).
+  dependency for what a short script does). For the device suite (clarified 2026-10-07): running
+  it on every push to a pull request, skipped only on documentation-only ones (constitution
+  v2.2.0; about thirty minutes per push, even for a change to `tasks.md`); skipping it on draft
+  pull requests; a skip label or a commit keyword (forgetting to remove it lets a pull request
+  merge untested); skipping it when the last push changed only documentation (needs the
+  previous run's result through the GitHub API, and a rebase defeats it).
 
 ## R18. First launch seed (FR-020, FR-023)
 
@@ -861,8 +871,8 @@ FR-030a, FR-039a).
     the folder; `nix develop` does the same by hand. `.direnv/` is ignored by Git;
   - `flake.lock` gets the Talisman entry required by the workspace `AGENTS.md` (content hashes
     and git revisions, not secrets);
-  - CI installs Nix (`DeterminateSystems/nix-installer-action`, with the
-    `DeterminateSystems/magic-nix-cache-action` cache) and runs every step through
+  - CI installs Nix (`DeterminateSystems/determinate-nix-action`, with the
+    `nix-community/cache-nix-action` cache) and runs every step through
     `nix develop --command …` (R17);
   - **out of Nix**: Xcode (macOS only, from Apple) and Android Studio with its SDK and emulator.
     Native device builds use them; Nix provides everything the automated checks and CI need.
@@ -951,11 +961,13 @@ FR-030a, FR-039a).
     also uses (Principle XI). The workspace imports nothing from the other workspaces: it only
     drives the built binary. It holds `.detoxrc.js`, its own `jest.config.js` and the journeys in
     `tests/e2e/journeys/*.e2e.ts`.
-  - **Test runner**: Detox's Jest runner, with **Jest 29** pinned in this workspace, because
-    Detox documents Jest 29. The app keeps Jest 30. Yarn installs each version where it is used
-    (`node-modules` linker), still from the one `yarn.lock`. TypeScript goes through `ts-jest`.
-  - **Native projects**: Detox needs native code changes (Android test runner, a network security
-    config for the release build, the iOS pod). Expo no longer ships a Detox config plugin, so the
+  - **Test runner**: Detox's Jest runner, with **Jest 30**, the app's version (updated
+    2026-10-07). Jest 29 was first pinned here because Detox documented it; with two versions,
+    the hoisted `@jest/reporters` 30 broke Detox's reporter, so a passing run still exited with
+    an error. Detox 20.51 supports Jest 30. TypeScript goes through `ts-jest`.
+  - **Native projects**: Detox needs native code changes on Android (test runner, a network
+    security config for the release build, ProGuard keep rules). On iOS, Detox 20 injects its
+    framework when it launches the app, so no pod is added. Expo no longer ships a Detox config plugin, so the
     app uses the community `expo-detox-config-plugin` (Expo SDK 54 and later, Detox 20.44 or
     later), registered in `app.config.ts`. If it does not support SDK 57 when the work starts,
     a local config plugin in `apps/mobile/plugins/with-detox.ts` makes the same Android changes.
@@ -997,18 +1009,31 @@ FR-030a, FR-039a).
 - **Running**:
   - Locally: `yarn test:e2e:android` and `yarn test:e2e:ios` at the root (Detox build then test
     in `tests/e2e/`). Android needs Android Studio with an emulator named in `.detoxrc.js`
-    (`Pixel_API_35` by default, overridable with `DETOX_AVD_NAME`). iOS needs macOS, Xcode and
-    `applesimutils` (Homebrew). These stay outside Nix, like Android Studio and Xcode (R21).
-  - CI: a job `e2e-android` in `.github/workflows/ci.yml` on `ubuntu-latest`, on every pull
-    request and push to `main` like the other jobs. It enables KVM, sets up Java 17
-    (`actions/setup-java`) and uses the runner's Android SDK, caches Gradle, starts an x86_64
+    (`Pixel_API_35` by default, overridable with `DETOX_AVD_NAME`) of API 35: Detox 20.51 fails on
+    API 37 (`InputManager.getInstance` was removed). iOS needs macOS, Xcode and `applesimutils`
+    (Homebrew); `DETOX_IOS_DEVICE` (default `iPhone 16`) and `DETOX_IOS_OS` choose the simulator.
+    These stay outside Nix, like Android Studio and Xcode (R21).
+  - **iOS 27** (found 2026-10-07): the iOS 27 SDK requires the UIScene lifecycle, which the
+    AppDelegate generated by Expo SDK 57 does not adopt, so the app stops at launch on an iOS 27
+    simulator. The iOS journeys run on an iOS 26 runtime until Expo adopts it; this open point
+    must be resolved before a release built with Xcode 27.
+  - CI (constitution v2.3.0): the job `e2e-android` in its own workflow,
+    `.github/workflows/e2e.yml`, on `ubuntu-latest`. It runs on every push to `main`, and on
+    demand on a branch (`gh workflow run e2e.yml --ref <branch>`), not on every push to a pull
+    request: a run takes about thirty minutes. A pull request that is not documentation-only
+    (R17) is merged only with a green run on its latest commit. The job frees disk space (the
+    native build fills a hosted runner otherwise), enables KVM, sets up Java 17
+    (`actions/setup-java`) and uses the runner's Android SDK, restores Gradle's cache and saves it
+    after every run, failed ones included, builds only the emulator's ABI (`x86_64`), starts an
     API 35 emulator with `reactivecircus/android-emulator-runner`, and runs the Detox build and
     test through `nix develop --command` for Node and Yarn (R21). It uploads Detox artifacts
-    (screenshots and logs of failed steps) when it fails.
+    (screenshots and logs of failed steps) when it fails. `workflow_dispatch` only starts a
+    workflow present on `main`, so the pull request that added `e2e.yml` (#40) was merged on
+    the green run of its previous workflow, as a recorded one-time exception.
   - iOS end-to-end runs on the maintainer's Mac, not in CI: macOS runners use GitHub minutes at
     ten times the Linux rate on a private repository. The iOS journeys run before each release
     and on any pull request that touches native configuration (`app.config.ts`, config plugins,
-    native dependencies). Constitution v2.2.0 sets this rule in its Quality Gates.
+    native dependencies). Constitution v2.3.0 sets this rule in its Quality Gates.
 - **Rationale**: Jest covers behavior through in-memory fakes and `node:sqlite`, but nothing
   automated checked the binary itself: that expo-sqlite opens and migrates on a device, that
   screens navigate, that data survives a killed process (SC-007, FR-028). Detox's gray-box
@@ -1018,8 +1043,8 @@ FR-030a, FR-039a).
   not chosen by the maintainer, and its black-box waits are less deterministic than Detox's
   synchronization); Appium (WebDriver setup heavier for a two-platform app); running Detox on
   debug builds (needs Metro during tests and differs from what users run); the e2e tests inside
-  `apps/mobile/` (Detox's Jest 29 would conflict with the app's Jest 30 config and `yarn test`
-  would pick the journeys up); iOS in CI on `macos-latest` (cost, see above; it can be added if the
+  `apps/mobile/` (`yarn test` would pick the journeys up, and the app's Jest config would have
+  to exclude them); iOS in CI on `macos-latest` (cost, see above; it can be added if the
   repository becomes public, where macOS minutes are free).
 
 ## R24. Releases and distribution (spec Success Criteria, Assumptions)
@@ -1028,7 +1053,10 @@ FR-030a, FR-039a).
   - **A release** is every `production` build from EAS (`eas build --profile production`), the
     only builds meant for users. Before one is built, every manual check of the spec's Success
     Criteria and the iOS device suite have succeeded on the last commit of the pull request that
-    last changed the application, recorded in its test plan. The release is built from that pull
+    last changed the application, recorded in its test plan. Since 2026-10-07 these checks
+    also include that the app starts on the iOS version the release's Xcode targets (R23) and
+    that the native entry-point test is green, the prebuilt `Info.plist` holding no URL scheme
+    (R25). The release is built from that pull
     request's squash commit on `main`, with no other change merged after it, so it holds the
     same code the checks ran on. `preview` and `development` builds are not releases.
   - **Distribution**: no public listing. The `production` profile builds an Android App Bundle
@@ -1088,6 +1116,10 @@ FR-030a, FR-039a).
     usage description other than these. The release build's real permission list is read once
     per release on the Android App Bundle (quickstart §8), since a native library can still add
     one that the config does not show.
+  - **Open point (found 2026-10-07)**: `expo prebuild` adds the bundle identifier
+    (`com.glimberger.mescourses`) as an iOS URL scheme (`CFBundleURLTypes`), an entry point
+    FR-041 forbids, which the resolved-config test cannot see. It needs a config plugin that
+    removes it and a test on the prebuilt `Info.plist`, before the first release.
   - **Nothing in the device log**: release builds write nothing about lists to the device log.
     ESLint's `no-console` is an error in `apps/mobile/src/`, except in the console error
     reporter, which is used only when no DSN is set (development and Detox builds) and logs the
@@ -1126,7 +1158,7 @@ FR-030a, FR-039a).
 | Nix flake: `nodejs_24`, `corepack_24`, `watchman` (dev environment only, R21) | One locked toolchain for developers, CI and the Pi, chosen by the maintainer. |
 | Yarn 4 (through Corepack, pinned by `packageManager`; not an app dependency) | Package manager and workspaces for the monorepo (R20, Principle XI), chosen by the maintainer. |
 | `expo`, `react-native`, `react` | Chosen platform (R1). |
-| `react-native-paper`, `react-native-safe-area-context`, `@expo/vector-icons` | Material 3 design system (R2, Principle V). |
+| `react-native-paper`, `react-native-safe-area-context`, `@expo/vector-icons`, `expo-font` (a peer dependency of `@expo/vector-icons`) | Material 3 design system (R2, Principle V). |
 | `@react-navigation/native`, `@react-navigation/native-stack`, `react-native-screens` | Navigation between screens (R3). |
 | `zustand` | Application state shared by every screen (R10), chosen by the maintainer. |
 | `expo-sqlite` | On-device storage (R4, Principle VII). |
@@ -1137,5 +1169,6 @@ FR-030a, FR-039a).
 | Dev: `eslint`, `eslint-config-expo`, `typescript-eslint`, `eslint-plugin-react-native`, `prettier`, `eslint-config-prettier`, `typescript` | Lint, format and type checks (R16, Quality Gates). |
 | Dev: `storybook`, `@storybook/react-native`, `@storybook/react` (portable stories), and the on-device UI's peer dependencies listed by its install guide (`react-native-reanimated`, `react-native-gesture-handler`, `react-native-svg`, `@gorhom/bottom-sheet` at the time of writing) | Screen catalog and story tests (R22), chosen by the maintainer. The peers are native modules, so they are compiled into every build, but no Storybook code is bundled without `STORYBOOK_ENABLED`. |
 | `expo-detox-config-plugin` (dev, config plugin) | Native changes Detox needs, applied at `expo prebuild` (R23). |
-| `tests/e2e` dev: `detox`, `jest@29`, `ts-jest`, `@types/jest` | End-to-end journeys on a device (R23), chosen by the maintainer. |
+| `tests/e2e` dev: `detox`, `jest` (30, the app's version), `ts-jest`, `@types/jest` | End-to-end journeys on a device (R23), chosen by the maintainer. |
 | CI only: `reactivecircus/android-emulator-runner`, `actions/setup-java` | Android emulator and JDK for the `e2e-android` job (R23). |
+| CI only: `DeterminateSystems/determinate-nix-action`, `nix-community/cache-nix-action` | Nix in CI and its store cache (R17, R21). |

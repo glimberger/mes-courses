@@ -12,10 +12,11 @@ Behavior is defined in [spec.md](spec.md); screens and text in
   command below runs inside it.
 - For device checks: Android Studio with an emulator, or Xcode with an iOS simulator (macOS), or a
   phone with a development build.
-- For the Detox journeys ([research.md](research.md) R23): an Android emulator named
-  `Pixel_API_35` (or set `DETOX_AVD_NAME`) with a JDK 17 (the one bundled with Android Studio
-  works); for iOS, Xcode and `applesimutils` (`brew tap wix/brew && brew install applesimutils`).
-  These stay outside Nix.
+- For the Detox journeys ([research.md](research.md) R23): an Android emulator of API 35 named
+  `Pixel_API_35` (or set `DETOX_AVD_NAME`; Detox 20 does not run on API 37) with a JDK 17; for
+  iOS, Xcode, `applesimutils` and CocoaPods (`brew tap wix/brew && brew install applesimutils
+  cocoapods`) and an iOS 26 simulator runtime, chosen with `DETOX_IOS_DEVICE` and `DETOX_IOS_OS`
+  (the app does not start on iOS 27 yet, R23). These stay outside Nix.
 - Optional: a Sentry project. Without `EXPO_PUBLIC_SENTRY_DSN`, errors go to the console only.
 
 Commands run from the repository root unless stated otherwise: one `yarn install` installs every
@@ -72,9 +73,10 @@ yarn test:e2e:ios       # macOS only: builds the iOS release for the simulator, 
 
 Expected: every journey in [contracts/ui-validation.md](contracts/ui-validation.md#end-to-end-journeys)
 passes on the first try (no retries are configured). A failure leaves screenshots and logs in
-`tests/e2e/artifacts/`. In CI the `e2e-android` job runs the Android journeys on every pull
-request. Run the iOS journeys before a release and on any pull request that changes
-`app.config.ts`, a config plugin or a native dependency.
+`tests/e2e/artifacts/`. In CI the `e2e-android` job of `.github/workflows/e2e.yml` runs the
+Android journeys on every push to `main`, and on a branch when started by hand
+(`gh workflow run e2e.yml --ref <branch>`, §7). Run the iOS journeys before a release and on any
+pull request that changes `app.config.ts`, a config plugin or a native dependency.
 
 ## 4. Run the app
 
@@ -220,14 +222,25 @@ Time each delivery: every report must appear in Sentry within 1 minute (SC-010).
 
 ## 7. Continuous integration
 
-Open a pull request: the `changes`, `typecheck`, `lint`, `test`, `build` and `e2e-android`
-jobs run, and `gh pr checks <pr>` shows them all green, none failing, pending or skipped, before
-the pull request is merged (constitution v2.2.0, Quality Gates). On a pull request that changes
-only documentation (`specs/`, `.specify/`, Markdown files), `e2e-android` is skipped by the
-`changes` job, and that skip alone does not block the merge ([research.md](research.md) R17).
-To check the rule by hand: `printf 'specs/x.md\n' | .github/scripts/app-changed.sh` prints
-`app=false`, and `printf 'apps/mobile/App.tsx\n' | .github/scripts/app-changed.sh` prints
-`app=true`.
+Open a pull request: the `typecheck`, `lint`, `test` and `build` jobs run on every push, a new
+push cancelling the run of the previous commit, and `gh pr checks <pr>` shows them all green,
+none failing, pending or skipped, before the pull request is merged (constitution v2.3.0,
+Quality Gates; [research.md](research.md) R17).
+
+The Android device suite does not run on every push. Once the pull request is final, start it on
+its branch, then check that the run of the latest commit is green right before merging:
+
+```sh
+gh workflow run e2e.yml --ref <branch>
+gh run list --workflow e2e.yml --branch <branch> --limit 1 --json headSha,conclusion
+```
+
+`headSha` must be the pull request's latest commit and `conclusion` `success`. A pull request
+that changes only documentation (`specs/`, `.specify/`, Markdown files) needs no device run:
+`git diff --name-only "$(git merge-base origin/main HEAD)" HEAD | .github/scripts/app-changed.sh`
+prints `app=false`. To check the rule by hand: `printf 'specs/x.md\n' |
+.github/scripts/app-changed.sh` prints `app=false`, and `printf 'apps/mobile/App.tsx\n' |
+.github/scripts/app-changed.sh` prints `app=true`.
 
 ## 8. Release (spec Success Criteria, [research.md](research.md) R24)
 
@@ -236,7 +249,10 @@ A release is a `production` build. Run these steps in order; stop at the first t
 1. The pull request that leads to the release sets `version` in `apps/mobile/app.config.ts`
    (MINOR for a new feature, PATCH for fixes only; this feature ships as 1.0.0), and its test
    plan records, on its last commit: every manual check of §5 and §6 on the reference phones,
-   and the iOS device suite (`yarn test:e2e:ios`) on the maintainer's Mac.
+   and the iOS device suite (`yarn test:e2e:ios`) on the maintainer's Mac. It also records that
+   the app starts on the iOS version the release's Xcode targets (T144; an iOS 27 or later SDK
+   requires the UIScene lifecycle, [research.md](research.md) R23), and that the FR-041 native
+   test of T142 is green, so the prebuilt `Info.plist` has no URL scheme.
 2. Once it is merged with every CI job green, from `main` at its squash commit, with nothing
    merged after it (otherwise run the checks again on a new pull request):
    `eas build --profile production --platform all`. A build with `EXPO_PUBLIC_SEED_ITEMS`,
