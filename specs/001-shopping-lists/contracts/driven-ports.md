@@ -22,7 +22,10 @@ interface Repositories {
 ```
 
 Every use case that writes runs inside `run`, so a multi-step write (seed, create-and-add) is
-all-or-nothing. Production: `withTransactionAsync` of the SQLite database.
+all-or-nothing. Production: `withTransactionAsync` of the SQLite database. Runs go one at a time,
+in the order they were started (expo-sqlite's transaction does not keep other statements out),
+so a use case never starts a run inside another's work: it would wait for ever. The
+repositories given to the work reject once the run has ended.
 
 ## Repositories
 
@@ -36,14 +39,14 @@ interface CategoryRepository {
 }
 
 interface ArticleRepository {
-  all(): Promise<Article[]>;
+  all(): Promise<Article[]>;                         // in the order added
   findById(id: ArticleId): Promise<Article | null>;
   findByNormalizedName(normalizedName: string): Promise<Article | null>;
   add(article: Article): Promise<void>;
 }
 
 interface ShoppingListRepository {
-  all(): Promise<ShoppingList[]>;
+  all(): Promise<ShoppingList[]>;                    // in the order added
   findById(id: ListId): Promise<ShoppingList | null>;
   findByNormalizedName(normalizedName: string): Promise<ShoppingList | null>;
   count(): Promise<number>;
@@ -52,7 +55,7 @@ interface ShoppingListRepository {
 }
 
 interface ListItemRepository {
-  forList(listId: ListId): Promise<ListItem[]>;
+  forList(listId: ListId): Promise<ListItem[]>;      // in the order added; an update keeps its place
   find(listId: ListId, articleId: ArticleId): Promise<ListItem | null>;
   save(item: ListItem): Promise<void>;               // insert or update
   remove(listId: ListId, articleId: ArticleId): Promise<void>;

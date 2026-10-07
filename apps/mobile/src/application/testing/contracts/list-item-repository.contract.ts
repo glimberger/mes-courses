@@ -36,6 +36,17 @@ export const listItemRepositoryContract = (
       );
     });
 
+    it('returns the items in the order they were added, an update keeping its place', async () => {
+      await repos.items.save(item('l-1', 'a-2'));
+      await repos.items.save(item('l-1', 'a-1'));
+      await repos.items.save(item('l-1', 'a-2', { inCart: true }));
+
+      expect(await repos.items.forList(listId('l-1'))).toEqual([
+        item('l-1', 'a-2', { inCart: true }),
+        item('l-1', 'a-1'),
+      ]);
+    });
+
     it('keeps an amount with decimals and no unit unchanged', async () => {
       await repos.items.save(
         item('l-1', 'a-2', { quantity: { amount: 0.125, unit: null } }),

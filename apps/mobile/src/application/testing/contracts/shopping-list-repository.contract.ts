@@ -17,18 +17,14 @@ export const shoppingListRepositoryContract = (
       expect(await repos.lists.count()).toBe(0);
     });
 
-    it('returns and counts every list added', async () => {
-      await repos.lists.add(list('l-1', 'Ma liste'));
-      await repos.lists.add(list('l-2', 'Barbecue'));
+    it('returns and counts every list added, in the order they were added', async () => {
+      await repos.lists.add(list('l-2', 'Ma liste'));
+      await repos.lists.add(list('l-1', 'Barbecue'));
 
-      const all = await repos.lists.all();
-      expect(all).toHaveLength(2);
-      expect(all).toEqual(
-        expect.arrayContaining([
-          list('l-1', 'Ma liste'),
-          list('l-2', 'Barbecue'),
-        ]),
-      );
+      expect(await repos.lists.all()).toEqual([
+        list('l-2', 'Ma liste'),
+        list('l-1', 'Barbecue'),
+      ]);
       expect(await repos.lists.count()).toBe(2);
     });
 

@@ -1,12 +1,12 @@
 import type { ShoppingListRepository } from '../../application/ports/repositories';
 import { normalizedName } from '../../domain/name';
 import type { ListId, ShoppingList } from '../../domain/shopping-list';
+import { findAll, findFirst, write } from './queries';
 import type { SqlDatabase } from './sql-database';
-import { withStorageErrors } from './storage-error';
 
 type ListRow = { id: string; name: string };
 
-const COLUMNS = 'SELECT id, name FROM shopping_list';
+const SELECT = 'SELECT id, name FROM shopping_list';
 
 const toList = (row: ListRow): ShoppingList => ({
   id: row.id as ListId,
@@ -15,48 +15,35 @@ const toList = (row: ListRow): ShoppingList => ({
 
 export const sqliteShoppingListRepository = (
   db: SqlDatabase,
-): ShoppingListRepository => {
-  const findOne = (where: string, value: string) =>
-    withStorageErrors(async () => {
-      const row = await db.getFirstAsync<ListRow>(
-        `${COLUMNS} WHERE ${where} = ?`,
-        [value],
-      );
-      return row && toList(row);
-    });
-
-  return {
-    all: () =>
-      withStorageErrors(async () =>
-        (await db.getAllAsync<ListRow>(COLUMNS, [])).map(toList),
+): ShoppingListRepository => ({
+  // The rowid grows with each insert: the order they were added.
+  all: () => findAll(db, `${SELECT} ORDER BY rowid`, [], toList),
+  findById: (id) => findFirst(db, `${SELECT} WHERE id = ?`, [id], toList),
+  findByNormalizedName: (normalized) =>
+    findFirst(db, `${SELECT} WHERE normalized_name = ?`, [normalized], toList),
+  count: async () =>
+    (await findFirst(
+      db,
+      'SELECT count(*) AS count FROM shopping_list',
+      [],
+      (row: { count: number }) => row.count,
+    )) ?? 0,
+  add: (list) =>
+    write(
+      db,
+      'INSERT INTO shopping_list (id, name, normalized_name) VALUES (?, ?, ?)',
+      [list.id, list.name, normalizedName(list.name)],
+    ),
+  itemCounts: async () =>
+    new Map(
+      await findAll(
+        db,
+        `SELECT shopping_list.id AS id, count(list_item.article_id) AS count
+         FROM shopping_list LEFT JOIN list_item ON list_item.list_id = shopping_list.id
+         GROUP BY shopping_list.id`,
+        [],
+        (row: { id: string; count: number }) =>
+          [row.id as ListId, row.count] as const,
       ),
-    findById: (id) => findOne('id', id),
-    findByNormalizedName: (normalized) =>
-      findOne('normalized_name', normalized),
-    count: () =>
-      withStorageErrors(async () => {
-        const row = await db.getFirstAsync<{ count: number }>(
-          'SELECT count(*) AS count FROM shopping_list',
-          [],
-        );
-        return row?.count ?? 0;
-      }),
-    add: (list) =>
-      withStorageErrors(async () => {
-        await db.runAsync(
-          'INSERT INTO shopping_list (id, name, normalized_name) VALUES (?, ?, ?)',
-          [list.id, list.name, normalizedName(list.name)],
-        );
-      }),
-    itemCounts: () =>
-      withStorageErrors(async () => {
-        const rows = await db.getAllAsync<{ id: string; count: number }>(
-          `SELECT shopping_list.id AS id, count(list_item.article_id) AS count
-           FROM shopping_list LEFT JOIN list_item ON list_item.list_id = shopping_list.id
-           GROUP BY shopping_list.id`,
-          [],
-        );
-        return new Map(rows.map((row) => [row.id as ListId, row.count]));
-      }),
-  };
-};
+    ),
+});

@@ -18,18 +18,14 @@ export const articleRepositoryContract = (
       expect(await repos.articles.all()).toEqual([]);
     });
 
-    it('returns every article added', async () => {
-      await repos.articles.add(article('a-1', 'Lait', 'c-1'));
+    it('returns every article added, in the order they were added', async () => {
       await repos.articles.add(article('a-2', 'Pommes', 'c-2'));
+      await repos.articles.add(article('a-1', 'Lait', 'c-1'));
 
-      const all = await repos.articles.all();
-      expect(all).toHaveLength(2);
-      expect(all).toEqual(
-        expect.arrayContaining([
-          article('a-1', 'Lait', 'c-1'),
-          article('a-2', 'Pommes', 'c-2'),
-        ]),
-      );
+      expect(await repos.articles.all()).toEqual([
+        article('a-2', 'Pommes', 'c-2'),
+        article('a-1', 'Lait', 'c-1'),
+      ]);
     });
 
     it('finds an article by id, or null', async () => {
