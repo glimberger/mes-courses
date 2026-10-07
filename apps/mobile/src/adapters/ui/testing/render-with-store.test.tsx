@@ -5,6 +5,7 @@ import { act, screen } from '@testing-library/react-native';
 
 import { useAppStore } from '../state/use-app-store';
 import { lightTheme } from '../theme/theme';
+import { fixture } from './fixtures';
 import { renderWithStore } from './render-with-store';
 
 const Probe = () => {
@@ -40,12 +41,23 @@ describe('renderWithStore', () => {
   });
 
   it('stores the seed before rendering', async () => {
-    const { unitOfWork } = await renderWithStore(<Probe />, {
-      seed: { categoryNames: ['Crèmerie'], firstListName: 'Ma liste' },
+    const { unitOfWork } = await renderWithStore(<Probe />, { seed: fixture });
+
+    expect(await unitOfWork.run((repos) => repos.lists.all())).toEqual(
+      fixture.lists,
+    );
+  });
+
+  it('builds its store from the scenario, as stories do', async () => {
+    const { useCases } = await renderWithStore(<Probe />, {
+      failing: ['initializeStore'],
     });
 
-    expect(await unitOfWork.run((repos) => repos.lists.all())).toEqual([
-      { id: expect.any(String), name: 'Ma liste' },
-    ]);
+    await expect(
+      useCases.initializeStore({
+        categoryNames: [],
+        firstListName: 'Ma liste',
+      }),
+    ).rejects.toBeInstanceOf(Error);
   });
 });

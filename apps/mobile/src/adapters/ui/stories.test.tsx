@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { ComponentType } from 'react';
 
 import { composeStories } from '@storybook/react';
-import { render } from '@testing-library/react-native';
+import { act, render } from '@testing-library/react-native';
 
 import preview from '../../../.rnstorybook/preview';
 import { requiredStories } from './required-stories';
@@ -47,12 +47,15 @@ const stories = loadStories();
 describe('every story renders in the light and the dark scheme', () => {
   for (const { id, Story } of stories) {
     for (const scheme of ['light', 'dark'] as const) {
-      it(`${id} in ${scheme}`, () => {
+      it(`${id} in ${scheme}`, async () => {
         mockColorScheme = scheme;
         const error = jest.spyOn(console, 'error').mockImplementation();
         const warn = jest.spyOn(console, 'warn').mockImplementation();
         try {
           render(<Story />);
+          // The story's store is built, and its data loaded, on the in-memory fakes, which
+          // settle within the current task.
+          await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
           expect(error).not.toHaveBeenCalled();
           expect(warn).not.toHaveBeenCalled();
         } finally {

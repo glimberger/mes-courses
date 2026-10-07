@@ -7,6 +7,8 @@ allowed_patterns:
   - 'PRAGMA foreign_keys'
   # React's `key` prop on a JSX element, which sets its identity, not a secret.
   - 'key=\{'
+  # TypeScript's `keyof` operator, which names a type's properties, not a secret.
+  - 'keyof'
 fileignoreconfig:
   # flake.lock pins Nix inputs with content hashes and git revisions, not secrets.
   - filename: flake.lock

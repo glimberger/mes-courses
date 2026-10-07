@@ -62,10 +62,10 @@ module.exports = {
       name: 'adapters-imported-only-by-composition-and-adapters',
       severity: 'error',
       comment:
-        'Only adapters, the composition root, App.tsx and the adapter test helpers import adapters. Storybook configuration (.rnstorybook/) builds the story theme from the UI adapter, so it is allowed too.',
+        'Only adapters, the composition root, App.tsx and its test, and the adapter test helpers import adapters. Storybook configuration (.rnstorybook/) builds the story theme from the UI adapter, so it is allowed too.',
       from: {
         pathNot:
-          '^apps/mobile/(src/adapters/|src/composition/|App\\.tsx$|test/|\\.rnstorybook/)',
+          '^apps/mobile/(src/adapters/|src/composition/|App\\.(test\\.)?tsx$|test/|\\.rnstorybook/)',
       },
       to: { path: `${MOBILE_SRC}/adapters/` },
     },

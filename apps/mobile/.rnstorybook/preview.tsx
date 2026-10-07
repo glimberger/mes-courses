@@ -1,5 +1,9 @@
 import type { Preview } from '@storybook/react-native';
 
-const preview: Preview = {};
+import { withAppProviders } from '../src/adapters/ui/testing/story-decorator';
+
+const preview: Preview = {
+  decorators: [withAppProviders],
+};
 
 export default preview;
