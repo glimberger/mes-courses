@@ -221,7 +221,7 @@ story depends on them.
 
 ### Error reporting and ids
 
-- [ ] T038 [P] Write failing tests for the Sentry reporter in `apps/mobile/src/adapters/error-reporting/sentry-error-reporter.test.ts`, with `@sentry/react-native` mocked. The app uses `@sentry/react-native` 7.11, the version Expo SDK 57 pins ([research.md](research.md) R13): before writing a case, check that the option or API it asserts exists in 7.11's type definitions; if one does not, stop and record the closest supported setting in R13 first, rather than asserting an option the SDK ignores:
+- [X] T038 [P] Write failing tests for the Sentry reporter in `apps/mobile/src/adapters/error-reporting/sentry-error-reporter.test.ts`, with `@sentry/react-native` mocked. The app uses `@sentry/react-native` 7.11, the version Expo SDK 57 pins ([research.md](research.md) R13): before writing a case, check that the option or API it asserts exists in 7.11's type definitions; if one does not, stop and record the closest supported setting in R13 first, rather than asserting an option the SDK ignores:
   - `init` is called with `sendDefaultPii: false`, the DSN, `maxCacheItems: 30` (FR-030a), `enableNativeCrashHandling: true` (native crashes are reported, FR-030), `maxBreadcrumbs: 0`, `enableAppHangTracking: false` and `enableAutoSessionTracking: false`, and with no `release` or `dist`, which the SDK reads from the native app ([research.md](research.md) R13);
   - FR-030 environment: `createSentryErrorReporter({ dsn, environment })` hands `environment` to `init` when it is `production` or `preview`; with any other value, or none, it does not call `init` and returns a `ConsoleErrorReporter`;
   - `beforeBreadcrumb` returns `null` for every breadcrumb, and `beforeSend` removes request data;
@@ -238,8 +238,8 @@ story depends on them.
   - FR-030b: the test names cite FR-030b on the case that runs a report from a use case of another feature through the same adapter (a `report(error, { operation: 'editArticle', screen: 'AddArticles' })` call is filtered and fingerprinted like the others);
   - `crashNatively()` calls `Sentry.nativeCrash()` (used only by the smoke test, T133);
   - `report` and `setScreen` never throw, even when the SDK throws.
-- [ ] T039 [P] Implement `createSentryErrorReporter` in `apps/mobile/src/adapters/error-reporting/sentry-error-reporter.ts` and `ConsoleErrorReporter` in `apps/mobile/src/adapters/error-reporting/console-error-reporter.ts` (the console one is also written test-first: its `setScreen` only remembers the screen it prints with each report, and its `crashNatively` prints a line and does not crash) to turn T038 green.
-- [ ] T040 [P] Implement `CryptoIdGenerator` (`expo-crypto` `randomUUID()`) in `apps/mobile/src/adapters/id/crypto-id-generator.ts`, with a test that mocks `expo-crypto` and checks `next()` returns its value.
+- [X] T039 [P] Implement `createSentryErrorReporter` in `apps/mobile/src/adapters/error-reporting/sentry-error-reporter.ts` and `ConsoleErrorReporter` in `apps/mobile/src/adapters/error-reporting/console-error-reporter.ts` (the console one is also written test-first: its `setScreen` only remembers the screen it prints with each report, and its `crashNatively` prints a line and does not crash) to turn T038 green.
+- [X] T040 [P] Implement `CryptoIdGenerator` (`expo-crypto` `randomUUID()`) in `apps/mobile/src/adapters/id/crypto-id-generator.ts`, with a test that mocks `expo-crypto` and checks `next()` returns its value.
 
 ### Design system foundations (Principle V)
 

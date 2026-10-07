@@ -480,6 +480,10 @@ FR-030a, FR-039a).
   `report` on every failure; the adapter alone decides not to send. `RecordingErrorReporter`
   records every call, so application tests keep asserting that each failure is passed to the
   reporter, and the adapter's tests assert the drop.
+  The signature is recorded in `beforeSend`, before the SDK sends the event, so the rule is "at
+  most once", as FR-030 says: an event lost afterwards (refused by the server's rate limit, or
+  dropped from a full offline cache, FR-030a) is not sent again during that opening; the next
+  opening sends the same failure again.
 - **Expected situations** (FR-030, clarified 2026-10-06): exactly the three the spec lists, each
   already handled without a report: `StorageFull` (R12a), `DataFromNewerVersion` (R18c), and the
   `Result` errors that use cases return for refused input (`NameRequired`, `NameTooLong`,
