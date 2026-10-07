@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
   initialWindowMetrics,
@@ -30,7 +30,9 @@ type Startup =
 /**
  * Starts the app and shows where it is (contracts/ui-screens.md#app-startup-fr-039): loading,
  * the app, or a full-screen error. "Réessayer" runs the composition root again from the start,
- * after closing the database; nothing is deleted or reset (research R18a, R13a).
+ * after closing the database; nothing is deleted or reset (research R18a, R13a). Each start
+ * closes its app when it ends (a retry, an unmount, StrictMode or Fast Refresh running the effect
+ * again), and the next start waits for that close, so one connection at a time holds the file.
  */
 export default function App() {
   // Built first, so a failure at startup can be reported.
@@ -41,13 +43,15 @@ export default function App() {
 
   // Bumped by "Réessayer" to run the composition root again.
   const [attempt, setAttempt] = useState(0);
+  // Settles once the app of the previous start, if any, is closed.
+  const previousClosed = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     let live = true;
-    composeApp(reporter).then(
+    const starting = previousClosed.current.then(() => composeApp(reporter));
+    starting.then(
       (app) => {
         if (live) setStartup({ status: 'ready', app });
-        else void app.close().catch(() => undefined);
       },
       (error: unknown) => {
         if (!live) return;
@@ -62,21 +66,22 @@ export default function App() {
     );
     return () => {
       live = false;
+      // A failure to close is no reason not to start again.
+      previousClosed.current = starting
+        .then((app) => app.close())
+        .catch(() => undefined);
     };
   }, [reporter, attempt]);
 
-  const restart = async () => {
-    const previous = startup.status === 'ready' ? startup.app : null;
+  const restart = () => {
     setStartup({ status: 'starting' });
-    // A failure to close is no reason not to start again.
-    await previous?.close().catch(() => undefined);
     setAttempt((count) => count + 1);
   };
 
   return (
     <ThemeProvider>
       <StatusBar style="auto" />
-      {renderStartup(startup, reporter, () => void restart())}
+      {renderStartup(startup, reporter, restart)}
     </ThemeProvider>
   );
 }

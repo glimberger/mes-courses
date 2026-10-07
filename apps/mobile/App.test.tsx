@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import {
   act,
   fireEvent,
@@ -63,7 +64,7 @@ describe('App startup', () => {
     render(<App />);
 
     expect(screen.getByLabelText('Chargement')).toBeOnTheScreen();
-    expect(compose).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(compose).toHaveBeenCalledTimes(1));
     await act(async () => start.resolve(await started()));
     expect(await currentList()).toBeOnTheScreen();
     expect(mockReporter.reports).toEqual([]);
@@ -113,6 +114,39 @@ describe('App startup', () => {
       { operation: 'startup' },
       { operation: 'startup' },
     ]);
+  });
+
+  it('closes the started app when App unmounts', async () => {
+    const app = await started();
+    compose.mockResolvedValueOnce(app);
+    const { unmount } = render(<App />);
+    await currentList();
+
+    unmount();
+
+    await waitFor(() => expect(app.close).toHaveBeenCalledTimes(1));
+  });
+
+  it('starts again only once the app of the previous run is closed, when the effect runs twice', async () => {
+    const steps: string[] = [];
+    compose.mockImplementation(async () => {
+      const start = steps.filter((step) => step.startsWith('start')).length;
+      steps.push(`start ${start}`);
+      const app = await started();
+      app.close = jest.fn(async () => {
+        steps.push(`close ${start}`);
+      });
+      return app;
+    });
+
+    render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    );
+
+    expect(await currentList()).toBeOnTheScreen();
+    expect(steps).toEqual(['start 0', 'close 0', 'start 1']);
   });
 
   it('FR-040 shows UpdateRequired, with no button and no report, for data from a newer version', async () => {
