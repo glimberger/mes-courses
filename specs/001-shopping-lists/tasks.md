@@ -243,20 +243,20 @@ story depends on them.
 
 ### Design system foundations (Principle V)
 
-- [ ] T041 Write failing tests in `apps/mobile/src/adapters/ui/theme/theme.test.ts`:
+- [X] T041 Write failing tests in `apps/mobile/src/adapters/ui/theme/theme.test.ts`:
   - every MD3 color role of the light and dark Paper themes equals the matching role of `schemes.light` and `schemes.dark` in `design/material-theme.json`;
-  - `elevation.level0..5` derive from `surfaceContainerLowest..Highest`;
+  - `elevation.level0` stays `transparent` and `level1..5` derive from `surfaceContainerLow..Highest` (R2);
   - FR-036: in light and dark, every foreground role the screens and shared components use (text, icons, checkbox, outline; at least `onSurface`, `onSurfaceVariant` for ticked rows, `primary`, `outline`) against every background role it is drawn on (at least `surface` and the `surfaceContainer*` roles) reaches 4.5:1 for text and 3:1 for the others (WCAG contrast ratio computed in the test). The pairs come from one exported list in `apps/mobile/src/adapters/ui/theme/used-color-pairs.ts`, which each task adding a new role to a screen or component extends;
   - the `spacing` tokens are `xs = 4` … `xl = 32` on the 4 dp grid.
-- [ ] T042 Implement the light and dark themes from the JSON in `apps/mobile/src/adapters/ui/theme/theme.ts` and the `spacing` tokens in `apps/mobile/src/adapters/ui/theme/spacing.ts`, and add `ThemeProvider` (follows `useColorScheme`, wraps `PaperProvider`) in `apps/mobile/src/adapters/ui/theme/theme-provider.tsx`, to turn T041 green. If a contrast pair of T041 fails with the colors of `design/material-theme.json`, export the theme again from Material Theme Builder, or use a role of the same scheme that passes and record the choice in [research.md](research.md) R12; never lower the threshold.
-- [ ] T043 [P] Write failing component tests in `apps/mobile/src/adapters/ui/components/screen-state.test.tsx`:
+- [X] T042 Implement the light and dark themes from the JSON in `apps/mobile/src/adapters/ui/theme/theme.ts` and the `spacing` tokens in `apps/mobile/src/adapters/ui/theme/spacing.ts`, and add `ThemeProvider` (follows `useColorScheme`, wraps `PaperProvider`) in `apps/mobile/src/adapters/ui/theme/theme-provider.tsx`, to turn T041 green. If a contrast pair of T041 fails with the colors of `design/material-theme.json`, export the theme again from Material Theme Builder, or use a role of the same scheme that passes and record the choice in [research.md](research.md) R12; never lower the threshold.
+- [X] T043 [P] Write failing component tests in `apps/mobile/src/adapters/ui/components/screen-state.test.tsx`:
   - `LoadingState` has the accessibility label "Chargement";
   - `EmptyState` shows its message and optional action button;
   - `ErrorState` shows its message and a "Réessayer" button that calls `onRetry`;
   - `ScreenStateView` renders exactly one of the three, or the success renderer, for each `ScreenState` status.
-- [ ] T044 [P] Implement `LoadingState.tsx`, `EmptyState.tsx`, `ErrorState.tsx` and `ScreenStateView.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T043 green.
-- [ ] T045 [P] Write failing tests for `formatQuantity` in `apps/mobile/src/adapters/ui/components/format-quantity.test.ts`: `{1.5, "kg"}` → "1,5 kg", `{6, null}` → "6", `{2, "L"}` → "2 L", `{0.125, "kg"}` → "0,125 kg", `{9999, null}` → "9999" (no digit grouping), and the output of `{1.5}` parses back through `parseQuantity` to 1.5 (FR-017).
-- [ ] T046 [P] Implement `formatQuantity` with `Intl.NumberFormat('fr-FR', { maximumFractionDigits: 3, useGrouping: false })` in `apps/mobile/src/adapters/ui/components/format-quantity.ts` to turn T045 green.
+- [X] T044 [P] Implement `LoadingState.tsx`, `EmptyState.tsx`, `ErrorState.tsx` and `ScreenStateView.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T043 green.
+- [X] T045 [P] Write failing tests for `formatQuantity` in `apps/mobile/src/adapters/ui/components/format-quantity.test.ts`: `{1.5, "kg"}` → "1,5 kg", `{6, null}` → "6", `{2, "L"}` → "2 L", `{0.125, "kg"}` → "0,125 kg", `{9999, null}` → "9999" (no digit grouping), and the output of `{1.5}` parses back through `parseQuantity` to 1.5 (FR-017).
+- [X] T046 [P] Implement `formatQuantity` with `Intl.NumberFormat('fr-FR', { maximumFractionDigits: 3, useGrouping: false })` in `apps/mobile/src/adapters/ui/components/format-quantity.ts` to turn T045 green.
 
 ### Application store core ([002 ui-state contract](../002-manage-articles/contracts/ui-state.md))
 
@@ -264,7 +264,7 @@ story depends on them.
   - every region starts `idle`;
   - `notice` starts `null`, and `dismissNotice()` clears it;
   - `pendingUndo` starts `null`.
-- [ ] T048 Implement `createAppStore` with `createStore` from `zustand/vanilla` and the `AppState`, `ScreenState<T, E>` (`idle | loading | error | empty | success`) and `Notice` types in `apps/mobile/src/adapters/ui/state/app-store.ts`, to turn T047 green. Use no middleware.
+- [ ] T048 Implement `createAppStore` with `createStore` from `zustand/vanilla` and the `AppState` and `Notice` types in `apps/mobile/src/adapters/ui/state/app-store.ts`, using the `ScreenState<T, E>` type (`idle | loading | error | empty | success`) that T044 added in `apps/mobile/src/adapters/ui/state/screen-state.ts` for `ScreenStateView`, to turn T047 green. Use no middleware.
 - [ ] T049 Write failing tests in `apps/mobile/src/adapters/ui/state/app-store.write-rules.test.ts` for the shared write rules, through a test-only write action:
   - every write goes through one store-wide queue, in the order the actions were called: with the first use case held pending, a second write starts only after the first resolves (FR-004, [research.md](research.md) R9);
   - a write that succeeds clears `pendingUndo`; a write that fails (a throw or a `Result` error) or returns refused input leaves `pendingUndo` as it was (FR-010, R8);
