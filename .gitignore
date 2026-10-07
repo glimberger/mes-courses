@@ -24,3 +24,21 @@ coverage/
 
 # Logs
 *.log
+
+# Expo and React Native (any workspace)
+.expo/
+ios/
+android/
+*.jks
+
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+
+# direnv
+.direnv/

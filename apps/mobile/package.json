@@ -1,0 +1,44 @@
+{
+  "name": "@mes-courses/mobile",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.ts",
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
+    "@react-navigation/native": "^7.5.0",
+    "@react-navigation/native-stack": "^7.20.0",
+    "@sentry/react-native": "~7.11.0",
+    "expo": "~57.0.26",
+    "expo-crypto": "~57.0.3",
+    "expo-font": "~57.0.4",
+    "expo-sqlite": "~57.0.3",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-paper": "^5.15.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@expo/config": "^57.0.0",
+    "@react-native/jest-preset": "~0.86.3",
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^30",
+    "@types/node": "^24",
+    "@types/react": "~19.2.2",
+    "@types/react-test-renderer": "^19",
+    "jest": "^30",
+    "jest-expo": "~57.0.5",
+    "react-test-renderer": "19.2.3",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "typecheck": "tsc --noEmit"
+  }
+}
