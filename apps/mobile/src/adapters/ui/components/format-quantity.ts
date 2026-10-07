@@ -1,8 +1,8 @@
-import type { Quantity } from '../../../domain/quantity';
+import { MAX_AMOUNT_DECIMALS, type Quantity } from '../../../domain/quantity';
 
 // No digit grouping and no trailing zeros, so the QuantityDialog prefill parses back unchanged.
 const amountFormat = new Intl.NumberFormat('fr-FR', {
-  maximumFractionDigits: 3,
+  maximumFractionDigits: MAX_AMOUNT_DECIMALS,
   useGrouping: false,
 });
 
