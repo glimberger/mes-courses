@@ -1,7 +1,7 @@
 import type { Article, ArticleId } from '../../../domain/article';
 import { filterCatalog, type CatalogView } from '../../../domain/catalog-view';
 import type { CategoryId } from '../../../domain/category';
-import type { AlreadyOnList } from '../../../domain/list-item';
+import type { AlreadyOnList, ItemNotOnList } from '../../../domain/list-item';
 import {
   cleanName,
   type NameAlreadyUsed,
@@ -46,8 +46,13 @@ export type EditListActions = {
     articleId: ArticleId,
     quantity: Quantity | null,
   ) => Promise<Result<void, WriteFailed>>;
-  /** Removes the item from the current list and offers to undo it (US2-6, FR-010). */
-  removeItem: (articleId: ArticleId) => Promise<Result<void, WriteFailed>>;
+  /**
+   * Removes the item from the current list and offers to undo it (US2-6, FR-010). An item
+   * already gone, removed by a tap just before, is left as it is: `ItemNotOnList`, not reported.
+   */
+  removeItem: (
+    articleId: ArticleId,
+  ) => Promise<Result<void, ItemNotOnList | WriteFailed>>;
   /** Ends the offer at once, then puts the item back in the write queue (R8). */
   undo: () => Promise<void>;
   /** Ends the offer: the removal is final (FR-010). */
@@ -69,6 +74,14 @@ const viewOf = (
     : { status: 'success', data };
 };
 
+/** The current list cannot be read; loading it reported why. */
+class NoCurrentList extends Error {
+  constructor() {
+    super('No current list shown');
+    this.name = 'NoCurrentList';
+  }
+}
+
 export const createEditListActions = (
   { get, set, useCases, runWrite, region, reloadOnRefresh, report }: StoreKit,
   { loadCurrentList }: Pick<CurrentListActions, 'loadCurrentList'>,
@@ -77,7 +90,7 @@ export const createEditListActions = (
   const currentListId = async (): Promise<ListId> => {
     if (shownList(get().currentList) === null) await loadCurrentList();
     const list = shownList(get().currentList);
-    if (list === null) throw new Error('No current list shown');
+    if (list === null) throw new NoCurrentList();
     return list.id;
   };
 
@@ -95,13 +108,11 @@ export const createEditListActions = (
     options?: WriteOptions<T, X>,
   ) => {
     const shown = shownList(get().currentList);
-    return shown !== null
-      ? runWrite<T, E, X>(operation, () => call(shown.id), options)
-      : runWrite<T, E, X>(
-          operation,
-          async () => call(await currentListId()),
-          options,
-        );
+    return runWrite<T, E, X>(
+      operation,
+      async () => call(shown?.id ?? (await currentListId())),
+      options,
+    );
   };
 
   const setCatalog = (full: CatalogState['full']) => {
@@ -124,7 +135,8 @@ export const createEditListActions = (
       };
     } catch (error) {
       loaded = { status: 'error', error };
-      report(error, 'getCatalog');
+      // Loading the current list already reported its own failure.
+      if (!(error instanceof NoCurrentList)) report(error, 'getCatalog');
     }
     if (started === latestCatalog) setCatalog(loaded);
   };
@@ -189,7 +201,10 @@ export const createEditListActions = (
     const outcome = await writeOnList(
       'removeItemFromList',
       (listId) => useCases.removeItemFromList(listId, articleId),
-      { offer: (removed) => ({ kind: 'removedItem', removed, name }) },
+      {
+        expected: ['ItemNotOnList'],
+        offer: (removed) => ({ kind: 'removedItem', removed, name }),
+      },
     );
     return outcome.ok ? ok(undefined) : outcome;
   };

@@ -253,6 +253,19 @@ describe('editing the current list in the store', () => {
     });
   });
 
+  it('reports only the failure of the current list when the catalog cannot know it', async () => {
+    const { store, errorReporter } = await buildStore(() => ({
+      getCurrentList: () => Promise.reject(new Error('storage failed')),
+    }));
+
+    await store.getState().loadCatalog();
+
+    expect(store.getState().catalog.view.status).toBe('error');
+    expect(errorReporter.reports).toEqual([
+      { error: expect.any(Error), context: { operation: 'getCurrentList' } },
+    ]);
+  });
+
   describe('loadCategories', () => {
     it('US2-7 loads the categories in order', async () => {
       const { store } = await buildStore();
@@ -463,6 +476,35 @@ describe('editing the current list in the store', () => {
 
       expect(store.getState().notice).toBeNull();
       expect(store.getState().pendingUndo).toMatchObject({ name: 'Beurre' });
+    });
+
+    it('FR-004 a second removal of the item, tapped before the first is saved, changes nothing and is not reported', async () => {
+      const { store, errorReporter } = await buildStore();
+      await store.getState().loadCurrentList();
+
+      const first = store.getState().removeItem(beurre.id);
+      const second = store.getState().removeItem(beurre.id);
+
+      expect(await first).toEqual(ok(undefined));
+      expect((await second).ok).toBe(false);
+      expect(store.getState().notice).toBeNull();
+      expect(errorReporter.reports).toEqual([]);
+      expect(store.getState().pendingUndo).toMatchObject({ name: 'Beurre' });
+    });
+
+    it('FR-004 a tap on an item whose removal is queued saves nothing, is not reported, and the item leaves the list', async () => {
+      const { store, errorReporter, stored } = await buildStore();
+      await store.getState().loadCurrentList();
+
+      await Promise.all([
+        store.getState().removeItem(lait.id),
+        store.getState().toggleItem(lait.id),
+      ]);
+
+      expect(await stored(lait.id)).toBeNull();
+      expect(listed(store).map((item) => item.name)).toEqual(['Beurre']);
+      expect(store.getState().notice).toBeNull();
+      expect(errorReporter.reports).toEqual([]);
     });
 
     it('FR-010 dismissUndo() ends the offer, and the removal stays', async () => {

@@ -432,7 +432,7 @@ describe('the current list in the store', () => {
       expect(shownInCart(store, lait)).toBe(false);
     });
 
-    it('FR-030 handles ItemNotOnList like a failed save, reported as an UnexpectedResult', async () => {
+    it('FR-004 FR-030 treats ItemNotOnList as an item removed by a tap just before: no notice, no report, the list shown as stored', async () => {
       const { store, errorReporter } = await buildStore(nothingInCart, () => ({
         toggleItemInCart: async () => err({ type: 'ItemNotOnList' as const }),
       }));
@@ -442,16 +442,8 @@ describe('the current list in the store', () => {
       await settle();
 
       expect(shownInCart(store, lait)).toBe(false);
-      expect(store.getState().notice).toEqual({ type: 'writeFailed' });
-      expect(errorReporter.reports).toEqual([
-        {
-          error: expect.objectContaining({
-            name: 'UnexpectedResult',
-            code: 'ItemNotOnList',
-          }),
-          context: { operation: 'toggleItemInCart' },
-        },
-      ]);
+      expect(store.getState().notice).toBeNull();
+      expect(errorReporter.reports).toEqual([]);
     });
   });
 

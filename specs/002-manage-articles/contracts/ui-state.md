@@ -95,7 +95,10 @@ Rules shared by every write action:
 5. **Business errors** (`Result` errors): refused input (`NameError`, `NameAlreadyUsed`,
    `QuantityError`) and `AlreadyOnList` returned by `addArticleToList` (001 US2-8) are returned
    to the caller unchanged and are not reported, since the form or dialog shows them.
-   `AlreadyOnList` from `restoreRemovedItem` is a failed restore (001 FR-010), handled as below. Every other `Result` error (a missing
+   `AlreadyOnList` from `restoreRemovedItem` is a failed restore (001 FR-010), handled as below.
+   `ItemNotOnList` from `removeItemFromList` or `toggleItemInCart` is a tap on an item whose
+   removal was queued just before it (001 FR-004): nothing is saved, nothing is shown or
+   reported, and a toggle reloads the current list. Every other `Result` error (a missing
    record or the wrong state: `ItemNotOnList`, `ArticleNotFound`, `CategoryNotFound`,
    `ListNotFound`, ...) cannot come from the user's input: it is handled as in
    rule 4 (`notice = writeFailed`, state unchanged, resolves to `WriteFailed`) and reported as an

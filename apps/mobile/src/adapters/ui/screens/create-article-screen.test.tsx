@@ -249,4 +249,18 @@ describe('CreateArticle', () => {
 
     await waitFor(() => expect(store.getState().notice).toBeNull());
   });
+
+  it('keeps a failure notice shown when it opens, so the user still reads it', async () => {
+    const { store } = await renderWithStore(<CreateArticleScreen />, {
+      seed: fixture,
+      failingWith: { addArticleToList: 'storageFull' },
+      prepare: async (actions) => {
+        await actions.loadCurrentList();
+        await actions.addArticleToList({ id: beurre, name: 'Beurre' }, null);
+      },
+    });
+    await screen.findByRole('radio', { name: 'Boissons' });
+
+    expect(store.getState().notice).toEqual({ type: 'storageFull' });
+  });
 });

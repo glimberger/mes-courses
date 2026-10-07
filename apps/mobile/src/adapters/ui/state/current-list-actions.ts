@@ -109,7 +109,7 @@ export const createCurrentListActions = ({
     const outcome = await runWrite<
       { inCart: boolean },
       Dropped | ItemNotOnList,
-      'Dropped'
+      'Dropped' | 'ItemNotOnList'
     >(
       'toggleItemInCart',
       async () => {
@@ -125,10 +125,15 @@ export const createCurrentListActions = ({
           throw error;
         }
       },
-      { expected: ['Dropped'] },
+      // A tap on an item whose removal was queued before it: nothing to save (FR-004).
+      { expected: ['Dropped', 'ItemNotOnList'] },
     );
-    // A failed save: show the item as stored.
-    if (!outcome.ok && outcome.error.type === 'WriteFailed') {
+    // A failed save, or an item gone: show the list as stored.
+    if (
+      !outcome.ok &&
+      (outcome.error.type === 'WriteFailed' ||
+        outcome.error.type === 'ItemNotOnList')
+    ) {
       await loadCurrentList();
     }
   };

@@ -31,18 +31,24 @@ export type AlreadyOnList = {
   quantity: Quantity | null;
 };
 
+/** A new item: unticked, with the quantity or none (FR-012, FR-013, FR-014). */
+export const newItem = (
+  { listId, articleId }: { listId: ListId; articleId: ArticleId },
+  quantity: Quantity | null,
+): ListItem => ({ listId, articleId, inCart: false, quantity });
+
 /**
- * Puts the article on the list, unticked, with the quantity or none (FR-012, FR-013, FR-014),
- * unless the list already holds it (`onList`, the item stored for this list and article).
+ * Puts the article on the list as a new item, unless the list already holds it (`onList`, the
+ * item stored for this list and article, FR-011).
  */
 export const add = (
   onList: ListItem | null,
-  { listId, articleId }: { listId: ListId; articleId: ArticleId },
+  target: { listId: ListId; articleId: ArticleId },
   quantity: Quantity | null,
 ): Result<ListItem, AlreadyOnList> =>
   onList
     ? err({ type: 'AlreadyOnList', quantity: onList.quantity })
-    : ok({ listId, articleId, inCart: false, quantity });
+    : ok(newItem(target, quantity));
 
 /** Sets or clears the quantity of this item only, keeping its tick (FR-015). */
 export const changeQuantity = (

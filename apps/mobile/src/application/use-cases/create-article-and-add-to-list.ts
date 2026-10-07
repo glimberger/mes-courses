@@ -1,6 +1,6 @@
 import type { Article, ArticleId } from '../../domain/article';
 import type { CategoryId, CategoryNotFound } from '../../domain/category';
-import { add } from '../../domain/list-item';
+import { newItem } from '../../domain/list-item';
 import {
   normalizedName,
   validateName,
@@ -47,8 +47,7 @@ export const createCreateArticleAndAddToList =
         name: validated.value,
         categoryId,
       });
-      const added = add(null, { listId, articleId }, quantity);
-      if (!added.ok) throw new Error('A new article is on no list');
-      await repos.items.save(added.value);
+      // A new article is on no list yet.
+      await repos.items.save(newItem({ listId, articleId }, quantity));
       return ok({ articleId });
     });

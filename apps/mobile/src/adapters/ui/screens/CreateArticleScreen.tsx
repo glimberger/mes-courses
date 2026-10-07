@@ -31,6 +31,7 @@ import { nameErrorText, NameField } from '../components/NameField';
 import { QuantityFields } from '../components/QuantityFields';
 import { ScreenStateView } from '../components/ScreenStateView';
 import type { RootStackParamList } from '../routes';
+import { useAppStoreApi } from '../state/app-store-provider';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
 import { QuantityDialog, type QuantityRequest } from './QuantityDialog';
@@ -50,13 +51,14 @@ export const CreateArticleScreen = () => {
     (state) => state.createArticleAndAddToList,
   );
   const addArticleToList = useAppStore((state) => state.addArticleToList);
-  const dismissNotice = useAppStore((state) => state.dismissNotice);
+  const store = useAppStoreApi();
 
-  // The confirmation of an earlier addition no longer applies, and its snackbar would cover
-  // "Créer et ajouter" at the bottom of the screen.
+  // The confirmation of an earlier addition no longer applies to this form. A failure notice
+  // stays, so the user still reads it.
   useEffect(() => {
-    dismissNotice();
-  }, [dismissNotice]);
+    const { notice, dismissNotice } = store.getState();
+    if (notice?.type === 'articleAdded') dismissNotice();
+  }, [store]);
 
   const [name, setName] = useState(params?.name ?? '');
   const [categoryId, setCategoryId] = useState<CategoryId | null>(

@@ -28,27 +28,29 @@ type Item = CurrentListView['sections'][number]['items'][number];
 /** What a row can ask the screen to do with its item. */
 type RowHandlers = {
   toggleItem: (articleId: ArticleId) => Promise<unknown>;
-  editQuantity: (item: Item) => void;
+  editQuantity: (articleId: ArticleId) => void;
   remove: (articleId: ArticleId) => void;
   /** The rows drawn, by article, for the focus moves (FR-037). */
   rowRefs: Map<ArticleId, View>;
 };
 
-/** A row whose callbacks stay the same between renders, so the row is not drawn again. */
+/**
+ * A row drawn again only when its item changes: it takes the item's fields, not the item, which a
+ * reload builds anew, and its callbacks stay the same between renders.
+ */
 const CurrentListRow = memo(function CurrentListRow({
-  item,
+  articleId,
+  name,
+  quantity,
+  inCart,
   handlers: { toggleItem, editQuantity, remove, rowRefs },
-}: {
-  item: Item;
-  handlers: RowHandlers;
-}) {
-  const { articleId } = item;
+}: Item & { handlers: RowHandlers }) {
   const onToggle = useCallback(() => {
     void toggleItem(articleId);
   }, [articleId, toggleItem]);
   const onEditQuantity = useCallback(
-    () => editQuantity(item),
-    [item, editQuantity],
+    () => editQuantity(articleId),
+    [articleId, editQuantity],
   );
   const onRemove = useCallback(() => remove(articleId), [articleId, remove]);
   const ref = useCallback(
@@ -61,9 +63,9 @@ const CurrentListRow = memo(function CurrentListRow({
   return (
     <ListItemRow
       ref={ref}
-      name={item.name}
-      quantity={item.quantity}
-      inCart={item.inCart}
+      name={name}
+      quantity={quantity}
+      inCart={inCart}
       onToggle={onToggle}
       onEditQuantity={onEditQuantity}
       onRemove={onRemove}
@@ -102,7 +104,8 @@ export const CurrentListScreen = () => {
   const emptyMessageRef = useRef<View>(null);
   const [rowRefs] = useState(() => new Map<ArticleId, View>());
   const editing = useRef<ArticleId | null>(null);
-  // The view as last drawn, read by `remove`, which stays the same as the view changes.
+  // The view as last drawn, read by `remove` and `editQuantity`, which stay the same as the view
+  // changes.
   const viewRef = useRef<CurrentListView | null>(null);
 
   useEffect(() => {
@@ -126,8 +129,12 @@ export const CurrentListScreen = () => {
     [rowRefs],
   );
 
-  const editQuantity = useCallback((item: Item) => {
-    editing.current = item.articleId;
+  const editQuantity = useCallback((articleId: ArticleId) => {
+    const item = viewRef.current?.sections
+      .flatMap((section) => section.items)
+      .find((shown) => shown.articleId === articleId);
+    if (!item) return;
+    editing.current = articleId;
     setRequest({
       mode: 'edit',
       article: { id: item.articleId, name: item.name },
@@ -257,9 +264,7 @@ const CurrentListSections = ({
         {section.title}
       </List.Subheader>
     )}
-    renderItem={({ item }) => (
-      <CurrentListRow item={item} handlers={handlers} />
-    )}
+    renderItem={({ item }) => <CurrentListRow {...item} handlers={handlers} />}
     stickySectionHeadersEnabled={false}
     contentContainerStyle={styles.content}
   />
