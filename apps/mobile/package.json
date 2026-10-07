@@ -44,8 +44,8 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
+    "android": "SENTRY_DISABLE_AUTO_UPLOAD=true expo run:android",
+    "ios": "SENTRY_DISABLE_AUTO_UPLOAD=true expo run:ios",
     "test": "jest",
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit",

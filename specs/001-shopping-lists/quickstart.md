@@ -46,7 +46,7 @@ required by [contracts/ui-validation.md](contracts/ui-validation.md#required-sto
 
 ```sh
 cd apps/mobile
-yarn expo run:android   # once, to install a development build (or: yarn expo run:ios)
+yarn android            # once, to install a development build (or: yarn ios)
 yarn storybook          # STORYBOOK_ENABLED=true expo start: the app opens on Storybook
 ```
 
@@ -82,7 +82,7 @@ pull request that changes `app.config.ts`, a config plugin or a native dependenc
 
 ```sh
 cd apps/mobile
-yarn expo run:android   # or: yarn expo run:ios
+yarn android            # or: yarn ios
 ```
 
 A development build is used (not Expo Go) because of the Sentry native module.
