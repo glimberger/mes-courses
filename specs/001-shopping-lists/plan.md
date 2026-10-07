@@ -4,7 +4,8 @@
 v2.1.0, monorepo, then for Storybook and Detox, then for constitution v2.1.1, then for the
 data clarifications, the failure-flow clarifications, the data checklist review, the
 observability clarifications, the two rounds of performance clarifications, the CI and
-delivery clarifications, the privacy and security clarifications and constitution v2.2.0) |
+delivery clarifications, the privacy and security clarifications and constitution v2.2.0;
+amended 2026-10-07 for constitution v2.3.0 and the findings of the setup phase) |
 **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/001-shopping-lists/spec.md`
@@ -39,7 +40,7 @@ Expo SDK 57, Node.js 24 LTS and Yarn 4 (through Corepack, `nodeLinker: node-modu
 tooling, all provided by a Nix flake dev shell ([research.md](research.md) R21)
 
 **Primary Dependencies**: Expo, React Native Paper 5 (Material 3), React Navigation 7 (native
-stack), Zustand 5, expo-sqlite, expo-crypto, @sentry/react-native 8 (full list and justification in
+stack), Zustand 5, expo-sqlite, expo-crypto, @sentry/react-native 7.11 (pinned by Expo SDK 57; full list and justification in
 [research.md](research.md#new-dependencies-principle-iv))
 
 **Storage**: SQLite on the device via expo-sqlite; hand-written SQL, migrations by
@@ -48,7 +49,7 @@ stack), Zustand 5, expo-sqlite, expo-crypto, @sentry/react-native 8 (full list a
 **Testing**: Jest 30 (`jest-expo` preset), React Native Testing Library for UI, `node:sqlite`
 for SQLite adapter tests, dependency-cruiser for the architecture test; Storybook for React
 Native 10 for the screen catalog, with every story rendered by a Jest test (portable stories,
-R22); Detox 20 with its own Jest 29 for end-to-end journeys in the test-only `tests/e2e/`
+R22); Detox 20, with the app's Jest 30, for end-to-end journeys in the test-only `tests/e2e/`
 workspace (R23)
 
 **Target Platform**: Android and iOS phones (versions supported by Expo SDK 57)
@@ -116,7 +117,7 @@ and every other unknown is resolved in [research.md](research.md).
 | IX | Explicit screen states | One `ScreenState` union per data region, held in the store, rendered by shared `LoadingState` / `EmptyState` / `ErrorState`; each state tested ([contracts/ui-screens.md](contracts/ui-screens.md)) and has a required story, built through the real store ([contracts/ui-validation.md](contracts/ui-validation.md)). No synchronization status yet: no data is synchronized until the sync feature (R19), which adds it to every data screen. | ✅ (sync status deferred with VII) |
 | X | French interface, no i18n | French text only in `apps/mobile/src/adapters/ui/`; domain and use cases return tagged errors; seed names passed in from the UI adapter; tests assert French text; `Intl` formats quantities with a decimal comma. | ✅ |
 | XI | Single repository (monorepo) | Yarn 4 workspaces (pinned by `packageManager`, run through Corepack), root `package.json` with `"workspaces": ["apps/*", "packages/*"]`, one `yarn.lock`, one `yarn install --immutable`, one CI. Shared bases at the root: `tsconfig.base.json`, ESLint flat config, Prettier, dependency-cruiser. The app is `@mes-courses/mobile` in `apps/mobile/`. No shared package exists yet, so `packages/` is not created (Principle IV); dependency-cruiser already forbids relative imports across workspaces ([research.md](research.md) R15, R20). The e2e tests are the test-only `tests/e2e/` workspace (`@mes-courses/e2e-tests`), so `"workspaces"` gains `"tests/*"`; its Jest 29 stays local to it, in the same `yarn.lock` (R23). | ✅ |
-| QG | Quality gates and CI | CI runs in the same Nix dev shell as local work (R21). `typecheck`, `lint` (+ Prettier check), `test` (+ architecture + story test), `build` (`expo export`), run from the root across every workspace, plus `e2e-android` (Detox on an emulator), on every PR and push to `main`, in place before the first application code is merged; no PR merged until `gh pr checks` shows every job green (no branch protection on this GitHub plan). "Works with the server unreachable" holds trivially: no code path reaches a server. Per constitution v2.2.0, `yarn test` is the fast suite, run before every commit; the Detox journeys are the device suite, run on Android before each push and in CI, except on a branch or pull request that changes only documentation, where the `changes` job skips `e2e-android` (R17), and on iOS on the maintainer's Mac before each release and before merging a pull request that changes native configuration (R23). Every job has a time limit (R17). A release is a `production` build, gated by every manual check and the iOS device suite recorded in a pull request, and a `production` build stops if a test-only option is set (R24). | ✅ |
+| QG | Quality gates and CI | CI runs in the same Nix dev shell as local work (R21). `typecheck`, `lint` (+ Prettier check), `test` (+ architecture + story test), `build` (`expo export`), run from the root across every workspace on every PR and push to `main`, a new push cancelling the previous run, in place before the first application code is merged; `e2e-android` (Detox on an emulator) in its own workflow, on every push to `main` and on demand on a branch (constitution v2.3.0); no PR merged until `gh pr checks` shows every job green and, unless the PR is documentation-only, an `e2e-android` run is green on its latest commit (no branch protection on this GitHub plan). "Works with the server unreachable" holds trivially: no code path reaches a server. Per constitution v2.3.0, `yarn test` is the fast suite, run before every commit; the Detox journeys are the device suite, run on Android before each push and once in CI on the final commit of a pull request, except on a branch or pull request that changes only documentation (`.github/scripts/app-changed.sh`, R17), and on iOS on the maintainer's Mac before each release and before merging a pull request that changes native configuration (R23). Every job has a time limit (R17). A release is a `production` build, gated by every manual check and the iOS device suite recorded in a pull request, and a `production` build stops if a test-only option is set (R24). | ✅ |
 | WF | Development workflow | The spec states offline behavior (FR-027) but excludes synchronization and reconciliation; deferred with VII (R19). | ⚠️ deviation |
 
 **Gate result before research**: one deviation, Principle VII (and the matching workflow rule):
@@ -215,7 +216,9 @@ eslint.config.mjs, .prettierrc        # shared lint and format config, per-works
 flake.nix, flake.lock                 # Nix dev shell: Node 24, Corepack (Yarn), watchman (research R21)
 .envrc                                # use flake (direnv)
 .talismanrc                           # + yarn.lock and flake.lock entries
-.github/workflows/ci.yml              # typecheck, lint, test, build across workspaces; e2e-android
+.github/workflows/ci.yml              # typecheck, lint, test, build across workspaces, on every PR
+.github/workflows/e2e.yml             # e2e-android: on push to main and on demand (constitution v2.3.0)
+.github/scripts/app-changed.sh        # documentation-only path rule (research R17)
 apps/
 └── mobile/                           # @mes-courses/mobile, the Expo app
     ├── package.json                  # app dependencies and scripts (start, build: expo export, test, storybook)
@@ -263,7 +266,7 @@ apps/
         └── sqlite/                   # node:sqlite wrapper implementing SqlDatabase for adapter tests
 tests/
 └── e2e/                              # @mes-courses/e2e-tests, test-only (research R23)
-    ├── package.json                  # detox, jest@29, ts-jest; scripts e2e:build:*, e2e:test:* (no "test")
+    ├── package.json                  # detox, jest (30), ts-jest; scripts e2e:build:*, e2e:test:* (no "test")
     ├── .detoxrc.js                   # android.emu.release, ios.sim.release
     ├── jest.config.js                # Detox runner, no retries
     └── journeys/                     # *.e2e.ts, one user journey per file (contracts/ui-validation.md)
@@ -277,8 +280,8 @@ layer under `apps/mobile/src/`, and the composition root is the only place that 
 adapter. Tests sit next to the code they cover (`*.test.ts(x)`). The only shared test helper
 outside `apps/mobile/src/` is the `node:sqlite` wrapper in `apps/mobile/test/`, which must stay
 out of the app bundle. Stories also sit next to the component they show (`*.stories.tsx`).
-Device journeys live in the test-only `tests/e2e/` workspace: they need Detox's Jest 29, and
-they must stay out of `yarn test`. That workspace defines no `test` script, so the root
+Device journeys live in the test-only `tests/e2e/` workspace: they drive a built binary and must
+stay out of `yarn test`. That workspace defines no `test` script, so the root
 `yarn test` never starts a device.
 
 ## Implementation notes for `/speckit-tasks`
@@ -294,7 +297,7 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
 - **Screen validation and e2e foundations**: in Setup, Storybook (`metro.config.js`,
   `.rnstorybook/`, `yarn storybook`), the story test with an empty required list, the
   `tests/e2e/` workspace with Detox, the config plugin, `.detoxrc.js`, a first journey that only
-  checks the app launches, the root `test:e2e:*` scripts and the `e2e-android` CI job. In
+  checks the app launches, the root `test:e2e:*` scripts and the `e2e-android` CI workflow. In
   Foundational, `createStoryStore` and fixtures next to `renderWithStore`, then the stories of
   the shared components with their rows in the required list.
 - **Then stories in priority order**: US1 and US2 (P1) together make the MVP; US3 (P2);
@@ -433,10 +436,25 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
   - the README lists two-factor sign-in on every account, Dependabot security alerts on, the
     Sentry EU region and the signing recovery steps (R25, T136);
   - quickstart §8 checks the release bundle's permissions in the Play Console.
-- **Constitution v2.2.0 (2026-10-07)**, reflected in the existing tasks: a `changes` job and
-  `.github/scripts/app-changed.sh` skip `e2e-android` on a documentation-only pull request
-  (`specs/`, `.specify/`, Markdown files), and the same rule decides locally whether a branch
-  needs the Android device suite before it is pushed; every other job always runs (R17, T016).
+- **Constitution v2.2.0 (2026-10-07)**, superseded by v2.3.0 below: a `changes` job and
+  `.github/scripts/app-changed.sh` skipped `e2e-android` on a documentation-only pull request.
+- **Constitution v2.3.0 (2026-10-07)**, already implemented on `main` (T016 describes the
+  former rule and is to be brought in line): `e2e-android` moves to `.github/workflows/e2e.yml`,
+  run on every push to `main` and on demand on a branch (`gh workflow run e2e.yml --ref
+  <branch>`); the `changes` job is removed; a pull request that is not documentation-only
+  (`.github/scripts/app-changed.sh`) is merged only with a green `e2e-android` run on its latest
+  commit; both workflows cancel superseded runs; Nix through `determinate-nix-action` and
+  `cache-nix-action`; the Gradle cache saved by every run, failed ones included (R17, R23).
+- **Setup phase findings (2026-10-07)**, to be turned into tasks:
+  - iOS 27: the iOS 27 SDK requires the UIScene lifecycle, which Expo SDK 57's AppDelegate does
+    not adopt, so the app stops at launch on iOS 27; the iOS journeys run on an iOS 26 runtime
+    meanwhile (R23). Resolve before a release built with Xcode 27;
+  - FR-041 on iOS: `expo prebuild` adds the bundle identifier as a URL scheme; a config plugin
+    removes it, tested on the prebuilt `Info.plist` (R25);
+  - the Sentry adapter targets `@sentry/react-native` 7.11: check each `Sentry.init` option of
+    R13 against that version when writing its tests;
+  - the Android journeys need an API 35 emulator (Detox 20.51 fails on API 37), and
+    `DETOX_IOS_DEVICE` / `DETOX_IOS_OS` choose the iOS simulator (R23).
 - No task touches the network or the server: synchronization belongs to the sync feature (R19).
 - The Sentry project is in place (done by the maintainer). It must belong to an organization in
   Sentry's EU region (R25); if it was created in the US region, the maintainer creates an EU
