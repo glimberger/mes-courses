@@ -100,14 +100,14 @@ quality gate, Storybook, the Detox workspace and CI in place before any applicat
   - add the file Storybook generates (`apps/mobile/.rnstorybook/storybook.requires.ts`, if the guide's version generates it) to `.gitignore`.
 
   Check that `yarn build` is still green and that `grep -ril storybook apps/mobile/dist` finds nothing, so a bundle built without `STORYBOOK_ENABLED` holds no Storybook code.
-- [ ] T010 Add the story test ([research.md](research.md) R22). Create `apps/mobile/src/adapters/ui/required-stories.ts` exporting `requiredStories: readonly string[]`, empty for now, filled with the ids of [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) as each story phase adds them. Then write `apps/mobile/src/adapters/ui/stories.test.tsx`:
+- [X] T010 Add the story test ([research.md](research.md) R22). Create `apps/mobile/src/adapters/ui/required-stories.ts` exporting `requiredStories: readonly string[]`, empty for now, filled with the ids of [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) as each story phase adds them. Then write `apps/mobile/src/adapters/ui/stories.test.tsx`:
   - it finds every `src/adapters/ui/**/*.stories.tsx` of the app with `fs.globSync` (Node 24), `require`s each file and composes its stories with `composeStories` from `@storybook/react`, using the project annotations of `apps/mobile/.rnstorybook/preview.tsx`;
   - it renders each story with React Native Testing Library twice, with `useColorScheme` mocked to `'light'` then `'dark'`, and fails if rendering throws or if `console.error` or `console.warn` is called;
   - one test fails for every id in `requiredStories` that no story has, the id being `<title>/<export name>`;
   - with no story file yet, the suite still runs: its "required stories exist" test is green on an empty list.
 
   Prove it with a throwaway `apps/mobile/src/adapters/ui/smoke.stories.tsx` that renders a Paper `Text`: it is green; a story that throws fails; a required id with no story fails. Then delete the throwaway story and id.
-- [ ] T011 Extend the root `.dependency-cruiser.cjs` with the rules of [research.md](research.md) R15 for Storybook and the e2e workspace, scanning `apps/mobile/.rnstorybook/` too:
+- [X] T011 Extend the root `.dependency-cruiser.cjs` with the rules of [research.md](research.md) R15 for Storybook and the e2e workspace, scanning `apps/mobile/.rnstorybook/` too:
   - `@storybook/*` is imported only by `**/*.stories.tsx`, `apps/mobile/.rnstorybook/**` and `apps/mobile/src/adapters/ui/stories.test.tsx`;
   - `**/*.stories.tsx`, `apps/mobile/src/adapters/ui/testing/**`, `apps/mobile/src/application/testing/**` and `apps/mobile/test/**` are imported only by `*.test.ts(x)` files, `*.stories.tsx` files, `apps/mobile/.rnstorybook/**` and other files in those testing folders, never by production code;
   - `tests/e2e/**` imports no other workspace, by package name or by path.

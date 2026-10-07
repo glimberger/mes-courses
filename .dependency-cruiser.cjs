@@ -13,6 +13,13 @@ const pure =
 
 const MOBILE_SRC = '^apps/mobile/src';
 
+const STORIES = '\\.stories\\.tsx$';
+const STORYBOOK_CONFIG = '^apps/mobile/\\.rnstorybook/';
+const TESTING_FOLDERS = `${MOBILE_SRC}/(adapters/ui|application)/testing/|^apps/mobile/test/`;
+const STORYBOOK_IMPORTERS = `${STORIES}|${STORYBOOK_CONFIG}|^apps/mobile/metro\\.config\\.js$|^apps/mobile/src/adapters/ui/stories\\.test\\.tsx$`;
+const TESTING_FILES = `${STORIES}|${TESTING_FOLDERS}`;
+const TESTING_IMPORTERS = `\\.test\\.tsx?$|${STORIES}|${STORYBOOK_CONFIG}|${TESTING_FOLDERS}`;
+
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
   forbidden: [
@@ -102,6 +109,34 @@ module.exports = {
       },
     },
     {
+      name: 'storybook-only-in-stories-and-its-config',
+      severity: 'error',
+      comment:
+        'Storybook is imported only by story files, apps/mobile/.rnstorybook/, its Metro wrapper and the story test (research R22).',
+      from: {
+        pathNot: `${STORYBOOK_IMPORTERS}`,
+      },
+      to: { path: 'node_modules/(@storybook/|storybook/)' },
+    },
+    {
+      name: 'testing-helpers-never-imported-by-production-code',
+      severity: 'error',
+      comment:
+        'Stories and testing helpers are imported only by tests, stories, apps/mobile/.rnstorybook/ and other testing helpers (research R22).',
+      from: { pathNot: `${TESTING_IMPORTERS}` },
+      to: { path: `${TESTING_FILES}` },
+    },
+    {
+      name: 'e2e-imports-no-other-workspace',
+      severity: 'error',
+      comment:
+        'The end-to-end tests only drive the built binary: they import no other workspace, by path or by package name (research R23).',
+      from: { path: '^tests/e2e/' },
+      to: {
+        path: '^(apps|packages)/|^tests/(?!e2e/)|node_modules/@mes-courses/',
+      },
+    },
+    {
       name: 'no-circular',
       severity: 'error',
       comment: 'No circular dependency.',
@@ -111,7 +146,10 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(^|/)(dist|\\.expo|ios|android|coverage|artifacts)/' },
+    exclude: {
+      // Build output of a workspace only: an npm package's own dist/ folder must stay in the graph.
+      path: '^(apps|packages|tests)/[^/]+/(dist|\\.expo|ios|android|coverage|artifacts)/',
+    },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: {
       exportsFields: ['exports'],
