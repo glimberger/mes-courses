@@ -1,6 +1,4 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
   initialWindowMetrics,
   SafeAreaProvider,
@@ -8,8 +6,8 @@ import {
 
 import type { AppStore } from '../state/app-store';
 import { AppStoreProvider } from '../state/app-store-provider';
-import { useNavigationTheme } from '../theme/navigation-theme';
 import { ThemeProvider } from '../theme/theme-provider';
+import { AsScreen } from './as-screen';
 import { createStoryStore, type StoryScenario } from './story-store';
 
 /** The story parameters the decorator reads. */
@@ -23,19 +21,8 @@ export type AppStoryParameters = {
   withoutStore?: boolean;
 };
 
-const Stack = createNativeStackNavigator();
-
-/** The story as the only screen of a navigator, so a screen can call `useNavigation`. */
-const AsScreen = ({ Story }: { Story: ComponentType }) => {
-  const theme = useNavigationTheme();
-  return (
-    <NavigationContainer theme={theme}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Story" component={Story} />
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
-};
+// One object, so a story without a scenario keeps its store when the decorator renders again.
+const EMPTY_SCENARIO: StoryScenario = {};
 
 /** Renders its children once the scenario's store is built, nothing before. */
 const WithStoryStore = ({
@@ -79,8 +66,10 @@ export const withAppProviders = (
       {parameters.withoutStore ? (
         <Story />
       ) : (
-        <WithStoryStore scenario={parameters.scenario ?? {}}>
-          <AsScreen Story={Story} />
+        <WithStoryStore scenario={parameters.scenario ?? EMPTY_SCENARIO}>
+          <AsScreen>
+            <Story />
+          </AsScreen>
         </WithStoryStore>
       )}
     </SafeAreaProvider>

@@ -4,6 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { render, screen } from '@testing-library/react-native';
 
+import type { AppStore } from '../state/app-store';
+import { useAppStoreApi } from '../state/app-store-provider';
 import { useAppStore } from '../state/use-app-store';
 import { darkTheme, lightTheme } from '../theme/theme';
 import { fixture } from './fixtures';
@@ -81,6 +83,22 @@ describe('withAppProviders', () => {
     renderStory(StoreStory);
 
     expect(await screen.findByText('avis aucun')).toBeOnTheScreen();
+  });
+
+  it('keeps the store of a story with no scenario when the decorator renders again', async () => {
+    const stores: AppStore[] = [];
+    const StoreProbe = () => {
+      stores.push(useAppStoreApi());
+      return <Text>{`rendu ${stores.length}`}</Text>;
+    };
+    const { rerender } = renderStory(StoreProbe);
+    await screen.findByText(/^rendu/);
+
+    rerender(withAppProviders(StoreProbe, { parameters: {} }));
+
+    await screen.findByText(/^rendu/);
+    expect(stores.length).toBeGreaterThan(1);
+    expect(new Set(stores).size).toBe(1);
   });
 
   it('renders a story without a store when it asks for none, as the app before startup ends', async () => {
