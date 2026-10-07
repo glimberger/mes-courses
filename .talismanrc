@@ -2,6 +2,23 @@
 allowed_patterns:
   - 'PRIMARY KEY'
 fileignoreconfig:
+  # flake.lock pins Nix inputs with content hashes and git revisions, not secrets.
+  - filename: flake.lock
+    ignore_detectors: [filecontent]
+  # direnv's file is named .envrc by convention; it holds `use flake`, not secrets.
+  - filename: .envrc
+    ignore_detectors: [filename]
+  # The ESLint selectors name the `key` field of an AST property node, which trips the pattern detector.
+  - filename: eslint.config.mjs
+    ignore_detectors: [filecontent]
+  # `key` and `restore-keys` are the cache inputs of actions/cache, not secrets.
+  - filename: .github/workflows/ci.yml
+    ignore_detectors: [filecontent]
+  - filename: .github/workflows/e2e.yml
+    ignore_detectors: [filecontent]
+  # Yarn lockfiles hold package checksums, not secrets.
+  - filename: yarn.lock
+    ignore_detectors: [filecontent]
   # Spec Kit manifests record SHA-256 content hashes of generated files, not secrets.
   - filename: .specify/integrations/speckit.manifest.json
     ignore_detectors: [filecontent]

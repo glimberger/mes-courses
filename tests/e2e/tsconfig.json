@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "nodenext",
+    "types": ["jest", "detox"],
+    "esModuleInterop": true,
+    "isolatedModules": true
+  },
+  "include": ["journeys/**/*.ts"]
+}

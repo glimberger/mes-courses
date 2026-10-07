@@ -1,0 +1,13 @@
+{
+  "extends": ["../../tsconfig.base.json", "expo/tsconfig.base"],
+  "compilerOptions": {
+    "strict": true,
+    "types": ["jest", "node"]
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "exclude": [
+    "node_modules",
+    ".rnstorybook/index.tsx",
+    ".rnstorybook/storybook.requires.ts"
+  ]
+}

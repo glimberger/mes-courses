@@ -1,0 +1,15 @@
+node_modules/
+.yarn/
+yarn.lock
+flake.lock
+dist/
+.expo/
+ios/
+android/
+coverage/
+artifacts/
+# Spec Kit documents, skills and the design export are not formatted by Prettier.
+specs/
+.specify/
+.claude/
+design/
