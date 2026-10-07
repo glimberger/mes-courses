@@ -54,7 +54,7 @@ module.exports = {
     },
     simulator: {
       type: 'ios.simulator',
-      device: { type: 'iPhone 16' },
+      device: { type: process.env.DETOX_IOS_DEVICE ?? 'iPhone 16' },
     },
   },
   configurations: {
