@@ -657,8 +657,9 @@ FR-030a, FR-039a).
   `prettier --check`), `test` (Jest, including the architecture test and the offline scenario),
   `build` (`yarn build`; for the app this is
   `expo export --platform android --platform ios`, which bundles the JS for both platforms). The repository is private on a GitHub plan without branch protection, so the
-  merge rule of the constitution's Quality Gates (v2.1.1) applies: no pull request is merged
-  while any job is failing, pending or skipped, as `gh pr checks` shows. Detox adds a fifth job,
+  merge rule of the constitution's Quality Gates (v2.2.0) applies: no pull request is merged
+  while any job is failing, pending or skipped, as `gh pr checks` shows, except `e2e-android`
+  skipped on a documentation-only pull request (below). Detox adds a fifth job,
   `e2e-android` (R23).
 - **Time limits** (clarified 2026-10-06): every job sets `timeout-minutes`: 15 for `typecheck`,
   `lint`, `test` and `build`, 45 for `e2e-android`. A job that runs out of time is a failing
@@ -671,12 +672,26 @@ FR-030a, FR-039a).
   `android-emulator-runner` are assumed available. If the cache action stops working, its step
   is removed and the jobs run without a Nix cache, slower but unchanged; the others have no
   replacement planned until needed (Principle IV).
+- **Documentation-only pull requests** (constitution v2.2.0, Quality Gates): a first job,
+  `changes`, lists the files the pull request changes (`git diff --name-only` against the merge
+  base with the base branch) and gives them to `.github/scripts/app-changed.sh`, which prints
+  `app=false` when every file is documentation-only (under `specs/`, under `.specify/`, or a
+  Markdown file ending in `.md`) and `app=true` otherwise, including for an empty list. On a
+  push to `main` the job sets `app=true` without looking. `e2e-android` declares
+  `needs: changes` and `if: needs.changes.outputs.app == 'true'`, so it is skipped only on a
+  documentation-only pull request; `typecheck`, `lint`, `test` and `build` always run, since the
+  traceability test reads `spec.md`. The same file list decides locally whether a branch needs
+  the Android device suite before it is pushed. The script is plain shell, so no action is added
+  (Principle IV).
 - **Not in CI, by decision**: scanning for leaked credentials stays the local Talisman pre-commit hook required
   by the workspace `AGENTS.md`, and dependencies are updated by hand (an Expo SDK upgrade is its
   own pull request through every gate), with no update bot (Principle IV).
 - **Rationale**: the constitution requires CI before the first application code is merged. `expo export` checks that the app bundles without the cost of a
   native build on every pull request; native builds go through EAS Build when releasing.
-- **Alternatives considered**: EAS Build on every pull request (slow, uses build credits).
+- **Alternatives considered**: EAS Build on every pull request (slow, uses build credits);
+  `paths-ignore` on the whole workflow (skips every job, the fast suite included, and leaves no
+  check to read with `gh pr checks`); a path filter action such as `dorny/paths-filter` (a new
+  dependency for what a short script does).
 
 ## R18. First launch seed (FR-020, FR-023)
 

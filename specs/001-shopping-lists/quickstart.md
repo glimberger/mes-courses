@@ -220,9 +220,14 @@ Time each delivery: every report must appear in Sentry within 1 minute (SC-010).
 
 ## 7. Continuous integration
 
-Open a pull request: the `typecheck`, `lint`, `test`, `build` and `e2e-android` jobs run, and
-`gh pr checks <pr>` shows them all green, none failing, pending or skipped, before the pull
-request is merged (constitution v2.1.1, Quality Gates).
+Open a pull request: the `changes`, `typecheck`, `lint`, `test`, `build` and `e2e-android`
+jobs run, and `gh pr checks <pr>` shows them all green, none failing, pending or skipped, before
+the pull request is merged (constitution v2.2.0, Quality Gates). On a pull request that changes
+only documentation (`specs/`, `.specify/`, Markdown files), `e2e-android` is skipped by the
+`changes` job, and that skip alone does not block the merge ([research.md](research.md) R17).
+To check the rule by hand: `printf 'specs/x.md\n' | .github/scripts/app-changed.sh` prints
+`app=false`, and `printf 'apps/mobile/App.tsx\n' | .github/scripts/app-changed.sh` prints
+`app=true`.
 
 ## 8. Release (spec Success Criteria, [research.md](research.md) R24)
 
