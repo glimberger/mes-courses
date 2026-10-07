@@ -92,6 +92,12 @@ yarn test:e2e:android    # builds the release APK, then runs the journeys on the
 yarn test:e2e:ios        # the same on the iOS simulator (macOS)
 ```
 
+Three variables choose the device: `DETOX_AVD_NAME` (default `Pixel_API_35`), `DETOX_IOS_DEVICE`
+(default `iPhone 16`) and `DETOX_IOS_OS` (for example `iOS 26.5`, when several runtimes have the
+same device). The Android journeys need an emulator of API 35 or lower: Detox 20 does not run on
+API 37. The iOS journeys need a simulator runtime older than iOS 27 until the app adopts the
+UIScene lifecycle that iOS 27 requires.
+
 ## Merging a pull request
 
 Every job of the CI must be green before a pull request is merged: `gh pr checks` shows none

@@ -54,7 +54,11 @@ module.exports = {
     },
     simulator: {
       type: 'ios.simulator',
-      device: { type: process.env.DETOX_IOS_DEVICE ?? 'iPhone 16' },
+      device: {
+        type: process.env.DETOX_IOS_DEVICE ?? 'iPhone 16',
+        // Set DETOX_IOS_OS (for example 'iOS 26.5') when several runtimes have the same device.
+        ...(process.env.DETOX_IOS_OS ? { os: process.env.DETOX_IOS_OS } : {}),
+      },
     },
   },
   configurations: {
