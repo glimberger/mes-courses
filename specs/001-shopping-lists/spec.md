@@ -373,6 +373,24 @@
 - Q: When does the user-facing version number change? → A: Semantic versioning, set by hand in
   the pull request that leads to a release: MINOR for a new feature, PATCH for fixes only; this
   feature ships as 1.0.0; the build number still goes up by itself (Success Criteria).
+- Q: Against what is the application's data protected? → A: Lists are not sensitive. In scope:
+  other applications (kept out by the system's isolation) and the error tracking service (no
+  list content). Out of scope, by decision: someone holding the unlocked phone, the backup
+  providers and a compromised phone; no lock of its own (Assumptions).
+- Q: Where are error reports stored, and for how long? → A: In the error tracking service's EU
+  region, kept for its default retention (90 days on the free plan) (Assumptions).
+- Q: Which system permissions may the application request, and which entry points may it
+  have? → A: Network access only, for error reports; no link scheme or other entry point
+  besides its icon; anything a library adds is removed or justified in the plan (FR-041).
+- Q: On what basis are crash reports sent without asking, and how are they deleted if asked?
+  → A: Personal use: while releases reach only the maintainer's phones, the GDPR exemption for
+  purely personal activity applies; a privacy notice and a lawful basis are required before
+  anyone else gets the application; reports are deleted by installation identifier or with the
+  project (Assumptions).
+- Q: Do builds for users carry the changes the end-to-end tests need? → A: No: those changes,
+  including the setting that allows unencrypted traffic to the testing computer, apply only to
+  builds made for the end-to-end tests, and a `production` build stops if they are turned on
+  (Success Criteria).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -855,6 +873,11 @@ the new heading.
   newer one, it MUST NOT read, change or delete it, and MUST show a full-screen French message:
   "Cette version de l'application est trop ancienne pour vos données. Mettez-la à jour." This
   is an expected situation, not an error, and is not reported.
+- **FR-041**: The application MUST request no system permission other than network access
+  (Android `INTERNET`; iOS needs none for it), used only to send error reports, and MUST offer
+  no way in other than its icon: no link scheme, no link handler, no other entry point. A
+  permission or entry point a library adds MUST be removed, or justified in the plan before it
+  is kept.
 
 ### Key Entities
 
@@ -941,8 +964,10 @@ build. `preview` and `development` builds are not releases. A faulty release is 
 a new `production` build with the fix, through a pull request and every pre-release check like
 any release. No rollback to an earlier build is offered, since an older version does not open
 data saved by a newer one (FR-040). A release cannot be built with a test-only option turned
-on (the measurement data, the test error report or crash, the screen catalog): the build fails
-and names the option. The version shown in error reports follows semantic versioning, set by
+on (the measurement data, the test error report or crash, the screen catalog, the end-to-end
+test changes): the build fails and names the option. Builds for users carry none of the
+end-to-end test changes, in particular no setting that allows unencrypted network traffic and no
+test hooks; only builds made for the end-to-end tests have them. The version shown in error reports follows semantic versioning, set by
 hand in the pull request that leads to a release: MINOR when a feature is added, PATCH for
 fixes only; this feature ships as 1.0.0. The build number goes up by itself with every build.
 
@@ -977,11 +1002,23 @@ The actions of this spec, checked one by one by SC-006 and SC-009:
   application loses it, an accepted risk. The application's data stays included in the system
   backup (Android Auto Backup, iCloud device backup) as a fallback. Lists hold no sensitive
   data, so no encryption is added beyond the system's own.
+- Threats in scope: other applications on the phone, kept out by the system's isolation of each
+  application's data, and the error tracking service, which receives no list content (FR-030).
+  Out of scope, by decision, because shopping lists are not sensitive: someone holding the
+  unlocked phone, the backup providers (Google, Apple), and a phone whose system is
+  compromised. The application asks for no lock of its own.
 - Error reports go to an outside error tracking service without the user being told in the
   application, and cannot be turned off: they hold no list content and no personal data, and
   only native crash reports carry an identifier, a random one per installation (FR-030). If the
   application is published on a store, its privacy details declare crash data and that random
-  installation identifier, neither linked to the user nor used for tracking.
+  installation identifier, neither linked to the user nor used for tracking. Reports are
+  stored in the error tracking service's EU region and kept for the service's default retention
+  (90 days on its free plan). While releases reach only the maintainer's own phones, this is
+  personal use, covered by the GDPR exemption for purely personal activity, so no consent and
+  no notice are needed. Before anyone else gets the application (other testers or a public
+  listing), a privacy notice and a lawful basis for sending reports are required. If ever asked,
+  reports are deleted in the error tracking service by installation identifier, or with the
+  whole project.
 - No public store listing in this feature: releases (`production` builds) reach the maintainer's
   phones through Google Play internal testing and TestFlight. Publishing on a public store is a
   later decision; the privacy details above apply then.

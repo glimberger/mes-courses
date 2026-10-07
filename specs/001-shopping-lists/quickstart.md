@@ -235,11 +235,14 @@ A release is a `production` build. Run these steps in order; stop at the first t
 2. Once it is merged with every CI job green, from `main` at its squash commit, with nothing
    merged after it (otherwise run the checks again on a new pull request):
    `eas build --profile production --platform all`. A build with `EXPO_PUBLIC_SEED_ITEMS`,
-   `EXPO_PUBLIC_SENTRY_SMOKE_TEST` or `STORYBOOK_ENABLED` set stops with an error naming it;
-   unset it and build again.
+   `EXPO_PUBLIC_SENTRY_SMOKE_TEST`, `STORYBOOK_ENABLED` or `DETOX_BUILD` set, or with a Sentry
+   DSN outside the EU region, stops with an error naming it; fix it and build again.
 3. `eas submit --profile production --platform all`: the Android build goes to Google Play's
    internal testing track, the iOS build to TestFlight. The very first Android upload is made
-   by hand in the Play Console, once.
+   by hand in the Play Console, once. In the Play Console's App bundle explorer, the release
+   lists `android.permission.INTERNET` as its only permission (FR-041,
+   [research.md](research.md) R25); any other stops the release until it is removed or
+   justified in the plan.
 4. Install the update on both phones from Google Play (internal testing) and TestFlight, open
    it: the lists are still there, and the system's app settings show the new version and build
    number.

@@ -3,8 +3,8 @@
 **Branch**: `feat/001-shopping-lists` | **Date**: 2026-10-05 (amended 2026-10-06 for constitution
 v2.1.0, monorepo, then for Storybook and Detox, then for constitution v2.1.1, then for the
 data clarifications, the failure-flow clarifications, the data checklist review, the
-observability clarifications, the two rounds of performance clarifications and the CI and
-delivery clarifications) |
+observability clarifications, the two rounds of performance clarifications, the CI and
+delivery clarifications and the privacy and security clarifications) |
 **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/001-shopping-lists/spec.md`
@@ -87,7 +87,10 @@ the device, at most 30 (FR-030a); a screen failing while drawing replaced by a f
 that restarts the app (FR-039a, R13a); a release is a `production` build, sent to Google Play
 internal testing and TestFlight with no public listing, gated by every pre-release check,
 versioned by hand (1.0.0 for this feature), refusing to build with a test-only option set, and
-fixed forward, never rolled back (R24)
+fixed forward, never rolled back (R24); network access as the only permission and the icon as
+the only entry point (FR-041); reports stored in Sentry's EU region, refused otherwise in a
+`production` build; Detox's native changes only in Detox builds; nothing about lists in the
+device log; every database value bound as a parameter (R25)
 
 **Scale/Scope**: one user, one device; 4 screens and 4 dialogs; up to 1 000 articles in the
 catalog, 20 lists and 200 items per list (spec Assumptions), with SC-001, SC-002, SC-008 and SC-011
@@ -103,7 +106,7 @@ and every other unknown is resolved in [research.md](research.md).
 | # | Principle | How this plan complies | Status |
 |---|---|---|---|
 | I | Test-First (non-negotiable) | Every task in `tasks.md` puts a failing test before the code it drives. Domain and use cases are driven by fast unit tests; SQLite adapter by contract tests; screens by RNTL tests. Scaffolding (config files, CI) is not production behavior; the first behavior commits start with a red test. Each story's Detox journey is written first and fails, as the outer loop; the inner unit and screen tests drive the code until it turns green (R23). Stories are fixtures, not production code, so they need no test of their own beyond the story test. | ✅ |
-| II | Tests as executable specification | Each acceptance scenario (US1-1 … US4-5) and each functional requirement (FR-001 … FR-040, with FR-030a and FR-039a) maps to at least one test named after the behavior, with the scenario or FR id in its name; the success criteria and requirements the spec lists as manual checks are covered by [quickstart.md](quickstart.md) §5 and §6 instead, and a traceability test fails on any id cited nowhere (T138). UI tests query by role and French label, not internals. Detox journeys find elements by French text and accessibility label, no `testID`, and name the scenarios they cover ([contracts/ui-validation.md](contracts/ui-validation.md)). | ✅ |
+| II | Tests as executable specification | Each acceptance scenario (US1-1 … US4-5) and each functional requirement (FR-001 … FR-041, with FR-030a and FR-039a) maps to at least one test named after the behavior, with the scenario or FR id in its name; the success criteria and requirements the spec lists as manual checks are covered by [quickstart.md](quickstart.md) §5 and §6 instead, and a traceability test fails on any id cited nowhere (T138). UI tests query by role and French label, not internals. Detox journeys find elements by French text and accessibility label, no `testID`, and name the scenarios they cover ([contracts/ui-validation.md](contracts/ui-validation.md)). | ✅ |
 | III | Fast, deterministic, isolated | Driven ports for IDs (no randomness), no clock port: the undo deadline reads `Date.now`, which Jest fake timers control, in-memory fakes, `node:sqlite` in-memory databases per test, Jest fake timers for the undo snackbar. No network in tests. The story test runs inside `yarn test` with no device. Detox journeys stay out of the unit suite (their own workspace and command), start each file on a fresh install, use no sleeps and no retries (R23). | ✅ |
 | IV | Simplicity (YAGNI) | No ORM, no FlashList, no Expo Router; each new dependency is justified in [research.md](research.md#new-dependencies-principle-iv), including Zustand for the application state, chosen by the maintainer for the whole app (R10, [002 research](../002-manage-articles/research.md) R1); no Zustand middleware ([002 research](../002-manage-articles/research.md#r1b-no-zustand-middleware) R1b). Ports are those required by Principle VI only. The Nix flake provides tools only (Node, Corepack, watchman), with no devenv or Devbox layer and no Android SDK in Nix (R21). Storybook and Detox are the maintainer's choice and justified in R22 and R23; no Storybook add-on, no visual regression service, no Detox on debug builds. | ✅ |
 | V | Single design system | React Native Paper (MD3) only; theme built from `design/material-theme.json` (light + dark) and checked by a test; its contrast variants stay unused in the JSON until a feature selects them (R2); shared components in `apps/mobile/src/adapters/ui/components/`; tokens for color (the JSON), typography (`theme.fonts`), shapes (`theme.roundness`), elevation (`theme.colors.elevation`) and spacing (`spacing.*`); ESLint bans color literals and inline styles, and limits a screen's own styles to layout from spacing tokens ([research.md](research.md) R2). Storybook catalogs the shared module, so a new shared component is reviewed in its pull request through its stories, in light and dark (R22). | ✅ |
@@ -169,6 +172,11 @@ justified. The design adds no layer, port or dependency beyond those above. Poin
   is a pure build-time function called by `app.config.ts`, and distribution is `eas.json` and
   `eas submit`, both already part of Expo's tooling (R24). Credential scanning in CI and an update
   bot stay out (Principle IV, R17).
+- The privacy and security clarifications add no port, layer or runtime dependency: FR-041 is
+  `app.config.ts` settings checked by a Jest test on the resolved config (`@expo/config`, part
+  of Expo, declared as a dev dependency of the app); the EU region and the Detox option are two
+  more checks in the release guard; the rest is a lint rule, an adapter test and repository or
+  account settings (R25).
 - Nothing in the design blocks the sync feature: ids are device UUIDs that never change, each
   change is one `UnitOfWork` transaction (where a later outbox write can join it), and no read
   model assumes the device holds the only copy. The open questions for that feature (first-launch
@@ -411,8 +419,24 @@ they must stay out of `yarn test`. That workspace defines no `test` script, so t
   - the README explains the release steps of quickstart §8, the versioning rule, the store
     credentials kept in EAS, and the one-time manual first upload to Google Play (T136);
   - research R17 and quickstart §7 cite the constitution's current merge rule.
+- **Privacy and security clarifications (2026-10-06)**, to be reflected in the existing tasks:
+  - FR-041: `app.config.ts` sets `android.permissions: []`, `android.blockedPermissions` and no
+    `scheme`; `apps/mobile/build-config/native-surface.test.ts` resolves the config with
+    `getConfig` and fails on any permission, scheme, intent filter or iOS usage description
+    beyond them (R25, T006);
+  - Detox's config plugin registered only when `DETOX_BUILD=1`, which the `.detoxrc.js` build
+    commands set (R23, T012, T013);
+  - the release guard also refuses `DETOX_BUILD` and a Sentry DSN whose host does not end with
+    `.de.sentry.io` (R24, R25, T139, T140);
+  - `no-console` as an error in `apps/mobile/src/`, except the console reporter (R25, T007);
+  - a SQLite adapter test saving and reading back `'); DROP TABLE article; --` (R25, T033);
+  - the README lists two-factor sign-in on every account, Dependabot security alerts on, the
+    Sentry EU region and the signing recovery steps (R25, T136);
+  - quickstart §8 checks the release bundle's permissions in the Play Console.
 - No task touches the network or the server: synchronization belongs to the sync feature (R19).
-- The Sentry project is in place (done by the maintainer). The Sentry DSN and build credential
+- The Sentry project is in place (done by the maintainer). It must belong to an organization in
+  Sentry's EU region (R25); if it was created in the US region, the maintainer creates an EU
+  organization and project and replaces the DSN. The Sentry DSN and build credential
   live in EAS environment variables, set by the maintainer, and are never committed.
 
 ## Complexity Tracking
