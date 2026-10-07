@@ -39,7 +39,8 @@ export class NodeSqlDatabase implements SqlDatabase {
     return (this.db.prepare(source).get(...params) as T | undefined) ?? null;
   }
 
-  // The same steps as expo-sqlite's `withTransactionAsync`.
+  // The same steps as expo-sqlite's `withTransactionAsync`, including the ROLLBACK after a BEGIN
+  // that failed: the tests then see the error a device would.
   async withTransactionAsync(task: () => Promise<void>): Promise<void> {
     try {
       await this.execAsync('BEGIN');

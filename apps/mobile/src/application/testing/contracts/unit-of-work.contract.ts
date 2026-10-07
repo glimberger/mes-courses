@@ -1,4 +1,4 @@
-import type { UnitOfWork } from '../../ports/unit-of-work';
+import type { Repositories, UnitOfWork } from '../../ports/unit-of-work';
 import { article, articleId, category, item, list, listId } from './entities';
 
 export const unitOfWorkContract = (
@@ -85,16 +85,55 @@ export const unitOfWorkContract = (
       });
     });
 
-    it('rejects a run started inside another, and lets the outer run finish', async () => {
-      const result = await unitOfWork.run(async (repos) => {
-        await repos.lists.add(list('l-1', 'Ma liste'));
-        await expect(unitOfWork.run(async () => 'inner')).rejects.toThrow();
-        return 'outer';
+    it('runs a run started while another is going after it ends, in the order they were started', async () => {
+      const steps: string[] = [];
+      let release = () => {};
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
       });
 
-      expect(result).toBe('outer');
+      const first = unitOfWork.run(async (repos) => {
+        steps.push('first started');
+        await repos.lists.add(list('l-1', 'Ma liste'));
+        await held;
+        steps.push('first ended');
+      });
+      const second = unitOfWork.run(async (repos) => {
+        steps.push('second started');
+        return repos.lists.all();
+      });
+      await new Promise(setImmediate);
+
+      expect(steps).toEqual(['first started']);
+
+      release();
+      await first;
+
+      expect(await second).toEqual([list('l-1', 'Ma liste')]);
+      expect(steps).toEqual(['first started', 'first ended', 'second started']);
+    });
+
+    it('runs the next run when the one before it throws', async () => {
+      const failure = new Error('failed midway');
+
+      const first = unitOfWork.run(async () => {
+        throw failure;
+      });
+      const second = unitOfWork.run(async () => 'second');
+
+      await expect(first).rejects.toBe(failure);
+      expect(await second).toBe('second');
+    });
+
+    it('rejects the use of the repositories given to a run once it has ended', async () => {
+      let kept: Repositories | undefined;
       await unitOfWork.run(async (repos) => {
-        expect(await repos.lists.all()).toEqual([list('l-1', 'Ma liste')]);
+        kept = repos;
+      });
+
+      await expect(kept?.lists.add(list('l-1', 'Ma liste'))).rejects.toThrow();
+      await unitOfWork.run(async (repos) => {
+        expect(await repos.lists.all()).toEqual([]);
       });
     });
   });

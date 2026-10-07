@@ -159,6 +159,26 @@ describe('SQLite repositories', () => {
     });
   });
 
+  it('rethrows the error of a run that throws even when the rollback then fails', async () => {
+    const failure = new Error('failed in the use case');
+    const rollbackFailing: SqlDatabase = {
+      ...failingDatabase(new Error('cannot rollback')),
+      withTransactionAsync: async (task) => {
+        try {
+          await task();
+        } catch {
+          throw Object.assign(new Error('disk I/O error'), { errcode: 10 });
+        }
+      },
+    };
+
+    await expect(
+      new SqliteUnitOfWork(rollbackFailing).run(async () => {
+        throw failure;
+      }),
+    ).rejects.toBe(failure);
+  });
+
   it('R25 binds every value as a parameter: a name made of SQL is saved and read back unchanged', async () => {
     const db = await migratedDatabase();
     const repos = sqliteRepositories(db);
