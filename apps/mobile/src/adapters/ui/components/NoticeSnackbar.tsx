@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AccessibilityInfo } from 'react-native';
 import { Snackbar } from 'react-native-paper';
 
@@ -20,6 +20,14 @@ const text = (notice: Notice): string => {
 export const NoticeSnackbar = () => {
   const notice = useAppStore((state) => state.notice);
   const dismissNotice = useAppStore((state) => state.dismissNotice);
+  // The last notice shown, kept while the snackbar fades out, and numbered so that a notice
+  // replacing a visible one gets its own snackbar and its own hide delay.
+  const [shown, setShown] = useState<{ notice: Notice; id: number } | null>(
+    null,
+  );
+  if (notice !== null && notice !== shown?.notice) {
+    setShown({ notice, id: (shown?.id ?? 0) + 1 });
+  }
 
   // Each new notice is announced as it appears, even one reading like the last (FR-038).
   useEffect(() => {
@@ -27,8 +35,14 @@ export const NoticeSnackbar = () => {
   }, [notice]);
 
   return (
-    <Snackbar visible={notice !== null} onDismiss={dismissNotice}>
-      {notice ? text(notice) : ''}
+    <Snackbar
+      key={shown?.id}
+      visible={notice !== null}
+      onDismiss={dismissNotice}
+      // Announced above on both platforms; a live region would read it a second time on Android.
+      accessibilityLiveRegion="none"
+    >
+      {shown ? text(shown.notice) : ''}
     </Snackbar>
   );
 };
