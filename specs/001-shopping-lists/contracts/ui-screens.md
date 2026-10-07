@@ -155,6 +155,10 @@ Appbar title "Nouvel article". `NameField` "Nom", category picker (radio list of
 "Nouvelle catégorie" opening CreateCategoryDialog, new category preselected on success),
 `QuantityFields` (optional), button "Créer et ajouter".
 
+The category picker is a data region: `LoadingState` while the categories load, and
+"Impossible de charger les catégories." + "Réessayer" on failure, reported with
+`{ operation: 'getCategories', screen: 'CreateArticle' }`.
+
 Opened from a category's empty state ("Créer un article", US2-15), that category is
 preselected; opened from "Nouvel article" or from a search with no match, no category is
 preselected (FR-018).

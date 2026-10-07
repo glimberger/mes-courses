@@ -37,6 +37,7 @@ interface AppState {
     view: ScreenState<CatalogView, { query: string }>;     // full filtered by query
   };
   lists: ScreenState<ListSummary[]>;
+  categories: ScreenState<Array<{ id: CategoryId; name: string }>>;  // the category picker (001 US2-7)
   pendingUndo:
     | { kind: 'removedItem'; removed: RemovedItem; name: string }
     | { kind: 'deletedArticle'; deleted: DeletedArticle }
@@ -63,7 +64,7 @@ type Notice =
 
 | Action | Behavior |
 |---|---|
-| `loadCurrentList()`, `loadLists()`, `loadCatalog()` | Run the query use case for the region (`getCatalog` without a query for the catalog); `error` state and report on failure (operation = use case name). Also used by "Réessayer". |
+| `loadCurrentList()`, `loadLists()`, `loadCatalog()`, `loadCategories()` | Run the query use case for the region (`getCatalog` without a query for the catalog, on the current list, which is loaded first when no region shows it); `error` state and report on failure (operation = use case name). Also used by "Réessayer". |
 | `searchCatalog(query)` | Sets `catalog.query` and derives `catalog.view` from the loaded catalog with the domain's `filterCatalog`, synchronously: no storage read, no `loading` state, no report (001 SC-011, [001 research](../../001-shopping-lists/research.md) R11a). A refresh reloads the full catalog and applies the current query again. |
 | `refresh()` | Reloads every region not `idle`. Called after each successful write. |
 | Write actions from 001 (`toggleItem`, `finishShopping`, `addArticleToList`, `createArticleAndAddToList`, `changeItemQuantity`, `removeItem`, `createList`, `setCurrentList`, `createCategory`) | Call the matching use case. `toggleItem` is optimistic (001 R9). `removeItem` sets `pendingUndo` to the removed item. |
@@ -94,7 +95,10 @@ Rules shared by every write action:
 5. **Business errors** (`Result` errors): refused input (`NameError`, `NameAlreadyUsed`,
    `QuantityError`) and `AlreadyOnList` returned by `addArticleToList` (001 US2-8) are returned
    to the caller unchanged and are not reported, since the form or dialog shows them.
-   `AlreadyOnList` from `restoreRemovedItem` is a failed restore (001 FR-010), handled as below. Every other `Result` error (a missing
+   `AlreadyOnList` from `restoreRemovedItem` is a failed restore (001 FR-010), handled as below.
+   `ItemNotOnList` from `removeItemFromList` or `toggleItemInCart` is a tap on an item whose
+   removal was queued just before it (001 FR-004): nothing is saved, nothing is shown or
+   reported, and a toggle reloads the current list. Every other `Result` error (a missing
    record or the wrong state: `ItemNotOnList`, `ArticleNotFound`, `CategoryNotFound`,
    `ListNotFound`, ...) cannot come from the user's input: it is handled as in
    rule 4 (`notice = writeFailed`, state unchanged, resolves to `WriteFailed`) and reported as an

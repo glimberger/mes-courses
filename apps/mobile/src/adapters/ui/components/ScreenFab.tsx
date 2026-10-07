@@ -24,6 +24,15 @@ export const ScreenFab = ({ icon, label, onPress }: ScreenFabProps) => (
   />
 );
 
+/** The height of Paper's FAB. */
+const FAB_HEIGHT = 56;
+
+/**
+ * Where the app-wide snackbars sit: above the FAB, as Material places them, and above a screen's
+ * bottom button, so neither is ever covered.
+ */
+export const ABOVE_SCREEN_FAB = { bottom: spacing.md + FAB_HEIGHT };
+
 /** The bottom padding a list needs so the FAB never covers its last row. */
 export const SCREEN_FAB_CLEARANCE = spacing.xl * 3;
 

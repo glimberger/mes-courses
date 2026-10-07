@@ -1,11 +1,15 @@
 import { AccessibilityInfo } from 'react-native';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import type { ReactTestInstance } from 'react-test-renderer';
 
 import type { ArticleId } from '../../../domain/article';
 import type { ListId } from '../../../domain/shopping-list';
+import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import { focusOn } from '../accessibility/focus';
+import { UndoSnackbar } from '../components/UndoSnackbar';
+import { Navigation } from '../navigation';
 import { fixture, LONG_ARTICLE_NAME } from '../testing/fixtures';
+import { recordFocusTargets } from '../testing/focus-targets';
 import { renderWithStore } from '../testing/render-with-store';
 import type { Fixture } from '../testing/story-store';
 import { CurrentListScreen } from './CurrentListScreen';
@@ -257,5 +261,225 @@ describe('CurrentList', () => {
     expect(
       liveRegionsAbove(subtitle).every((region) => region === 'none'),
     ).toBe(true);
+  });
+});
+
+describe('CurrentList, editing the list (User Story 2)', () => {
+  const beurre = 'article-beurre' as ArticleId;
+
+  /** The fixture's "Ma liste" with "Beurre" ticked, with "2 kg", in Crèmerie after "Lait". */
+  const withBeurre: Fixture = {
+    ...fixture,
+    items: [
+      ...fixture.items,
+      {
+        listId: 'list-ma-liste' as ListId,
+        articleId: beurre,
+        inCart: true,
+        quantity: { amount: 2, unit: 'kg' },
+      },
+    ],
+  };
+
+  let focusTargets: string[] = [];
+
+  beforeEach(() => {
+    focusTargets = recordFocusTargets(jest.mocked(focusOn));
+  });
+
+  /** The screen with the undo snackbar every screen shares. */
+  const renderEditable = async (seed: Fixture = withBeurre) => {
+    const rendered = await renderWithStore(
+      <>
+        <CurrentListScreen />
+        <UndoSnackbar />
+      </>,
+      { seed },
+    );
+    await screen.findByText('Ma liste');
+    const stored = (articleId: ArticleId) =>
+      rendered.unitOfWork.run((repos) =>
+        repos.items.find('list-ma-liste' as ListId, articleId),
+      );
+    return { ...rendered, stored };
+  };
+
+  /** Runs one of the row's accessibility actions, as a screen reader does. */
+  const runAction = async (
+    label: string,
+    actionName: 'editQuantity' | 'remove',
+  ) =>
+    fireEvent(await row(label), 'accessibilityAction', {
+      nativeEvent: { actionName },
+    });
+
+  it('FR-032 offers "Modifier la quantité" and "Retirer de la liste" as accessibility actions of each row', async () => {
+    await renderEditable();
+
+    expect(
+      (await row('Beurre, 2 kg, dans le caddie')).props.accessibilityActions,
+    ).toEqual([
+      { name: 'editQuantity', label: 'Modifier la quantité' },
+      { name: 'remove', label: 'Retirer de la liste' },
+    ]);
+  });
+
+  it('US2-3 the action "Modifier la quantité" opens QuantityDialog prefilled, and saving shows the new quantity', async () => {
+    await renderEditable();
+
+    await runAction('Lait, 2 L, pas dans le caddie', 'editQuantity');
+
+    expect(
+      (await screen.findAllByRole('header', { name: 'Lait' })).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Quantité')).toHaveDisplayValue('2');
+    expect(screen.getByLabelText('Unité')).toHaveDisplayValue('L');
+    fireEvent.changeText(screen.getByLabelText('Quantité'), '3');
+    fireEvent.press(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(await row('Lait, 3 L, pas dans le caddie')).toBeOnTheScreen();
+  });
+
+  it('US2-4 the row button "Modifier la quantité" opens the dialog, where the quantity can be cleared', async () => {
+    await renderEditable({ ...withBeurre, items: withBeurre.items.slice(-1) });
+
+    fireEvent.press(
+      // Hidden from screen readers, which reach it as the row's action.
+      screen.getByLabelText('Modifier la quantité', {
+        includeHiddenElements: true,
+      }),
+    );
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Effacer la quantité' }),
+    );
+
+    expect(await row('Beurre, dans le caddie')).toBeOnTheScreen();
+  });
+
+  it('US2-6 the row button "Retirer de la liste" removes the item at once and offers "Annuler"', async () => {
+    const { stored } = await renderEditable({
+      ...withBeurre,
+      items: withBeurre.items.slice(-1),
+    });
+
+    fireEvent.press(
+      // Hidden from screen readers, which reach it as the row's action.
+      screen.getByLabelText('Retirer de la liste', {
+        includeHiddenElements: true,
+      }),
+    );
+
+    expect(
+      await screen.findByText('« Beurre » retiré de la liste'),
+    ).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Annuler' })).toBeOnTheScreen();
+    expect(await stored(beurre)).toBeNull();
+  });
+
+  it('US2-6 the action "Retirer de la liste" removes the item and offers "Annuler"', async () => {
+    await renderEditable();
+
+    await runAction('Beurre, 2 kg, dans le caddie', 'remove');
+
+    expect(
+      await screen.findByText('« Beurre » retiré de la liste'),
+    ).toBeOnTheScreen();
+    expect(
+      screen.queryByRole('checkbox', { name: 'Beurre, 2 kg, dans le caddie' }),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('US2-16 "Annuler" puts the item back, ticked, with "2 kg"', async () => {
+    await renderEditable();
+    await runAction('Beurre, 2 kg, dans le caddie', 'remove');
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Annuler' }));
+
+    const back = await row('Beurre, 2 kg, dans le caddie');
+    expect(back).toBeChecked();
+    await waitFor(() =>
+      expect(
+        screen.queryByText('« Beurre » retiré de la liste'),
+      ).not.toBeOnTheScreen(),
+    );
+  });
+
+  it('FR-010 ends the offer after 5 s', async () => {
+    const { store } = await renderEditable();
+    jest.useFakeTimers();
+    try {
+      await runAction('Beurre, 2 kg, dans le caddie', 'remove');
+      await act(async () => {});
+      expect(store.getState().pendingUndo).not.toBeNull();
+
+      await act(() => jest.advanceTimersByTime(5000));
+
+      expect(store.getState().pendingUndo).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  describe('FR-037 screen reader focus after a removal', () => {
+    it('goes to the next row', async () => {
+      await renderEditable();
+
+      await runAction('Lait, 2 L, pas dans le caddie', 'remove');
+
+      await waitFor(() =>
+        expect(focusTargets).toEqual([
+          `${LONG_ARTICLE_NAME}, pas dans le caddie`,
+        ]),
+      );
+    });
+
+    it('goes to the previous row when the removed row was the last one', async () => {
+      await renderEditable();
+
+      await runAction('Farine, 1,5 kg, pas dans le caddie', 'remove');
+
+      await waitFor(() =>
+        expect(focusTargets).toEqual(['Beurre, 2 kg, dans le caddie']),
+      );
+    });
+
+    it('goes to the EmptyState when the list becomes empty', async () => {
+      await renderEditable({
+        ...withBeurre,
+        items: withBeurre.items.slice(-1),
+      });
+
+      await runAction('Beurre, 2 kg, dans le caddie', 'remove');
+
+      await waitFor(() =>
+        expect(focusTargets).toEqual(['Votre liste est vide']),
+      );
+    });
+  });
+
+  it('FR-037 gives focus back to the row when QuantityDialog closes', async () => {
+    await renderEditable();
+
+    await runAction('Lait, 2 L, pas dans le caddie', 'editQuantity');
+    fireEvent.press(await screen.findByRole('button', { name: 'Annuler' }));
+
+    await waitFor(() =>
+      expect(focusTargets).toEqual(['Lait', 'Lait, 2 L, pas dans le caddie']),
+    );
+  });
+
+  it('the FAB "Ajouter" opens AddArticles, and coming back shows the items added', async () => {
+    await renderWithStore(
+      <Navigation errorReporter={new RecordingErrorReporter()} />,
+      { seed: fixture, asScreen: false },
+    );
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Ajouter' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Beurre' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Ajouter' }));
+    await screen.findByText('« Beurre » ajouté');
+    fireEvent.press(screen.getByLabelText('Retour'));
+
+    expect(await row('Beurre, pas dans le caddie')).toBeOnTheScreen();
   });
 });

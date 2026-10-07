@@ -6,8 +6,12 @@ const amountFormat = new Intl.NumberFormat('fr-FR', {
   useGrouping: false,
 });
 
+/** An amount in French, for example "1,5": typed back, it reads as the same amount (FR-017). */
+export const formatAmount = (amount: number): string =>
+  amountFormat.format(amount);
+
 /** A quantity in French, for example "1,5 kg" (FR-017). */
 export const formatQuantity = ({ amount, unit }: Quantity): string => {
-  const formatted = amountFormat.format(amount);
+  const formatted = formatAmount(amount);
   return unit === null ? formatted : `${formatted} ${unit}`;
 };

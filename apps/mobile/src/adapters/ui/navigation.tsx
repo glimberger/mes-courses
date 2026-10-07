@@ -7,6 +7,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { ErrorReporter } from '../../application/ports/error-reporter';
 import { ScreenErrorBoundary } from './components/app-error-boundary';
 import { NoticeSnackbar } from './components/NoticeSnackbar';
+import { UndoSnackbar } from './components/UndoSnackbar';
+import { AddArticlesScreen } from './screens/AddArticlesScreen';
+import { CreateArticleScreen } from './screens/CreateArticleScreen';
 import { CurrentListScreen } from './screens/CurrentListScreen';
 import { PlaceholderScreen } from './screens/PlaceholderScreen';
 import type { RootStackParamList } from './routes';
@@ -15,13 +18,10 @@ import { useNavigationTheme } from './theme/navigation-theme';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const ListsScreen = () => <PlaceholderScreen title="Mes listes" />;
-const AddArticlesScreen = () => (
-  <PlaceholderScreen title="Ajouter des articles" />
-);
-const CreateArticleScreen = () => <PlaceholderScreen title="Nouvel article" />;
 
 /**
- * The app's screens, with the snackbars every screen shares. The route shown is given to the
+ * The app's screens, with the snackbars every screen shares (the undo offer stays across
+ * screens, FR-010). The route shown is given to the
  * reporter whenever it changes, so every report names a screen (contracts/driven-ports.md).
  * Each screen has its own error boundary, so a screen that fails while drawing is reported with
  * its own route, even on its first render (FR-039a).
@@ -61,6 +61,7 @@ export const Navigation = ({
           <Stack.Screen name="CreateArticle" component={CreateArticleScreen} />
         </Stack.Navigator>
       </NavigationContainer>
+      <UndoSnackbar />
       <NoticeSnackbar />
     </>
   );

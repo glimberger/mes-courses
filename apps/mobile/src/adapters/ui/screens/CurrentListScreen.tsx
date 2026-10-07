@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SectionList, StyleSheet, View } from 'react-native';
 import { Appbar, List, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -6,7 +6,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { ArticleId } from '../../../domain/article';
 import type { CurrentListView } from '../../../domain/current-list-view';
-import type { Quantity } from '../../../domain/quantity';
 import { focusOn } from '../accessibility/focus';
 import { AppbarIconAction } from '../components/AppbarIconAction';
 import { ListItemRow } from '../components/ListItemRow';
@@ -16,6 +15,7 @@ import type { RootStackParamList } from '../routes';
 import { shownList } from '../state/current-list-actions';
 import { useAppStore } from '../state/use-app-store';
 import { FinishShoppingDialog } from './FinishShoppingDialog';
+import { QuantityDialog, type QuantityRequest } from './QuantityDialog';
 
 /** "3 articles restants", "1 article restant", or "Tout est dans le caddie" (FR-006). */
 const remainingText = (count: number) => {
@@ -23,25 +23,67 @@ const remainingText = (count: number) => {
   return count === 1 ? '1 article restant' : `${count} articles restants`;
 };
 
-type RowProps = {
-  articleId: ArticleId;
-  name: string;
-  inCart: boolean;
-  quantity: Quantity | null;
-  toggleItem: (articleId: ArticleId) => Promise<void>;
+type Item = CurrentListView['sections'][number]['items'][number];
+
+/** What a row can ask the screen to do with its item. */
+type RowHandlers = {
+  toggleItem: (articleId: ArticleId) => Promise<unknown>;
+  editQuantity: (articleId: ArticleId) => void;
+  remove: (articleId: ArticleId) => void;
+  /** The rows drawn, by article, for the focus moves (FR-037). */
+  rowRefs: Map<ArticleId, View>;
 };
 
-/** A row whose tap callback stays the same between renders, so the row is not drawn again. */
+/**
+ * A row drawn again only when its item changes: it takes the item's fields, not the item, which a
+ * reload builds anew, and its callbacks stay the same between renders.
+ */
 const CurrentListRow = memo(function CurrentListRow({
   articleId,
-  toggleItem,
-  ...item
-}: RowProps) {
+  name,
+  quantity,
+  inCart,
+  handlers: { toggleItem, editQuantity, remove, rowRefs },
+}: Item & { handlers: RowHandlers }) {
   const onToggle = useCallback(() => {
     void toggleItem(articleId);
   }, [articleId, toggleItem]);
-  return <ListItemRow {...item} onToggle={onToggle} />;
+  const onEditQuantity = useCallback(
+    () => editQuantity(articleId),
+    [articleId, editQuantity],
+  );
+  const onRemove = useCallback(() => remove(articleId), [articleId, remove]);
+  const ref = useCallback(
+    (node: View | null) => {
+      if (node) rowRefs.set(articleId, node);
+      else rowRefs.delete(articleId);
+    },
+    [articleId, rowRefs],
+  );
+  return (
+    <ListItemRow
+      ref={ref}
+      name={name}
+      quantity={quantity}
+      inCart={inCart}
+      onToggle={onToggle}
+      onEditQuantity={onEditQuantity}
+      onRemove={onRemove}
+    />
+  );
 });
+
+/** The row focus goes to once the item is removed: the next one, or the one before (FR-037). */
+const neighbourOf = (
+  view: CurrentListView,
+  articleId: ArticleId,
+): ArticleId | null => {
+  const rows = view.sections.flatMap((section) =>
+    section.items.map((item) => item.articleId),
+  );
+  const at = rows.indexOf(articleId);
+  return rows[at + 1] ?? rows[at - 1] ?? null;
+};
 
 /**
  * The current list (User Story 1): its items by category, ticked with a tap, the remaining count,
@@ -54,9 +96,17 @@ export const CurrentListScreen = () => {
   const loadCurrentList = useAppStore((state) => state.loadCurrentList);
   const toggleItem = useAppStore((state) => state.toggleItem);
   const finishShopping = useAppStore((state) => state.finishShopping);
+  const removeItem = useAppStore((state) => state.removeItem);
   const [finishing, setFinishing] = useState(false);
+  const [request, setRequest] = useState<QuantityRequest | null>(null);
   const titleRef = useRef<View>(null);
   const finishActionRef = useRef<View>(null);
+  const emptyMessageRef = useRef<View>(null);
+  const [rowRefs] = useState(() => new Map<ArticleId, View>());
+  const editing = useRef<ArticleId | null>(null);
+  // The view as last drawn, read by `remove` and `editQuantity`, which stay the same as the view
+  // changes.
+  const viewRef = useRef<CurrentListView | null>(null);
 
   useEffect(() => {
     void loadCurrentList();
@@ -64,6 +114,61 @@ export const CurrentListScreen = () => {
 
   const list = shownList(currentList);
   const view = currentList.status === 'success' ? currentList.data : null;
+  useEffect(() => {
+    viewRef.current = view;
+  });
+
+  /** Focus on the row of the item, looked up once the screen has settled (FR-037). */
+  const focusOnRow = useCallback(
+    (articleId: ArticleId) =>
+      focusOn({
+        get current() {
+          return rowRefs.get(articleId) ?? null;
+        },
+      }),
+    [rowRefs],
+  );
+
+  const editQuantity = useCallback((articleId: ArticleId) => {
+    const item = viewRef.current?.sections
+      .flatMap((section) => section.items)
+      .find((shown) => shown.articleId === articleId);
+    if (!item) return;
+    editing.current = articleId;
+    setRequest({
+      mode: 'edit',
+      article: { id: item.articleId, name: item.name },
+      quantity: item.quantity,
+    });
+  }, []);
+
+  const closeDialog = () => {
+    setRequest(null);
+    if (editing.current !== null) focusOnRow(editing.current);
+  };
+
+  const remove = useCallback(
+    async (articleId: ArticleId) => {
+      const shown = viewRef.current;
+      const neighbour = shown && neighbourOf(shown, articleId);
+      const outcome = await removeItem(articleId);
+      if (!outcome.ok) return;
+      if (neighbour === null) focusOn(emptyMessageRef);
+      else focusOnRow(neighbour);
+    },
+    [removeItem, focusOnRow],
+  );
+
+  // Every callback is stable, so the rows are not drawn again for them.
+  const handlers = useMemo<RowHandlers>(
+    () => ({
+      toggleItem,
+      editQuantity,
+      remove: (articleId) => void remove(articleId),
+      rowRefs,
+    }),
+    [toggleItem, editQuantity, remove, rowRefs],
+  );
 
   const cancelFinish = () => {
     setFinishing(false);
@@ -119,9 +224,10 @@ export const CurrentListScreen = () => {
         empty={() => ({
           message: 'Votre liste est vide',
           action: { label: 'Ajouter des articles', onPress: addArticles },
+          messageRef: emptyMessageRef,
         })}
         renderSuccess={(data) => (
-          <CurrentListSections view={data} toggleItem={toggleItem} />
+          <CurrentListSections view={data} handlers={handlers} />
         )}
       />
       {view && <ScreenFab icon="plus" label="Ajouter" onPress={addArticles} />}
@@ -130,6 +236,7 @@ export const CurrentListScreen = () => {
         onCancel={cancelFinish}
         onConfirm={() => void confirmFinish()}
       />
+      <QuantityDialog request={request} onClose={closeDialog} />
     </View>
   );
 };
@@ -139,10 +246,10 @@ const rowId = (item: { articleId: ArticleId }) => item.articleId;
 
 const CurrentListSections = ({
   view,
-  toggleItem,
+  handlers,
 }: {
   view: CurrentListView;
-  toggleItem: (articleId: ArticleId) => Promise<void>;
+  handlers: RowHandlers;
 }) => (
   <SectionList
     sections={view.sections.map((section) => ({
@@ -157,9 +264,7 @@ const CurrentListSections = ({
         {section.title}
       </List.Subheader>
     )}
-    renderItem={({ item }) => (
-      <CurrentListRow {...item} toggleItem={toggleItem} />
-    )}
+    renderItem={({ item }) => <CurrentListRow {...item} handlers={handlers} />}
     stickySectionHeadersEnabled={false}
     contentContainerStyle={styles.content}
   />

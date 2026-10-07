@@ -2,15 +2,23 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import type { ErrorReporter } from '../../../application/ports/error-reporter';
 import { StorageFull } from '../../../application/ports/storage-full';
-import type { NameError } from '../../../domain/name';
-import type { QuantityError } from '../../../domain/quantity';
 import { err, type Result } from '../../../domain/result';
 import type { UseCases } from '../use-cases';
 import {
   createCurrentListActions,
   type CurrentListActions,
 } from './current-list-actions';
-import type { StoreCore, StoreKit, WriteFailed } from './store-kit';
+import {
+  createEditListActions,
+  type EditListActions,
+} from './edit-list-actions';
+import type {
+  RefusedInputType,
+  StoreCore,
+  StoreKit,
+  WriteFailed,
+  WriteOptions,
+} from './store-kit';
 import { UnexpectedResult } from './unexpected-result';
 
 export type {
@@ -23,7 +31,7 @@ export type {
 } from './store-kit';
 
 /** The application state shared by every screen (002 contracts/ui-state.md). */
-export type AppState = StoreCore & CurrentListActions;
+export type AppState = StoreCore & CurrentListActions & EditListActions;
 
 export type AppStore = StoreApi<AppState>;
 
@@ -36,10 +44,7 @@ export type AppStoreDeps = {
  * Input the user can correct: the form or dialog shows it, and it is never reported (FR-030).
  * A record with an entry per tag, so a new name or quantity error does not compile until listed.
  */
-const REFUSED_INPUT: Record<
-  NameError['type'] | QuantityError['type'] | 'NameAlreadyUsed',
-  true
-> = {
+const REFUSED_INPUT: Record<RefusedInputType, true> = {
   NameRequired: true,
   NameTooLong: true,
   NameAlreadyUsed: true,
@@ -88,7 +93,7 @@ export const createAppStoreWith = <Actions extends object>(
     const write = async <T, E extends { type: string }>(
       operation: string,
       call: () => Promise<Result<T, E>>,
-      expected: readonly string[],
+      { expected = [], offer }: WriteOptions<T, string>,
     ): Promise<Result<T, E | WriteFailed>> => {
       let outcome: Result<T, E>;
       try {
@@ -102,7 +107,12 @@ export const createAppStoreWith = <Actions extends object>(
           ? outcome
           : fail(operation, new UnexpectedResult(type));
       }
-      update({ pendingUndo: null });
+      // A new offer also ends the notice: its snackbar would cover "Annuler".
+      update(
+        offer
+          ? { pendingUndo: offer(outcome.value), notice: null }
+          : { pendingUndo: null },
+      );
       return outcome;
     };
 
@@ -110,16 +120,23 @@ export const createAppStoreWith = <Actions extends object>(
       get,
       set: update,
       useCases,
-      runWrite: (operation, call, options) => {
-        const saved = writes.then(() =>
-          write(operation, call, options?.expected ?? []),
-        );
+      runWrite: <T, E extends { type: string }, X extends E['type']>(
+        operation: string,
+        call: () => Promise<Result<T, E>>,
+        options: WriteOptions<T, X> = {},
+      ) => {
+        const saved = writes.then(() => write(operation, call, options));
         writes = saved.catch(() => undefined);
+        // Any error left is refused input or one of `expected`: the others became WriteFailed.
         return saved.then(async (outcome) => {
           if (outcome.ok) await refresh();
-          return outcome;
+          return outcome as Result<
+            T,
+            Extract<E, { type: RefusedInputType | X }> | WriteFailed
+          >;
         });
       },
+      report: (error, operation) => errorReporter.report(error, { operation }),
       region: (name, operation, query) => {
         const setRegion = (state: StoreCore[typeof name]) =>
           update({ [name]: state } as Partial<StoreCore>);
@@ -155,6 +172,7 @@ export const createAppStoreWith = <Actions extends object>(
         view: { status: 'idle' },
       },
       lists: { status: 'idle' },
+      categories: { status: 'idle' },
       pendingUndo: null,
       notice: null,
       refresh,
@@ -165,4 +183,7 @@ export const createAppStoreWith = <Actions extends object>(
 
 /** Builds the store: a plain vanilla store with no middleware (002 research R1b). */
 export const createAppStore = (deps: AppStoreDeps): AppStore =>
-  createAppStoreWith(deps, createCurrentListActions);
+  createAppStoreWith(deps, (kit) => {
+    const currentList = createCurrentListActions(kit);
+    return { ...currentList, ...createEditListActions(kit, currentList) };
+  });
