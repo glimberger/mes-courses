@@ -13,6 +13,7 @@ import { ListItemRow } from '../components/ListItemRow';
 import { SCREEN_FAB_CLEARANCE, ScreenFab } from '../components/ScreenFab';
 import { ScreenStateView } from '../components/ScreenStateView';
 import type { RootStackParamList } from '../routes';
+import { shownList } from '../state/current-list-actions';
 import { useAppStore } from '../state/use-app-store';
 import { FinishShoppingDialog } from './FinishShoppingDialog';
 
@@ -61,12 +62,7 @@ export const CurrentListScreen = () => {
     void loadCurrentList();
   }, [loadCurrentList]);
 
-  const list =
-    currentList.status === 'success'
-      ? currentList.data.list
-      : currentList.status === 'empty'
-        ? currentList.detail.list
-        : null;
+  const list = shownList(currentList);
   const view = currentList.status === 'success' ? currentList.data : null;
 
   const cancelFinish = () => {

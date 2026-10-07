@@ -23,13 +23,15 @@ export type CurrentListActions = {
 /** A toggle still queued when an earlier toggle of its item failed: it is not saved (R9). */
 type Dropped = { type: 'Dropped' };
 
-/** The current list's id, when the region shows a list. */
-const shownListId = (region: StoreCore['currentList']): ListId | null => {
+/** The list the region shows, loaded with or without items, or null while it has none. */
+export const shownList = (
+  region: StoreCore['currentList'],
+): CurrentListView['list'] | null => {
   switch (region.status) {
     case 'success':
-      return region.data.list.id;
+      return region.data.list;
     case 'empty':
-      return region.detail.list.id;
+      return region.detail.list;
     default:
       return null;
   }
@@ -66,11 +68,15 @@ export const createCurrentListActions = ({
     JSON.stringify([listId, articleId]);
 
   const withUnsaved = (view: CurrentListView): CurrentListView =>
-    flipItems(
-      view,
-      (articleId) =>
-        (unsaved.get(itemRef(view.list.id, articleId))?.count ?? 0) % 2 === 1,
-    );
+    // Usually no tap is waiting: the view is already sorted and counted.
+    unsaved.size === 0
+      ? view
+      : flipItems(
+          view,
+          (articleId) =>
+            (unsaved.get(itemRef(view.list.id, articleId))?.count ?? 0) % 2 ===
+            1,
+        );
 
   const loadCurrentList = region('currentList', 'getCurrentList', async () => {
     const view = await useCases.getCurrentList();
@@ -91,7 +97,7 @@ export const createCurrentListActions = ({
   };
 
   const toggleItem = async (articleId: ArticleId) => {
-    const listId = shownListId(get().currentList);
+    const listId = shownList(get().currentList)?.id ?? null;
     if (listId === null) return;
     const ref = itemRef(listId, articleId);
     const taps = unsaved.get(ref) ?? { count: 0 };
@@ -126,7 +132,7 @@ export const createCurrentListActions = ({
   };
 
   const finishShopping = async (): Promise<Result<void, WriteFailed>> => {
-    const listId = shownListId(get().currentList);
+    const listId = shownList(get().currentList)?.id ?? null;
     // Not offered without a list shown: nothing is saved, so nothing succeeds.
     if (listId === null) return err({ type: 'WriteFailed' });
     return runWrite('finishShopping', () => useCases.finishShopping(listId));

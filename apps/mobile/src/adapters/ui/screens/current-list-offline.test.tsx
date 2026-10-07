@@ -43,14 +43,20 @@ describe('CurrentList with no network', () => {
     expect(
       screen.getByRole('checkbox', { name: 'Pommes, pas dans le caddie' }),
     ).not.toBeChecked();
-    await waitFor(async () => {
-      const stored = await unitOfWork.run((repos) =>
-        repos.items.find(
-          'list-ma-liste' as ListId,
-          'article-lait' as ArticleId,
-        ),
+    const stored = (articleId: string) =>
+      unitOfWork.run(
+        async (repos) =>
+          (
+            await repos.items.find(
+              'list-ma-liste' as ListId,
+              articleId as ArticleId,
+            )
+          )?.inCart,
       );
-      expect(stored?.inCart).toBe(true);
+    // Both ticks are saved before checking that nothing failed.
+    await waitFor(async () => {
+      expect(await stored('article-lait')).toBe(true);
+      expect(await stored('article-pommes')).toBe(false);
     });
     expect(
       screen.queryByText("La modification n'a pas pu être enregistrée."),
