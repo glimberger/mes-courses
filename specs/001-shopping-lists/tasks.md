@@ -212,11 +212,11 @@ story depends on them.
 
 ### Startup seed
 
-- [ ] T036 Write failing tests for `initializeStore` in `apps/mobile/src/application/use-cases/initialize-store.test.ts`, on fakes:
+- [X] T036 Write failing tests for `initializeStore` in `apps/mobile/src/application/use-cases/initialize-store.test.ts`, on fakes:
   - on an empty store it creates the given categories with positions 0..n-1 in order, then the first list, and makes it current (US3-1, US4-1, FR-002, FR-020, FR-023);
   - on a store that already has a list it does nothing;
   - a failure midway leaves nothing behind (one transaction).
-- [ ] T037 Implement `initializeStore(seed: { categoryNames; firstListName })` in `apps/mobile/src/application/use-cases/initialize-store.ts` to turn T036 green.
+- [X] T037 Implement `initializeStore(seed: { categoryNames; firstListName })` in `apps/mobile/src/application/use-cases/initialize-store.ts` to turn T036 green.
 
 ### Error reporting and ids
 
