@@ -245,7 +245,7 @@ story depends on them.
 
 - [X] T041 Write failing tests in `apps/mobile/src/adapters/ui/theme/theme.test.ts`:
   - every MD3 color role of the light and dark Paper themes equals the matching role of `schemes.light` and `schemes.dark` in `design/material-theme.json`;
-  - `elevation.level0..5` derive from `surfaceContainerLowest..Highest`;
+  - `elevation.level0` stays `transparent` and `level1..5` derive from `surfaceContainerLow..Highest` (R2);
   - FR-036: in light and dark, every foreground role the screens and shared components use (text, icons, checkbox, outline; at least `onSurface`, `onSurfaceVariant` for ticked rows, `primary`, `outline`) against every background role it is drawn on (at least `surface` and the `surfaceContainer*` roles) reaches 4.5:1 for text and 3:1 for the others (WCAG contrast ratio computed in the test). The pairs come from one exported list in `apps/mobile/src/adapters/ui/theme/used-color-pairs.ts`, which each task adding a new role to a screen or component extends;
   - the `spacing` tokens are `xs = 4` … `xl = 32` on the 4 dp grid.
 - [X] T042 Implement the light and dark themes from the JSON in `apps/mobile/src/adapters/ui/theme/theme.ts` and the `spacing` tokens in `apps/mobile/src/adapters/ui/theme/spacing.ts`, and add `ThemeProvider` (follows `useColorScheme`, wraps `PaperProvider`) in `apps/mobile/src/adapters/ui/theme/theme-provider.tsx`, to turn T041 green. If a contrast pair of T041 fails with the colors of `design/material-theme.json`, export the theme again from Material Theme Builder, or use a role of the same scheme that passes and record the choice in [research.md](research.md) R12; never lower the threshold.

@@ -27,8 +27,10 @@ const buildTheme = (base: MD3Theme, scheme: Scheme): AppTheme => ({
     surfaceDisabled: rgba(scheme.onSurface, 0.12),
     onSurfaceDisabled: rgba(scheme.onSurface, 0.38),
     backdrop: rgba(scheme.scrim, 0.4),
+    // Paper paints a Surface with its level: level0 stays transparent so a flat Surface shows
+    // its parent; the others follow Material 3's surface container for each elevation.
     elevation: {
-      level0: scheme.surfaceContainerLowest,
+      level0: base.colors.elevation.level0,
       level1: scheme.surfaceContainerLow,
       level2: scheme.surfaceContainer,
       level3: scheme.surfaceContainerHigh,

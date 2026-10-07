@@ -37,8 +37,10 @@ FR-030a, FR-039a).
   at the repository root in `design/`, which Metro watches in a workspaces setup, R20) and builds
   the light and dark Paper themes from `schemes.light` and `schemes.dark`. The scheme follows the
   system (`useColorScheme`). Paper's `elevation.level0..5` colors are not in the export; they
-  are derived from `surfaceContainerLowest..Highest`, as Material 3 defines surface
-  containers: `level0` to `level4` take the five containers in order and `level5` repeats
+  are derived from the surface containers, as Material 3 maps elevation to them: `level0`
+  stays Paper's `transparent` (Paper paints a `Surface` with its level, and a flat one must
+  show its parent), `level1` to `level4` are `surfaceContainerLow`, `surfaceContainer`,
+  `surfaceContainerHigh` and `surfaceContainerHighest`, and `level5` repeats
   `surfaceContainerHighest`. The other Paper roles the export lacks come from it too:
   `surfaceDisabled` and `onSurfaceDisabled` are `onSurface` at 12% and 38%, as Material 3
   defines disabled states, and `backdrop` is `scrim` at 40%, Paper's own opacity. The theme
