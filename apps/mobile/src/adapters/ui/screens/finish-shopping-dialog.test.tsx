@@ -1,9 +1,9 @@
-import type { RefObject } from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { focusOn } from '../accessibility/focus';
 import { NoticeSnackbar } from '../components/NoticeSnackbar';
 import { fixture } from '../testing/fixtures';
+import { recordFocusTargets } from '../testing/focus-targets';
 import { renderWithStore } from '../testing/render-with-store';
 import type { StoryScenario } from '../testing/story-store';
 import { CurrentListScreen } from './CurrentListScreen';
@@ -15,38 +15,11 @@ beforeEach(() => jest.mocked(focusOn).mockReset());
 const title = 'Terminer les courses ?';
 const message = 'Tous les articles seront décochés et resteront dans la liste.';
 
-/** The text of an element and of everything inside it. */
-const textOf = (children: unknown): string => {
-  if (typeof children === 'string' || typeof children === 'number') {
-    return String(children);
-  }
-  if (Array.isArray(children)) return children.map(textOf).join('');
-  if (children && typeof children === 'object' && 'props' in children) {
-    return textOf(
-      (children as { props: { children?: unknown } }).props.children,
-    );
-  }
-  return '';
-};
-
-/**
- * What each focus move went to: the element's label, or its text. Like `focusOn`, it looks at
- * the element once the screen has settled, when a dialog drawn in a portal is mounted.
- */
+/** What each focus move went to (`recordFocusTargets`). */
 let focusTargets: string[] = [];
 
 beforeEach(() => {
-  focusTargets = [];
-  jest.mocked(focusOn).mockImplementation((target) => {
-    setTimeout(() => {
-      const props = (target as RefObject<{ props: Record<string, unknown> }>)
-        .current?.props;
-      focusTargets.push(
-        (props?.accessibilityLabel as string | undefined) ??
-          textOf(props?.children),
-      );
-    }, 0);
-  });
+  focusTargets = recordFocusTargets(jest.mocked(focusOn));
 });
 
 /** The fixture's "Ma liste", Pommes in the cart, with the snackbar every screen shares. */
