@@ -50,7 +50,17 @@ const cleanException = ({
       frames: stacktrace.frames.map(({ vars: _vars, ...frame }) => frame),
     },
   }),
-  ...(mechanism && { mechanism: pick(mechanism, ['type', 'handled']) }),
+  // The mechanism's structural fields link the errors of a `cause` chain; none holds content.
+  ...(mechanism && {
+    mechanism: pick(mechanism, [
+      'type',
+      'handled',
+      'source',
+      'exception_id',
+      'parent_id',
+      'is_exception_group',
+    ]),
+  }),
 });
 
 /**
@@ -80,6 +90,8 @@ const filterEvent = (
       'release',
       'dist',
       'environment',
+      // The debug ids of the bundle files, which match the uploaded source maps (FR-030).
+      'debug_meta',
     ]),
     ...(values && { exception: { values } }),
     tags: {
@@ -109,10 +121,16 @@ export const createSentryErrorReporter = ({
   dsn: string;
   environment?: string | undefined;
 }): ErrorReporter => {
-  if (environment === undefined || !ENVIRONMENTS.includes(environment)) {
+  if (
+    !dsn ||
+    environment === undefined ||
+    !ENVIRONMENTS.includes(environment)
+  ) {
     return new ConsoleErrorReporter();
   }
 
+  // Sentry's global `screen` tag already reaches every event; this copy fills it in when
+  // `setTag` failed.
   let screen: string | undefined;
   // The FR-030 signatures sent since this opening of the app; the reporter is built once per opening.
   const sent = new Set<string>();

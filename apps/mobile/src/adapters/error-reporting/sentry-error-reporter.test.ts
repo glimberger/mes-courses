@@ -108,6 +108,78 @@ describe('createSentryErrorReporter', () => {
     },
   );
 
+  it('with no DSN, does not start Sentry and reports to the console', () => {
+    const reporter = createSentryErrorReporter({
+      dsn: '',
+      environment: 'production',
+    });
+
+    expect(init).not.toHaveBeenCalled();
+    expect(reporter).toBeInstanceOf(ConsoleErrorReporter);
+  });
+
+  it('FR-030 keeps the debug ids that match the uploaded source maps', () => {
+    const { beforeSend } = start();
+    const debugMeta = {
+      images: [
+        {
+          type: 'sourcemap' as const,
+          code_file: 'app:///index.android.bundle',
+          debug_id: '2a5e7b1c-4d3f-4e8a-9b6c-0f1d2e3a4b5c',
+        },
+      ],
+    };
+
+    const sent = beforeSend(event({ debug_meta: debugMeta }));
+
+    expect(sent?.debug_meta).toEqual(debugMeta);
+  });
+
+  it('keeps the links between the errors of a cause chain', () => {
+    const { beforeSend } = start();
+    const linked = {
+      type: 'generic',
+      handled: true,
+      source: 'cause',
+      exception_id: 1,
+      parent_id: 0,
+      is_exception_group: false,
+    };
+    const root = {
+      type: 'generic',
+      handled: true,
+      exception_id: 0,
+      parent_id: 0,
+      is_exception_group: false,
+    };
+
+    const sent = beforeSend(
+      event({
+        exception: {
+          values: [
+            { type: 'Error', value: 'cause', mechanism: linked },
+            {
+              type: 'Error',
+              value: 'boom',
+              mechanism: root,
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(sent?.exception?.values?.map((value) => value.mechanism)).toEqual([
+      linked,
+      {
+        type: 'generic',
+        handled: true,
+        exception_id: 0,
+        parent_id: 0,
+        is_exception_group: false,
+      },
+    ]);
+  });
+
   it('keeps no breadcrumb', () => {
     const { options } = start();
 
