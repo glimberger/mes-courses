@@ -4,18 +4,15 @@ import {
 } from '../../../application/testing/in-memory-repositories';
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import { SequentialIdGenerator } from '../../../application/testing/sequential-id-generator';
-import { createInitializeStore } from '../../../application/use-cases/initialize-store';
-import type { UseCases } from '../use-cases';
+import { createUseCases, type UseCases } from '../use-cases';
 import { createAppStore } from './app-store';
 
 const buildStore = () => {
   const unitOfWork = new InMemoryUnitOfWork(new InMemoryRepositories());
-  const useCases: UseCases = {
-    initializeStore: createInitializeStore({
-      unitOfWork,
-      ids: new SequentialIdGenerator(),
-    }),
-  };
+  const useCases: UseCases = createUseCases({
+    unitOfWork,
+    ids: new SequentialIdGenerator(),
+  });
   return createAppStore({
     useCases,
     errorReporter: new RecordingErrorReporter(),

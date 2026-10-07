@@ -11,6 +11,7 @@ import App from './App';
 import { DataFromNewerVersion } from './src/application/ports/data-from-newer-version';
 import { RecordingErrorReporter } from './src/application/testing/recording-error-reporter';
 import type { AppStore, Notice } from './src/adapters/ui/state/app-store';
+import { fixture } from './src/adapters/ui/testing/fixtures';
 import { createStoryStore } from './src/adapters/ui/testing/story-store';
 import {
   composeApp,
@@ -38,7 +39,7 @@ const deferred = <T,>() => {
 
 /** What the composition root gives on a start that succeeds. */
 const started = async (): Promise<ComposedApp & { store: AppStore }> => ({
-  store: await createStoryStore({}),
+  store: await createStoryStore({ seed: fixture }),
   close: jest.fn(() => Promise.resolve()),
 });
 
@@ -47,7 +48,7 @@ const tooOld =
   "Cette version de l'application est trop ancienne pour vos données. Mettez-la à jour.";
 const crashed = 'Une erreur est survenue.';
 
-const currentList = () => screen.findByText('Liste en cours');
+const currentList = () => screen.findByText('Ma liste');
 const retry = () =>
   fireEvent.press(screen.getByRole('button', { name: 'Réessayer' }));
 
@@ -196,7 +197,7 @@ describe('App after a failure while drawing', () => {
 
     expect(await screen.findByText(crashed)).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Réessayer' })).toBeOnTheScreen();
-    expect(screen.queryByText('Liste en cours')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Ma liste')).not.toBeOnTheScreen();
     expect(mockReporter.reports).toEqual([
       {
         error: failure,

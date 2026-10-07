@@ -7,19 +7,17 @@ import {
 } from '../../../application/testing/in-memory-repositories';
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import { SequentialIdGenerator } from '../../../application/testing/sequential-id-generator';
-import { createInitializeStore } from '../../../application/use-cases/initialize-store';
+import { createUseCases } from '../use-cases';
 import { createAppStore } from './app-store';
 import { AppStoreProvider } from './app-store-provider';
 import { useAppStore } from './use-app-store';
 
 const buildStore = () =>
   createAppStore({
-    useCases: {
-      initializeStore: createInitializeStore({
-        unitOfWork: new InMemoryUnitOfWork(new InMemoryRepositories()),
-        ids: new SequentialIdGenerator(),
-      }),
-    },
+    useCases: createUseCases({
+      unitOfWork: new InMemoryUnitOfWork(new InMemoryRepositories()),
+      ids: new SequentialIdGenerator(),
+    }),
     errorReporter: new RecordingErrorReporter(),
   });
 

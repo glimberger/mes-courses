@@ -1,52 +1,19 @@
 import {
   NavigationContainer,
-  useNavigation,
   useNavigationContainerRef,
 } from '@react-navigation/native';
-import {
-  createNativeStackNavigator,
-  type NativeStackNavigationProp,
-} from '@react-navigation/native-stack';
-import { Appbar } from 'react-native-paper';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import type { ErrorReporter } from '../../application/ports/error-reporter';
 import { ScreenErrorBoundary } from './components/app-error-boundary';
 import { NoticeSnackbar } from './components/NoticeSnackbar';
+import { CurrentListScreen } from './screens/CurrentListScreen';
 import { PlaceholderScreen } from './screens/PlaceholderScreen';
+import type { RootStackParamList } from './routes';
 import { useNavigationTheme } from './theme/navigation-theme';
-
-/** The app's routes, by name; none takes a parameter yet (contracts/ui-screens.md#navigation). */
-export type RootStackParamList = {
-  CurrentList: undefined;
-  Lists: undefined;
-  AddArticles: undefined;
-  CreateArticle: undefined;
-};
-
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace ReactNavigation {
-    // An interface, so it merges with React Navigation's declaration.
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-    interface RootParamList extends RootStackParamList {}
-  }
-}
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const CurrentListScreen = () => {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  return (
-    <PlaceholderScreen title="Liste en cours">
-      <Appbar.Action
-        icon="format-list-bulleted"
-        accessibilityLabel="Mes listes"
-        onPress={() => navigation.navigate('Lists')}
-      />
-    </PlaceholderScreen>
-  );
-};
 const ListsScreen = () => <PlaceholderScreen title="Mes listes" />;
 const AddArticlesScreen = () => (
   <PlaceholderScreen title="Ajouter des articles" />

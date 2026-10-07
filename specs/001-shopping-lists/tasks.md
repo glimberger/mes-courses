@@ -372,12 +372,12 @@ finish shopping and check every item is unticked and still present.
 
 ### Implementation for User Story 1
 
-- [ ] T074 [P] [US1] Implement `buildCurrentListView` in `apps/mobile/src/domain/current-list-view.ts` to turn T066 green.
-- [ ] T075 [P] [US1] Implement `toggle` and `finish` with the `ItemNotOnList` error in `apps/mobile/src/domain/list-item.ts` to turn T067 green.
-- [ ] T076 [US1] Implement `getCurrentList`, `toggleItemInCart` and `finishShopping` in `apps/mobile/src/application/use-cases/get-current-list.ts`, `toggle-item-in-cart.ts` and `finish-shopping.ts`, per [contracts/driving-ports.md](contracts/driving-ports.md#current-list-user-story-1), to turn T068 green. Add them to `UseCases` (`apps/mobile/src/adapters/ui/use-cases.ts`) and to the composition root.
-- [ ] T077 [US1] Add the `currentList` region and the `loadCurrentList`, `toggleItem` (optimistic, saved through the store's single write queue, and on failure the item's queued toggles dropped and the region reloaded, [research.md](research.md) R9) and `finishShopping` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T069 green.
-- [ ] T078 [P] [US1] Implement `ListItemRow.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T070 green. Leave the trailing action slots empty for now; US2 fills them.
-- [ ] T079 [US1] Implement `CurrentListScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`:
+- [X] T074 [P] [US1] Implement `buildCurrentListView` in `apps/mobile/src/domain/current-list-view.ts` to turn T066 green.
+- [X] T075 [P] [US1] Implement `toggle` and `finish` with the `ItemNotOnList` error in `apps/mobile/src/domain/list-item.ts` to turn T067 green.
+- [X] T076 [US1] Implement `getCurrentList`, `toggleItemInCart` and `finishShopping` in `apps/mobile/src/application/use-cases/get-current-list.ts`, `toggle-item-in-cart.ts` and `finish-shopping.ts`, per [contracts/driving-ports.md](contracts/driving-ports.md#current-list-user-story-1), to turn T068 green. Add them to `UseCases` (`apps/mobile/src/adapters/ui/use-cases.ts`) and to the composition root.
+- [X] T077 [US1] Add the `currentList` region and the `loadCurrentList`, `toggleItem` (optimistic, saved through the store's single write queue, and on failure the item's queued toggles dropped and the region reloaded, [research.md](research.md) R9) and `finishShopping` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T069 green.
+- [X] T078 [P] [US1] Implement `ListItemRow.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T070 green. Leave the trailing action slots empty for now; US2 fills them.
+- [X] T079 [US1] Implement `CurrentListScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`:
   - a `SectionList` with one section per category, memoized rows identified by article id ([research.md](research.md) R11);
   - Appbar title and subtitle;
   - the "Terminer les courses" action, shown only when `hasItemsInCart`;
@@ -386,16 +386,16 @@ finish shopping and check every item is unticked and still present.
   - a ticked row keeps focus when it moves (FR-037): rows keyed by article id keep their native view.
 
   Replace the placeholder in `navigation.tsx`. It turns T071 and T073 green.
-- [ ] T080 [US1] Implement `FinishShoppingDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` (Paper `Dialog` in a `Portal`) and open it from CurrentList, with the focus moves of FR-037, to turn T072 green.
-- [ ] T081 [US1] Add the US1 ids of [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) to `apps/mobile/src/adapters/ui/required-stories.ts`: `Components/ListItemRow/NotInCart`, `.../InCart`, `.../WithQuantity`, `.../LongName`, `Components/NoticeSnackbar/WriteFailed`, `Components/NoticeSnackbar/StorageFull`, `Screens/CurrentList/Loading`, `.../Error`, `.../Empty`, `.../Success`, `.../AllInCart` and `Dialogs/FinishShoppingDialog/Default`. Run the story test and confirm it fails on each missing story.
-- [ ] T082 [US1] Write the stories to turn T081 green:
+- [X] T080 [US1] Implement `FinishShoppingDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` (Paper `Dialog` in a `Portal`) and open it from CurrentList, with the focus moves of FR-037, to turn T072 green.
+- [X] T081 [US1] Add the US1 ids of [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) to `apps/mobile/src/adapters/ui/required-stories.ts`: `Components/ListItemRow/NotInCart`, `.../InCart`, `.../WithQuantity`, `.../LongName`, `Components/NoticeSnackbar/WriteFailed`, `Components/NoticeSnackbar/StorageFull`, `Screens/CurrentList/Loading`, `.../Error`, `.../Empty`, `.../Success`, `.../AllInCart` and `Dialogs/FinishShoppingDialog/Default`. Run the story test and confirm it fails on each missing story.
+- [X] T082 [US1] Write the stories to turn T081 green:
   - `apps/mobile/src/adapters/ui/components/ListItemRow.stories.tsx`, from the fixtures (the long-name story uses the 60-character article);
   - `apps/mobile/src/adapters/ui/components/NoticeSnackbar.stories.tsx`: scenario with `failing: ['toggleItemInCart']` and a `prepare` that loads the current list and toggles an item, and a `StorageFull` story with `failingWith: { toggleItemInCart: 'storageFull' }` and the same `prepare`;
   - `apps/mobile/src/adapters/ui/screens/CurrentListScreen.stories.tsx`: `pending: ['getCurrentList']` (Loading), `failing: ['getCurrentList']` (Error), an empty "Ma liste" (Empty), several categories with ticked, unticked and quantified items (Success), every item ticked (AllInCart);
   - `apps/mobile/src/adapters/ui/screens/FinishShoppingDialog.stories.tsx`.
 
   Review them with `yarn storybook` on Android and iOS, in light and dark mode and at 200% text size.
-- [ ] T083 [US1] Make `first-launch.e2e.ts` (T065) green with `yarn test:e2e:android` and `yarn test:e2e:ios`. Any production fix it forces starts with its own failing unit or screen test.
+- [X] T083 [US1] Make `first-launch.e2e.ts` (T065) green with `yarn test:e2e:android` and `yarn test:e2e:ios`. Any production fix it forces starts with its own failing unit or screen test.
 
 **Checkpoint**: on a device with items added through US2, US1 works end to end, offline included; its stories are in Storybook and `first-launch.e2e.ts` is green on both platforms. This is the first half of the MVP. The US1 journeys that need items (ticking, persistence, finishing) are written in US2, which adds them.
 

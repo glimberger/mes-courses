@@ -241,6 +241,7 @@ describe('the current list in the store', () => {
     it('US1-3 takes a ticked item out of the cart at once', async () => {
       const { store, held } = await buildHeldStore();
       const ticking = store.getState().toggleItem(lait);
+      await settle();
       held.calls[0]?.release();
       await ticking;
 
@@ -272,6 +273,7 @@ describe('the current list in the store', () => {
     it('FR-007 has nothing in the cart again when the save of the only tick fails', async () => {
       const { store, held } = await buildHeldStore();
       const toggling = store.getState().toggleItem(lait);
+      await settle();
 
       held.calls[0]?.release('fails');
       await toggling;
@@ -435,6 +437,7 @@ describe('the current list in the store', () => {
       const { store, held, stored } = await buildHeldStore();
       void store.getState().toggleItem(lait);
       void store.getState().toggleItem(pommes);
+      await settle();
       held.calls[0]?.release();
       await settle();
       held.calls[1]?.release();

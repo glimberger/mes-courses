@@ -125,7 +125,7 @@ describe('createStoryStore', () => {
   it('stops waiting for prepare once it calls a use case held pending', async () => {
     let isolated!: typeof StoryStoreModule;
     jest.isolateModules(() => {
-      // No action of the app's store calls a use case yet: one that does, for this test only.
+      // An action that calls initializeStore, held pending, for this test only.
       jest.doMock('../state/app-store', () => {
         const actual =
           jest.requireActual<typeof AppStoreModule>('../state/app-store');

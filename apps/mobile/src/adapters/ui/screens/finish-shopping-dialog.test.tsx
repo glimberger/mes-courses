@@ -29,16 +29,25 @@ const textOf = (children: unknown): string => {
   return '';
 };
 
-/** What each focus move went to: the element's label, or its text when it has none. */
-const focusTargets = () =>
-  jest.mocked(focusOn).mock.calls.map(([target]) => {
-    const props = (target as RefObject<{ props: Record<string, unknown> }>)
-      .current?.props;
-    return (
-      (props?.accessibilityLabel as string | undefined) ??
-      textOf(props?.children)
-    );
+/**
+ * What each focus move went to: the element's label, or its text. Like `focusOn`, it looks at
+ * the element once the screen has settled, when a dialog drawn in a portal is mounted.
+ */
+let focusTargets: string[] = [];
+
+beforeEach(() => {
+  focusTargets = [];
+  jest.mocked(focusOn).mockImplementation((target) => {
+    setTimeout(() => {
+      const props = (target as RefObject<{ props: Record<string, unknown> }>)
+        .current?.props;
+      focusTargets.push(
+        (props?.accessibilityLabel as string | undefined) ??
+          textOf(props?.children),
+      );
+    }, 0);
   });
+});
 
 /** The fixture's "Ma liste", Pommes in the cart, with the snackbar every screen shares. */
 const renderScreen = async (scenario: StoryScenario = {}) => {
@@ -134,7 +143,9 @@ describe('FinishShoppingDialog', () => {
     expect(errorReporter.reports).toEqual([
       { error: expect.any(Error), context: { operation: 'finishShopping' } },
     ]);
-    expect(focusTargets().at(-1)).toBe('Terminer les courses');
+    await waitFor(() =>
+      expect(focusTargets.at(-1)).toBe('Terminer les courses'),
+    );
   });
 
   describe('FR-037 screen reader focus', () => {
@@ -143,7 +154,7 @@ describe('FinishShoppingDialog', () => {
 
       await openDialog();
 
-      await waitFor(() => expect(focusTargets()).toEqual([title]));
+      await waitFor(() => expect(focusTargets).toEqual([title]));
     });
 
     it('goes back to "Terminer les courses" when "Annuler" closes the dialog', async () => {
@@ -153,7 +164,7 @@ describe('FinishShoppingDialog', () => {
       press('Annuler');
 
       await waitFor(() =>
-        expect(focusTargets()).toEqual([title, 'Terminer les courses']),
+        expect(focusTargets).toEqual([title, 'Terminer les courses']),
       );
     });
 
@@ -163,7 +174,7 @@ describe('FinishShoppingDialog', () => {
 
       press('Terminer');
 
-      await waitFor(() => expect(focusTargets()).toEqual([title, 'Ma liste']));
+      await waitFor(() => expect(focusTargets).toEqual([title, 'Ma liste']));
     });
   });
 });

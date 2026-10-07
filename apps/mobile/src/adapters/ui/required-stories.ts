@@ -11,4 +11,17 @@ export const requiredStories: readonly string[] = [
   'Screens/Startup/Error',
   'Screens/Startup/UpdateRequired',
   'Screens/Crash/Error',
+  // User Story 1
+  'Components/ListItemRow/NotInCart',
+  'Components/ListItemRow/InCart',
+  'Components/ListItemRow/WithQuantity',
+  'Components/ListItemRow/LongName',
+  'Components/NoticeSnackbar/WriteFailed',
+  'Components/NoticeSnackbar/StorageFull',
+  'Screens/CurrentList/Loading',
+  'Screens/CurrentList/Error',
+  'Screens/CurrentList/Empty',
+  'Screens/CurrentList/Success',
+  'Screens/CurrentList/AllInCart',
+  'Dialogs/FinishShoppingDialog/Default',
 ];
