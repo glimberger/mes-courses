@@ -5,6 +5,8 @@ allowed_patterns:
   - 'enableForeignKeyConstraints'
   # The SQLite pragma that turns foreign constraints on, not a secret.
   - 'PRAGMA foreign_keys'
+  # React's `key` prop on a JSX element, which sets its identity, not a secret.
+  - 'key=\{'
 fileignoreconfig:
   # flake.lock pins Nix inputs with content hashes and git revisions, not secrets.
   - filename: flake.lock

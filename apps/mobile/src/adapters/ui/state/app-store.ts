@@ -69,7 +69,8 @@ export interface StoreKit {
   /**
    * Runs a write in the store-wide queue, after every write called before it, and applies the
    * shared write rules (002 contracts/ui-state.md). Refused input, and the business errors named
-   * in `expected`, are returned to the caller as they are.
+   * in `expected`, are returned to the caller as they are. After a success it resolves once
+   * `refresh()` is done; the next write does not wait for that refresh.
    */
   runWrite: <T, E extends { type: string }>(
     operation: string,
@@ -78,29 +79,41 @@ export interface StoreKit {
   ) => Promise<Result<T, E | WriteFailed>>;
   /**
    * Defines how a region loads, and returns its load action. `refresh` reloads the region once
-   * it has been requested.
+   * it has been requested. When loads overlap, only the last one started is shown.
    */
   region: <K extends RegionName>(
     name: K,
     operation: string,
     query: () => Promise<Loaded<K>>,
   ) => () => Promise<void>;
+  /**
+   * Has `refresh` call `reload` whenever `requested` says the region has been requested, for a
+   * region that `region` cannot build (the catalog, whose two views load together).
+   */
+  reloadOnRefresh: (
+    requested: () => boolean,
+    reload: () => Promise<void>,
+  ) => void;
 }
 
-/** Input the user can correct: the form or dialog shows it, and it is never reported (FR-030). */
-const REFUSED_INPUT: readonly string[] = [
-  'NameRequired',
-  'NameTooLong',
-  'NameAlreadyUsed',
-  'AmountNotANumber',
-  'AmountNotPositive',
-  'AmountTooPrecise',
-  'AmountTooLarge',
-  'UnitWithoutAmount',
-  'UnitTooLong',
-] satisfies readonly (
-  NameError['type'] | QuantityError['type'] | 'NameAlreadyUsed'
-)[];
+/**
+ * Input the user can correct: the form or dialog shows it, and it is never reported (FR-030).
+ * A record with an entry per tag, so a new name or quantity error does not compile until listed.
+ */
+const REFUSED_INPUT: Record<
+  NameError['type'] | QuantityError['type'] | 'NameAlreadyUsed',
+  true
+> = {
+  NameRequired: true,
+  NameTooLong: true,
+  NameAlreadyUsed: true,
+  AmountNotANumber: true,
+  AmountNotPositive: true,
+  AmountTooPrecise: true,
+  AmountTooLarge: true,
+  UnitWithoutAmount: true,
+  UnitTooLong: true,
+};
 
 /**
  * Builds the store with the actions `extend` defines on the shared write rules. Used by
@@ -149,12 +162,11 @@ export const createAppStoreWith = <Actions extends object>(
       }
       if (!outcome.ok) {
         const { type } = outcome.error;
-        return REFUSED_INPUT.includes(type) || expected.includes(type)
+        return Object.hasOwn(REFUSED_INPUT, type) || expected.includes(type)
           ? outcome
           : fail(operation, new UnexpectedResult(type));
       }
       update({ pendingUndo: null });
-      await refresh();
       return outcome;
     };
 
@@ -163,30 +175,39 @@ export const createAppStoreWith = <Actions extends object>(
       set: update,
       useCases,
       runWrite: (operation, call, options) => {
-        const run = writes.then(() =>
+        const saved = writes.then(() =>
           write(operation, call, options?.expected ?? []),
         );
-        writes = run.catch(() => undefined);
-        return run;
+        writes = saved.catch(() => undefined);
+        return saved.then(async (outcome) => {
+          if (outcome.ok) await refresh();
+          return outcome;
+        });
       },
       region: (name, operation, query) => {
         const setRegion = (state: AppState[typeof name]) =>
           update({ [name]: state } as Partial<AppState>);
+        let latest = 0;
         const load = async () => {
+          const started = ++latest;
           const { status } = get()[name];
           // A reload keeps the data on screen until the new data arrives.
           if (status !== 'success' && status !== 'empty') {
             setRegion({ status: 'loading' });
           }
           try {
-            setRegion(await query());
+            const loaded = await query();
+            if (started === latest) setRegion(loaded);
           } catch (error) {
-            setRegion({ status: 'error', error });
+            if (started === latest) setRegion({ status: 'error', error });
             errorReporter.report(error, { operation });
           }
         };
-        regions.push({ requested: () => get()[name].status !== 'idle', load });
+        kit.reloadOnRefresh(() => get()[name].status !== 'idle', load);
         return load;
+      },
+      reloadOnRefresh: (requested, reload) => {
+        regions.push({ requested, load: reload });
       },
     };
 

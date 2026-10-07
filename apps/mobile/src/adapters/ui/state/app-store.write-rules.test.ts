@@ -59,22 +59,30 @@ const buildStore = () => {
   };
   const getLists = jest.fn<Promise<ListSummary[]>, []>();
   const getCurrentList = jest.fn<Promise<CurrentListView>, []>();
-  const store = createAppStoreWith({ useCases, errorReporter }, (kit) => ({
-    testWrite: (call: Call) => kit.runWrite('testWrite', call),
-    addArticleToList: (call: Call) =>
-      kit.runWrite('addArticleToList', call, { expected: ['AlreadyOnList'] }),
-    restoreRemovedItem: (call: Call) =>
-      kit.runWrite('restoreRemovedItem', call),
-    loadLists: kit.region('lists', 'getLists', async () => ({
-      status: 'success' as const,
-      data: await getLists(),
-    })),
-    loadCurrentList: kit.region('currentList', 'getCurrentList', async () => ({
-      status: 'success' as const,
-      data: await getCurrentList(),
-    })),
-  }));
-  return { store, errorReporter, getLists, getCurrentList };
+  const catalog = { requested: false, reload: jest.fn(async () => {}) };
+  const store = createAppStoreWith({ useCases, errorReporter }, (kit) => {
+    kit.reloadOnRefresh(() => catalog.requested, catalog.reload);
+    return {
+      testWrite: (call: Call) => kit.runWrite('testWrite', call),
+      addArticleToList: (call: Call) =>
+        kit.runWrite('addArticleToList', call, { expected: ['AlreadyOnList'] }),
+      restoreRemovedItem: (call: Call) =>
+        kit.runWrite('restoreRemovedItem', call),
+      loadLists: kit.region('lists', 'getLists', async () => ({
+        status: 'success' as const,
+        data: await getLists(),
+      })),
+      loadCurrentList: kit.region(
+        'currentList',
+        'getCurrentList',
+        async () => ({
+          status: 'success' as const,
+          data: await getCurrentList(),
+        }),
+      ),
+    };
+  });
+  return { store, errorReporter, getLists, getCurrentList, catalog };
 };
 
 describe('the shared write rules', () => {
@@ -117,6 +125,30 @@ describe('the shared write rules', () => {
 
       await expect(failing).resolves.toEqual(err({ type: 'WriteFailed' }));
       await expect(next).resolves.toEqual(ok('saved'));
+    });
+
+    it("FR-004 starts the next save without waiting for the previous write's refresh", async () => {
+      const { store, getLists } = buildStore();
+      getLists.mockResolvedValueOnce([summary('Ma liste')]);
+      await store.getState().loadLists();
+      const reload = deferred<ListSummary[]>();
+      getLists.mockReturnValueOnce(reload.promise);
+      getLists.mockResolvedValue([summary('Ma liste')]);
+      const secondCall = jest.fn(async () => ok('second'));
+
+      const firstWrite = store.getState().testWrite(async () => ok('first'));
+      const secondWrite = store.getState().testWrite(secondCall);
+      await expect(secondWrite).resolves.toEqual(ok('second'));
+
+      expect(secondCall).toHaveBeenCalledTimes(1);
+      let firstDone = false;
+      void firstWrite.then(() => {
+        firstDone = true;
+      });
+      await Promise.resolve();
+      expect(firstDone).toBe(false);
+      reload.resolve([summary('Ma liste')]);
+      await expect(firstWrite).resolves.toEqual(ok('first'));
     });
   });
 
@@ -166,6 +198,17 @@ describe('the shared write rules', () => {
         status: 'success',
         data: [summary('Ma liste'), summary('Barbecue')],
       });
+    });
+
+    it('reloads a region registered with reloadOnRefresh once it has been requested', async () => {
+      const { store, catalog } = buildStore();
+
+      await store.getState().testWrite(async () => ok('saved'));
+      expect(catalog.reload).not.toHaveBeenCalled();
+
+      catalog.requested = true;
+      await store.getState().testWrite(async () => ok('saved'));
+      expect(catalog.reload).toHaveBeenCalledTimes(1);
     });
 
     it('does not reload after a write that fails', async () => {
@@ -232,6 +275,48 @@ describe('the shared write rules', () => {
       expect(errorReporter.reports).toEqual([
         { error: failure, context: { operation: 'getLists' } },
       ]);
+    });
+
+    it('shows the last load started when an older one resolves after it', async () => {
+      const { store, getLists } = buildStore();
+      const older = deferred<ListSummary[]>();
+      const newer = deferred<ListSummary[]>();
+      getLists
+        .mockReturnValueOnce(older.promise)
+        .mockReturnValueOnce(newer.promise);
+
+      const olderLoad = store.getState().loadLists();
+      const newerLoad = store.getState().loadLists();
+      newer.resolve([summary('Barbecue')]);
+      await newerLoad;
+      older.resolve([summary('Ma liste')]);
+      await olderLoad;
+
+      expect(store.getState().lists).toEqual({
+        status: 'success',
+        data: [summary('Barbecue')],
+      });
+    });
+
+    it('keeps the last load shown when an older one fails after it, and still reports the failure', async () => {
+      const { store, getLists, errorReporter } = buildStore();
+      const older = deferred<ListSummary[]>();
+      getLists
+        .mockReturnValueOnce(
+          older.promise.then(() => Promise.reject(new Error('boom'))),
+        )
+        .mockResolvedValueOnce([summary('Barbecue')]);
+
+      const olderLoad = store.getState().loadLists();
+      await store.getState().loadLists();
+      older.resolve([]);
+      await olderLoad;
+
+      expect(store.getState().lists).toEqual({
+        status: 'success',
+        data: [summary('Barbecue')],
+      });
+      expect(errorReporter.reports).toHaveLength(1);
     });
 
     it('shows loading again for a retry after an error', async () => {
