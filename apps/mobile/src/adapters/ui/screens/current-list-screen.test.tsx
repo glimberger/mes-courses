@@ -330,8 +330,8 @@ describe('CurrentList, editing the list (User Story 2)', () => {
     await runAction('Lait, 2 L, pas dans le caddie', 'editQuantity');
 
     expect(
-      await screen.findByRole('header', { name: 'Lait' }),
-    ).toBeOnTheScreen();
+      (await screen.findAllByRole('header', { name: 'Lait' })).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByLabelText('Quantité')).toHaveDisplayValue('2');
     expect(screen.getByLabelText('Unité')).toHaveDisplayValue('L');
     fireEvent.changeText(screen.getByLabelText('Quantité'), '3');
@@ -344,8 +344,8 @@ describe('CurrentList, editing the list (User Story 2)', () => {
     await renderEditable({ ...withBeurre, items: withBeurre.items.slice(-1) });
 
     fireEvent.press(
-      screen.getByRole('button', {
-        name: 'Modifier la quantité',
+      // Hidden from screen readers, which reach it as the row's action.
+      screen.getByLabelText('Modifier la quantité', {
         includeHiddenElements: true,
       }),
     );
@@ -363,8 +363,8 @@ describe('CurrentList, editing the list (User Story 2)', () => {
     });
 
     fireEvent.press(
-      screen.getByRole('button', {
-        name: 'Retirer de la liste',
+      // Hidden from screen readers, which reach it as the row's action.
+      screen.getByLabelText('Retirer de la liste', {
         includeHiddenElements: true,
       }),
     );

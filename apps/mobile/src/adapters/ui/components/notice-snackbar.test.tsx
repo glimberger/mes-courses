@@ -1,8 +1,13 @@
 import { AccessibilityInfo } from 'react-native';
+import { Snackbar } from 'react-native-paper';
 import { act, screen } from '@testing-library/react-native';
 
+import type { ArticleId } from '../../../domain/article';
+import type { ListId } from '../../../domain/shopping-list';
 import type { Notice } from '../state/app-store';
 import { renderWithStore } from '../testing/render-with-store';
+import { ABOVE_SCREEN_FAB } from './ScreenFab';
+import { ABOVE_UNDO_OFFER } from './UndoSnackbar';
 import { NoticeSnackbar } from './NoticeSnackbar';
 
 const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
@@ -135,5 +140,37 @@ describe('NoticeSnackbar', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('shows above the FAB of the screen, never covering it', async () => {
+    await renderSnackbar();
+
+    expect(screen.UNSAFE_getByType(Snackbar).props.wrapperStyle).toEqual(
+      ABOVE_SCREEN_FAB,
+    );
+  });
+
+  it('shows above the undo offer while one is pending, never covering "Annuler"', async () => {
+    const { store, show } = await renderSnackbar();
+    act(() =>
+      store.setState({
+        pendingUndo: {
+          kind: 'removedItem',
+          removed: {
+            listId: 'list-1' as ListId,
+            articleId: 'article-1' as ArticleId,
+            inCart: false,
+            quantity: null,
+          },
+          name: 'Lait',
+        },
+      }),
+    );
+
+    show({ type: 'writeFailed' });
+
+    expect(screen.UNSAFE_getByType(Snackbar).props.wrapperStyle).toEqual(
+      ABOVE_UNDO_OFFER,
+    );
   });
 });

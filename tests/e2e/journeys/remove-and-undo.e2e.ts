@@ -5,6 +5,8 @@ import {
   createArticle,
   expectRow,
   openAddArticles,
+  removeRow,
+  tapUndo,
 } from '../support/app';
 
 describe('remove an item and undo', () => {
@@ -20,9 +22,7 @@ describe('remove an item and undo', () => {
     await element(by.label('Beurre, 2 kg, pas dans le caddie')).tap();
     await expectRow('Beurre, 2 kg, dans le caddie');
 
-    await element(
-      by.label('Beurre, 2 kg, dans le caddie'),
-    ).performAccessibilityAction('remove');
+    await removeRow('Beurre, 2 kg, dans le caddie');
     await expect(
       element(by.text('« Beurre » retiré de la liste')),
     ).toBeVisible();
@@ -30,7 +30,7 @@ describe('remove an item and undo', () => {
       element(by.label('Beurre, 2 kg, dans le caddie')),
     ).not.toExist();
 
-    await element(by.text('Annuler')).tap();
+    await tapUndo();
 
     await expectRow('Beurre, 2 kg, dans le caddie');
   });

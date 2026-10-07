@@ -1,5 +1,6 @@
 import { AccessibilityInfo, AppState, type AppStateStatus } from 'react-native';
 import { act, fireEvent, screen } from '@testing-library/react-native';
+import { Snackbar } from 'react-native-paper';
 
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import type { ArticleId } from '../../../domain/article';
@@ -8,6 +9,7 @@ import { Navigation } from '../navigation';
 import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
 import type { StoryScenario } from '../testing/story-store';
+import { ABOVE_SCREEN_FAB } from './ScreenFab';
 import { UndoSnackbar } from './UndoSnackbar';
 
 const lait = 'article-lait' as ArticleId;
@@ -27,15 +29,20 @@ beforeEach(() => {
   screenReaderListener = undefined;
   jest
     .spyOn(AccessibilityInfo, 'isScreenReaderEnabled')
-    .mockImplementation(() => Promise.resolve(screenReaderOn));
+    // Answers on the next timer, so the test lets it answer inside act().
+    .mockImplementation(
+      () =>
+        new Promise((resolve) => setTimeout(() => resolve(screenReaderOn), 0)),
+    );
   jest
     .spyOn(AccessibilityInfo, 'addEventListener')
-    .mockImplementation((event, listener) => {
+    // Typed loosely: the method has one overload per event.
+    .mockImplementation(((event: string, listener: unknown) => {
       if (event === 'screenReaderChanged') {
         screenReaderListener = listener as (enabled: boolean) => void;
       }
-      return { remove: jest.fn() } as never;
-    });
+      return { remove: jest.fn() };
+    }) as never);
   jest
     .spyOn(AppState, 'addEventListener')
     .mockImplementation((event, listener) => {
@@ -61,7 +68,9 @@ const renderSnackbar = async () => {
     prepare: removeLait,
   });
   // Lets the snackbar read the screen reader setting.
-  await act(async () => {});
+  await act(async () => {
+    jest.advanceTimersByTime(0);
+  });
   const offered = () => rendered.store.getState().pendingUndo !== null;
   const stored = () =>
     rendered.unitOfWork.run((repos) =>
@@ -195,5 +204,13 @@ describe('UndoSnackbar', () => {
 
     expect(screen.getByText('Ajouter des articles')).toBeOnTheScreen();
     expect(screen.getByText(removedText)).toBeOnTheScreen();
+  });
+
+  it('shows above the FAB of the screen, never covering it', async () => {
+    await renderSnackbar();
+
+    expect(screen.UNSAFE_getByType(Snackbar).props.wrapperStyle).toEqual(
+      ABOVE_SCREEN_FAB,
+    );
   });
 });

@@ -37,6 +37,7 @@ interface AppState {
     view: ScreenState<CatalogView, { query: string }>;     // full filtered by query
   };
   lists: ScreenState<ListSummary[]>;
+  categories: ScreenState<Array<{ id: CategoryId; name: string }>>;  // the category picker (001 US2-7)
   pendingUndo:
     | { kind: 'removedItem'; removed: RemovedItem; name: string }
     | { kind: 'deletedArticle'; deleted: DeletedArticle }
@@ -63,7 +64,7 @@ type Notice =
 
 | Action | Behavior |
 |---|---|
-| `loadCurrentList()`, `loadLists()`, `loadCatalog()` | Run the query use case for the region (`getCatalog` without a query for the catalog); `error` state and report on failure (operation = use case name). Also used by "Réessayer". |
+| `loadCurrentList()`, `loadLists()`, `loadCatalog()`, `loadCategories()` | Run the query use case for the region (`getCatalog` without a query for the catalog, on the current list, which is loaded first when no region shows it); `error` state and report on failure (operation = use case name). Also used by "Réessayer". |
 | `searchCatalog(query)` | Sets `catalog.query` and derives `catalog.view` from the loaded catalog with the domain's `filterCatalog`, synchronously: no storage read, no `loading` state, no report (001 SC-011, [001 research](../../001-shopping-lists/research.md) R11a). A refresh reloads the full catalog and applies the current query again. |
 | `refresh()` | Reloads every region not `idle`. Called after each successful write. |
 | Write actions from 001 (`toggleItem`, `finishShopping`, `addArticleToList`, `createArticleAndAddToList`, `changeItemQuantity`, `removeItem`, `createList`, `setCurrentList`, `createCategory`) | Call the matching use case. `toggleItem` is optimistic (001 R9). `removeItem` sets `pendingUndo` to the removed item. |

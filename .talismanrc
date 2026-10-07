@@ -9,6 +9,8 @@ allowed_patterns:
   - 'key=\{'
   # TypeScript's `keyof` operator, which names a type's properties, not a secret.
   - 'keyof'
+  # A React Native ScrollView prop (taps reach the list while typing), not a secret.
+  - 'keyboardShouldPersistTaps'
 fileignoreconfig:
   # flake.lock pins Nix inputs with content hashes and git revisions, not secrets.
   - filename: flake.lock

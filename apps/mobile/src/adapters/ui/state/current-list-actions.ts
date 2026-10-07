@@ -3,6 +3,7 @@ import {
   summarizeSections,
   type CurrentListView,
 } from '../../../domain/current-list-view';
+import type { ItemNotOnList } from '../../../domain/list-item';
 import { err, type Result } from '../../../domain/result';
 import type { ListId } from '../../../domain/shopping-list';
 import type { StoreCore, StoreKit, WriteFailed } from './store-kit';
@@ -107,7 +108,8 @@ export const createCurrentListActions = ({
 
     const outcome = await runWrite<
       { inCart: boolean },
-      Dropped | { type: string }
+      Dropped | ItemNotOnList,
+      'Dropped'
     >(
       'toggleItemInCart',
       async () => {

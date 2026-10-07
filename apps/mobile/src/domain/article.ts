@@ -8,3 +8,6 @@ export type Article = {
   name: string;
   categoryId: CategoryId;
 };
+
+/** No article has this id (a missing record, never the user's input). */
+export type ArticleNotFound = { type: 'ArticleNotFound' };

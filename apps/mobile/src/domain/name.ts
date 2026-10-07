@@ -6,6 +6,8 @@ export const MAX_NAME_LENGTH = 60;
 export type NameRequired = { type: 'NameRequired' };
 export type NameTooLong = { type: 'NameTooLong' };
 export type NameError = NameRequired | NameTooLong;
+/** Another entity of the same kind already has this name (FR-021); it carries that entity. */
+export type NameAlreadyUsed<T> = { type: 'NameAlreadyUsed'; existing: T };
 
 // Zero-width space, non-joiner and joiner, word joiner, byte order mark.
 const INVISIBLE_CHARACTERS = /[\u200B-\u200D\u2060\uFEFF]/gu;

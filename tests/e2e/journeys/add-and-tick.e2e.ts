@@ -6,6 +6,7 @@ import {
   expectAbove,
   expectRow,
   openAddArticles,
+  removeRow,
 } from '../support/app';
 
 describe('add articles and tick one', () => {
@@ -25,12 +26,11 @@ describe('add articles and tick one', () => {
   it('US2-1 adds an existing article of the catalog', async () => {
     // "Beurre" leaves the list, staying in the catalog, so it can be added again.
     await backToList();
-    await element(
-      by.label('Beurre, pas dans le caddie'),
-    ).performAccessibilityAction('remove');
+    await removeRow('Beurre, pas dans le caddie');
     await openAddArticles();
 
-    await element(by.label('Beurre')).tap();
+    // The row and the name inside it match: tapping either opens the dialog.
+    await element(by.label('Beurre')).atIndex(0).tap();
     await element(by.label('Ajouter')).tap();
 
     await expect(element(by.text('« Beurre » ajouté'))).toBeVisible();

@@ -1,3 +1,4 @@
+import { KeyboardAvoidingView } from 'react-native';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
@@ -65,7 +66,8 @@ describe('CreateArticle', () => {
     expect(screen.getByLabelText('Nom')).toHaveDisplayValue('');
     expect(
       screen
-        .getAllByRole('radio')
+        // The named items, not the radio each one draws inside it.
+        .getAllByRole('radio', { name: /.+/ })
         .map((radio) => radio.props.accessibilityLabel as string),
     ).toEqual(appSeed.categoryNames);
     expect(screen.getByLabelText('Quantité')).toBeOnTheScreen();
@@ -226,5 +228,25 @@ describe('CreateArticle', () => {
     expect(await stored(beurre)).toMatchObject({
       quantity: { amount: 250, unit: 'g' },
     });
+  });
+
+  it('keeps "Créer et ajouter" in sight on iOS while the user types', async () => {
+    await renderScreen();
+
+    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).props.behavior).toBe(
+      'padding',
+    );
+  });
+
+  it('clears the notice shown when it opens, so the snackbar never covers "Créer et ajouter"', async () => {
+    const { store } = await renderWithStore(<CreateArticleScreen />, {
+      seed: fixture,
+      prepare: async (actions) => {
+        await actions.loadCurrentList();
+        await actions.addArticleToList({ id: beurre, name: 'Beurre' }, null);
+      },
+    });
+
+    await waitFor(() => expect(store.getState().notice).toBeNull());
   });
 });

@@ -6,3 +6,6 @@ export type Category = {
   name: string;
   position: number;
 };
+
+/** No category has this id (a missing record, never the user's input). */
+export type CategoryNotFound = { type: 'CategoryNotFound' };

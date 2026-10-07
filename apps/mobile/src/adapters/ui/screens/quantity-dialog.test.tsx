@@ -59,19 +59,28 @@ const renderDialog = async (request: QuantityRequest) => {
 const type = (label: string, text: string) =>
   fireEvent.changeText(screen.getByLabelText(label), text);
 
-const press = (name: string) =>
-  fireEvent.press(screen.getByRole('button', { name }));
+/** Presses the dialog's button: drawn in a portal, it comes after the list's ("Ajouter"). */
+const press = (name: string) => {
+  const button = screen.getAllByRole('button', { name }).at(-1);
+  if (!button) throw new Error(`No button "${name}"`);
+  fireEvent.press(button);
+};
+
+/**
+ * Whether the dialog titled so is open: its title is a header, inside the header that takes
+ * screen reader focus.
+ */
+const isOpen = (title: string) =>
+  screen.queryAllByRole('header', { name: title }).length > 0;
 
 const closed = (title: string) =>
-  waitFor(() =>
-    expect(screen.queryByRole('header', { name: title })).not.toBeOnTheScreen(),
-  );
+  waitFor(() => expect(isOpen(title)).toBe(false));
 
 describe('QuantityDialog', () => {
   describe('add mode', () => {
     it('US2-1 SC-003 "Ajouter" with empty fields adds the article with no quantity', async () => {
       const { stored } = await renderDialog({ mode: 'add', article: beurre });
-      expect(screen.getByRole('header', { name: 'Beurre' })).toBeOnTheScreen();
+      expect(isOpen('Beurre')).toBe(true);
 
       press('Ajouter');
 
@@ -130,9 +139,7 @@ describe('QuantityDialog', () => {
         press('Ajouter');
 
         expect(await screen.findByText(message)).toBeOnTheScreen();
-        expect(
-          screen.getByRole('header', { name: 'Beurre' }),
-        ).toBeOnTheScreen();
+        expect(isOpen('Beurre')).toBe(true);
         expect(await stored(beurre.id)).toBeNull();
       },
     );
@@ -169,9 +176,10 @@ describe('QuantityDialog', () => {
       expect(
         screen.getByRole('button', { name: 'Modifier la quantité' }),
       ).toBeOnTheScreen();
-      expect(
-        screen.queryByRole('button', { name: 'Ajouter' }),
-      ).not.toBeOnTheScreen();
+      // Only the list's FAB.
+      expect(screen.getAllByRole('button', { name: 'Ajouter' })).toHaveLength(
+        1,
+      );
     });
 
     it('US2-8 "Modifier la quantité" saves the new quantity, without adding the article twice', async () => {
@@ -255,7 +263,7 @@ describe('QuantityDialog', () => {
       await renderWithStore(<AddArticlesScreen />, { seed: fixture });
 
       fireEvent.press(await screen.findByRole('button', { name: 'Beurre' }));
-      await screen.findByRole('header', { name: 'Beurre' });
+      await waitFor(() => expect(isOpen('Beurre')).toBe(true));
       await waitFor(() => expect(focusTargets).toEqual(['Beurre']));
 
       press('Annuler');

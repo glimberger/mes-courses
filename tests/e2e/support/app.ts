@@ -1,4 +1,4 @@
-import { by, element, expect, waitFor } from 'detox';
+import { by, device, element, expect, waitFor } from 'detox';
 
 // Steps the journeys share. They find elements by French text and accessibility label only, and
 // wait only through Detox's synchronization: no sleep, no retry (research R23).
@@ -31,11 +31,29 @@ export const expectAbove = async (
   }
 };
 
-/** Types into the field with this label, then closes the keyboard. */
-export const typeInto = async (label: string, text: string) => {
-  await element(by.label(label)).replaceText(text);
-  await element(by.label(label)).tapReturnKey();
-};
+/**
+ * The text field with this label. Its floating label reads the same, so the field is told apart
+ * by its native type too.
+ */
+const field = (label: string) =>
+  element(
+    by
+      .label(label)
+      .and(
+        by.type(
+          device.getPlatform() === 'android'
+            ? 'android.widget.EditText'
+            : 'RCTUITextField',
+        ),
+      ),
+  );
+
+/**
+ * Sets the text of the field with this label without focusing it: a panel to type on would
+ * open, and its closing would move the screen under the next tap.
+ */
+export const typeInto = (label: string, text: string) =>
+  field(label).replaceText(text);
 
 /**
  * From AddArticles, creates the article in the category, with the quantity if given, and adds it
@@ -47,21 +65,26 @@ export const createArticle = async (
   quantity?: { amount: string; unit: string },
 ) => {
   await element(by.label('Nouvel article')).tap();
-  await element(by.label(category)).tap();
+  // The radio item and the text inside it match: tapping either chooses the category.
+  await element(by.label(category)).atIndex(0).tap();
   await typeInto('Nom', name);
   if (quantity) {
     await typeInto('Quantité', quantity.amount);
     await typeInto('Unité', quantity.unit);
   }
   await element(by.label('Créer et ajouter')).tap();
-  await expect(element(by.text(`« ${name} » ajouté`))).toBeVisible();
+  // The snackbar slides in.
+  await waitFor(element(by.text(`« ${name} » ajouté`)))
+    .toBeVisible()
+    .withTimeout(2000);
 };
 
 /** From the current list, opens AddArticles, with the FAB or from the empty list. */
 export const openAddArticles = async (fromEmptyList = false) => {
-  await element(
-    by.label(fromEmptyList ? 'Ajouter des articles' : 'Ajouter'),
-  ).tap();
+  // The FAB and the text inside it match: tapping either opens the screen.
+  await element(by.label(fromEmptyList ? 'Ajouter des articles' : 'Ajouter'))
+    .atIndex(0)
+    .tap();
   await expect(element(by.text('Ajouter des articles'))).toBeVisible();
 };
 
@@ -75,3 +98,20 @@ export const expectRow = (label: string) =>
   waitFor(element(by.label(label)))
     .toBeVisible()
     .withTimeout(2000);
+
+/** Taps "Annuler" in the undo snackbar, once it has slid fully in. */
+export const tapUndo = async () => {
+  await waitFor(element(by.text('Annuler')))
+    .toBeVisible(100)
+    .withTimeout(2000);
+  await element(by.text('Annuler')).tap();
+};
+
+/**
+ * Removes the item of this row through its accessibility action "Retirer de la liste", as a
+ * screen reader does. iOS names a custom action by its label, Android by its name.
+ */
+export const removeRow = (rowLabel: string) =>
+  element(by.label(rowLabel)).performAccessibilityAction(
+    device.getPlatform() === 'ios' ? 'Retirer de la liste' : 'remove',
+  );

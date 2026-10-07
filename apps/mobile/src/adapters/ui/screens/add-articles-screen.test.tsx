@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import type { ArticleId } from '../../../domain/article';
@@ -275,16 +275,14 @@ describe('AddArticles', () => {
     });
   });
 
-  it('opens with an empty search, whatever was searched the last time', async () => {
-    const { store } = await renderScreen({
-      prepare: async (actions) => {
-        await actions.loadCatalog();
-        actions.searchCatalog('xyz');
-      },
-    });
-    await act(async () => {});
+  it('clears the search when the screen is left, so it opens on the whole catalog the next time', async () => {
+    const { store, unmount } = await renderScreen();
+    await screen.findByText('Beurre');
+    search('xyz');
+
+    unmount();
 
     expect(store.getState().catalog.query).toBe('');
-    expect(await screen.findByText('Beurre')).toBeOnTheScreen();
+    expect(store.getState().catalog.view.status).toBe('success');
   });
 });

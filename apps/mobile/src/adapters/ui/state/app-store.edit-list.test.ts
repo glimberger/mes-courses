@@ -453,6 +453,18 @@ describe('editing the current list in the store', () => {
       ]);
     });
 
+    it('ends the notice shown, so its snackbar never covers the undo offer', async () => {
+      const { store } = await buildStore();
+      await store.getState().loadCurrentList();
+      await store.getState().addArticleToList(pommes, null);
+      expect(store.getState().notice).not.toBeNull();
+
+      await store.getState().removeItem(beurre.id);
+
+      expect(store.getState().notice).toBeNull();
+      expect(store.getState().pendingUndo).toMatchObject({ name: 'Beurre' });
+    });
+
     it('FR-010 dismissUndo() ends the offer, and the removal stays', async () => {
       const { store, stored } = await buildStoreWithOffer();
 
