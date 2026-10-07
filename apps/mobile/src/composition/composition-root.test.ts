@@ -8,6 +8,7 @@ import * as Sentry from '@sentry/react-native';
 import { RecordingErrorReporter } from '../application/testing/recording-error-reporter';
 import * as initializeStoreModule from '../application/use-cases/initialize-store';
 import { ConsoleErrorReporter } from '../adapters/error-reporting/console-error-reporter';
+import * as appStoreModule from '../adapters/ui/state/app-store';
 import { NodeSqlDatabase } from '../../test/sqlite/node-sql-database';
 import { composeApp, createErrorReporter } from './composition-root';
 
@@ -135,6 +136,25 @@ describe('composeApp', () => {
 
     await composeApp(new RecordingErrorReporter());
     expect(await stored()).toEqual(before);
+  });
+
+  it('reports the store failures until the app is closed, and none after', async () => {
+    const createAppStore = jest.spyOn(appStoreModule, 'createAppStore');
+    const reporter = new RecordingErrorReporter();
+    const composed = await composeApp(reporter);
+    const storeReporter = createAppStore.mock.calls[0]?.[0].errorReporter;
+    createAppStore.mockRestore();
+    const before = new Error('write failed while open');
+
+    storeReporter?.report(before, { operation: 'write' });
+    await composed.close();
+    storeReporter?.report(new Error('database closed'), { operation: 'write' });
+    storeReporter?.setScreen('Lists');
+
+    expect(reporter.reports).toEqual([
+      { error: before, context: { operation: 'write' } },
+    ]);
+    expect(reporter.screens).toEqual(['Lists']);
   });
 
   it('closes the database it opened when the app is closed', async () => {
