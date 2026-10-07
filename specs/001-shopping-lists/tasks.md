@@ -320,21 +320,21 @@ finish shopping and check every item is unticked and still present.
 
 ### Tests for User Story 1 ⚠️ (write first, confirm they fail)
 
-- [ ] T065 [US1] Write the failing journey `tests/e2e/journeys/first-launch.e2e.ts` ([contracts/ui-validation.md](contracts/ui-validation.md#end-to-end-journeys)): on a fresh install (`device.launchApp({ delete: true, newInstance: true })`), the app opens on "Ma liste" with "Votre liste est vide" and "Ajouter des articles" (US3-1, US1-10), found by text only. Delete `launch.e2e.ts` (T014), whose check this one includes. Run `yarn test:e2e:android` and confirm it fails on the placeholder screen.
-- [ ] T066 [P] [US1] Write failing domain tests for the current list view in `apps/mobile/src/domain/current-list-view.test.ts`:
+- [X] T065 [US1] Write the failing journey `tests/e2e/journeys/first-launch.e2e.ts` ([contracts/ui-validation.md](contracts/ui-validation.md#end-to-end-journeys)): on a fresh install (`device.launchApp({ delete: true, newInstance: true })`), the app opens on "Ma liste" with "Votre liste est vide" and "Ajouter des articles" (US3-1, US1-10), found by text only. Delete `launch.e2e.ts` (T014), whose check this one includes. Run `yarn test:e2e:android` and confirm it fails on the placeholder screen.
+- [X] T066 [P] [US1] Write failing domain tests for the current list view in `apps/mobile/src/domain/current-list-view.test.ts`:
   - sections only for categories holding an item of the list, ordered by `position` (FR-003, US4-5);
   - within a section, unticked items first, then ticked, each group sorted with `compareNames` (`Intl.Collator('fr', { sensitivity: 'base', numeric: true })`), so "Lait 2 L" comes before "Lait 10 L" (US1-6, FR-005, Assumptions);
   - `remainingCount` = unticked items (US1-7, FR-006: 5 items with 2 ticked → 3);
   - `totalCount`, and `hasItemsInCart`.
-- [ ] T067 [P] [US1] Write failing domain tests for the list item transitions in `apps/mobile/src/domain/list-item.test.ts`:
+- [X] T067 [P] [US1] Write failing domain tests for the list item transitions in `apps/mobile/src/domain/list-item.test.ts`:
   - `toggle` flips `inCart` (US1-2, US1-3);
   - `finish` sets every `inCart = false` and keeps quantities and items (US1-8);
   - `finish` on a list with nothing in the cart succeeds and changes nothing (FR-007).
-- [ ] T068 [P] [US1] Write failing use case tests on fakes:
+- [X] T068 [P] [US1] Write failing use case tests on fakes:
   - `apps/mobile/src/application/use-cases/get-current-list.test.ts`: it returns the `CurrentListView` of the current list (US1-1);
   - `apps/mobile/src/application/use-cases/toggle-item-in-cart.test.ts`: it flips and persists (US1-4), and returns `ItemNotOnList` for an unknown item;
   - `apps/mobile/src/application/use-cases/finish-shopping.test.ts`: it unticks all and keeps quantities (US1-8), and with nothing in the cart succeeds with no change (FR-007).
-- [ ] T069 [P] [US1] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.current-list.test.ts`:
+- [X] T069 [P] [US1] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.current-list.test.ts`:
   - `loadCurrentList()` goes `loading` → `success` / `empty`, and on a throw goes `error` and reports `{ operation: 'getCurrentList', screen: 'CurrentList' }` (US1-12);
   - `toggleItem` updates the region immediately (optimistic) before the use case resolves, then keeps it (US1-2, US1-3), with `remainingCount` and `hasItemsInCart` updated at once too: the first tick on a list with none sets `hasItemsInCart` before its save resolves, and a failed save of the only tick sets it back to `false` (FR-007);
   - quick toggles on one item are saved one after the other in tap order: with the use case held pending, three taps show ticked, unticked, ticked at once, and `toggleItemInCart` is called a second time only after the first call resolves; toggles on other items and other writes join the same queue behind them (FR-004, [research.md](research.md) R9);
@@ -343,7 +343,7 @@ finish shopping and check every item is unticked and still present.
   - `finishShopping` called while toggles are still queued runs after them, and is still saved when one of them fails, so every item ends unticked (FR-004, FR-007);
   - when the only tick fails and a queued `finishShopping` then finds nothing in the cart, it succeeds with no change: the one notice is the tick's `writeFailed` and there is one report (FR-007);
   - `finishShopping` refreshes the list; when it throws, no item changes in the region, `notice = writeFailed` and `{ operation: 'finishShopping' }` is reported (FR-007, R9a).
-- [ ] T070 [P] [US1] Write failing component tests for `ListItemRow` in `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx`:
+- [X] T070 [P] [US1] Write failing component tests for `ListItemRow` in `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx`:
   - role `checkbox` with the `checked` state;
   - the label "Lait, 2 L, dans le caddie" or "Pommes, pas dans le caddie" (FR-032);
   - a ticked row shows a check mark and struck-through text, not only a color (FR-035);
@@ -351,7 +351,7 @@ finish shopping and check every item is unticked and still present.
   - the row has `minHeight` 48 (FR-034);
   - the name has no `numberOfLines`, so long names wrap (FR-033);
   - tapping calls `onToggle`.
-- [ ] T071 [US1] Write failing screen tests for `CurrentList` in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx`, through `renderWithStore`:
+- [X] T071 [US1] Write failing screen tests for `CurrentList` in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx`, through `renderWithStore`:
   - US1-1: the list name is in the Appbar, items sit under category headings, and "Lait" shows "2 L";
   - US1-2 / US1-3: tapping ticks and unticks immediately;
   - US1-6, FR-005: ticked items move after unticked ones;
@@ -362,13 +362,13 @@ finish shopping and check every item is unticked and still present.
   - US4-5: an empty category heading is not shown;
   - "Terminer les courses" is absent when nothing is ticked;
   - FR-037: with `AccessibilityInfo` mocked, a row keeps screen reader focus when ticking moves it below the unticked rows, and the remaining count is not announced (FR-038).
-- [ ] T072 [US1] Write failing tests for finishing in `apps/mobile/src/adapters/ui/screens/finish-shopping-dialog.test.tsx`:
+- [X] T072 [US1] Write failing tests for finishing in `apps/mobile/src/adapters/ui/screens/finish-shopping-dialog.test.tsx`:
   - the dialog text is "Terminer les courses ?" / "Tous les articles seront décochés et resteront dans la liste.";
   - US1-8: "Terminer" unticks all, and items and quantities stay;
   - US1-9: "Annuler" changes nothing;
   - FR-007: when `finishShopping` fails, every item stays as it was, the dialog closes, focus goes back to "Terminer les courses" (still shown), and the snackbar "La modification n'a pas pu être enregistrée." appears;
   - FR-037: opening moves focus to the dialog title; "Annuler" gives it back to "Terminer les courses", and "Terminer", which hides that action, gives it to the Appbar title.
-- [ ] T073 [US1] Write a failing offline test for US1-5 in `apps/mobile/src/adapters/ui/screens/current-list-offline.test.tsx`: with `global.fetch` replaced by a function that throws, open the app and tick items. Everything works and no error is shown or reported.
+- [X] T073 [US1] Write a failing offline test for US1-5 in `apps/mobile/src/adapters/ui/screens/current-list-offline.test.tsx`: with `global.fetch` replaced by a function that throws, open the app and tick items. Everything works and no error is shown or reported.
 
 ### Implementation for User Story 1
 
