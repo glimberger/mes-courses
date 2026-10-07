@@ -260,12 +260,12 @@ story depends on them.
 
 ### Application store core ([002 ui-state contract](../002-manage-articles/contracts/ui-state.md))
 
-- [ ] T047 Write failing store-core tests in `apps/mobile/src/adapters/ui/state/app-store.test.ts`, on a store built by `createAppStore({ useCases, errorReporter })` with use cases on in-memory fakes and a `RecordingErrorReporter`:
+- [X] T047 Write failing store-core tests in `apps/mobile/src/adapters/ui/state/app-store.test.ts`, on a store built by `createAppStore({ useCases, errorReporter })` with use cases on in-memory fakes and a `RecordingErrorReporter`:
   - every region starts `idle`;
   - `notice` starts `null`, and `dismissNotice()` clears it;
   - `pendingUndo` starts `null`.
-- [ ] T048 Implement `createAppStore` with `createStore` from `zustand/vanilla` and the `AppState` and `Notice` types in `apps/mobile/src/adapters/ui/state/app-store.ts`, using the `ScreenState<T, E>` type (`idle | loading | error | empty | success`) that T044 added in `apps/mobile/src/adapters/ui/state/screen-state.ts` for `ScreenStateView`, to turn T047 green. Use no middleware.
-- [ ] T049 Write failing tests in `apps/mobile/src/adapters/ui/state/app-store.write-rules.test.ts` for the shared write rules, through a test-only write action:
+- [X] T048 Implement `createAppStore` with `createStore` from `zustand/vanilla` and the `AppState` and `Notice` types in `apps/mobile/src/adapters/ui/state/app-store.ts`, using the `ScreenState<T, E>` type (`idle | loading | error | empty | success`) that T044 added in `apps/mobile/src/adapters/ui/state/screen-state.ts` for `ScreenStateView`, to turn T047 green. Use no middleware.
+- [X] T049 Write failing tests in `apps/mobile/src/adapters/ui/state/app-store.write-rules.test.ts` for the shared write rules, through a test-only write action:
   - every write goes through one store-wide queue, in the order the actions were called: with the first use case held pending, a second write starts only after the first resolves (FR-004, [research.md](research.md) R9);
   - a write that succeeds clears `pendingUndo`; a write that fails (a throw or a `Result` error) or returns refused input leaves `pendingUndo` as it was (FR-010, R8);
   - after success, `refresh()` reloads every region that is not `idle`, keeping `success` / `empty` data on screen while it reloads;
@@ -274,10 +274,10 @@ story depends on them.
   - a `Result` error of refused input (`NameRequired`, `NameAlreadyUsed`, `AmountNotPositive`) or `AlreadyOnList` from `addArticleToList` is returned unchanged and not reported;
   - `AlreadyOnList` from `restoreRemovedItem` is a failed restore: `notice = { type: 'writeFailed' }`, reported as an `UnexpectedResult` with code `AlreadyOnList` (FR-010);
   - any other `Result` error (`ItemNotOnList`, `ListNotFound`) is handled like an unexpected throw (`notice = { type: 'writeFailed' }`, state unchanged, resolves to `WriteFailed`) and reported as an `UnexpectedResult` error whose `code` is the tag and whose message is fixed ([contracts/driving-ports.md](contracts/driving-ports.md#conventions)).
-- [ ] T050 Implement the internal `runWrite` helper (with the store-wide write queue) and `refresh()` in `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T049 green.
-- [ ] T051 Implement `AppStoreProvider` (React context) in `apps/mobile/src/adapters/ui/state/app-store-provider.tsx` and `useAppStore(selector)` (wraps `useStore`) in `apps/mobile/src/adapters/ui/state/use-app-store.ts`, with a test rendering a component that selects a slice. Add the `renderWithStore(ui, { seed? })` helper in `apps/mobile/src/adapters/ui/testing/render-with-store.tsx`: it builds fresh fakes, use cases, store, theme and navigation container for each test.
-- [ ] T052 [P] Write failing tests for `NoticeSnackbar` in `apps/mobile/src/adapters/ui/components/notice-snackbar.test.tsx`: `writeFailed` shows "La modification n'a pas pu être enregistrée.", `storageFull` shows "Espace de stockage insuffisant. Libérez de la place sur votre téléphone.", `articleAdded` shows "« {name} » ajouté", and dismissing calls `dismissNotice`. Each notice is announced with its French text as it appears (`AccessibilityInfo.announceForAccessibility` mocked, FR-038).
-- [ ] T053 [P] Implement `NoticeSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T052 green.
+- [X] T050 Implement the internal `runWrite` helper (with the store-wide write queue) and `refresh()` in `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T049 green.
+- [X] T051 Implement `AppStoreProvider` (React context) in `apps/mobile/src/adapters/ui/state/app-store-provider.tsx` and `useAppStore(selector)` (wraps `useStore`) in `apps/mobile/src/adapters/ui/state/use-app-store.ts`, with a test rendering a component that selects a slice. Add the `renderWithStore(ui, { seed? })` helper in `apps/mobile/src/adapters/ui/testing/render-with-store.tsx`: it builds fresh fakes, use cases, store, theme and navigation container for each test.
+- [X] T052 [P] Write failing tests for `NoticeSnackbar` in `apps/mobile/src/adapters/ui/components/notice-snackbar.test.tsx`: `writeFailed` shows "La modification n'a pas pu être enregistrée.", `storageFull` shows "Espace de stockage insuffisant. Libérez de la place sur votre téléphone.", `articleAdded` shows "« {name} » ajouté", and dismissing calls `dismissNotice`. Each notice is announced with its French text as it appears (`AccessibilityInfo.announceForAccessibility` mocked, FR-038).
+- [X] T053 [P] Implement `NoticeSnackbar.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T052 green.
 
 ### App shell and composition
 

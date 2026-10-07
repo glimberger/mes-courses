@@ -9,3 +9,11 @@ export type ListItem = {
   inCart: boolean;
   quantity: Quantity | null;
 };
+
+/** A removed item as it was, so "Annuler" can put it back (FR-010). */
+export type RemovedItem = {
+  listId: ListId;
+  articleId: ArticleId;
+  inCart: boolean;
+  quantity: Quantity | null;
+};
