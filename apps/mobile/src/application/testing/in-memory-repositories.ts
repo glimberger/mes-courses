@@ -212,20 +212,24 @@ const guarded = <R extends object>(repository: R, isOpen: () => boolean): R =>
 
 /**
  * Runs the work on in-memory repositories and puts back what was stored before a run that
- * throws, as a rolled back transaction would. Like a SQLite transaction, it does not nest: a run
- * started while another is still going rejects at once, where a queue would wait for ever on a
- * nested run. The repositories given to the work reject once the run has ended.
+ * throws, as a rolled back transaction would. Runs go one at a time, in the order they were
+ * started, as on SQLite; so a run started inside another's work would wait for ever: use cases
+ * never nest runs. The repositories given to the work reject once the run has ended.
  */
 export class InMemoryUnitOfWork implements UnitOfWork {
-  private running = false;
+  private queue: Promise<unknown> = Promise.resolve();
 
   constructor(private readonly repositories: InMemoryRepositories) {}
 
-  async run<T>(work: (repos: Repositories) => Promise<T>): Promise<T> {
-    if (this.running) {
-      throw new Error('A run started while another is still running');
-    }
-    this.running = true;
+  run<T>(work: (repos: Repositories) => Promise<T>): Promise<T> {
+    const result = this.queue.then(() => this.runNow(work));
+    this.queue = result.catch(() => undefined);
+    return result;
+  }
+
+  private async runNow<T>(
+    work: (repos: Repositories) => Promise<T>,
+  ): Promise<T> {
     let open = true;
     const isOpen = () => open;
     const repos = this.repositories;
@@ -243,7 +247,6 @@ export class InMemoryUnitOfWork implements UnitOfWork {
       throw error;
     } finally {
       open = false;
-      this.running = false;
     }
   }
 }

@@ -14,6 +14,7 @@ export interface CategoryRepository {
 }
 
 export interface ArticleRepository {
+  /** In the order they were added. */
   all(): Promise<Article[]>;
   findById(id: ArticleId): Promise<Article | null>;
   findByNormalizedName(normalizedName: string): Promise<Article | null>;
@@ -21,6 +22,7 @@ export interface ArticleRepository {
 }
 
 export interface ShoppingListRepository {
+  /** In the order they were added. */
   all(): Promise<ShoppingList[]>;
   findById(id: ListId): Promise<ShoppingList | null>;
   findByNormalizedName(normalizedName: string): Promise<ShoppingList | null>;
@@ -31,6 +33,7 @@ export interface ShoppingListRepository {
 }
 
 export interface ListItemRepository {
+  /** In the order they were added; an update keeps the item's place. */
   forList(listId: ListId): Promise<ListItem[]>;
   find(listId: ListId, articleId: ArticleId): Promise<ListItem | null>;
   /** Inserts the item, or updates it when the list already holds the article. */

@@ -1,6 +1,10 @@
 # SQL "PRIMARY KEY" declarations trip the pattern detector; they are not secrets.
 allowed_patterns:
   - 'PRIMARY KEY'
+  # A node:sqlite option name (DatabaseSync), not a secret.
+  - 'enableForeignKeyConstraints'
+  # The SQLite pragma that turns foreign constraints on, not a secret.
+  - 'PRAGMA foreign_keys'
 fileignoreconfig:
   # flake.lock pins Nix inputs with content hashes and git revisions, not secrets.
   - filename: flake.lock
@@ -43,4 +47,12 @@ fileignoreconfig:
     ignore_detectors: [filecontent]
   - filename: .claude/skills/speckit-taskstoissues/SKILL.md
     ignore_detectors: [filecontent]
+  # The file name check flags any name containing "sql" (database dumps); these are SQLite adapter
+  # sources named by the tasks, not dumps.
+  - filename: apps/mobile/src/adapters/sqlite/sql-database.ts
+    ignore_detectors: [filename]
+  - filename: apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts
+    ignore_detectors: [filename]
+  - filename: apps/mobile/test/sqlite/node-sql-database.ts
+    ignore_detectors: [filename]
 version: "1.0"
