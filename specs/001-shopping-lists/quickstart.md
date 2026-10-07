@@ -219,6 +219,10 @@ Time each delivery: every report must appear in Sentry within 1 minute (SC-010).
    of [research.md](research.md) R13, both on `production` only, and no other rule; "Send test
    notification" on each one delivers an email to the maintainer. The preview reports of steps
    1 to 5 have sent no email.
+8. On the Android `preview` build, ANR reports are off (R13): the APK's manifest holds
+   `io.sentry.anr.enable` set to `false`
+   (`aapt2 dump xmltree --file AndroidManifest.xml <app>.apk | grep -A1 io.sentry.anr`, or
+   Android Studio's APK Analyzer).
 
 ## 7. Continuous integration
 

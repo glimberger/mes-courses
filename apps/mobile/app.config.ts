@@ -1,5 +1,7 @@
 import type { ExpoConfig } from 'expo/config';
 
+import { withAndroidAnrOff } from './build-config/android-anr-off.cjs';
+
 // Detox's native changes (test runner, cleartext traffic to the emulator host) go only into
 // builds made for the end-to-end tests (research R23, R25).
 const detoxBuild = process.env.DETOX_BUILD === '1';
@@ -42,4 +44,5 @@ const config: ExpoConfig = {
   },
 };
 
-export default config;
+// A plugin given as a function is applied here: `plugins` only types names.
+export default withAndroidAnrOff(config);
