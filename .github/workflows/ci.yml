@@ -99,7 +99,10 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('yarn.lock', 'apps/mobile/app.config.ts') }}
           restore-keys: gradle-${{ runner.os }}-
       - run: nix develop --command yarn install --immutable
+      # The emulator is x86_64: building one ABI instead of four keeps the job well under its limit.
       - run: nix develop --command yarn workspace @mes-courses/e2e-tests e2e:build:android
+        env:
+          ORG_GRADLE_PROJECT_reactNativeArchitectures: x86_64
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35

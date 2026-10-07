@@ -4,8 +4,10 @@ const APP_DIR = '../../apps/mobile';
 // Name of the Xcode workspace and scheme that `expo prebuild` generates for the app.
 const IOS_PROJECT = 'Mescourses';
 
-const buildEnv =
-  'env -u EXPO_PUBLIC_SENTRY_DSN -u STORYBOOK_ENABLED DETOX_BUILD=1 SENTRY_DISABLE_AUTO_UPLOAD=true';
+// The whole build chain (prebuild, then Gradle or Xcode) runs in one shell with this environment,
+// so that Sentry's build steps see SENTRY_DISABLE_AUTO_UPLOAD too.
+const build = (commands) =>
+  `cd ${APP_DIR} && env -u EXPO_PUBLIC_SENTRY_DSN -u STORYBOOK_ENABLED DETOX_BUILD=1 SENTRY_DISABLE_AUTO_UPLOAD=true sh -c '${commands}'`;
 
 /** @type {Detox.DetoxConfig} */
 module.exports = {
@@ -31,13 +33,17 @@ module.exports = {
   apps: {
     'android.release': {
       type: 'android.apk',
-      build: `cd ${APP_DIR} && ${buildEnv} yarn expo prebuild --platform android && cd android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release`,
+      build: build(
+        'yarn expo prebuild --platform android && cd android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release',
+      ),
       binaryPath: `${APP_DIR}/android/app/build/outputs/apk/release/app-release.apk`,
       testBinaryPath: `${APP_DIR}/android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk`,
     },
     'ios.release': {
       type: 'ios.app',
-      build: `cd ${APP_DIR} && ${buildEnv} yarn expo prebuild --platform ios && xcodebuild -workspace ios/${IOS_PROJECT}.xcworkspace -scheme ${IOS_PROJECT} -configuration Release -sdk iphonesimulator -derivedDataPath ios/build`,
+      build: build(
+        `yarn expo prebuild --platform ios && xcodebuild -workspace ios/${IOS_PROJECT}.xcworkspace -scheme ${IOS_PROJECT} -configuration Release -sdk iphonesimulator -derivedDataPath ios/build`,
+      ),
       binaryPath: `${APP_DIR}/ios/build/Build/Products/Release-iphonesimulator/${IOS_PROJECT}.app`,
     },
   },
