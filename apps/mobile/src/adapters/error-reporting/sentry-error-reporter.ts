@@ -183,6 +183,15 @@ export const createSentryErrorReporter = ({
         // Reporting never breaks the app.
       }
     },
+    clearScreen: () => {
+      screen = undefined;
+      try {
+        // An undefined value removes the tag, in the native scopes too.
+        Sentry.setTag('screen', undefined);
+      } catch {
+        // Reporting never breaks the app.
+      }
+    },
     crashNatively: () => Sentry.nativeCrash(),
   };
 };

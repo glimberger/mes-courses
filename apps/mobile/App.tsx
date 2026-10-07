@@ -74,6 +74,8 @@ export default function App() {
   }, [reporter, attempt]);
 
   const restart = () => {
+    // The screen of the app that ends is not the one of a failure of the next start.
+    reporter.clearScreen();
     setStartup({ status: 'starting' });
     setAttempt((count) => count + 1);
   };

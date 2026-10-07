@@ -26,6 +26,11 @@ export class ScreenTrackingReporter implements ErrorReporter {
     this.reporter.setScreen(screen);
   }
 
+  clearScreen(): void {
+    this.shown = undefined;
+    this.reporter.clearScreen();
+  }
+
   crashNatively(): void {
     this.reporter.crashNatively();
   }

@@ -220,6 +220,22 @@ describe('App after a failure while drawing', () => {
     expect(compose).toHaveBeenCalledTimes(2);
   });
 
+  it('FR-039a reports a startup failure after "Réessayer" without the screen of the app that crashed', async () => {
+    await startAndCrash();
+    await screen.findByText(crashed);
+    const failure = new Error('database locked');
+    compose.mockRejectedValueOnce(failure);
+
+    retry();
+
+    expect(await screen.findByText(startupFailed)).toBeOnTheScreen();
+    expect(mockReporter.reports.at(-1)).toEqual({
+      error: failure,
+      context: { operation: 'startup' },
+    });
+    expect(mockReporter.screens).toEqual(['CurrentList', null]);
+  });
+
   it('FR-039a shows CrashError again, with a second report, when the screen fails again', async () => {
     await startAndCrash();
     await screen.findByText(crashed);

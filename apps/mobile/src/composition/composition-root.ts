@@ -40,6 +40,7 @@ const mutable = (reporter: ErrorReporter) => {
       if (!muted) reporter.report(error, context);
     },
     setScreen: (screen) => reporter.setScreen(screen),
+    clearScreen: () => reporter.clearScreen(),
     crashNatively: () => reporter.crashNatively(),
   };
   return {

@@ -48,6 +48,15 @@ describe('RecordingErrorReporter', () => {
     expect(reporter.screens).toEqual(['CurrentList', 'Lists']);
   });
 
+  it('records a cleared screen as null, in order with the screens given', () => {
+    const reporter = new RecordingErrorReporter();
+
+    reporter.setScreen('CurrentList');
+    reporter.clearScreen();
+
+    expect(reporter.screens).toEqual(['CurrentList', null]);
+  });
+
   it('counts the native crash requests, and does not crash', () => {
     const reporter = new RecordingErrorReporter();
 
