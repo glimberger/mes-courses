@@ -112,3 +112,5 @@ git diff --name-only "$(git merge-base origin/main HEAD)" HEAD | .github/scripts
 # app=true  -> run yarn test:e2e:android first
 # app=false -> documentation only, the device suite is not needed
 ```
+
+<!-- throwaway change to check that e2e-android is skipped on a documentation-only pull request -->
