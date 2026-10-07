@@ -1,13 +1,14 @@
 import { StorageFull } from '../../../application/ports/storage-full';
 import type { ListId } from '../../../domain/shopping-list';
-import type { Fixture } from './story-store';
+import type * as AppStoreModule from '../state/app-store';
+import type * as StoryStoreModule from './story-store';
 import { buildStoryStore, createStoryStore } from './story-store';
 
 const seed = { categoryNames: ['Crèmerie'], firstListName: 'Ma liste' };
 
 const barbecue = 'l1' as ListId;
 
-const fixture: Fixture = {
+const fixture: StoryStoreModule.Fixture = {
   categories: [{ id: 'c1', name: 'Crèmerie', position: 0 }],
   articles: [{ id: 'a1', name: 'Lait', categoryId: 'c1' }],
   lists: [{ id: 'l1', name: 'Barbecue' }],
@@ -20,7 +21,7 @@ const fixture: Fixture = {
     },
   ],
   currentListId: 'l1',
-} as Fixture;
+} as StoryStoreModule.Fixture;
 
 /** Whether the promise is still pending once every queued task has run. */
 const isPending = async (promise: Promise<unknown>) => {
@@ -119,6 +120,40 @@ describe('createStoryStore', () => {
 
     expect(steps).toEqual(['prepared']);
     expect(store.getState().notice).toBeNull();
+  });
+
+  it('stops waiting for prepare once it calls a use case held pending', async () => {
+    let isolated!: typeof StoryStoreModule;
+    jest.isolateModules(() => {
+      // No action of the app's store calls a use case yet: one that does, for this test only.
+      jest.doMock('../state/app-store', () => {
+        const actual =
+          jest.requireActual<typeof AppStoreModule>('../state/app-store');
+        return {
+          ...actual,
+          createAppStore: (deps: AppStoreModule.AppStoreDeps) =>
+            actual.createAppStoreWith(deps, ({ useCases }) => ({
+              initialize: () => useCases.initializeStore(seed),
+            })),
+        };
+      });
+      isolated = jest.requireActual<typeof StoryStoreModule>('./story-store');
+    });
+    const steps: string[] = [];
+
+    const built = isolated.buildStoryStore({
+      pending: ['initializeStore'],
+      prepare: async (actions) => {
+        steps.push('started');
+        await (
+          actions as unknown as { initialize: () => Promise<unknown> }
+        ).initialize();
+        steps.push('never');
+      },
+    });
+
+    expect(await isPending(built)).toBe(false);
+    expect(steps).toEqual(['started']);
   });
 
   it('gives prepare the store actions only, never a way to set state', async () => {

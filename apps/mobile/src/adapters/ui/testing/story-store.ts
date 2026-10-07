@@ -43,7 +43,10 @@ export type StoryScenario = {
   failing?: UseCaseName[];
   /** Use cases that reject with the given failure instead of an `Error`; they fail too. */
   failingWith?: Partial<Record<UseCaseName, 'storageFull'>>;
-  /** Runs once the store is built, through its actions only. */
+  /**
+   * Runs once the store is built, through its actions only. It is awaited until it resolves or
+   * calls a use case held `pending`, whichever comes first, so a loading state can be prepared.
+   */
   prepare?: (store: StoreActions) => Promise<void>;
 };
 
@@ -73,9 +76,13 @@ const scenarioUseCase = <K extends UseCaseName>(
   name: K,
   real: UseCases[K],
   { pending = [], failing = [], failingWith = {} }: StoryScenario,
+  onPending: () => void,
 ): UseCases[K] => {
   if (pending.includes(name)) {
-    return (() => new Promise(() => undefined)) as UseCases[K];
+    return (() => {
+      onPending();
+      return new Promise(() => undefined);
+    }) as UseCases[K];
   }
   const failure = failingWith[name];
   if (failure !== undefined || failing.includes(name)) {
@@ -91,22 +98,30 @@ const scenarioUseCase = <K extends UseCaseName>(
 
 /**
  * Builds a store as the app does, on fresh in-memory fakes holding the scenario's seed, with the
- * real use cases except those the scenario holds pending or makes fail, then runs `prepare`.
+ * real use cases except those the scenario holds pending or makes fail, then runs `prepare`
+ * until it resolves or calls a use case held pending.
  * Returns the fakes and the reporter with it, for the screen tests.
  */
 export const buildStoryStore = async (scenario: StoryScenario) => {
   const unitOfWork = new InMemoryUnitOfWork(new InMemoryRepositories());
   if (scenario.seed) await storeFixture(unitOfWork, scenario.seed);
   const real = createUseCases({ unitOfWork, ids: new SequentialIdGenerator() });
+  // Settles when a use case held pending is called: `prepare` may be waiting on it for ever.
+  let pendingCalled!: () => void;
+  const reachedPending = new Promise<void>((resolve) => {
+    pendingCalled = resolve;
+  });
   const useCases = Object.fromEntries(
     (Object.keys(real) as UseCaseName[]).map((name) => [
       name,
-      scenarioUseCase(name, real[name], scenario),
+      scenarioUseCase(name, real[name], scenario, pendingCalled),
     ]),
   ) as UseCases;
   const errorReporter = new RecordingErrorReporter();
   const store = createAppStore({ useCases, errorReporter });
-  await scenario.prepare?.(storeActions(store));
+  if (scenario.prepare) {
+    await Promise.race([scenario.prepare(storeActions(store)), reachedPending]);
+  }
   return { store, useCases, unitOfWork, errorReporter };
 };
 
