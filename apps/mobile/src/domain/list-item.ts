@@ -17,3 +17,12 @@ export type RemovedItem = {
   inCart: boolean;
   quantity: Quantity | null;
 };
+
+/** The list does not hold the article (a missing record, never the user's input). */
+export type ItemNotOnList = { type: 'ItemNotOnList' };
+
+/** Puts the item in the cart, or takes it out (FR-004). */
+export const toggle = (item: ListItem): ListItem => ({
+  ...item,
+  inCart: !item.inCart,
+});

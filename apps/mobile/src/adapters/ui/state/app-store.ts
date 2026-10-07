@@ -2,47 +2,28 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import type { ErrorReporter } from '../../../application/ports/error-reporter';
 import { StorageFull } from '../../../application/ports/storage-full';
-import type { CatalogView } from '../../../domain/catalog-view';
-import type { CurrentListView } from '../../../domain/current-list-view';
-import type { RemovedItem } from '../../../domain/list-item';
-import type { ListSummary } from '../../../domain/list-summary';
 import type { NameError } from '../../../domain/name';
 import type { QuantityError } from '../../../domain/quantity';
 import { err, type Result } from '../../../domain/result';
 import type { UseCases } from '../use-cases';
-import type { ScreenState } from './screen-state';
+import {
+  createCurrentListActions,
+  type CurrentListActions,
+} from './current-list-actions';
+import type { StoreCore, StoreKit, WriteFailed } from './store-kit';
 import { UnexpectedResult } from './unexpected-result';
 
-/** The app-wide snackbar; its French text is written by `NoticeSnackbar` (Principle X). */
-export type Notice =
-  | { type: 'writeFailed' }
-  | { type: 'storageFull' }
-  | { type: 'articleAdded'; name: string };
-
-/** The one change that "Annuler" can still revert (FR-010). */
-export type PendingUndo = {
-  kind: 'removedItem';
-  removed: RemovedItem;
-  name: string;
-};
+export type {
+  EmptyCurrentList,
+  Notice,
+  PendingUndo,
+  StoreCore,
+  StoreKit,
+  WriteFailed,
+} from './store-kit';
 
 /** The application state shared by every screen (002 contracts/ui-state.md). */
-export interface AppState {
-  currentList: ScreenState<CurrentListView>;
-  catalog: {
-    query: string;
-    /** Loaded once, unfiltered (R11a). */
-    full: ScreenState<CatalogView>;
-    /** `full` filtered by `query`. */
-    view: ScreenState<CatalogView, { query: string }>;
-  };
-  lists: ScreenState<ListSummary[]>;
-  pendingUndo: PendingUndo | null;
-  notice: Notice | null;
-  /** Reloads every region already requested. Runs after each write that succeeds. */
-  refresh: () => Promise<void>;
-  dismissNotice: () => void;
-}
+export type AppState = StoreCore & CurrentListActions;
 
 export type AppStore = StoreApi<AppState>;
 
@@ -50,51 +31,6 @@ export type AppStoreDeps = {
   useCases: UseCases;
   errorReporter: ErrorReporter;
 };
-
-/** What a write action resolves to when its save failed; the notice already says so. */
-export type WriteFailed = { type: 'WriteFailed' };
-
-/** Regions that hold one `ScreenState` and load with one query. */
-type RegionName = 'currentList' | 'lists';
-type Loaded<K extends RegionName> = Extract<
-  AppState[K],
-  { status: 'success' | 'empty' }
->;
-
-/** What the actions are built with. */
-export interface StoreKit {
-  get: () => AppState;
-  set: (partial: Partial<AppState>) => void;
-  useCases: UseCases;
-  /**
-   * Runs a write in the store-wide queue, after every write called before it, and applies the
-   * shared write rules (002 contracts/ui-state.md). Refused input, and the business errors named
-   * in `expected`, are returned to the caller as they are. After a success it resolves once
-   * `refresh()` is done; the next write does not wait for that refresh.
-   */
-  runWrite: <T, E extends { type: string }>(
-    operation: string,
-    call: () => Promise<Result<T, E>>,
-    options?: { expected?: readonly E['type'][] },
-  ) => Promise<Result<T, E | WriteFailed>>;
-  /**
-   * Defines how a region loads, and returns its load action. `refresh` reloads the region once
-   * it has been requested. When loads overlap, only the last one started is shown.
-   */
-  region: <K extends RegionName>(
-    name: K,
-    operation: string,
-    query: () => Promise<Loaded<K>>,
-  ) => () => Promise<void>;
-  /**
-   * Has `refresh` call `reload` whenever `requested` says the region has been requested, for a
-   * region that `region` cannot build (the catalog, whose two views load together).
-   */
-  reloadOnRefresh: (
-    requested: () => boolean,
-    reload: () => Promise<void>,
-  ) => void;
-}
 
 /**
  * Input the user can correct: the form or dialog shows it, and it is never reported (FR-030).
@@ -122,13 +58,13 @@ const REFUSED_INPUT: Record<
 export const createAppStoreWith = <Actions extends object>(
   { useCases, errorReporter }: AppStoreDeps,
   extend: (kit: StoreKit) => Actions,
-): StoreApi<AppState & Actions> =>
-  createStore<AppState & Actions>()((set, get) => {
+): StoreApi<StoreCore & Actions> =>
+  createStore<StoreCore & Actions>()((set, get) => {
     const regions: { requested: () => boolean; load: () => Promise<void> }[] =
       [];
     let writes: Promise<unknown> = Promise.resolve();
-    const update = (partial: Partial<AppState>) =>
-      set(partial as Partial<AppState & Actions>);
+    const update = (partial: Partial<StoreCore>) =>
+      set(partial as Partial<StoreCore & Actions>);
 
     const refresh = async () => {
       await Promise.all(
@@ -185,8 +121,8 @@ export const createAppStoreWith = <Actions extends object>(
         });
       },
       region: (name, operation, query) => {
-        const setRegion = (state: AppState[typeof name]) =>
-          update({ [name]: state } as Partial<AppState>);
+        const setRegion = (state: StoreCore[typeof name]) =>
+          update({ [name]: state } as Partial<StoreCore>);
         let latest = 0;
         const load = async () => {
           const started = ++latest;
@@ -229,4 +165,4 @@ export const createAppStoreWith = <Actions extends object>(
 
 /** Builds the store: a plain vanilla store with no middleware (002 research R1b). */
 export const createAppStore = (deps: AppStoreDeps): AppStore =>
-  createAppStoreWith(deps, () => ({}));
+  createAppStoreWith(deps, createCurrentListActions);

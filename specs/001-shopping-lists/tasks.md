@@ -320,21 +320,21 @@ finish shopping and check every item is unticked and still present.
 
 ### Tests for User Story 1 ⚠️ (write first, confirm they fail)
 
-- [ ] T065 [US1] Write the failing journey `tests/e2e/journeys/first-launch.e2e.ts` ([contracts/ui-validation.md](contracts/ui-validation.md#end-to-end-journeys)): on a fresh install (`device.launchApp({ delete: true, newInstance: true })`), the app opens on "Ma liste" with "Votre liste est vide" and "Ajouter des articles" (US3-1, US1-10), found by text only. Delete `launch.e2e.ts` (T014), whose check this one includes. Run `yarn test:e2e:android` and confirm it fails on the placeholder screen.
-- [ ] T066 [P] [US1] Write failing domain tests for the current list view in `apps/mobile/src/domain/current-list-view.test.ts`:
+- [X] T065 [US1] Write the failing journey `tests/e2e/journeys/first-launch.e2e.ts` ([contracts/ui-validation.md](contracts/ui-validation.md#end-to-end-journeys)): on a fresh install (`device.launchApp({ delete: true, newInstance: true })`), the app opens on "Ma liste" with "Votre liste est vide" and "Ajouter des articles" (US3-1, US1-10), found by text only. Delete `launch.e2e.ts` (T014), whose check this one includes. Run `yarn test:e2e:android` and confirm it fails on the placeholder screen.
+- [X] T066 [P] [US1] Write failing domain tests for the current list view in `apps/mobile/src/domain/current-list-view.test.ts`:
   - sections only for categories holding an item of the list, ordered by `position` (FR-003, US4-5);
   - within a section, unticked items first, then ticked, each group sorted with `compareNames` (`Intl.Collator('fr', { sensitivity: 'base', numeric: true })`), so "Lait 2 L" comes before "Lait 10 L" (US1-6, FR-005, Assumptions);
   - `remainingCount` = unticked items (US1-7, FR-006: 5 items with 2 ticked → 3);
   - `totalCount`, and `hasItemsInCart`.
-- [ ] T067 [P] [US1] Write failing domain tests for the list item transitions in `apps/mobile/src/domain/list-item.test.ts`:
-  - `toggle` flips `inCart` (US1-2, US1-3);
-  - `finish` sets every `inCart = false` and keeps quantities and items (US1-8);
-  - `finish` on a list with nothing in the cart succeeds and changes nothing (FR-007).
-- [ ] T068 [P] [US1] Write failing use case tests on fakes:
+- [X] T067 [P] [US1] Write failing domain tests for the list item transitions in `apps/mobile/src/domain/list-item.test.ts`:
+  - `toggle` flips `inCart` (US1-2, US1-3).
+
+  Finishing has no domain function: `finishShopping` unticks the list with `ListItemRepository.takeAllOutOfCart` ([contracts/driven-ports.md](contracts/driven-ports.md)), one statement in one transaction, and its use case tests (T068) cover US1-8 and FR-007.
+- [X] T068 [P] [US1] Write failing use case tests on fakes:
   - `apps/mobile/src/application/use-cases/get-current-list.test.ts`: it returns the `CurrentListView` of the current list (US1-1);
   - `apps/mobile/src/application/use-cases/toggle-item-in-cart.test.ts`: it flips and persists (US1-4), and returns `ItemNotOnList` for an unknown item;
   - `apps/mobile/src/application/use-cases/finish-shopping.test.ts`: it unticks all and keeps quantities (US1-8), and with nothing in the cart succeeds with no change (FR-007).
-- [ ] T069 [P] [US1] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.current-list.test.ts`:
+- [X] T069 [P] [US1] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.current-list.test.ts`:
   - `loadCurrentList()` goes `loading` → `success` / `empty`, and on a throw goes `error` and reports `{ operation: 'getCurrentList', screen: 'CurrentList' }` (US1-12);
   - `toggleItem` updates the region immediately (optimistic) before the use case resolves, then keeps it (US1-2, US1-3), with `remainingCount` and `hasItemsInCart` updated at once too: the first tick on a list with none sets `hasItemsInCart` before its save resolves, and a failed save of the only tick sets it back to `false` (FR-007);
   - quick toggles on one item are saved one after the other in tap order: with the use case held pending, three taps show ticked, unticked, ticked at once, and `toggleItemInCart` is called a second time only after the first call resolves; toggles on other items and other writes join the same queue behind them (FR-004, [research.md](research.md) R9);
@@ -343,7 +343,7 @@ finish shopping and check every item is unticked and still present.
   - `finishShopping` called while toggles are still queued runs after them, and is still saved when one of them fails, so every item ends unticked (FR-004, FR-007);
   - when the only tick fails and a queued `finishShopping` then finds nothing in the cart, it succeeds with no change: the one notice is the tick's `writeFailed` and there is one report (FR-007);
   - `finishShopping` refreshes the list; when it throws, no item changes in the region, `notice = writeFailed` and `{ operation: 'finishShopping' }` is reported (FR-007, R9a).
-- [ ] T070 [P] [US1] Write failing component tests for `ListItemRow` in `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx`:
+- [X] T070 [P] [US1] Write failing component tests for `ListItemRow` in `apps/mobile/src/adapters/ui/components/list-item-row.test.tsx`:
   - role `checkbox` with the `checked` state;
   - the label "Lait, 2 L, dans le caddie" or "Pommes, pas dans le caddie" (FR-032);
   - a ticked row shows a check mark and struck-through text, not only a color (FR-035);
@@ -351,7 +351,7 @@ finish shopping and check every item is unticked and still present.
   - the row has `minHeight` 48 (FR-034);
   - the name has no `numberOfLines`, so long names wrap (FR-033);
   - tapping calls `onToggle`.
-- [ ] T071 [US1] Write failing screen tests for `CurrentList` in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx`, through `renderWithStore`:
+- [X] T071 [US1] Write failing screen tests for `CurrentList` in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx`, through `renderWithStore`:
   - US1-1: the list name is in the Appbar, items sit under category headings, and "Lait" shows "2 L";
   - US1-2 / US1-3: tapping ticks and unticks immediately;
   - US1-6, FR-005: ticked items move after unticked ones;
@@ -362,22 +362,22 @@ finish shopping and check every item is unticked and still present.
   - US4-5: an empty category heading is not shown;
   - "Terminer les courses" is absent when nothing is ticked;
   - FR-037: with `AccessibilityInfo` mocked, a row keeps screen reader focus when ticking moves it below the unticked rows, and the remaining count is not announced (FR-038).
-- [ ] T072 [US1] Write failing tests for finishing in `apps/mobile/src/adapters/ui/screens/finish-shopping-dialog.test.tsx`:
+- [X] T072 [US1] Write failing tests for finishing in `apps/mobile/src/adapters/ui/screens/finish-shopping-dialog.test.tsx`:
   - the dialog text is "Terminer les courses ?" / "Tous les articles seront décochés et resteront dans la liste.";
   - US1-8: "Terminer" unticks all, and items and quantities stay;
   - US1-9: "Annuler" changes nothing;
   - FR-007: when `finishShopping` fails, every item stays as it was, the dialog closes, focus goes back to "Terminer les courses" (still shown), and the snackbar "La modification n'a pas pu être enregistrée." appears;
   - FR-037: opening moves focus to the dialog title; "Annuler" gives it back to "Terminer les courses", and "Terminer", which hides that action, gives it to the Appbar title.
-- [ ] T073 [US1] Write a failing offline test for US1-5 in `apps/mobile/src/adapters/ui/screens/current-list-offline.test.tsx`: with `global.fetch` replaced by a function that throws, open the app and tick items. Everything works and no error is shown or reported.
+- [X] T073 [US1] Write a failing offline test for US1-5 in `apps/mobile/src/adapters/ui/screens/current-list-offline.test.tsx`: with `global.fetch` replaced by a function that throws, open the app and tick items. Everything works and no error is shown or reported.
 
 ### Implementation for User Story 1
 
-- [ ] T074 [P] [US1] Implement `buildCurrentListView` in `apps/mobile/src/domain/current-list-view.ts` to turn T066 green.
-- [ ] T075 [P] [US1] Implement `toggle` and `finish` with the `ItemNotOnList` error in `apps/mobile/src/domain/list-item.ts` to turn T067 green.
-- [ ] T076 [US1] Implement `getCurrentList`, `toggleItemInCart` and `finishShopping` in `apps/mobile/src/application/use-cases/get-current-list.ts`, `toggle-item-in-cart.ts` and `finish-shopping.ts`, per [contracts/driving-ports.md](contracts/driving-ports.md#current-list-user-story-1), to turn T068 green. Add them to `UseCases` (`apps/mobile/src/adapters/ui/use-cases.ts`) and to the composition root.
-- [ ] T077 [US1] Add the `currentList` region and the `loadCurrentList`, `toggleItem` (optimistic, saved through the store's single write queue, and on failure the item's queued toggles dropped and the region reloaded, [research.md](research.md) R9) and `finishShopping` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T069 green.
-- [ ] T078 [P] [US1] Implement `ListItemRow.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T070 green. Leave the trailing action slots empty for now; US2 fills them.
-- [ ] T079 [US1] Implement `CurrentListScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`:
+- [X] T074 [P] [US1] Implement `buildCurrentListView` in `apps/mobile/src/domain/current-list-view.ts` to turn T066 green.
+- [X] T075 [P] [US1] Implement `toggle` with the `ItemNotOnList` error in `apps/mobile/src/domain/list-item.ts` to turn T067 green.
+- [X] T076 [US1] Implement `getCurrentList`, `toggleItemInCart` and `finishShopping` in `apps/mobile/src/application/use-cases/get-current-list.ts`, `toggle-item-in-cart.ts` and `finish-shopping.ts`, per [contracts/driving-ports.md](contracts/driving-ports.md#current-list-user-story-1), to turn T068 green. Add them to `UseCases` (`apps/mobile/src/adapters/ui/use-cases.ts`) and to the composition root.
+- [X] T077 [US1] Add the `currentList` region and the `loadCurrentList`, `toggleItem` (optimistic, saved through the store's single write queue, and on failure the item's queued toggles dropped and the region reloaded, [research.md](research.md) R9) and `finishShopping` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T069 green.
+- [X] T078 [P] [US1] Implement `ListItemRow.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T070 green. Leave the trailing action slots empty for now; US2 fills them.
+- [X] T079 [US1] Implement `CurrentListScreen.tsx` in `apps/mobile/src/adapters/ui/screens/`:
   - a `SectionList` with one section per category, memoized rows identified by article id ([research.md](research.md) R11);
   - Appbar title and subtitle;
   - the "Terminer les courses" action, shown only when `hasItemsInCart`;
@@ -386,16 +386,16 @@ finish shopping and check every item is unticked and still present.
   - a ticked row keeps focus when it moves (FR-037): rows keyed by article id keep their native view.
 
   Replace the placeholder in `navigation.tsx`. It turns T071 and T073 green.
-- [ ] T080 [US1] Implement `FinishShoppingDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` (Paper `Dialog` in a `Portal`) and open it from CurrentList, with the focus moves of FR-037, to turn T072 green.
-- [ ] T081 [US1] Add the US1 ids of [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) to `apps/mobile/src/adapters/ui/required-stories.ts`: `Components/ListItemRow/NotInCart`, `.../InCart`, `.../WithQuantity`, `.../LongName`, `Components/NoticeSnackbar/WriteFailed`, `Components/NoticeSnackbar/StorageFull`, `Screens/CurrentList/Loading`, `.../Error`, `.../Empty`, `.../Success`, `.../AllInCart` and `Dialogs/FinishShoppingDialog/Default`. Run the story test and confirm it fails on each missing story.
-- [ ] T082 [US1] Write the stories to turn T081 green:
+- [X] T080 [US1] Implement `FinishShoppingDialog.tsx` in `apps/mobile/src/adapters/ui/screens/` (Paper `Dialog` in a `Portal`) and open it from CurrentList, with the focus moves of FR-037, to turn T072 green.
+- [X] T081 [US1] Add the US1 ids of [contracts/ui-validation.md](contracts/ui-validation.md#required-stories) to `apps/mobile/src/adapters/ui/required-stories.ts`: `Components/ListItemRow/NotInCart`, `.../InCart`, `.../WithQuantity`, `.../LongName`, `Components/NoticeSnackbar/WriteFailed`, `Components/NoticeSnackbar/StorageFull`, `Screens/CurrentList/Loading`, `.../Error`, `.../Empty`, `.../Success`, `.../AllInCart` and `Dialogs/FinishShoppingDialog/Default`. Run the story test and confirm it fails on each missing story.
+- [X] T082 [US1] Write the stories to turn T081 green:
   - `apps/mobile/src/adapters/ui/components/ListItemRow.stories.tsx`, from the fixtures (the long-name story uses the 60-character article);
   - `apps/mobile/src/adapters/ui/components/NoticeSnackbar.stories.tsx`: scenario with `failing: ['toggleItemInCart']` and a `prepare` that loads the current list and toggles an item, and a `StorageFull` story with `failingWith: { toggleItemInCart: 'storageFull' }` and the same `prepare`;
   - `apps/mobile/src/adapters/ui/screens/CurrentListScreen.stories.tsx`: `pending: ['getCurrentList']` (Loading), `failing: ['getCurrentList']` (Error), an empty "Ma liste" (Empty), several categories with ticked, unticked and quantified items (Success), every item ticked (AllInCart);
   - `apps/mobile/src/adapters/ui/screens/FinishShoppingDialog.stories.tsx`.
 
   Review them with `yarn storybook` on Android and iOS, in light and dark mode and at 200% text size.
-- [ ] T083 [US1] Make `first-launch.e2e.ts` (T065) green with `yarn test:e2e:android` and `yarn test:e2e:ios`. Any production fix it forces starts with its own failing unit or screen test.
+- [X] T083 [US1] Make `first-launch.e2e.ts` (T065) green with `yarn test:e2e:android` and `yarn test:e2e:ios`. Any production fix it forces starts with its own failing unit or screen test.
 
 **Checkpoint**: on a device with items added through US2, US1 works end to end, offline included; its stories are in Storybook and `first-launch.e2e.ts` is green on both platforms. This is the first half of the MVP. The US1 journeys that need items (ticking, persistence, finishing) are written in US2, which adds them.
 
@@ -707,7 +707,7 @@ Task: "T070 ListItemRow tests in apps/mobile/src/adapters/ui/components/list-ite
 
 # Green: then these in parallel
 Task: "T074 buildCurrentListView in apps/mobile/src/domain/current-list-view.ts"
-Task: "T075 toggle and finish in apps/mobile/src/domain/list-item.ts"
+Task: "T075 toggle in apps/mobile/src/domain/list-item.ts"
 Task: "T078 ListItemRow in apps/mobile/src/adapters/ui/components/ListItemRow.tsx"
 ```
 

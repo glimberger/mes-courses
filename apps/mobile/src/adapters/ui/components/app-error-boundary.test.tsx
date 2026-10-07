@@ -3,6 +3,7 @@ import { fireEvent, screen } from '@testing-library/react-native';
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import { Navigation } from '../navigation';
 import { ScreenTrackingReporter } from '../screen-tracking-reporter';
+import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
 import { AppErrorBoundary } from './app-error-boundary';
 
@@ -42,9 +43,9 @@ describe('AppErrorBoundary', () => {
       <AppErrorBoundary errorReporter={reporter} onRetry={() => undefined}>
         <Navigation errorReporter={reporter} />
       </AppErrorBoundary>,
-      { asScreen: false },
+      { seed: fixture, asScreen: false },
     );
-    await screen.findByText('Liste en cours');
+    await screen.findByText('Ma liste');
     return recording;
   };
 

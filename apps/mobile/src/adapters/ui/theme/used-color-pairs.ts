@@ -36,4 +36,10 @@ export const usedColorPairs: readonly UsedColorPair[] = [
   ...onEveryBackground('primary', 'text'),
   // An unticked checkbox and outlined fields.
   ...onEveryBackground('outline', 'graphic'),
+  // The FAB's label and icon (ScreenFab).
+  {
+    foreground: 'onPrimaryContainer',
+    background: 'primaryContainer',
+    kind: 'text',
+  },
 ];

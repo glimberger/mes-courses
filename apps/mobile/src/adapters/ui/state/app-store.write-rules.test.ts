@@ -5,13 +5,12 @@ import {
 } from '../../../application/testing/in-memory-repositories';
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import { SequentialIdGenerator } from '../../../application/testing/sequential-id-generator';
-import { createInitializeStore } from '../../../application/use-cases/initialize-store';
 import type { ArticleId } from '../../../domain/article';
 import type { CurrentListView } from '../../../domain/current-list-view';
 import type { ListSummary } from '../../../domain/list-summary';
 import { err, ok, type Result } from '../../../domain/result';
 import type { ListId } from '../../../domain/shopping-list';
-import type { UseCases } from '../use-cases';
+import { createUseCases, type UseCases } from '../use-cases';
 import { createAppStoreWith, type PendingUndo } from './app-store';
 import { UnexpectedResult } from './unexpected-result';
 
@@ -51,12 +50,10 @@ const offer: PendingUndo = {
 const buildStore = () => {
   const errorReporter = new RecordingErrorReporter();
   const unitOfWork = new InMemoryUnitOfWork(new InMemoryRepositories());
-  const useCases: UseCases = {
-    initializeStore: createInitializeStore({
-      unitOfWork,
-      ids: new SequentialIdGenerator(),
-    }),
-  };
+  const useCases: UseCases = createUseCases({
+    unitOfWork,
+    ids: new SequentialIdGenerator(),
+  });
   const getLists = jest.fn<Promise<ListSummary[]>, []>();
   const getCurrentList = jest.fn<Promise<CurrentListView>, []>();
   const catalog = { requested: false, reload: jest.fn(async () => {}) };
