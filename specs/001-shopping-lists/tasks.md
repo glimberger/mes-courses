@@ -327,9 +327,9 @@ finish shopping and check every item is unticked and still present.
   - `remainingCount` = unticked items (US1-7, FR-006: 5 items with 2 ticked → 3);
   - `totalCount`, and `hasItemsInCart`.
 - [X] T067 [P] [US1] Write failing domain tests for the list item transitions in `apps/mobile/src/domain/list-item.test.ts`:
-  - `toggle` flips `inCart` (US1-2, US1-3);
-  - `finish` sets every `inCart = false` and keeps quantities and items (US1-8);
-  - `finish` on a list with nothing in the cart succeeds and changes nothing (FR-007).
+  - `toggle` flips `inCart` (US1-2, US1-3).
+
+  Finishing has no domain function: `finishShopping` unticks the list with `ListItemRepository.takeAllOutOfCart` ([contracts/driven-ports.md](contracts/driven-ports.md)), one statement in one transaction, and its use case tests (T068) cover US1-8 and FR-007.
 - [X] T068 [P] [US1] Write failing use case tests on fakes:
   - `apps/mobile/src/application/use-cases/get-current-list.test.ts`: it returns the `CurrentListView` of the current list (US1-1);
   - `apps/mobile/src/application/use-cases/toggle-item-in-cart.test.ts`: it flips and persists (US1-4), and returns `ItemNotOnList` for an unknown item;
@@ -373,7 +373,7 @@ finish shopping and check every item is unticked and still present.
 ### Implementation for User Story 1
 
 - [X] T074 [P] [US1] Implement `buildCurrentListView` in `apps/mobile/src/domain/current-list-view.ts` to turn T066 green.
-- [X] T075 [P] [US1] Implement `toggle` and `finish` with the `ItemNotOnList` error in `apps/mobile/src/domain/list-item.ts` to turn T067 green.
+- [X] T075 [P] [US1] Implement `toggle` with the `ItemNotOnList` error in `apps/mobile/src/domain/list-item.ts` to turn T067 green.
 - [X] T076 [US1] Implement `getCurrentList`, `toggleItemInCart` and `finishShopping` in `apps/mobile/src/application/use-cases/get-current-list.ts`, `toggle-item-in-cart.ts` and `finish-shopping.ts`, per [contracts/driving-ports.md](contracts/driving-ports.md#current-list-user-story-1), to turn T068 green. Add them to `UseCases` (`apps/mobile/src/adapters/ui/use-cases.ts`) and to the composition root.
 - [X] T077 [US1] Add the `currentList` region and the `loadCurrentList`, `toggleItem` (optimistic, saved through the store's single write queue, and on failure the item's queued toggles dropped and the region reloaded, [research.md](research.md) R9) and `finishShopping` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T069 green.
 - [X] T078 [P] [US1] Implement `ListItemRow.tsx` in `apps/mobile/src/adapters/ui/components/` to turn T070 green. Leave the trailing action slots empty for now; US2 fills them.
@@ -707,7 +707,7 @@ Task: "T070 ListItemRow tests in apps/mobile/src/adapters/ui/components/list-ite
 
 # Green: then these in parallel
 Task: "T074 buildCurrentListView in apps/mobile/src/domain/current-list-view.ts"
-Task: "T075 toggle and finish in apps/mobile/src/domain/list-item.ts"
+Task: "T075 toggle in apps/mobile/src/domain/list-item.ts"
 Task: "T078 ListItemRow in apps/mobile/src/adapters/ui/components/ListItemRow.tsx"
 ```
 

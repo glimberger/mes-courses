@@ -238,7 +238,7 @@ apps/
     │   │   ├── category.ts
     │   │   ├── article.ts
     │   │   ├── shopping-list.ts
-    │   │   ├── list-item.ts          # transitions: add, toggle, change quantity, finish
+    │   │   ├── list-item.ts          # transitions: add, toggle, change quantity (finishing is ListItemRepository.takeAllOutOfCart)
     │   │   ├── current-list-view.ts  # grouping and sorting rules (FR-003, FR-005, FR-006)
     │   │   ├── catalog-view.ts       # search and onList marks (FR-009, FR-011)
     │   │   ├── result.ts

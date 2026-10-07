@@ -26,7 +26,3 @@ export const toggle = (item: ListItem): ListItem => ({
   ...item,
   inCart: !item.inCart,
 });
-
-/** Takes every item out of the cart, keeping the items and their quantities (FR-007). */
-export const finish = (items: readonly ListItem[]): ListItem[] =>
-  items.map((item) => ({ ...item, inCart: false }));
