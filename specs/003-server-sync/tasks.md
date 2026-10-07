@@ -90,7 +90,7 @@ listed in [contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-e
   - only `tests/**` imports `@mes-courses/mobile/testing` and `@mes-courses/server/testing`, and nothing imports `tests/**`.
 
   Prove each new rule fails on a throwaway violation, then delete the violation.
-- [ ] T006 Check that `.github/workflows/ci.yml` (001) covers the new workspaces with no new job: the root scripts already run in every workspace, and the `build` job's root `yarn build` now also compiles the server. Fix the workflow only if a workspace is missed. There is no deployment step.
+- [ ] T006 Check that `.github/workflows/ci.yml` (001) covers the new workspaces with no new job: the root scripts already run in every workspace, and the `build` job's root `yarn build` now also compiles the server. Fix the workflow only if a workspace is missed. `.github/workflows/e2e.yml` (001, constitution v2.3.0: on every push to `main` and on demand on a branch) needs no change: it builds the app and runs every journey of `tests/e2e/journeys/`, this feature's included. There is no deployment step.
 - [ ] T007 [P] Add `apps/server/.data/`, `apps/server/dist/` and `packages/*/dist/` to `.gitignore`.
 
 **Checkpoint**: the workspaces install with one `yarn install --immutable`, every existing test is still green, and CI is green on the setup pull request.
@@ -608,7 +608,10 @@ Task: "App track: T028 → T033"
 5. US4 → one pull request (device management).
 6. Polish → deployment files, privacy and accessibility checks, the Pi validation.
 
-Each pull request is merged only when `gh pr checks` is all green (constitution, Quality Gates).
+Each pull request is merged only when `gh pr checks` is all green and, unless it is
+documentation-only (`.github/scripts/app-changed.sh`), an `e2e-android` run started with
+`gh workflow run e2e.yml --ref <branch>` is green on its latest commit (constitution v2.3.0,
+Quality Gates).
 
 ---
 
@@ -620,10 +623,11 @@ Each pull request is merged only when `gh pr checks` is all green (constitution,
   Tasks only check them (T111).
 - A deletion or removal that is undone never reaches the server (FR-008): held outbox entries
   are the only mechanism, so any new undoable change must record its changes held.
-- Test gates (constitution v2.2.0, Quality Gates): before each commit, `yarn test` (the fast
+- Test gates (constitution v2.3.0, Quality Gates): before each commit, `yarn test` (the fast
   suite) is green; before each push, `yarn test:e2e:android` (the device suite) is green, unless
   the branch changes only documentation (`specs/`, `.specify/`, Markdown files, as
-  `.github/scripts/app-changed.sh` decides, constitution v2.2.0); the
-  iOS journeys (`yarn test:e2e:ios`) run before each release and before merging a pull request
+  `.github/scripts/app-changed.sh` decides); before merging a pull request that is not
+  documentation-only, the `E2E Android` workflow, started by hand on its branch, is green on its
+  latest commit; the iOS journeys (`yarn test:e2e:ios`) run before each release and before merging a pull request
   that changes native configuration (`apps/mobile/app.config.ts`, a config plugin or a native
   dependency), and that pull request's test plan records the run.

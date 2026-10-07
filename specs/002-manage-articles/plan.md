@@ -1,6 +1,6 @@
 # Implementation Plan: Manage Articles
 
-**Branch**: `feat/002-manage-articles` | **Date**: 2026-10-05 (amended 2026-10-06 for Storybook and Detox) | **Spec**: [spec.md](spec.md)
+**Branch**: `feat/002-manage-articles` | **Date**: 2026-10-05 (amended 2026-10-06 for Storybook and Detox, then 2026-10-07 for constitution v2.3.0) | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/002-manage-articles/spec.md`
 
@@ -72,7 +72,7 @@ No NEEDS CLARIFICATION remains.
 | IX | Explicit screen states | Store regions are `ScreenState` unions rendered by the shared state components; `EditArticle` reads already-loaded data, and its save outcomes are tested and have stories. No synchronization status yet: no data is synchronized until the sync feature (R7), which adds it to every data screen. | ✅ (sync status deferred with VII) |
 | X | French interface, no i18n | Text only in UI components ([contracts/ui-screens.md](contracts/ui-screens.md)); store and use cases return typed results and notices. | ✅ |
 | XI | Single repository (monorepo) | Everything stays in the `apps/mobile/` workspace of 001; no new workspace or shared package. The new dependency-cruiser rules go in the root config. | ✅ |
-| QG | Quality gates and CI | Same CI jobs as 001, `e2e-android` included; architecture test gains the `zustand` rules. The device suite follows the gates of constitution v2.1.1, as in 001. "Works with the server unreachable" holds trivially: no code path reaches a server. | ✅ |
+| QG | Quality gates and CI | Same CI jobs as 001 (`typecheck`, `lint`, `test`, `build`, on every pull request); architecture test gains the `zustand` rules. The device suite follows the gates of constitution v2.3.0, as in 001: `e2e-android` (`.github/workflows/e2e.yml`) runs on every push to `main` and on demand on a branch, and a pull request that is not documentation-only (`.github/scripts/app-changed.sh`) is merged only with a green run on its latest commit. "Works with the server unreachable" holds trivially: no code path reaches a server. | ✅ |
 | WF | Development workflow | The spec states offline behavior (FR-010) but not synchronization or reconciliation; deferred with VII (R7). | ⚠️ deviation |
 
 **Gate result before research**: one deviation, Principle VII (and the matching workflow rule):
