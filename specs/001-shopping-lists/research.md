@@ -38,7 +38,12 @@ FR-030a, FR-039a).
   the light and dark Paper themes from `schemes.light` and `schemes.dark`. The scheme follows the
   system (`useColorScheme`). Paper's `elevation.level0..5` colors are not in the export; they
   are derived from `surfaceContainerLowest..Highest`, as Material 3 defines surface
-  containers. A unit test checks every role in the Paper theme against the JSON, so the file
+  containers: `level0` to `level4` take the five containers in order and `level5` repeats
+  `surfaceContainerHighest`. The other Paper roles the export lacks come from it too:
+  `surfaceDisabled` and `onSurfaceDisabled` are `onSurface` at 12% and 38%, as Material 3
+  defines disabled states, and `backdrop` is `scrim` at 40%, Paper's own opacity. The theme
+  also carries every role of the export, so components can draw on the `surfaceContainer*`
+  roles. A unit test checks every role in the Paper theme against the JSON, so the file
   stays the single source of truth. The export's contrast variants (`light-medium-contrast`,
   `dark-high-contrast`, ...) are not mapped in this feature (clarified 2026-10-06): React Native
   has no cross-platform API to read the system contrast setting, so nothing would select them,
