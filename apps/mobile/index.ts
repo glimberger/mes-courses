@@ -1,8 +1,11 @@
 import { registerRootComponent } from 'expo';
 
-import App from './App';
-
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
-registerRootComponent(App);
+// Storybook replaces the app only in a build made with STORYBOOK_ENABLED (see metro.config.js).
+// Without it the flag is the constant 'false', so the bundle holds no Storybook code.
+if (process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === 'true') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  registerRootComponent(require('./.rnstorybook').default);
+} else {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  registerRootComponent(require('./App').default);
+}

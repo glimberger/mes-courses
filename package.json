@@ -15,10 +15,13 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "yarn workspaces foreach --all --exclude mes-courses run typecheck"
+    "typecheck": "yarn workspaces foreach --all --exclude mes-courses run typecheck",
+    "test:architecture": "depcruise apps --config .dependency-cruiser.cjs",
+    "build": "yarn workspaces foreach --all --exclude mes-courses run build"
   },
   "devDependencies": {
     "@eslint/js": "^9",
+    "dependency-cruiser": "^18.5.0",
     "eslint": "^9",
     "eslint-config-expo": "^57.0.2",
     "eslint-config-prettier": "^10.1.8",

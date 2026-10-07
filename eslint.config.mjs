@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import globals from 'globals';
 import expoConfig from 'eslint-config-expo/flat.js';
 import prettier from 'eslint-config-prettier';
 import reactNative from 'eslint-plugin-react-native';
@@ -70,6 +71,12 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    // CommonJS tool configuration files.
+    files: ['**/*.cjs', '**/*.config.js'],
+    languageOptions: { globals: globals.node },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
   {
     files: ['apps/mobile/src/**/*.{ts,tsx}'],

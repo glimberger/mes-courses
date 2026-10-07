@@ -5,9 +5,12 @@
   "main": "index.ts",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "@gorhom/bottom-sheet": "^5.2.14",
     "@react-navigation/native": "^7.5.0",
     "@react-navigation/native-stack": "^7.20.0",
     "@sentry/react-native": "~7.11.0",
+    "@storybook/react": "^10.6.1",
+    "@storybook/react-native": "^10.6.0",
     "expo": "~57.0.26",
     "expo-crypto": "~57.0.3",
     "expo-font": "~57.0.4",
@@ -15,9 +18,14 @@
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-gesture-handler": "~2.32.0",
     "react-native-paper": "^5.15.3",
+    "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
+    "react-native-worklets": "0.10.1",
+    "storybook": "^10.6.1",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
@@ -39,6 +47,8 @@
     "ios": "expo start --ios",
     "test": "jest",
     "test:watch": "jest --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "storybook": "STORYBOOK_ENABLED=true expo start",
+    "build": "expo export --platform android --platform ios"
   }
 }

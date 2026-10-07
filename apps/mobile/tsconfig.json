@@ -4,5 +4,10 @@
     "strict": true,
     "types": ["jest", "node"]
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "exclude": [
+    "node_modules",
+    ".rnstorybook/index.tsx",
+    ".rnstorybook/storybook.requires.ts"
+  ]
 }
