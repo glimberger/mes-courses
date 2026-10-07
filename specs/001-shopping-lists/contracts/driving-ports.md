@@ -37,7 +37,7 @@ function in `apps/mobile/src/application/use-cases/`, built by the composition r
 
 | Use case | Signature | Behavior |
 |---|---|---|
-| `initializeStore` | `(seed: { categoryNames: string[]; firstListName: string }) => Promise<void>` | When no list exists: creates the categories in order, the first list, and makes it current, in one transaction. Otherwise does nothing. (FR-020, FR-023, US3-1, US4-1) |
+| `initializeStore` | `(seed: { categoryNames: readonly string[]; firstListName: string }) => Promise<void>` | When no list exists: creates the categories in order (only when there are none, so a store holding categories and no list still starts), the first list, and makes it current, in one transaction. Otherwise does nothing. (FR-020, FR-023, US3-1, US4-1) |
 
 ## Current list (User Story 1)
 

@@ -1,5 +1,6 @@
+import type { CategoryId } from '../../domain/category';
 import type { ListId } from '../../domain/shopping-list';
-import type { Repositories, UnitOfWork } from '../ports/unit-of-work';
+import type { UnitOfWork } from '../ports/unit-of-work';
 import {
   InMemoryRepositories,
   InMemoryUnitOfWork,
@@ -12,12 +13,6 @@ const seed = {
   firstListName: 'Ma liste',
 };
 
-/** Reads the store in a run of its own, as the next use case would. */
-const read = <T>(
-  unitOfWork: UnitOfWork,
-  query: (repos: Repositories) => Promise<T>,
-) => unitOfWork.run(query);
-
 describe('initializeStore', () => {
   let unitOfWork: UnitOfWork;
   let ids: SequentialIdGenerator;
@@ -27,19 +22,19 @@ describe('initializeStore', () => {
     ids = new SequentialIdGenerator();
   });
 
-  it('US3-1 US4-1 FR-020 FR-023 creates the categories in order, then the first list, and makes it current', async () => {
+  it('US3-1 US4-1 FR-002 FR-020 FR-023 creates the categories in order, then the first list, and makes it current', async () => {
     await createInitializeStore({ unitOfWork, ids })(seed);
 
-    expect(await read(unitOfWork, (repos) => repos.categories.all())).toEqual([
+    expect(await unitOfWork.run((repos) => repos.categories.all())).toEqual([
       { id: 'id-1', name: 'Fruits et légumes', position: 0 },
       { id: 'id-2', name: 'Crèmerie', position: 1 },
       { id: 'id-3', name: 'Boulangerie', position: 2 },
     ]);
-    expect(await read(unitOfWork, (repos) => repos.lists.all())).toEqual([
+    expect(await unitOfWork.run((repos) => repos.lists.all())).toEqual([
       { id: 'id-4', name: 'Ma liste' },
     ]);
     expect(
-      await read(unitOfWork, (repos) => repos.appState.currentListId()),
+      await unitOfWork.run((repos) => repos.appState.currentListId()),
     ).toBe('id-4');
   });
 
@@ -51,15 +46,37 @@ describe('initializeStore', () => {
 
     await createInitializeStore({ unitOfWork, ids })(seed);
 
-    expect(await read(unitOfWork, (repos) => repos.categories.all())).toEqual(
-      [],
-    );
-    expect(await read(unitOfWork, (repos) => repos.lists.all())).toEqual([
+    expect(await unitOfWork.run((repos) => repos.categories.all())).toEqual([]);
+    expect(await unitOfWork.run((repos) => repos.lists.all())).toEqual([
       { id: 'l-1', name: 'Barbecue' },
     ]);
     expect(
-      await read(unitOfWork, (repos) => repos.appState.currentListId()),
+      await unitOfWork.run((repos) => repos.appState.currentListId()),
     ).toBe('l-1');
+    // No id was taken: nothing was even started.
+    expect(ids.next()).toBe('id-1');
+  });
+
+  it('FR-023 keeps the categories of a store that has no list, and adds the first list', async () => {
+    await unitOfWork.run((repos) =>
+      repos.categories.add({
+        id: 'c-1' as CategoryId,
+        name: 'Crèmerie',
+        position: 0,
+      }),
+    );
+
+    await createInitializeStore({ unitOfWork, ids })(seed);
+
+    expect(await unitOfWork.run((repos) => repos.categories.all())).toEqual([
+      { id: 'c-1', name: 'Crèmerie', position: 0 },
+    ]);
+    expect(await unitOfWork.run((repos) => repos.lists.all())).toEqual([
+      { id: 'id-1', name: 'Ma liste' },
+    ]);
+    expect(
+      await unitOfWork.run((repos) => repos.appState.currentListId()),
+    ).toBe('id-1');
   });
 
   it('FR-023 runs only once: a second start creates nothing again', async () => {
@@ -69,9 +86,9 @@ describe('initializeStore', () => {
     await initializeStore(seed);
 
     expect(
-      await read(unitOfWork, (repos) => repos.categories.all()),
+      await unitOfWork.run((repos) => repos.categories.all()),
     ).toHaveLength(3);
-    expect(await read(unitOfWork, (repos) => repos.lists.count())).toBe(1);
+    expect(await unitOfWork.run((repos) => repos.lists.count())).toBe(1);
   });
 
   it('FR-023 leaves nothing behind when it fails midway, and the next start seeds again', async () => {
@@ -100,20 +117,18 @@ describe('initializeStore', () => {
 
     await expect(initializeStore(seed)).rejects.toBe(failure);
 
-    expect(await read(unitOfWork, (repos) => repos.categories.all())).toEqual(
-      [],
-    );
-    expect(await read(unitOfWork, (repos) => repos.lists.all())).toEqual([]);
+    expect(await unitOfWork.run((repos) => repos.categories.all())).toEqual([]);
+    expect(await unitOfWork.run((repos) => repos.lists.all())).toEqual([]);
     expect(
-      await read(unitOfWork, (repos) => repos.appState.currentListId()),
+      await unitOfWork.run((repos) => repos.appState.currentListId()),
     ).toBeNull();
 
     failing = false;
     await initializeStore(seed);
 
     expect(
-      await read(unitOfWork, (repos) => repos.categories.all()),
+      await unitOfWork.run((repos) => repos.categories.all()),
     ).toHaveLength(3);
-    expect(await read(unitOfWork, (repos) => repos.lists.count())).toBe(1);
+    expect(await unitOfWork.run((repos) => repos.lists.count())).toBe(1);
   });
 });

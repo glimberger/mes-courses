@@ -215,6 +215,7 @@ story depends on them.
 - [X] T036 Write failing tests for `initializeStore` in `apps/mobile/src/application/use-cases/initialize-store.test.ts`, on fakes:
   - on an empty store it creates the given categories with positions 0..n-1 in order, then the first list, and makes it current (US3-1, US4-1, FR-002, FR-020, FR-023);
   - on a store that already has a list it does nothing;
+  - on a store that has categories and no list, it keeps the categories and adds only the first list, made current;
   - a failure midway leaves nothing behind (one transaction).
 - [X] T037 Implement `initializeStore(seed: { categoryNames; firstListName })` in `apps/mobile/src/application/use-cases/initialize-store.ts` to turn T036 green.
 
@@ -280,7 +281,7 @@ story depends on them.
 
 ### App shell and composition
 
-- [ ] T054 Add the French seed in `apps/mobile/src/adapters/ui/seed.ts`: `categoryNames` = Fruits et légumes, Boucherie et poissonnerie, Crèmerie, Boulangerie, Épicerie salée, Épicerie sucrée, Surgelés, Boissons, Hygiène et beauté, Entretien, Divers (this order), and `firstListName` = "Ma liste". Test that the order matches the spec's Assumptions.
+- [ ] T054 Add the French seed in `apps/mobile/src/adapters/ui/seed.ts`: `categoryNames` = Fruits et légumes, Boucherie et poissonnerie, Crèmerie, Boulangerie, Épicerie salée, Épicerie sucrée, Surgelés, Boissons, Hygiène et beauté, Entretien, Divers (this order), and `firstListName` = "Ma liste". Test that the order matches the spec's Assumptions, that every name is already clean (`validateName` returns it unchanged, FR-022) and that no two names share a `normalizedName`, since `initializeStore` stores them as given.
 - [ ] T055 Write a failing test in `apps/mobile/src/adapters/ui/navigation.test.tsx`: through `renderWithStore`, the initial route is `CurrentList` and a `notice` set in the store shows in the root `NoticeSnackbar`; with a `RecordingErrorReporter` given as `errorReporter`, `CurrentList` is recorded through `setScreen` when the navigation is ready, and `Lists` when the test navigates there ([contracts/driven-ports.md](contracts/driven-ports.md#errorreporter)). Then add the navigation in `apps/mobile/src/adapters/ui/navigation.tsx` (React Navigation 7 native stack): `Navigation({ errorReporter })` with `CurrentList` (initial), `Lists`, `AddArticles` and `CreateArticle` as typed placeholder screens, replaced in the story phases, `NoticeSnackbar` rendered once at the root, and the container's `onReady` and `onStateChange` giving the current route name to `errorReporter.setScreen`.
 - [ ] T056 Write failing tests for `createStoryStore(scenario)` in `apps/mobile/src/adapters/ui/testing/story-store.test.ts`. The scenario is `{ seed?: Fixture; pending?: UseCaseName[]; failing?: UseCaseName[]; failingWith?: Partial<Record<UseCaseName, 'storageFull'>>; prepare?: (store) => Promise<void> }`, where `UseCaseName` is the union of the entry names of `UseCases`:
   - it builds fresh in-memory fakes holding `seed`, the real use cases, a `RecordingErrorReporter` and `createAppStore`, and returns the store;

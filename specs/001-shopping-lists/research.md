@@ -706,8 +706,9 @@ FR-030a, FR-039a).
 ## R18. First launch seed (FR-020, FR-023)
 
 - **Decision**: an `initializeStore(seed)` use case runs at startup. When the store holds no
-  list, it creates the default categories in order, the list "Ma liste" and marks it current, in
-  one transaction; otherwise it does nothing. The French names are passed in by the UI adapter
+  list, it creates the default categories in order (only when there are none: categories without
+  a list, which 001 never stores but a sync could, are kept, so the app still starts), the list
+  "Ma liste" and marks it current, in one transaction; otherwise it does nothing. The French names are passed in by the UI adapter
   (`apps/mobile/src/adapters/ui/seed.ts`), so the application layer holds no display text (Principle X).
 - **Rationale**: the "only on an empty store" rule is tested with in-memory fakes, and running it
   in one transaction means an interrupted first launch never leaves half a seed.
