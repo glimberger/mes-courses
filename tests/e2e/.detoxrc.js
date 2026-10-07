@@ -51,6 +51,10 @@ module.exports = {
     emulator: {
       type: 'android.emulator',
       device: { avdName: process.env.DETOX_AVD_NAME ?? 'Pixel_API_35' },
+      // Cold boot when Detox starts the emulator itself (locally). From a quick-boot snapshot,
+      // the emulator reports booted at once, then drops its adb connection a moment later, while
+      // Detox installs the app. In CI the emulator runner boots it first, so this is unused.
+      bootArgs: '-no-snapshot-load',
     },
     simulator: {
       type: 'ios.simulator',
