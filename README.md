@@ -129,3 +129,7 @@ git diff --name-only "$(git merge-base origin/main HEAD)" HEAD | .github/scripts
 # app=true  -> run yarn test:e2e:android first, and the e2e workflow before merging
 # app=false -> documentation only, the device suite is not needed
 ```
+
+## License
+
+[MIT](LICENSE.md)
