@@ -73,9 +73,14 @@ yarn build              # expo export for Android and iOS
 From `apps/mobile/`, with a development build on an emulator, a simulator or a phone:
 
 ```sh
-yarn expo run:android    # or: yarn expo run:ios
+yarn android             # or: yarn ios
 yarn storybook           # starts Metro with Storybook instead of the app
 ```
+
+`yarn android` and `yarn ios` build with `SENTRY_DISABLE_AUTO_UPLOAD=true`: a local build sends no
+source maps to Sentry, which only EAS builds do. A bare `yarn expo run:ios` fails at the "Bundle
+React Native code and images" step with "An organization ID or slug is required" until the
+Sentry organization and project are configured.
 
 `yarn storybook` is the on-device catalog of the screens. A bundle built without
 `STORYBOOK_ENABLED` holds no Storybook code.
