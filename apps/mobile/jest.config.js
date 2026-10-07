@@ -15,13 +15,21 @@ module.exports = {
       displayName: 'app',
       preset: 'jest-expo',
       transformIgnorePatterns,
-      testPathIgnorePatterns: ['/node_modules/', '<rootDir>/build-config/'],
+      testPathIgnorePatterns: [
+        '/node_modules/',
+        '<rootDir>/build-config/',
+        '<rootDir>/src/adapters/sqlite/',
+      ],
     },
     {
-      // Tests that run in plain Node (no React Native runtime): build-time configuration.
+      // Tests that run in plain Node (no React Native runtime): build-time configuration, and
+      // the SQLite adapter on `node:sqlite`, which the React Native preset's globals break.
       displayName: 'node',
       preset: 'jest-expo/node',
-      testMatch: ['<rootDir>/build-config/**/*.test.ts'],
+      testMatch: [
+        '<rootDir>/build-config/**/*.test.ts',
+        '<rootDir>/src/adapters/sqlite/**/*.test.ts',
+      ],
     },
   ],
 };
