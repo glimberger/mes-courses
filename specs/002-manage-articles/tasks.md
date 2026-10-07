@@ -348,8 +348,10 @@ Each pull request is merged only when `gh pr checks` is all green (constitution,
 - Never delete, skip or weaken a test to make a change go green (Principle I).
 - The undo snapshot lives only in the store, never on disk: a killed app makes the deletion final.
 - Synchronization of edits and deletions is out of scope; its open questions are in [research.md](research.md) R7.
-- Test gates (constitution v2.1.1, Quality Gates): before each commit, `yarn test` (the fast
-  suite) is green; before each push, `yarn test:e2e:android` (the device suite) is green; the
+- Test gates (constitution v2.2.0, Quality Gates): before each commit, `yarn test` (the fast
+  suite) is green; before each push, `yarn test:e2e:android` (the device suite) is green, unless
+  the branch changes only documentation (`specs/`, `.specify/`, Markdown files, as
+  `.github/scripts/app-changed.sh` decides, constitution v2.2.0); the
   iOS journeys (`yarn test:e2e:ios`) run before each release and before merging a pull request
   that changes native configuration (`apps/mobile/app.config.ts`, a config plugin or a native
   dependency), and that pull request's test plan records the run.

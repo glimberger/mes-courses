@@ -1008,7 +1008,7 @@ FR-030a, FR-039a).
   - iOS end-to-end runs on the maintainer's Mac, not in CI: macOS runners use GitHub minutes at
     ten times the Linux rate on a private repository. The iOS journeys run before each release
     and on any pull request that touches native configuration (`app.config.ts`, config plugins,
-    native dependencies). Constitution v2.1.1 sets this rule in its Quality Gates.
+    native dependencies). Constitution v2.2.0 sets this rule in its Quality Gates.
 - **Rationale**: Jest covers behavior through in-memory fakes and `node:sqlite`, but nothing
   automated checked the binary itself: that expo-sqlite opens and migrates on a device, that
   screens navigate, that data survives a killed process (SC-007, FR-028). Detox's gray-box
