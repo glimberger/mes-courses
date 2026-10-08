@@ -283,6 +283,10 @@ Continuous integration is blocking for every pull request:
 - Features go through Spec Kit: `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` →
   `/speckit-implement`. Generated task lists MUST order each test task before the
   implementation task it drives.
+- A decision that outlives one feature (the stack, the repository layout, tooling) is recorded as
+  an Architecture Decision Record in `docs/adr/`, in the pull request that makes it. A choice that
+  matters only inside one feature stays in that feature's `research.md`. An ADR explains why; a
+  rule that must be enforced belongs in this constitution.
 - Each feature spec states the feature's behavior while offline or with the server
   unreachable, how its data is synchronized with the server, and how concurrent changes are
   reconciled (Principle VII).
@@ -306,4 +310,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 2.3.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-07
+**Version**: 2.4.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-08

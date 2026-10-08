@@ -42,6 +42,14 @@
 
 [Gates determined based on constitution file]
 
+## Architecture Decisions
+
+*List the ADRs in `docs/adr/` that this plan creates, supersedes or relies on, or write "None".
+A decision that outlives this feature (stack, repository layout, tooling) gets an ADR; a choice
+that matters only here stays in research.md.*
+
+[ADR links, or None]
+
 ## Project Structure
 
 ### Documentation (this feature)
