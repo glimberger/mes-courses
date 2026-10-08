@@ -1,13 +1,14 @@
 import type { Ref } from 'react';
-import { StyleSheet, type View } from 'react-native';
+import { StyleSheet, type HostInstance } from 'react-native';
 import { Icon, TouchableRipple, useTheme } from 'react-native-paper';
+import { paperRef } from './paper-ref';
 
 export type AppbarIconActionProps = {
   icon: string;
   accessibilityLabel: string;
   onPress: () => void;
   /** The button screen readers focus, for a focus move (FR-037). */
-  ref?: Ref<View>;
+  ref?: Ref<HostInstance>;
 };
 
 /**
@@ -24,7 +25,7 @@ export const AppbarIconAction = ({
   const { colors } = useTheme();
   return (
     <TouchableRipple
-      ref={ref}
+      ref={paperRef(ref)}
       borderless
       onPress={onPress}
       accessibilityRole="button"

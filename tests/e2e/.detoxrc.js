@@ -33,8 +33,10 @@ module.exports = {
   apps: {
     'android.release': {
       type: 'android.apk',
+      // Only the app module: assembleAndroidTest at the root also builds every library's debug
+      // test APK, which fails on duplicate native libraries since React Native 0.88.
       build: build(
-        'yarn expo prebuild --platform android && cd android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release',
+        'yarn expo prebuild --platform android && cd android && ./gradlew :app:assembleRelease :app:assembleAndroidTest -DtestBuildType=release',
       ),
       binaryPath: `${APP_DIR}/android/app/build/outputs/apk/release/app-release.apk`,
       testBinaryPath: `${APP_DIR}/android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk`,

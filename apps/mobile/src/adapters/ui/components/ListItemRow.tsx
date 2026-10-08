@@ -1,5 +1,10 @@
 import { memo, type Ref } from 'react';
-import { StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  type AccessibilityActionEvent,
+  type HostInstance,
+} from 'react-native';
 import {
   Checkbox,
   IconButton,
@@ -11,6 +16,7 @@ import {
 import type { Quantity } from '../../../domain/quantity';
 import { spacing } from '../theme/spacing';
 import { formatQuantity } from './format-quantity';
+import { paperRef } from './paper-ref';
 
 export type ListItemRowProps = {
   name: string;
@@ -22,7 +28,7 @@ export type ListItemRowProps = {
   /** Shows the action "Retirer de la liste" (US2-6). */
   onRemove?: () => void;
   /** The checkbox screen readers focus, for a focus move (FR-037). */
-  ref?: Ref<View>;
+  ref?: Ref<HostInstance>;
 };
 
 /** "Lait, 2 L, dans le caddie" (FR-032). */
@@ -76,7 +82,7 @@ export const ListItemRow = memo(function ListItemRow({
   return (
     <View style={styles.row}>
       <TouchableRipple
-        ref={ref}
+        ref={paperRef(ref)}
         onPress={onToggle}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: inCart }}

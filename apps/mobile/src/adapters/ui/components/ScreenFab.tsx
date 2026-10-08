@@ -1,5 +1,5 @@
 import type { Ref } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type HostInstance } from 'react-native';
 import {
   Icon,
   Surface,
@@ -9,6 +9,7 @@ import {
 } from 'react-native-paper';
 
 import { spacing } from '../theme/spacing';
+import { paperRef } from './paper-ref';
 
 export type ScreenFabProps = {
   icon: string;
@@ -16,7 +17,7 @@ export type ScreenFabProps = {
   label: string;
   onPress: () => void;
   /** The button screen readers focus, for a focus move (FR-037). */
-  ref?: Ref<View>;
+  ref?: Ref<HostInstance>;
 };
 
 /** The height of the FAB. */
@@ -36,7 +37,7 @@ export const ScreenFab = ({ icon, label, onPress, ref }: ScreenFabProps) => {
       style={[styles.fab, { backgroundColor: colors.primaryContainer }]}
     >
       <TouchableRipple
-        ref={ref}
+        ref={paperRef(ref)}
         borderless
         onPress={onPress}
         accessibilityRole="button"

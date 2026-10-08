@@ -36,11 +36,11 @@ The decisions and their alternatives are in [research.md](research.md).
 ## Technical Context
 
 **Language/Version**: TypeScript 5.x (strict), React Native (New Architecture, Hermes) through
-Expo SDK 57, Node.js 24 LTS and Yarn 4 (through Corepack, `nodeLinker: node-modules`) for
+Expo SDK 58, Node.js 24 LTS and Yarn 4 (through Corepack, `nodeLinker: node-modules`) for
 tooling, all provided by a Nix flake dev shell ([research.md](research.md) R21)
 
 **Primary Dependencies**: Expo, React Native Paper 5 (Material 3), React Navigation 7 (native
-stack), Zustand 5, expo-sqlite, expo-crypto, @sentry/react-native 7.11 (pinned by Expo SDK 57; full list and justification in
+stack), Zustand 5, expo-sqlite, expo-crypto, @sentry/react-native 8.28 (pinned by Expo SDK 58; full list and justification in
 [research.md](research.md#new-dependencies-principle-iv))
 
 **Storage**: SQLite on the device via expo-sqlite; hand-written SQL, migrations by
@@ -52,7 +52,7 @@ Native 10 for the screen catalog, with every story rendered by a Jest test (port
 R22); Detox 20, with the app's Jest 30, for end-to-end journeys in the test-only `tests/e2e/`
 workspace (R23)
 
-**Target Platform**: Android and iOS phones (versions supported by Expo SDK 57)
+**Target Platform**: Android and iOS phones (versions supported by Expo SDK 58)
 
 **Project Type**: mobile app, the first workspace (`apps/mobile/`) of a Yarn workspaces monorepo,
 plus the test-only `tests/e2e/` workspace
@@ -448,7 +448,7 @@ stay out of `yarn test`. That workspace defines no `test` script, so the root
 - **Setup phase findings (2026-10-07)**, to be turned into tasks:
   - iOS 27: the iOS 27 SDK requires the UIScene lifecycle, which Expo SDK 57's AppDelegate does
     not adopt, so the app stops at launch on iOS 27; the iOS journeys run on an iOS 26 runtime
-    meanwhile (R23). Resolve before a release built with Xcode 27;
+    meanwhile (R23). Resolved 2026-10-08 by Expo SDK 58 (R1, T144);
   - FR-041 on iOS: `expo prebuild` adds the bundle identifier as a URL scheme; a config plugin
     removes it, tested on the prebuilt `Info.plist` (R25);
   - the Sentry adapter targets `@sentry/react-native` 7.11: check each `Sentry.init` option of

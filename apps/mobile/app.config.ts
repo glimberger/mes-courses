@@ -1,6 +1,7 @@
 import type { ExpoConfig } from 'expo/config';
 
 import { withAndroidAnrOff } from './build-config/android-anr-off.cjs';
+import { withAndroidNoMinify } from './build-config/android-no-minify.cjs';
 
 // Detox's native changes (test runner, cleartext traffic to the emulator host) go only into
 // builds made for the end-to-end tests (research R23, R25).
@@ -45,4 +46,4 @@ const config: ExpoConfig = {
 };
 
 // A plugin given as a function is applied here: `plugins` only types names.
-export default withAndroidAnrOff(config);
+export default withAndroidNoMinify(withAndroidAnrOff(config));

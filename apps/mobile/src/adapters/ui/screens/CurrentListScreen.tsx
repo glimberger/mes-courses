@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { SectionList, StyleSheet, View } from 'react-native';
+import { SectionList, StyleSheet, View, type HostInstance } from 'react-native';
 import { Appbar, List, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,7 +31,7 @@ type RowHandlers = {
   editQuantity: (articleId: ArticleId) => void;
   remove: (articleId: ArticleId) => void;
   /** The rows drawn, by article, for the focus moves (FR-037). */
-  rowRefs: Map<ArticleId, View>;
+  rowRefs: Map<ArticleId, HostInstance>;
 };
 
 /**
@@ -54,7 +54,7 @@ const CurrentListRow = memo(function CurrentListRow({
   );
   const onRemove = useCallback(() => remove(articleId), [articleId, remove]);
   const ref = useCallback(
-    (node: View | null) => {
+    (node: HostInstance | null) => {
       if (node) rowRefs.set(articleId, node);
       else rowRefs.delete(articleId);
     },
@@ -99,10 +99,10 @@ export const CurrentListScreen = () => {
   const removeItem = useAppStore((state) => state.removeItem);
   const [finishing, setFinishing] = useState(false);
   const [request, setRequest] = useState<QuantityRequest | null>(null);
-  const titleRef = useRef<View>(null);
-  const finishActionRef = useRef<View>(null);
-  const emptyMessageRef = useRef<View>(null);
-  const [rowRefs] = useState(() => new Map<ArticleId, View>());
+  const titleRef = useRef<HostInstance>(null);
+  const finishActionRef = useRef<HostInstance>(null);
+  const emptyMessageRef = useRef<HostInstance>(null);
+  const [rowRefs] = useState(() => new Map<ArticleId, HostInstance>());
   const editing = useRef<ArticleId | null>(null);
   // The view as last drawn, read by `remove` and `editQuantity`, which stay the same as the view
   // changes.

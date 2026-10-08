@@ -15,8 +15,8 @@ Behavior is defined in [spec.md](spec.md); screens and text in
 - For the Detox journeys ([research.md](research.md) R23): an Android emulator of API 35 named
   `Pixel_API_35` (or set `DETOX_AVD_NAME`; Detox 20 does not run on API 37) with a JDK 17; for
   iOS, Xcode, `applesimutils` and CocoaPods (`brew tap wix/brew && brew install applesimutils
-  cocoapods`) and an iOS 26 simulator runtime, chosen with `DETOX_IOS_DEVICE` and `DETOX_IOS_OS`
-  (the app does not start on iOS 27 yet, R23). These stay outside Nix.
+  cocoapods`) and an iOS simulator runtime, chosen with `DETOX_IOS_DEVICE` and `DETOX_IOS_OS`
+  (on iOS 27, which has no "iPhone 16", for example `iPhone 17` and `iOS 27.0`, R23). These stay outside Nix.
 - Optional: a Sentry project. Without `EXPO_PUBLIC_SENTRY_DSN`, errors go to the console only.
 
 Commands run from the repository root unless stated otherwise: one `yarn install` installs every

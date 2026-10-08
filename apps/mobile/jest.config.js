@@ -29,6 +29,9 @@ module.exports = {
       // preset's globals break.
       displayName: 'node',
       preset: 'jest-expo/node',
+      // jest-expo 58 adds the `expo-source` condition, whose `src/` entries the published Expo
+      // packages (@expo/config among them) do not ship: resolve their built files instead.
+      testEnvironmentOptions: { customExportConditions: ['node', 'require'] },
       testMatch: [
         '<rootDir>/build-config/**/*.test.ts',
         '<rootDir>/src/adapters/sqlite/**/*.test.ts',

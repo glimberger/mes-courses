@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { View } from 'react-native';
+import { View, type HostInstance } from 'react-native';
 import { Button, Dialog, Portal, Text } from 'react-native-paper';
 
 import { focusOn } from '../accessibility/focus';
@@ -19,7 +19,7 @@ export const FinishShoppingDialog = ({
   onCancel,
   onConfirm,
 }: FinishShoppingDialogProps) => {
-  const titleRef = useRef<View>(null);
+  const titleRef = useRef<HostInstance>(null);
   useEffect(() => {
     if (visible) focusOn(titleRef);
   }, [visible]);

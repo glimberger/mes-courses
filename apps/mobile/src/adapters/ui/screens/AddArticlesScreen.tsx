@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { SectionList, StyleSheet, View } from 'react-native';
+import { SectionList, StyleSheet, View, type HostInstance } from 'react-native';
 import { Appbar, Button, List, Searchbar, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -27,7 +27,7 @@ type Row = CatalogArticle | EmptyCategory;
 const isEmptyCategory = (row: Row): row is EmptyCategory => 'empty' in row;
 
 /** The rows drawn, by article, so focus can go back to the one that opened the dialog. */
-type RowRefs = Map<ArticleId, View>;
+type RowRefs = Map<ArticleId, HostInstance>;
 
 type CatalogRowProps = {
   article: CatalogArticle;
@@ -43,7 +43,7 @@ const CatalogRow = memo(function CatalogRow({
 }: CatalogRowProps) {
   const onPress = useCallback(() => open(article), [article, open]);
   const ref = useCallback(
-    (node: View | null) => {
+    (node: HostInstance | null) => {
       if (node) rowRefs.set(article.id, node);
       else rowRefs.delete(article.id);
     },
