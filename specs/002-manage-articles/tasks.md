@@ -107,12 +107,12 @@ ticked states unchanged.
 
 ### Tests for User Story 1 ⚠️ (write first, confirm they fail)
 
-- [ ] T010 [US1] Write the failing journey `tests/e2e/journeys/rename-article.e2e.ts` ([contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-end-journeys)): on a fresh install, create "Lait", add it to "Ma liste" with "2" "L" and tick it, create "Barbecue" and add "Lait" there; from the catalog, "Plus d'actions pour « Lait »" → "Modifier", rename it "Lait demi-écrémé", save; both lists show the new name with the ticked state and quantity kept; `device.terminateApp()` then `device.launchApp({ newInstance: true })`: still renamed (002 US1-1, US1-2, SC-005). Run `yarn test:e2e:android` and confirm it fails on the missing menu.
-- [ ] T011 [P] [US1] Add failing tests for the edit rule to `apps/mobile/src/application/use-cases/unique-name.test.ts`, where 001 keeps the shared naming rule (`uniqueName`). The name follows 001's rules: "cleaned, non-blank, ≤ 60 characters". With a new optional "ignore" argument, uniqueness is "by `normalizedName` among **other** articles":
+- [X] T010 [US1] Write the failing journey `tests/e2e/journeys/rename-article.e2e.ts` ([contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-end-journeys)): on a fresh install, create "Lait", add it to "Ma liste" with "2" "L" and tick it, create "Barbecue" and add "Lait" there; from the catalog, "Plus d'actions pour « Lait »" → "Modifier", rename it "Lait demi-écrémé", save; both lists show the new name with the ticked state and quantity kept; `device.terminateApp()` then `device.launchApp({ newInstance: true })`: still renamed (002 US1-1, US1-2, SC-005). Run `yarn test:e2e:android` and confirm it fails on the missing menu.
+- [X] T011 [P] [US1] Add failing tests for the edit rule to `apps/mobile/src/application/use-cases/unique-name.test.ts`, where 001 keeps the shared naming rule (`uniqueName`). The name follows 001's rules: "cleaned, non-blank, ≤ 60 characters". With a new optional "ignore" argument, uniqueness is "by `normalizedName` among **other** articles":
   - a name used by another article → `NameAlreadyUsed` carrying that article (002 US1-4: " beurre " while "Beurre" exists);
   - the article's own name with a different case or spaces is accepted (002 US1-5: "Lait" → "lait", and "Pommes de terre" → "Pommes  de terre");
   - `NameRequired` / `NameTooLong` (002 US1-6).
-- [ ] T012 [P] [US1] Write failing use case tests in `apps/mobile/src/application/use-cases/edit-article.test.ts`, on 001's fakes:
+- [X] T012 [P] [US1] Write failing use case tests in `apps/mobile/src/application/use-cases/edit-article.test.ts`, on 001's fakes:
   - 002 US1-1: the catalog shows the new name and not the old one;
   - 002 US1-2: both lists show the new name, each keeping its quantity and `inCart`;
   - 002 US1-3: searching "demi" and "Lait" both find it;
@@ -120,12 +120,12 @@ ticked states unchanged.
   - 002 US1-8: the item moves to its new alphabetical place in its category;
   - `ArticleNotFound`;
   - the name is stored cleaned: "  Lait   demi-écrémé " → "Lait demi-écrémé".
-- [ ] T013 [P] [US1] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.edit-article.test.ts`:
+- [X] T013 [P] [US1] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.edit-article.test.ts`:
   - `editArticle(articleId, { name, categoryId })` clears `pendingUndo` first;
   - it returns the use case `Result` unchanged and does not report business errors;
   - on success it refreshes every loaded region, so `currentList`, `catalog` and `lists` show the new name (edge case "renamed while a list is on screen");
   - on a throw it reports `{ operation: 'editArticle', screen: 'EditArticle' }`, sets `notice = writeFailed` and resolves to `{ ok: false, error: { type: 'WriteFailed' } }`.
-- [ ] T014 [US1] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/edit-article-screen.test.tsx`, through `renderWithStore`:
+- [X] T014 [US1] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/edit-article-screen.test.tsx`, through `renderWithStore`:
   - Appbar "Modifier l'article" with a back action, `NameField` "Nom" prefilled, and the button "Enregistrer";
   - success goes back to AddArticles with no snackbar, and the row shows the new name;
   - 002 US1-4: "Un article « Beurre » existe déjà.";
@@ -133,7 +133,7 @@ ticked states unchanged.
   - after a refused save, the field keeps what was typed and the stored name is unchanged;
   - 002 US1-7: back without saving changes nothing;
   - `ArticleNotFound` or a throw: the screen stays open with "La modification n'a pas pu être enregistrée.", reported.
-- [ ] T015 [US1] Write failing tests in `apps/mobile/src/adapters/ui/screens/add-articles-screen.test.tsx`: "Plus d'actions" → "Modifier" opens EditArticle for that article (FR-001), both while browsing by category and in search results; after saving, the search results show the new name (002 US1-3).
+- [X] T015 [US1] Write failing tests in `apps/mobile/src/adapters/ui/screens/add-articles-screen.test.tsx`: "Plus d'actions" → "Modifier" opens EditArticle for that article (FR-001), both while browsing by category and in search results; after saving, the search results show the new name (002 US1-3).
 
 ### Implementation for User Story 1
 
