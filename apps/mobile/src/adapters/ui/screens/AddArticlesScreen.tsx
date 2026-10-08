@@ -4,7 +4,7 @@ import { Appbar, List, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import type { ArticleId } from '../../../domain/article';
+import type { ArticleId, ArticleUsage } from '../../../domain/article';
 import type { CatalogView } from '../../../domain/catalog-view';
 import type { CategoryId } from '../../../domain/category';
 import { cleanName } from '../../../domain/name';
@@ -18,6 +18,7 @@ import { SearchField } from '../components/SearchField';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
+import { DeleteArticleDialog } from './DeleteArticleDialog';
 import { QuantityDialog, type QuantityRequest } from './QuantityDialog';
 
 type CatalogArticle = CatalogView['sections'][number]['articles'][number];
@@ -36,6 +37,7 @@ type CatalogRowProps = {
   article: CatalogArticle;
   open: (article: CatalogArticle) => void;
   edit: (article: CatalogArticle) => void;
+  remove: (article: CatalogArticle) => void;
   rowRefs: RowRefs;
 };
 
@@ -44,10 +46,12 @@ const CatalogRow = memo(function CatalogRow({
   article,
   open,
   edit,
+  remove,
   rowRefs,
 }: CatalogRowProps) {
   const onPress = useCallback(() => open(article), [article, open]);
   const onEdit = useCallback(() => edit(article), [article, edit]);
+  const onDelete = useCallback(() => remove(article), [article, remove]);
   const ref = useCallback(
     (node: HostInstance | null) => {
       if (node) rowRefs.set(article.id, node);
@@ -62,6 +66,7 @@ const CatalogRow = memo(function CatalogRow({
       onList={article.onList}
       onPress={onPress}
       onEdit={onEdit}
+      onDelete={onDelete}
     />
   );
 });
@@ -78,9 +83,14 @@ export const AddArticlesScreen = () => {
   const query = useAppStore((state) => state.catalog.query);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
   const searchCatalog = useAppStore((state) => state.searchCatalog);
+  const getArticleUsage = useAppStore((state) => state.getArticleUsage);
+  const [usage, setUsage] = useState<ArticleUsage | null>(null);
   const [request, setRequest] = useState<QuantityRequest | null>(null);
   const [rowRefs] = useState<RowRefs>(() => new Map());
   const opener = useRef<ArticleId | null>(null);
+  const titleRef = useRef<HostInstance>(null);
+  // A second tap while the usage is being read would open the dialog for the wrong row.
+  const reading = useRef(false);
 
   // Leaving clears the search, so the screen opens on the whole catalog the next time.
   useEffect(() => {
@@ -108,15 +118,41 @@ export const AddArticlesScreen = () => {
     [navigation],
   );
 
-  const closeDialog = () => {
-    setRequest(null);
-    // Back to the row that opened the dialog, looked up once the dialog is gone (FR-037).
+  /** Reads where the article is used, then asks before deleting it (FR-006). */
+  const remove = useCallback(
+    async (article: CatalogArticle) => {
+      if (reading.current) return;
+      reading.current = true;
+      opener.current = article.id;
+      try {
+        const outcome = await getArticleUsage(article.id);
+        if (outcome.ok) setUsage(outcome.value);
+      } finally {
+        reading.current = false;
+      }
+    },
+    [getArticleUsage],
+  );
+
+  const closeDeleteDialog = () => {
+    setUsage(null);
+    focusRow();
+  };
+
+  const focusRow = () => {
+    // Back to the row that opened the dialog, looked up once the dialog is gone (FR-037). A
+    // deleted article has no row any more: focus goes to the screen title instead.
     const id = opener.current;
     focusOn({
       get current() {
-        return id === null ? null : (rowRefs.get(id) ?? null);
+        return (id === null ? null : rowRefs.get(id)) ?? titleRef.current;
       },
     });
+  };
+
+  const closeDialog = () => {
+    setRequest(null);
+    focusRow();
   };
 
   const createArticle = (params: RootStackParamList['CreateArticle']) =>
@@ -134,7 +170,15 @@ export const AddArticlesScreen = () => {
         {navigation.canGoBack() && (
           <BackAction onPress={() => navigation.goBack()} />
         )}
-        <Appbar.Content title="Ajouter des articles" />
+        <Appbar.Content
+          title={
+            <View ref={titleRef} accessible accessibilityRole="header">
+              <Text variant="titleLarge" numberOfLines={1}>
+                Ajouter des articles
+              </Text>
+            </View>
+          }
+        />
         <AppbarIconAction
           icon="plus"
           accessibilityLabel="Nouvel article"
@@ -163,12 +207,14 @@ export const AddArticlesScreen = () => {
             view={view}
             open={open}
             edit={edit}
+            remove={remove}
             rowRefs={rowRefs}
             createInCategory={(categoryId) => createArticle({ categoryId })}
           />
         )}
       />
       <QuantityDialog request={request} onClose={closeDialog} />
+      <DeleteArticleDialog usage={usage} onClose={closeDeleteDialog} />
     </View>
   );
 };
@@ -180,12 +226,14 @@ const CatalogSections = ({
   view,
   open,
   edit,
+  remove,
   rowRefs,
   createInCategory,
 }: {
   view: CatalogView;
   open: (article: CatalogArticle) => void;
   edit: (article: CatalogArticle) => void;
+  remove: (article: CatalogArticle) => void;
   rowRefs: RowRefs;
   createInCategory: (categoryId: CategoryId) => void;
 }) => (
@@ -214,7 +262,13 @@ const CatalogSections = ({
           </Button>
         </View>
       ) : (
-        <CatalogRow article={item} open={open} edit={edit} rowRefs={rowRefs} />
+        <CatalogRow
+          article={item}
+          open={open}
+          edit={edit}
+          remove={remove}
+          rowRefs={rowRefs}
+        />
       )
     }
     stickySectionHeadersEnabled={false}

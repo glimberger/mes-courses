@@ -1,3 +1,4 @@
+import type { DeletedArticle } from '../../../domain/article';
 import type { CatalogView } from '../../../domain/catalog-view';
 import type { CategoryId } from '../../../domain/category';
 import type { CurrentListView } from '../../../domain/current-list-view';
@@ -19,11 +20,9 @@ export type Notice =
   | { type: 'articleAdded'; name: string };
 
 /** The one change that "Annuler" can still revert (FR-010). */
-export type PendingUndo = {
-  kind: 'removedItem';
-  removed: RemovedItem;
-  name: string;
-};
+export type PendingUndo =
+  | { kind: 'removedItem'; removed: RemovedItem; name: string }
+  | { kind: 'deletedArticle'; deleted: DeletedArticle };
 
 /** What the current list region shows when the list has no item: its name (US1-10). */
 export type EmptyCurrentList = { list: CurrentListView['list'] };
@@ -89,8 +88,8 @@ export interface StoreKit {
   ) => Promise<
     Result<T, Extract<E, { type: RefusedInputType | X }> | WriteFailed>
   >;
-  /** Reports a failure the action handles itself, with the operation only (Principle VIII). */
-  report: (error: unknown, operation: string) => void;
+  /** Reports a failure the action handles itself, with the operation and screen only (Principle VIII). */
+  report: (error: unknown, operation: string, screen?: string) => void;
   /**
    * Defines how a region loads, and returns its load action. `refresh` reloads the region once
    * it has been requested. When loads overlap, only the last one started is shown.

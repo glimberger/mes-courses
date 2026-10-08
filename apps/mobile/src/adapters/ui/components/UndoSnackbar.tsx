@@ -19,8 +19,16 @@ export const ABOVE_UNDO_OFFER = {
 /** How long "Annuler" is offered, with no screen reader on (FR-010). */
 export const UNDO_DELAY_MS = 5000;
 
-const text = (offer: PendingUndo): string =>
-  `« ${offer.name} » retiré de la liste`;
+const text = (offer: PendingUndo): string => {
+  switch (offer.kind) {
+    case 'deletedArticle':
+      return `« ${offer.deleted.article.name} » supprimé`;
+    case 'removedItem':
+      return `« ${offer.name} » retiré de la liste`;
+    default:
+      return offer satisfies never;
+  }
+};
 
 /**
  * The app-wide "Annuler" offer for the store's `pendingUndo`, rendered once at the root so it

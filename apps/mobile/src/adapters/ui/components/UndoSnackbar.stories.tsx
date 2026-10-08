@@ -23,3 +23,13 @@ const removeLait: StoryScenario['prepare'] = async (store) => {
 export const RemovedItem: Story = {
   parameters: { scenario: { seed: fixture, prepare: removeLait } },
 };
+
+/** "Lait" deleted from the catalog, as from the delete dialog. */
+const deleteLait: StoryScenario['prepare'] = async (store) => {
+  await store.loadCurrentList();
+  await store.deleteArticle('article-lait' as ArticleId);
+};
+
+export const DeletedArticle: Story = {
+  parameters: { scenario: { seed: fixture, prepare: deleteLait } },
+};

@@ -1,4 +1,6 @@
 import type { CategoryId } from './category';
+import type { Quantity } from './quantity';
+import type { ListId } from './shopping-list';
 
 export type ArticleId = string & { readonly __brand: 'ArticleId' };
 
@@ -11,3 +13,18 @@ export type Article = {
 
 /** No article has this id (a missing record, never the user's input). */
 export type ArticleNotFound = { type: 'ArticleNotFound' };
+
+/**
+ * An article deleted, as it was with each list item that held it, so "Annuler" can bring it back
+ * with the same id (FR-009, SC-006).
+ */
+export type DeletedArticle = {
+  article: Article;
+  items: { listId: ListId; inCart: boolean; quantity: Quantity | null }[];
+};
+
+/** Where an article is used: the lists holding it, sorted by name (FR-006). */
+export type ArticleUsage = {
+  article: { id: ArticleId; name: string };
+  lists: { id: ListId; name: string }[];
+};

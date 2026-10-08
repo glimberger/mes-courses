@@ -58,4 +58,8 @@ export const requiredStories: readonly string[] = [
   // 002 Manage articles
   'Components/CategoryPicker/Default',
   'Components/CategoryPicker/NewCategorySelected',
+  'Components/UndoSnackbar/DeletedArticle',
+  'Dialogs/DeleteArticleDialog/NoList',
+  'Dialogs/DeleteArticleDialog/OneList',
+  'Dialogs/DeleteArticleDialog/SeveralLists',
 ];

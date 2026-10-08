@@ -150,7 +150,11 @@ export const createAppStoreWith = <Actions extends object>(
           >;
         });
       },
-      report: (error, operation) => errorReporter.report(error, { operation }),
+      report: (error, operation, screen) =>
+        errorReporter.report(
+          error,
+          screen === undefined ? { operation } : { operation, screen },
+        ),
       region: (name, operation, query) => {
         const setRegion = (state: StoreCore[typeof name]) =>
           update({ [name]: state } as Partial<StoreCore>);

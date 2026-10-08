@@ -10,6 +10,10 @@ import { renderWithStore } from '../testing/render-with-store';
 import type { Fixture, StoryScenario } from '../testing/story-store';
 import { AddArticlesScreen } from './AddArticlesScreen';
 
+import { focusOn } from '../accessibility/focus';
+
+jest.mock('../accessibility/focus');
+
 const maListe = 'list-ma-liste' as ListId;
 
 const shownCategories = [
@@ -51,10 +55,10 @@ const renderScreen = (scenario: StoryScenario = {}) =>
   );
 
 /** The app on this seed, opened on AddArticles from the FAB of the current list. */
-const openFromCurrentList = async () => {
+const openFromCurrentList = async (from: Fixture = seed) => {
   const rendered = await renderWithStore(
     <Navigation errorReporter={new RecordingErrorReporter()} />,
-    { seed, asScreen: false },
+    { seed: from, asScreen: false },
   );
   fireEvent.press(await screen.findByRole('button', { name: 'Ajouter' }));
   await screen.findByText('Beurre');
@@ -349,6 +353,148 @@ describe('AddArticles', () => {
       expect(
         screen.getByPlaceholderText('Rechercher un article'),
       ).toHaveDisplayValue('pât');
+    });
+  });
+
+  describe('"Plus d\'actions" → "Supprimer" (002 US2)', () => {
+    const lait = 'article-lait' as ArticleId;
+    const barbecue = 'list-barbecue' as ListId;
+    const eau = 'article-eau' as ArticleId;
+    const boissons = seed.categories.find(
+      (category) => category.name === 'Boissons',
+    );
+    if (!boissons) throw new Error('No Boissons in the seed');
+
+    /** "Lait" on "Ma liste" and "Barbecue", "Eau" alone in "Boissons" and on no list. */
+    const deletionSeed: Fixture = {
+      ...seed,
+      articles: [
+        ...seed.articles,
+        { id: eau, name: 'Eau', categoryId: boissons.id },
+      ],
+      items: [
+        ...seed.items,
+        { listId: barbecue, articleId: lait, inCart: false, quantity: null },
+      ],
+    };
+
+    const chooseSupprimerFor = (name: string) => {
+      fireEvent.press(
+        screen.getByRole('button', { name: `Plus d'actions pour « ${name} »` }),
+      );
+      fireEvent.press(screen.getByText('Supprimer'));
+    };
+
+    it('FR-006 loads the usage and opens the dialog naming the lists', async () => {
+      await openFromCurrentList(deletionSeed);
+
+      chooseSupprimerFor('Lait');
+
+      expect(await screen.findByText('Supprimer « Lait » ?')).toBeOnTheScreen();
+      expect(
+        screen.getByText(
+          'Il est dans les listes « Barbecue » et « Ma liste » et en sera retiré.',
+        ),
+      ).toBeOnTheScreen();
+    });
+
+    it('reports a failed usage load, shows writeFailed and opens no dialog', async () => {
+      const rendered = await renderWithStore(
+        <Navigation errorReporter={new RecordingErrorReporter()} />,
+        { seed: deletionSeed, asScreen: false, failing: ['getArticleUsage'] },
+      );
+      fireEvent.press(await screen.findByRole('button', { name: 'Ajouter' }));
+      await screen.findByText('Beurre');
+
+      chooseSupprimerFor('Lait');
+
+      expect(
+        await screen.findByText("La modification n'a pas pu être enregistrée."),
+      ).toBeOnTheScreen();
+      expect(screen.queryByText('Supprimer « Lait » ?')).toBeNull();
+      expect(rendered.errorReporter.reports).toEqual([
+        {
+          error: expect.any(Error),
+          context: { operation: 'getArticleUsage', screen: 'AddArticles' },
+        },
+      ]);
+    });
+
+    it('SC-002 deletes in 3 taps: the menu, "Supprimer" and the confirmation', async () => {
+      const { unitOfWork } = await openFromCurrentList(deletionSeed);
+
+      fireEvent.press(
+        screen.getByRole('button', { name: "Plus d'actions pour « Beurre »" }),
+      );
+      fireEvent.press(screen.getByText('Supprimer'));
+      await screen.findByText('Supprimer « Beurre » ?');
+      fireEvent.press(screen.getByRole('button', { name: 'Supprimer' }));
+
+      expect(await screen.findByText('« Beurre » supprimé')).toBeOnTheScreen();
+      expect(
+        await unitOfWork.run((repos) => repos.articles.all()),
+      ).not.toContainEqual(expect.objectContaining({ name: 'Beurre' }));
+      expect(screen.queryByText('Beurre')).not.toBeOnTheScreen();
+    });
+
+    it('US2-8 shows "Aucun article dans cette catégorie" for the category left empty', async () => {
+      await openFromCurrentList(deletionSeed);
+      expect(screen.getByText('Eau')).toBeOnTheScreen();
+      // "Boissons" holds one article now, so it has no empty state yet.
+      expect(
+        screen.queryByText('Aucun article dans cette catégorie'),
+      ).not.toBeOnTheScreen();
+
+      chooseSupprimerFor('Eau');
+      await screen.findByText('Supprimer « Eau » ?');
+      fireEvent.press(screen.getByRole('button', { name: 'Supprimer' }));
+
+      // Waits on the snackbar: a failed `toBeNull` poll on the whole tree is too slow to retry.
+      await screen.findByText('« Eau » supprimé');
+      expect(screen.queryByText('Eau')).toBeNull();
+      expect(screen.getByText('Boissons')).toBeOnTheScreen();
+      expect(
+        screen.getByText('Aucun article dans cette catégorie'),
+      ).toBeOnTheScreen();
+    });
+
+    it('FR-037 moves screen reader focus to the screen title once the article is deleted', async () => {
+      jest.mocked(focusOn).mockClear();
+      await openFromCurrentList(deletionSeed);
+      chooseSupprimerFor('Eau');
+      await screen.findByText('Supprimer « Eau » ?');
+      fireEvent.press(screen.getByRole('button', { name: 'Supprimer' }));
+      await screen.findByText('« Eau » supprimé');
+
+      expect(
+        screen.getByRole('header', { name: 'Ajouter des articles' }),
+      ).toBeOnTheScreen();
+      // The last focus move is the one made when the dialog closed: the row is gone, so its
+      // target is the title, which is a View marked as a header.
+      const target = jest.mocked(focusOn).mock.calls.at(-1)?.[0].current;
+      expect(target).not.toBeNull();
+      expect(target).toMatchObject({ props: { accessibilityRole: 'header' } });
+    });
+
+    it('US2-5 "Annuler" brings the article back in the catalog and on both lists', async () => {
+      const { unitOfWork } = await openFromCurrentList(deletionSeed);
+      chooseSupprimerFor('Lait');
+      await screen.findByText('Supprimer « Lait » ?');
+      fireEvent.press(screen.getByRole('button', { name: 'Supprimer' }));
+      await screen.findByText('« Lait » supprimé');
+      // A boolean, so a failed poll does not format the whole tree and outlast the timeout.
+      await waitFor(() =>
+        expect(screen.queryByText('Lait') === null).toBe(true),
+      );
+
+      fireEvent.press(screen.getByRole('button', { name: 'Annuler' }));
+
+      expect(await screen.findByText('Lait')).toBeOnTheScreen();
+      for (const listId of [maListe, barbecue]) {
+        expect(
+          await unitOfWork.run((repos) => repos.items.find(listId, lait)),
+        ).not.toBeNull();
+      }
     });
   });
 });
