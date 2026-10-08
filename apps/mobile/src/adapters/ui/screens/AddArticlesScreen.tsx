@@ -35,6 +35,7 @@ type RowRefs = Map<ArticleId, HostInstance>;
 type CatalogRowProps = {
   article: CatalogArticle;
   open: (article: CatalogArticle) => void;
+  edit: (article: CatalogArticle) => void;
   rowRefs: RowRefs;
 };
 
@@ -42,9 +43,11 @@ type CatalogRowProps = {
 const CatalogRow = memo(function CatalogRow({
   article,
   open,
+  edit,
   rowRefs,
 }: CatalogRowProps) {
   const onPress = useCallback(() => open(article), [article, open]);
+  const onEdit = useCallback(() => edit(article), [article, edit]);
   const ref = useCallback(
     (node: HostInstance | null) => {
       if (node) rowRefs.set(article.id, node);
@@ -58,6 +61,7 @@ const CatalogRow = memo(function CatalogRow({
       name={article.name}
       onList={article.onList}
       onPress={onPress}
+      onEdit={onEdit}
     />
   );
 });
@@ -97,6 +101,12 @@ export const AddArticlesScreen = () => {
         : { mode: 'add', article: { id, name } },
     );
   }, []);
+
+  const edit = useCallback(
+    (article: CatalogArticle) =>
+      navigation.navigate('EditArticle', { articleId: article.id }),
+    [navigation],
+  );
 
   const closeDialog = () => {
     setRequest(null);
@@ -152,6 +162,7 @@ export const AddArticlesScreen = () => {
           <CatalogSections
             view={view}
             open={open}
+            edit={edit}
             rowRefs={rowRefs}
             createInCategory={(categoryId) => createArticle({ categoryId })}
           />
@@ -168,11 +179,13 @@ const rowId = (row: Row) =>
 const CatalogSections = ({
   view,
   open,
+  edit,
   rowRefs,
   createInCategory,
 }: {
   view: CatalogView;
   open: (article: CatalogArticle) => void;
+  edit: (article: CatalogArticle) => void;
   rowRefs: RowRefs;
   createInCategory: (categoryId: CategoryId) => void;
 }) => (
@@ -201,7 +214,7 @@ const CatalogSections = ({
           </Button>
         </View>
       ) : (
-        <CatalogRow article={item} open={open} rowRefs={rowRefs} />
+        <CatalogRow article={item} open={open} edit={edit} rowRefs={rowRefs} />
       )
     }
     stickySectionHeadersEnabled={false}

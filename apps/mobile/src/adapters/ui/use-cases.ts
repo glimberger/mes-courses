@@ -5,6 +5,7 @@ import { createChangeItemQuantity } from '../../application/use-cases/change-ite
 import { createCreateArticleAndAddToList } from '../../application/use-cases/create-article-and-add-to-list';
 import { createCreateCategory } from '../../application/use-cases/create-category';
 import { createCreateList } from '../../application/use-cases/create-list';
+import { createEditArticle } from '../../application/use-cases/edit-article';
 import { createFinishShopping } from '../../application/use-cases/finish-shopping';
 import { createGetCatalog } from '../../application/use-cases/get-catalog';
 import { createGetCategories } from '../../application/use-cases/get-categories';
@@ -70,6 +71,12 @@ export type UseCases = {
       NameError | NameAlreadyUsed<Article> | CategoryNotFound
     >
   >;
+  editArticle: (
+    articleId: ArticleId,
+    article: { name: string; categoryId: CategoryId },
+  ) => Promise<
+    Result<void, NameError | NameAlreadyUsed<Article> | ArticleNotFound>
+  >;
   changeItemQuantity: (
     listId: ListId,
     articleId: ArticleId,
@@ -115,6 +122,7 @@ export const createUseCases = (ports: {
   getCategories: createGetCategories(ports),
   addArticleToList: createAddArticleToList(ports),
   createArticleAndAddToList: createCreateArticleAndAddToList(ports),
+  editArticle: createEditArticle(ports),
   changeItemQuantity: createChangeItemQuantity(ports),
   removeItemFromList: createRemoveItemFromList(ports),
   restoreRemovedItem: createRestoreRemovedItem(ports),

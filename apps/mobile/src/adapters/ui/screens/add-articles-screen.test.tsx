@@ -304,4 +304,51 @@ describe('AddArticles', () => {
     expect(store.getState().catalog.query).toBe('');
     expect(store.getState().catalog.view.status).toBe('success');
   });
+
+  describe('"Plus d\'actions" → "Modifier" (002 US1)', () => {
+    /** The app on this seed, opened on AddArticles, with the row menu of "Lait" chosen. */
+    const chooseModifierFor = (name: string) => {
+      fireEvent.press(
+        screen.getByRole('button', { name: `Plus d'actions pour « ${name} »` }),
+      );
+      fireEvent.press(screen.getByText('Modifier'));
+    };
+
+    it('FR-001 opens EditArticle for that article while browsing by category', async () => {
+      await openFromCurrentList();
+
+      chooseModifierFor('Beurre');
+
+      expect(await screen.findByText("Modifier l'article")).toBeOnTheScreen();
+      expect(screen.getByLabelText('Nom')).toHaveDisplayValue('Beurre');
+    });
+
+    it('FR-001 opens EditArticle for that article in the search results', async () => {
+      await openFromCurrentList();
+      search('pât');
+      await screen.findByText('Pâte');
+
+      chooseModifierFor('Pâte');
+
+      expect(await screen.findByText("Modifier l'article")).toBeOnTheScreen();
+      expect(screen.getByLabelText('Nom')).toHaveDisplayValue('Pâte');
+    });
+
+    it('US1-3 after saving, the search results show the new name', async () => {
+      await openFromCurrentList();
+      search('pât');
+      await screen.findByText('Pâte');
+      chooseModifierFor('Pâte');
+      await screen.findByText("Modifier l'article");
+
+      fireEvent.changeText(screen.getByLabelText('Nom'), 'Pâte brisée');
+      fireEvent.press(screen.getByRole('button', { name: 'Enregistrer' }));
+
+      expect(await screen.findByText('Pâte brisée')).toBeOnTheScreen();
+      expect(screen.queryByText('Pâte')).not.toBeOnTheScreen();
+      expect(
+        screen.getByPlaceholderText('Rechercher un article'),
+      ).toHaveDisplayValue('pât');
+    });
+  });
 });

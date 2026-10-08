@@ -19,6 +19,8 @@ export type AppStoryParameters = {
    * startup and crash screens.
    */
   withoutStore?: boolean;
+  /** The route params of a screen story. */
+  routeParams?: object;
 };
 
 // One object, so a story without a scenario keeps its store when the decorator renders again.
@@ -67,7 +69,7 @@ export const withAppProviders = (
         <Story />
       ) : (
         <WithStoryStore scenario={parameters.scenario ?? EMPTY_SCENARIO}>
-          <AsScreen>
+          <AsScreen params={parameters.routeParams}>
             <Story />
           </AsScreen>
         </WithStoryStore>
