@@ -1196,6 +1196,7 @@ FR-030a, FR-039a).
 | Yarn 4 (through Corepack, pinned by `packageManager`; not an app dependency) | Package manager and workspaces for the monorepo (R20, Principle XI), chosen by the maintainer. |
 | `expo`, `react-native`, `react` | Chosen platform (R1). |
 | `react-native-paper`, `react-native-safe-area-context`, `@expo/vector-icons`, `expo-font` (a peer dependency of `@expo/vector-icons`) | Material 3 design system (R2, Principle V). |
+| A Yarn patch of `react-native-paper` 5.15.3 (`.yarn/patches/`, no new package) | Its `Dialog` drops the `Modal` option that labels the backdrop, so every dialog backdrop read "Close modal" in English to VoiceOver (FR-031, FR-032); the patch hands it on (T132, added 2026-10-08). |
 | `@react-navigation/native`, `@react-navigation/native-stack`, `react-native-screens` | Navigation between screens (R3). |
 | `zustand` | Application state shared by every screen (R10), chosen by the maintainer. |
 | `expo-sqlite` | On-device storage (R4, Principle VII). |

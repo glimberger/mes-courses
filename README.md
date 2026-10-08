@@ -2,12 +2,26 @@
 
 A shopping list application, developed with strict Test-Driven Development.
 
-The app is an offline-first Expo (React Native) project for Android and iOS. The first feature,
-[001 shopping lists](specs/001-shopping-lists/spec.md), is being built: the repository tooling is
-in place and the application code is added task by task from
-[`tasks.md`](specs/001-shopping-lists/tasks.md).
+The app is an offline-first Expo (React Native) project for Android and iOS, in French. With the
+first feature, [001 shopping lists](specs/001-shopping-lists/spec.md), you keep several named
+shopping lists on your phone and choose the current one; you add articles from a catalog sorted
+in categories, by browsing or searching, or create them on the way, with an optional quantity
+("2 L", "1,5 kg"); in the store you tick items into the cart, then finish shopping, which unticks
+them all for next time. A removed item can be put back with "Annuler". Everything works with no
+network: the data lives only on the device until server synchronization comes
+([003](specs/003-server-sync/spec.md)).
 Its governing principles are in [`.specify/memory/constitution.md`](.specify/memory/constitution.md),
 and its Material 3 color theme is in [`design/material-theme.json`](design/material-theme.json).
+
+## Architecture
+
+The app follows a hexagonal architecture (constitution Principle VI, enforced by
+dependency-cruiser): the pure `domain/` holds the rules (names, quantities, list views); the
+`application/` layer holds the use cases and the ports they need (repositories, unit of work, ids,
+error reporting); `adapters/` implement those ports (SQLite through `expo-sqlite`, Sentry, UUIDs)
+and drive them from the UI, a React Native Paper interface whose shared state is a Zustand store
+that lives in the UI adapter only; `composition/` is the one module that knows every adapter and
+wires them at startup. French text exists only in the UI adapter.
 
 ## Development workflow
 
@@ -57,6 +71,10 @@ yarn install     # at the repository root, installs every workspace
 Yarn only installs a version that was published at least a day ago (`npmMinimalAgeGate`), so a
 brand-new release is ignored until then.
 
+React Native Paper carries one Yarn patch (`.yarn/patches/`): its `Dialog` passes
+`overlayAccessibilityLabel` on to its `Modal`, so screen readers read the dialog backdrop in
+French. Check it still applies when Paper is upgraded, and drop it once Paper does this itself.
+
 `yarn install` also installs the Git hooks ([Lefthook](https://lefthook.dev), `lefthook.yml`).
 Before each commit, Prettier formats the staged files and stages the result, then Talisman
 checks what is about to be committed. Install Talisman first, or the hook fails.
@@ -89,7 +107,10 @@ React Native code and images" step with "An organization ID or slug is required"
 `SENTRY_ORG` and `SENTRY_PROJECT` are set (see [EAS builds and error tracking](#eas-builds-and-error-tracking)).
 
 `yarn storybook` is the on-device catalog of the screens. A bundle built without
-`STORYBOOK_ENABLED` holds no Storybook code.
+`STORYBOOK_ENABLED` holds no Storybook code. To review a pull request that changes the UI, open
+each story it lists ([quickstart §2](specs/001-shopping-lists/quickstart.md#2-review-the-screens-in-storybook)):
+the text is French, colors come from the theme in light and dark mode, and at 200% system text
+the long names wrap without being cut. `yarn start` brings the app back.
 
 `EXPO_PUBLIC_SENTRY_DSN` is optional: it sends error reports to Sentry. Without it, errors go to
 the console only.
@@ -151,11 +172,79 @@ yarn test:e2e:android    # builds the release APK, then runs the journeys on the
 yarn test:e2e:ios        # the same on the iOS simulator (macOS)
 ```
 
+Run the iOS journeys before every release and on every pull request that changes native
+configuration (`apps/mobile/app.config.ts`, a config plugin or a native dependency), and record
+the run in that pull request's test plan.
+
 Three variables choose the device: `DETOX_AVD_NAME` (default `Pixel_API_35`), `DETOX_IOS_DEVICE`
 (default `iPhone 16`) and `DETOX_IOS_OS` (for example `iOS 26.5`, when several runtimes have the
 same device). The Android journeys need an emulator of API 35 or lower: Detox 20 does not run on
 API 37. iOS 27 has no "iPhone 16" simulator: there, run
 `DETOX_IOS_DEVICE="iPhone 17" DETOX_IOS_OS="iOS 27.0" yarn test:e2e:ios`.
+
+## Build-time flags
+
+Two flags turn on test-only code at build time. Builds for users never set them: a `production`
+build that sets either one stops while reading its configuration and names it, as it does for
+`STORYBOOK_ENABLED`, `DETOX_BUILD` and a Sentry DSN outside the EU region
+(`apps/mobile/build-config/release-guard.cjs`).
+
+| Flag                                   | What it does                                                                                                                                                                                                             |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `EXPO_PUBLIC_SEED_ITEMS=<n>`           | Fills an empty store, on first launch, to the spec's data size: 1 000 French articles (100 at the 60-character limit), 20 lists, `n` items on the current list (half ticked, half with "2 kg") and 50 on each other list |
+| `EXPO_PUBLIC_SENTRY_SMOKE_TEST=1`      | Reports one test error at startup, on `CurrentList`                                                                                                                                                                      |
+| `EXPO_PUBLIC_SENTRY_SMOKE_TEST=native` | Crashes the app in native code 10 seconds after startup                                                                                                                                                                  |
+
+For example, `EXPO_PUBLIC_SEED_ITEMS=200 eas build --profile preview` makes the measurement build.
+
+## Device checks
+
+Some requirements need a person and a phone: timings, frame rate, the screen reader, 200% text,
+contrast as seen, a power cut, the system backup and the error tracking delivery. They are the
+hands-on steps of [quickstart.md](specs/001-shopping-lists/quickstart.md) §5 and §6, run before
+every release on the code it is built from, each result recorded in the test plan of the pull
+request that leads to it.
+
+The performance targets (SC-001 start time, SC-002 tick latency, SC-008 frame rate, SC-011 add
+screen) are measured on the two reference phones, an entry-level Android phone about five years
+old and the maintainer's iPhone, with the seeded `preview` build (`EXPO_PUBLIC_SEED_ITEMS=200`)
+and the setup of [research R11](specs/001-shopping-lists/research.md): screen at 60 Hz, airplane
+mode on, battery saver off, screen reader off, default text size, light theme, other apps closed.
+A target missed on either phone blocks the release until a fix meets it; the pull request records
+the miss, its cause and the new measurement.
+
+## Releases
+
+A release is a `production` build, the only kind meant for users; `preview` and `development`
+builds are not releases ([quickstart §8](specs/001-shopping-lists/quickstart.md#8-release-spec-success-criteria-researchmd-r24)).
+
+1. A pull request sets `version` in `apps/mobile/app.config.ts` (semantic versioning: MINOR for a
+   new feature, PATCH for fixes only) and records in its test plan every manual check of
+   quickstart §5 and §6 and the iOS device suite, on its last commit.
+2. Once it is merged, from `main` at its squash commit with nothing merged after it:
+   `eas build --profile production --platform all`.
+3. `eas submit --profile production --platform all` sends the Android build to Google Play's
+   internal testing track and the iOS build to TestFlight. The very first Android upload is made
+   once by hand in the Play Console.
+4. Install the update on both phones and check the lists are still there.
+
+A faulty release is fixed forward, never rolled back: a new pull request with the fix, then these
+steps again. An older version does not open data saved by a newer one (FR-040).
+
+## Privacy and security
+
+- Error reports go to Sentry's EU region (Frankfurt). An organization created in the US region
+  cannot be moved and is replaced by a new EU one; the release guard refuses a DSN outside the EU.
+- The Expo, Sentry, Google Play Console, App Store Connect and GitHub accounts use two-factor
+  sign-in.
+- Dependabot security alerts are turned on in the repository settings, with no update bot and no
+  automatic pull request; an alert is fixed like any defect.
+- A lost or exposed Android upload identity is reset through Google Play support (Google Play App
+  Signing keeps the app's own signing identity); an iOS certificate is revoked and made again with
+  `eas credentials`. Neither affects the data on the phones.
+- While the app reaches only the maintainer's own phones, sending error reports is personal use.
+  It must not reach anyone else (other testers or a store listing) before a privacy notice and a
+  lawful basis for sending reports exist (spec Assumptions).
 
 ## Merging a pull request
 
