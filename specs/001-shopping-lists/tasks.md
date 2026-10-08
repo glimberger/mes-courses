@@ -540,12 +540,12 @@ current.
 
 ### Tests for User Story 3 ⚠️ (write first, confirm they fail)
 
-- [ ] T108 [US3] Write the failing journeys:
+- [X] T108 [US3] Write the failing journeys:
   - `tests/e2e/journeys/several-lists.e2e.ts`: with "Lait" ticked on "Ma liste", create "Barbecue", make it current from "Mes listes", add "Lait" (unticked there), switch back: "Ma liste" is untouched and "Lait" is still ticked on it (US3-2, US3-3, US3-4, US3-8, US2-5);
   - extend `tests/e2e/journeys/persistence.e2e.ts`: make "Barbecue" current, terminate and relaunch: "Barbecue" is still the current list.
 
   Confirm they fail.
-- [ ] T109 [P] [US3] Write failing use case tests on fakes in `apps/mobile/src/application/use-cases/`:
+- [X] T109 [P] [US3] Write failing use case tests on fakes in `apps/mobile/src/application/use-cases/`:
   - `get-lists.test.ts`: lists sorted by name with `compareNames` ("Liste 2" before "Liste 10"), each with `itemCount` counting ticked and unticked items alike and `isCurrent` (US3-8);
   - `create-list.test.ts`:
     - US3-2, FR-024: an empty list is created and is not made current;
@@ -554,11 +554,11 @@ current.
     - `NameTooLong`;
   - `set-current-list.test.ts`: US3-3 and FR-025, persisted across a new store instance on the same fakes; `ListNotFound`;
   - FR-026 / US3-4: ticking "Lait" on one list leaves it unticked on another.
-- [ ] T110 [P] [US3] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.lists.test.ts`:
+- [X] T110 [P] [US3] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.lists.test.ts`:
   - `loadLists()` uses the region states and reports `{ operation: 'getLists', screen: 'Lists' }` on failure (US3-7);
   - `createList` returns its `Result` and refreshes;
   - `setCurrentList` refreshes, so `currentList` shows the new list.
-- [ ] T111 [US3] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/lists-screen.test.tsx`:
+- [X] T111 [US3] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/lists-screen.test.tsx`:
   - Appbar "Mes listes";
   - US3-7: loading; the error "Impossible de charger vos listes." with "Réessayer", reported;
   - US3-8: rows show the name, "{n} articles" / "1 article", and "Liste actuelle" with a check icon and text;
@@ -566,7 +566,7 @@ current.
   - US3-3, FR-002: tapping a list makes it current and returns to CurrentList, which shows "Barbecue";
   - FR-025: tapping the current list returns to CurrentList without calling `setCurrentList`, and a pending undo offer stays;
   - SC-005: two taps from CurrentList ("Mes listes", then the list).
-- [ ] T112 [US3] Write failing dialog tests in `apps/mobile/src/adapters/ui/screens/create-list-dialog.test.tsx`:
+- [X] T112 [US3] Write failing dialog tests in `apps/mobile/src/adapters/ui/screens/create-list-dialog.test.tsx`:
   - title "Nouvelle liste", buttons "Annuler" / "Créer";
   - US3-2, FR-024: the list appears empty in Lists, in its alphabetical place, the dialog closes on Lists and "Ma liste" stays current;
   - US3-5: "Une liste porte déjà ce nom.";
@@ -575,12 +575,12 @@ current.
 
 ### Implementation for User Story 3
 
-- [ ] T113 [US3] Implement `get-lists.ts`, `create-list.ts` and `set-current-list.ts` in `apps/mobile/src/application/use-cases/` to turn T109 green, per [contracts/driving-ports.md](contracts/driving-ports.md#named-lists-user-story-3). Add them to `UseCases` and to the composition root.
-- [ ] T114 [US3] Add the `lists` region and the `loadLists`, `createList` and `setCurrentList` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T110 green.
-- [ ] T115 [US3] Implement `ListsScreen.tsx` (with the FAB "Nouvelle liste") in `apps/mobile/src/adapters/ui/screens/` and replace its placeholder in `navigation.tsx`, to turn T111 green.
-- [ ] T116 [US3] Implement `CreateListDialog.tsx` in `apps/mobile/src/adapters/ui/screens/`, with the focus moves of FR-037, to turn T112 green.
-- [ ] T117 [US3] Add `Screens/Lists/Loading`, `.../Error`, `.../Success`, `Dialogs/CreateListDialog/Default` and `.../NameAlreadyUsed` to `required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/screens/ListsScreen.stories.tsx` (pending and failing `getLists`, two lists with the current one marked) and `CreateListDialog.stories.tsx` (the error story renders the form with "Une liste porte déjà ce nom.") to turn it green. Review them in Storybook.
-- [ ] T118 [US3] Make the T108 journeys green with `yarn test:e2e:android` and `yarn test:e2e:ios`.
+- [X] T113 [US3] Implement `get-lists.ts`, `create-list.ts` and `set-current-list.ts` in `apps/mobile/src/application/use-cases/` to turn T109 green, per [contracts/driving-ports.md](contracts/driving-ports.md#named-lists-user-story-3). Add them to `UseCases` and to the composition root.
+- [X] T114 [US3] Add the `lists` region and the `loadLists`, `createList` and `setCurrentList` actions to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T110 green.
+- [X] T115 [US3] Implement `ListsScreen.tsx` (with the FAB "Nouvelle liste") in `apps/mobile/src/adapters/ui/screens/` and replace its placeholder in `navigation.tsx`, to turn T111 green.
+- [X] T116 [US3] Implement `CreateListDialog.tsx` in `apps/mobile/src/adapters/ui/screens/`, with the focus moves of FR-037, to turn T112 green.
+- [X] T117 [US3] Add `Screens/Lists/Loading`, `.../Error`, `.../Success`, `Dialogs/CreateListDialog/Default` and `.../NameAlreadyUsed` to `required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/screens/ListsScreen.stories.tsx` (pending and failing `getLists`, two lists with the current one marked) and `CreateListDialog.stories.tsx` (the error story renders the form with "Une liste porte déjà ce nom.") to turn it green. Review them in Storybook.
+- [X] T118 [US3] Make the T108 journeys green with `yarn test:e2e:android` and `yarn test:e2e:ios`.
 
 **Checkpoint**: several lists, each with its own items and ticks; the current list survives a
 restart.

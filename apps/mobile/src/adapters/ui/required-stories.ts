@@ -44,4 +44,10 @@ export const requiredStories: readonly string[] = [
   'Dialogs/QuantityDialog/Edit',
   'Dialogs/QuantityDialog/AlreadyOnList',
   'Dialogs/QuantityDialog/InvalidAmount',
+  // User Story 3
+  'Screens/Lists/Loading',
+  'Screens/Lists/Error',
+  'Screens/Lists/Success',
+  'Dialogs/CreateListDialog/Default',
+  'Dialogs/CreateListDialog/NameAlreadyUsed',
 ];

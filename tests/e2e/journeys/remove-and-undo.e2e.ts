@@ -1,4 +1,4 @@
-import { by, device, element, expect } from 'detox';
+import { by, device, element, expect, waitFor } from 'detox';
 
 import {
   backToList,
@@ -23,9 +23,10 @@ describe('remove an item and undo', () => {
     await expectRow('Beurre, 2 kg, dans le caddie');
 
     await removeRow('Beurre, 2 kg, dans le caddie');
-    await expect(
-      element(by.text('« Beurre » retiré de la liste')),
-    ).toBeVisible();
+    // The snackbar slides in.
+    await waitFor(element(by.text('« Beurre » retiré de la liste')))
+      .toBeVisible()
+      .withTimeout(2000);
     await expect(
       element(by.label('Beurre, 2 kg, dans le caddie')),
     ).not.toExist();

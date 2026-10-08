@@ -115,3 +115,30 @@ export const removeRow = (rowLabel: string) =>
   element(by.label(rowLabel)).performAccessibilityAction(
     device.getPlatform() === 'ios' ? 'Retirer de la liste' : 'remove',
   );
+
+/** From the current list, opens Lists with the Appbar action "Mes listes". */
+export const openLists = async () => {
+  await element(by.label('Mes listes')).tap();
+  await expect(element(by.text('Nouvelle liste'))).toBeVisible();
+};
+
+/** From Lists, creates an empty list with the FAB "Nouvelle liste"; ends back on Lists. */
+export const createList = async (name: string) => {
+  // The FAB and the text inside it match: tapping either opens the dialog.
+  await element(by.label('Nouvelle liste')).atIndex(0).tap();
+  await typeInto('Nom', name);
+  await element(by.label('Créer')).tap();
+};
+
+/**
+ * From Lists, makes the list of this row current, which goes back to the current list, showing
+ * it under its name.
+ */
+export const chooseList = async (rowLabel: string, name: string) => {
+  await element(by.label(rowLabel)).tap();
+  // Lists shows the name too: the current list is shown once Lists and its FAB are gone.
+  await waitFor(element(by.text('Nouvelle liste')))
+    .not.toExist()
+    .withTimeout(2000);
+  await expect(element(by.text(name))).toBeVisible();
+};
