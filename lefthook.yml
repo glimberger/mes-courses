@@ -1,0 +1,12 @@
+# Git hooks, installed by `yarn install` (the postinstall script runs `lefthook install`).
+# Jobs run in order: Prettier formats the staged files and stages the result, then Talisman
+# checks what is about to be committed.
+pre-commit:
+  jobs:
+    - name: prettier
+      run: yarn prettier --write --ignore-unknown {staged_files}
+      stage_fixed: true
+
+    # Talisman is not installed through Yarn: see the README.
+    - name: talisman
+      run: talisman --githook pre-commit

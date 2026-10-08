@@ -37,6 +37,8 @@ This is a Yarn workspaces monorepo ([research R20](specs/001-shopping-lists/rese
 - [Nix](https://nixos.org/download) with flakes enabled. The dev shell provides Node.js 24, Yarn 4
   (through Corepack, the version comes from `packageManager`) and watchman. Optionally
   [`direnv`](https://direnv.net) with `nix-direnv`, so the shell loads when you enter the folder.
+- [Talisman](https://github.com/thoughtworks/talisman) on `PATH` (for example
+  `brew install talisman`): the pre-commit hook runs it to block potential secrets.
 - For device builds: Android Studio (Android) or Xcode (iOS, macOS only).
 - For the end-to-end journeys: an Android emulator named `Pixel_API_35` (or the name in
   `DETOX_AVD_NAME`) and a JDK 17; on macOS, for iOS, Xcode and
@@ -54,6 +56,10 @@ yarn install     # at the repository root, installs every workspace
 
 Yarn only installs a version that was published at least a day ago (`npmMinimalAgeGate`), so a
 brand-new release is ignored until then.
+
+`yarn install` also installs the Git hooks ([Lefthook](https://lefthook.dev), `lefthook.yml`).
+Before each commit, Prettier formats the staged files and stages the result, then Talisman
+checks what is about to be committed. Install Talisman first, or the hook fails.
 
 ## Check
 
