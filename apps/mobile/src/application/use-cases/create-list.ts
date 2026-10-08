@@ -1,13 +1,9 @@
-import {
-  normalizedName,
-  validateName,
-  type NameAlreadyUsed,
-  type NameError,
-} from '../../domain/name';
-import { err, ok, type Result } from '../../domain/result';
+import type { NameAlreadyUsed, NameError } from '../../domain/name';
+import { ok, type Result } from '../../domain/result';
 import type { ListId, ShoppingList } from '../../domain/shopping-list';
 import type { IdGenerator } from '../ports/id-generator';
 import type { UnitOfWork } from '../ports/unit-of-work';
+import { uniqueName } from './unique-name';
 
 /**
  * Creates an empty list, its name cleaned (FR-022), without making it current (US3-2, FR-024).
@@ -21,14 +17,10 @@ export const createCreateList =
     Result<{ listId: ListId }, NameError | NameAlreadyUsed<ShoppingList>>
   > =>
     unitOfWork.run(async (repos) => {
-      const validated = validateName(name);
-      if (!validated.ok) return validated;
-      const existing = await repos.lists.findByNormalizedName(
-        normalizedName(validated.value),
-      );
-      if (existing) return err({ type: 'NameAlreadyUsed', existing });
+      const unique = await uniqueName(repos.lists, name);
+      if (!unique.ok) return unique;
 
       const listId = ids.next() as ListId;
-      await repos.lists.add({ id: listId, name: validated.value });
+      await repos.lists.add({ id: listId, name: unique.value });
       return ok({ listId });
     });
