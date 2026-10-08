@@ -2,6 +2,11 @@ import type { ExpoConfig } from 'expo/config';
 
 import { withAndroidAnrOff } from './build-config/android-anr-off.cjs';
 import { withAndroidNoMinify } from './build-config/android-no-minify.cjs';
+import { assertNoTestOptionsInProduction } from './build-config/release-guard.cjs';
+
+// A `production` build stops here when it carries a test-only option or a DSN outside the EU
+// (research R24, R25).
+assertNoTestOptionsInProduction(process.env);
 
 // Detox's native changes (test runner, cleartext traffic to the emulator host) go only into
 // builds made for the end-to-end tests (research R23, R25).
