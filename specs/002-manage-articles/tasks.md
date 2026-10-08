@@ -53,7 +53,7 @@ listed in [contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-e
 
 **Purpose**: start from a green 001 baseline.
 
-- [ ] T001 Branch from `origin/main` with 001 merged. Run `yarn typecheck && yarn lint && yarn format:check && yarn test && yarn test:architecture` and `yarn test:e2e:android` and confirm it is all green before any change. If 001 was built without the store of [contracts/ui-state.md](contracts/ui-state.md), stop: the first task is then a refactoring that moves 001's screens onto it with their tests kept green ([plan.md](plan.md#implementation-notes-for-speckit-tasks)).
+- [ ] T001 Branch from `origin/main` (`git fetch`, then `git switch -c feat/002-manage-articles origin/main`) with 001 merged. Run `yarn typecheck && yarn lint && yarn format:check && yarn test && yarn test:architecture` and `yarn test:e2e:android` and confirm it is all green before any change.
 
 ---
 
@@ -108,7 +108,7 @@ ticked states unchanged.
 ### Tests for User Story 1 ⚠️ (write first, confirm they fail)
 
 - [ ] T010 [US1] Write the failing journey `tests/e2e/journeys/rename-article.e2e.ts` ([contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-end-journeys)): on a fresh install, create "Lait", add it to "Ma liste" with "2" "L" and tick it, create "Barbecue" and add "Lait" there; from the catalog, "Plus d'actions pour « Lait »" → "Modifier", rename it "Lait demi-écrémé", save; both lists show the new name with the ticked state and quantity kept; `device.terminateApp()` then `device.launchApp({ newInstance: true })`: still renamed (002 US1-1, US1-2, SC-005). Run `yarn test:e2e:android` and confirm it fails on the missing menu.
-- [ ] T011 [P] [US1] Write failing domain tests for the edit rule in `apps/mobile/src/domain/article.test.ts`. The name follows 001's rules: "cleaned, non-blank, ≤ 60 characters". Uniqueness is "by `normalizedName` among **other** articles":
+- [ ] T011 [P] [US1] Add failing tests for the edit rule to `apps/mobile/src/application/use-cases/unique-name.test.ts`, where 001 keeps the shared naming rule (`uniqueName`). The name follows 001's rules: "cleaned, non-blank, ≤ 60 characters". With a new optional "ignore" argument, uniqueness is "by `normalizedName` among **other** articles":
   - a name used by another article → `NameAlreadyUsed` carrying that article (002 US1-4: " beurre " while "Beurre" exists);
   - the article's own name with a different case or spaces is accepted (002 US1-5: "Lait" → "lait", and "Pommes de terre" → "Pommes  de terre");
   - `NameRequired` / `NameTooLong` (002 US1-6).
@@ -137,7 +137,7 @@ ticked states unchanged.
 
 ### Implementation for User Story 1
 
-- [ ] T016 [P] [US1] Implement the edit rule (validate the name, then check uniqueness against `findByNormalizedName` ignoring the article itself) in `apps/mobile/src/domain/article.ts` to turn T011 green ([research.md](research.md) R3).
+- [ ] T016 [P] [US1] Extend `uniqueName` in `apps/mobile/src/application/use-cases/unique-name.ts` with an optional `isSelf: (existing: T) => boolean` argument: a match for which it returns true is not a conflict. Do not add a second uniqueness rule in the domain. This turns T011 green ([research.md](research.md) R3).
 - [ ] T017 [US1] Implement `editArticle(articleId, { name, categoryId })` in `apps/mobile/src/application/use-cases/edit-article.ts`, per [contracts/driving-ports.md](contracts/driving-ports.md): validate everything before writing, then one `articles.update` inside `UnitOfWork.run`. This turns T012 green. Add it to `UseCases` in `apps/mobile/src/adapters/ui/use-cases.ts` and to `apps/mobile/src/composition/composition-root.ts`.
 - [ ] T018 [US1] Add the `editArticle` action to `apps/mobile/src/adapters/ui/state/app-store.ts`, through the shared write rules, to turn T013 green.
 - [ ] T019 [US1] Implement `apps/mobile/src/adapters/ui/screens/EditArticleScreen.tsx` with the name field only; the category field comes in US3, and saving passes the current `categoryId`. Register the `EditArticle` route (param `articleId`) in `apps/mobile/src/adapters/ui/navigation.tsx`. This turns T014 green.
@@ -313,7 +313,7 @@ Task: "T037 deletedArticle text in UndoSnackbar.tsx"
 ## Parallel Example: User Story 1
 
 ```bash
-Task: "T011 edit rule tests in apps/mobile/src/domain/article.test.ts"
+Task: "T011 edit rule tests in apps/mobile/src/application/use-cases/unique-name.test.ts"
 Task: "T012 editArticle tests in apps/mobile/src/application/use-cases/edit-article.test.ts"
 Task: "T013 store tests in apps/mobile/src/adapters/ui/state/app-store.edit-article.test.ts"
 ```
