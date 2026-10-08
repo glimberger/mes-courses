@@ -1,8 +1,9 @@
 import { memo, type Ref } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type HostInstance } from 'react-native';
 import { Chip, Text, TouchableRipple } from 'react-native-paper';
 
 import { spacing } from '../theme/spacing';
+import { paperRef } from './paper-ref';
 
 export type ArticleRowProps = {
   name: string;
@@ -10,7 +11,7 @@ export type ArticleRowProps = {
   onList: boolean;
   onPress: () => void;
   /** The row screen readers focus, for a focus move (FR-037). */
-  ref?: Ref<View>;
+  ref?: Ref<HostInstance>;
 };
 
 /**
@@ -26,7 +27,7 @@ export const ArticleRow = memo(function ArticleRow({
 }: ArticleRowProps) {
   return (
     <TouchableRipple
-      ref={ref}
+      ref={paperRef(ref)}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={onList ? `${name}, déjà dans la liste` : name}

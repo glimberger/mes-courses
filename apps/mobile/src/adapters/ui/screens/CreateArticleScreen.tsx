@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  type HostInstance,
 } from 'react-native';
 import {
   Appbar,
@@ -36,6 +37,7 @@ import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
 import { CreateCategoryDialog } from './CreateCategoryDialog';
 import { QuantityDialog, type QuantityRequest } from './QuantityDialog';
+import { paperRef } from '../components/paper-ref';
 
 const NO_CATEGORY = 'Choisissez une catégorie.';
 
@@ -77,8 +79,8 @@ export const CreateArticleScreen = () => {
   const [saving, setSaving] = useState(false);
   const [request, setRequest] = useState<QuantityRequest | null>(null);
   const [creatingCategory, setCreatingCategory] = useState(false);
-  const addExistingRef = useRef<View>(null);
-  const newCategoryRef = useRef<View>(null);
+  const addExistingRef = useRef<HostInstance>(null);
+  const newCategoryRef = useRef<HostInstance>(null);
 
   const chooseCategory = (id: CategoryId) => {
     setCategoryId(id);
@@ -206,7 +208,7 @@ const CategoryPicker = ({
   value: CategoryId | null;
   onChange: (id: CategoryId) => void;
   onNewCategory: () => void;
-  newCategoryRef?: Ref<View> | undefined;
+  newCategoryRef?: Ref<HostInstance> | undefined;
   saving: boolean;
 }) => {
   const categories = useAppStore((state) => state.categories);
@@ -236,7 +238,7 @@ const CategoryPicker = ({
             ))}
           </RadioButton.Group>
           <Button
-            ref={newCategoryRef}
+            ref={paperRef(newCategoryRef)}
             icon="plus"
             disabled={saving}
             onPress={onNewCategory}
@@ -258,7 +260,7 @@ export type CreateArticleFormProps = {
   /** The article that already has the name, offered to be added instead (US2-9). */
   existingName: string | null;
   onAddExisting: () => void;
-  addExistingRef?: Ref<View> | undefined;
+  addExistingRef?: Ref<HostInstance> | undefined;
   amount: string;
   unit: string;
   onChangeAmount: (text: string) => void;
@@ -269,7 +271,7 @@ export type CreateArticleFormProps = {
   /** Opens CreateCategoryDialog (US4-2). */
   onNewCategory: () => void;
   /** "Nouvelle catégorie", which takes focus back when the dialog closes (FR-037). */
-  newCategoryRef?: Ref<View> | undefined;
+  newCategoryRef?: Ref<HostInstance> | undefined;
   categoryMissing: boolean;
   saving: boolean;
   onSubmit: () => void;
@@ -322,7 +324,7 @@ export const CreateArticleForm = ({
         <NameField value={name} onChangeText={onChangeName} error={nameError} />
         {existingName !== null && (
           <Button
-            ref={addExistingRef}
+            ref={paperRef(addExistingRef)}
             mode="outlined"
             disabled={saving}
             onPress={onAddExisting}

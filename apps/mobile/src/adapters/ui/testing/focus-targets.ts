@@ -27,8 +27,9 @@ export const recordFocusTargets = (
   const targets: string[] = [];
   mocked.mockImplementation((target) => {
     setTimeout(() => {
-      const props = (target as RefObject<{ props: Record<string, unknown> }>)
-        .current?.props;
+      const props = (
+        target as unknown as RefObject<{ props: Record<string, unknown> }>
+      ).current?.props;
       targets.push(
         (props?.accessibilityLabel as string | undefined) ??
           textOf(props?.children),

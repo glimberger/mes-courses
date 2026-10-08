@@ -1,5 +1,5 @@
 import type { Ref } from 'react';
-import type { View } from 'react-native';
+import type { HostInstance } from 'react-native';
 import { Button } from 'react-native-paper';
 
 import { StateLayout } from './StateLayout';
@@ -9,7 +9,7 @@ export interface EmptyStateProps {
   message: string;
   action?: { label: string; onPress: () => void };
   /** The message, for a focus move to the empty state (FR-037). */
-  messageRef?: Ref<View> | undefined;
+  messageRef?: Ref<HostInstance> | undefined;
 }
 
 /** A data region with nothing to show, and what the user can do about it (Principle IX). */

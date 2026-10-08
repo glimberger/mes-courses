@@ -21,6 +21,12 @@ fileignoreconfig:
   # The ESLint selectors name the `key` field of an AST property node, which trips the pattern detector.
   - filename: eslint.config.mjs
     ignore_detectors: [filecontent]
+  # Gradle properties are `{ type, key, value }` items in Expo's config plugin API, which trips the
+  # pattern detector.
+  - filename: apps/mobile/build-config/android-no-minify.cjs
+    ignore_detectors: [filecontent]
+  - filename: apps/mobile/build-config/android-no-minify.test.ts
+    ignore_detectors: [filecontent]
   # `key` and `restore-keys` are the cache inputs of actions/cache, not secrets.
   - filename: .github/workflows/ci.yml
     ignore_detectors: [filecontent]

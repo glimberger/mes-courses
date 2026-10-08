@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View, type HostInstance } from 'react-native';
 import { Appbar } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 
@@ -43,7 +43,7 @@ export const ListsScreen = () => {
   const loadLists = useAppStore((state) => state.loadLists);
   const setCurrentList = useAppStore((state) => state.setCurrentList);
   const [creating, setCreating] = useState(false);
-  const fabRef = useRef<View>(null);
+  const fabRef = useRef<HostInstance>(null);
 
   useEffect(() => {
     void loadLists();

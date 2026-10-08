@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type Ref } from 'react';
-import { View } from 'react-native';
+import { View, type HostInstance } from 'react-native';
 import { Button, Dialog, Portal } from 'react-native-paper';
 
 import type { NameAlreadyUsed, NameError } from '../../../domain/name';
@@ -45,7 +45,7 @@ export const CreateNamedDialog = <T,>({
   const [saving, setSaving] = useState(false);
   // Set at once, so a second tap before the next render does not create a second entity.
   const savingRef = useRef(false);
-  const titleRef = useRef<View>(null);
+  const titleRef = useRef<HostInstance>(null);
 
   // Screen reader focus goes to the title when the dialog opens (FR-037).
   useEffect(() => {
@@ -99,7 +99,7 @@ export const CreateNamedDialog = <T,>({
 export type CreateNamedDialogFormProps = {
   title: string;
   /** The title, which takes screen reader focus when the dialog opens (FR-037). */
-  titleRef?: Ref<View> | undefined;
+  titleRef?: Ref<HostInstance> | undefined;
   name: string;
   onChangeName: (text: string) => void;
   /** The French name error, if any. */

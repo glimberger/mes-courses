@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type Ref } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type HostInstance } from 'react-native';
 import { Button, Dialog, Portal, Text } from 'react-native-paper';
 
 import type { ArticleId } from '../../../domain/article';
@@ -62,7 +62,7 @@ const QuantityForm = ({
   const [saving, setSaving] = useState(false);
   // Set at once, so a second tap before the next render does not save twice.
   const savingRef = useRef(false);
-  const titleRef = useRef<View>(null);
+  const titleRef = useRef<HostInstance>(null);
 
   // Screen reader focus goes to the title when the dialog opens (FR-037).
   useEffect(() => {
@@ -133,7 +133,7 @@ export type QuantityDialogFormProps = {
   name: string;
   mode: QuantityRequest['mode'];
   /** The title, which takes screen reader focus when the dialog opens (FR-037). */
-  titleRef?: Ref<View> | undefined;
+  titleRef?: Ref<HostInstance> | undefined;
   amount: string;
   unit: string;
   onChangeAmount: (text: string) => void;
