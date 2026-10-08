@@ -8,7 +8,7 @@ import { Navigation } from '../navigation';
 import { seed as appSeed } from '../seed';
 import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
-import type { Fixture } from '../testing/story-store';
+import type { Fixture, StoryScenario } from '../testing/story-store';
 import { CreateArticleScreen } from './CreateArticleScreen';
 
 const maListe = 'list-ma-liste' as ListId;
@@ -25,8 +25,14 @@ const fewCategories: Fixture = {
 };
 
 /** CreateArticle alone, opened with no name and no category. */
-const renderScreen = async (seed: Fixture = fixture) => {
-  const rendered = await renderWithStore(<CreateArticleScreen />, { seed });
+const renderScreen = async (
+  seed: Fixture = fixture,
+  scenario: StoryScenario = {},
+) => {
+  const rendered = await renderWithStore(<CreateArticleScreen />, {
+    seed,
+    ...scenario,
+  });
   await screen.findByRole('radio', { name: 'Boissons' });
   const stored = (articleId: ArticleId) =>
     rendered.unitOfWork.run((repos) => repos.items.find(maListe, articleId));
@@ -121,6 +127,20 @@ describe('CreateArticle', () => {
 
     expect(await screen.findByRole('radio', { name: 'Bébé' })).toBeChecked();
     expect(screen.getByRole('radio', { name: 'Boissons' })).not.toBeChecked();
+  });
+
+  it('disables "Nouvelle catégorie" while the article is being saved', async () => {
+    await renderScreen(fixture, { pending: ['createArticleAndAddToList'] });
+
+    type('Nom', 'Houmous');
+    choose('Boissons');
+    create();
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Nouvelle catégorie' }),
+      ).toBeDisabled(),
+    );
   });
 
   it('US4-2 an article created in the new category "Bébé" shows under a "Bébé" heading on CurrentList', async () => {

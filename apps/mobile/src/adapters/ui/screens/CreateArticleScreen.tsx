@@ -201,11 +201,13 @@ const CategoryPicker = ({
   onChange,
   onNewCategory,
   newCategoryRef,
+  saving,
 }: {
   value: CategoryId | null;
   onChange: (id: CategoryId) => void;
   onNewCategory: () => void;
   newCategoryRef?: Ref<View> | undefined;
+  saving: boolean;
 }) => {
   const categories = useAppStore((state) => state.categories);
   const loadCategories = useAppStore((state) => state.loadCategories);
@@ -233,7 +235,12 @@ const CategoryPicker = ({
               />
             ))}
           </RadioButton.Group>
-          <Button ref={newCategoryRef} icon="plus" onPress={onNewCategory}>
+          <Button
+            ref={newCategoryRef}
+            icon="plus"
+            disabled={saving}
+            onPress={onNewCategory}
+          >
             Nouvelle catégorie
           </Button>
         </>
@@ -337,6 +344,7 @@ export const CreateArticleForm = ({
           onChange={onChooseCategory}
           onNewCategory={onNewCategory}
           newCategoryRef={newCategoryRef}
+          saving={saving}
         />
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>

@@ -8,7 +8,7 @@ import { focusOn } from '../accessibility/focus';
 import { nameErrorText, NameField } from '../components/NameField';
 import { useAppStore } from '../state/use-app-store';
 
-const NAME_ALREADY_USED = 'Cette catégorie existe déjà.';
+export const NAME_ALREADY_USED = 'Cette catégorie existe déjà.';
 
 export type CreateCategoryDialogProps = {
   visible: boolean;

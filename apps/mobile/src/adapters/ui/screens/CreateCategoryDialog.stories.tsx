@@ -4,6 +4,7 @@ import { fixture } from '../testing/fixtures';
 import {
   CreateCategoryDialog,
   CreateCategoryDialogForm,
+  NAME_ALREADY_USED,
 } from './CreateCategoryDialog';
 
 const meta = {
@@ -27,7 +28,7 @@ export const NameAlreadyUsed: Story = {
     <CreateCategoryDialogForm
       name="boissons"
       onChangeName={noop}
-      error="Cette catégorie existe déjà."
+      error={NAME_ALREADY_USED}
       saving={false}
       onClose={noop}
       onSubmit={noop}
