@@ -1,17 +1,13 @@
 import type { Article, ArticleId } from '../../domain/article';
 import type { CategoryId, CategoryNotFound } from '../../domain/category';
 import { newItem } from '../../domain/list-item';
-import {
-  normalizedName,
-  validateName,
-  type NameAlreadyUsed,
-  type NameError,
-} from '../../domain/name';
+import type { NameAlreadyUsed, NameError } from '../../domain/name';
 import type { Quantity } from '../../domain/quantity';
 import { err, ok, type Result } from '../../domain/result';
 import type { ListId } from '../../domain/shopping-list';
 import type { IdGenerator } from '../ports/id-generator';
 import type { UnitOfWork } from '../ports/unit-of-work';
+import { uniqueName } from './unique-name';
 
 /**
  * Creates the article, its name cleaned (FR-022), and puts it on the list in one transaction
@@ -31,12 +27,8 @@ export const createCreateArticleAndAddToList =
     >
   > =>
     unitOfWork.run(async (repos) => {
-      const validated = validateName(name);
-      if (!validated.ok) return validated;
-      const existing = await repos.articles.findByNormalizedName(
-        normalizedName(validated.value),
-      );
-      if (existing) return err({ type: 'NameAlreadyUsed', existing });
+      const unique = await uniqueName(repos.articles, name);
+      if (!unique.ok) return unique;
       if (!(await repos.categories.findById(categoryId))) {
         return err({ type: 'CategoryNotFound' });
       }
@@ -44,7 +36,7 @@ export const createCreateArticleAndAddToList =
       const articleId = ids.next() as ArticleId;
       await repos.articles.add({
         id: articleId,
-        name: validated.value,
+        name: unique.value,
         categoryId,
       });
       // A new article is on no list yet.
