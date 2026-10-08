@@ -467,6 +467,39 @@ describe('createSentryErrorReporter', () => {
     ]);
   });
 
+  it('FR-030 Principle VIII sends no name, no installation id and no device name anywhere in the event', () => {
+    const { beforeSend } = start();
+    const thrown = new Error('Lait');
+
+    const sent = beforeSend(
+      event(
+        {
+          user: { id: 'install-1' },
+          contexts: {
+            device: { name: 'iPhone de Marie', model: 'iPhone15,2' },
+            app: { device_app_hash: 'install-1' },
+          },
+          extra: { article: 'Lait' },
+          message: 'Lait',
+          breadcrumbs: [{ message: 'Lait', data: { name: 'Marie' } }],
+          request: { url: 'https://example.org/Lait' },
+          tags: {
+            operation: 'toggleItemInCart',
+            screen: 'CurrentList',
+            article: 'Lait',
+          },
+        },
+        { value: thrown.message },
+      ),
+      { originalException: thrown },
+    );
+
+    const serialized = JSON.stringify(sent);
+    expect(serialized).not.toContain('Lait');
+    expect(serialized).not.toContain('install-1');
+    expect(serialized).not.toContain('Marie');
+  });
+
   it('crashNatively crashes in native code', () => {
     const { reporter } = start();
 
