@@ -12,6 +12,7 @@ import {
   createEditListActions,
   type EditListActions,
 } from './edit-list-actions';
+import { createListsActions, type ListsActions } from './lists-actions';
 import type {
   RefusedInputType,
   StoreCore,
@@ -31,7 +32,10 @@ export type {
 } from './store-kit';
 
 /** The application state shared by every screen (002 contracts/ui-state.md). */
-export type AppState = StoreCore & CurrentListActions & EditListActions;
+export type AppState = StoreCore &
+  CurrentListActions &
+  EditListActions &
+  ListsActions;
 
 export type AppStore = StoreApi<AppState>;
 
@@ -185,5 +189,9 @@ export const createAppStoreWith = <Actions extends object>(
 export const createAppStore = (deps: AppStoreDeps): AppStore =>
   createAppStoreWith(deps, (kit) => {
     const currentList = createCurrentListActions(kit);
-    return { ...currentList, ...createEditListActions(kit, currentList) };
+    return {
+      ...currentList,
+      ...createEditListActions(kit, currentList),
+      ...createListsActions(kit),
+    };
   });

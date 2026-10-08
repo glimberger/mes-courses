@@ -11,13 +11,11 @@ import { UndoSnackbar } from './components/UndoSnackbar';
 import { AddArticlesScreen } from './screens/AddArticlesScreen';
 import { CreateArticleScreen } from './screens/CreateArticleScreen';
 import { CurrentListScreen } from './screens/CurrentListScreen';
-import { PlaceholderScreen } from './screens/PlaceholderScreen';
+import { ListsScreen } from './screens/ListsScreen';
 import type { RootStackParamList } from './routes';
 import { useNavigationTheme } from './theme/navigation-theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-
-const ListsScreen = () => <PlaceholderScreen title="Mes listes" />;
 
 /**
  * The app's screens, with the snackbars every screen shares (the undo offer stays across

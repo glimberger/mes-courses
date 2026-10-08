@@ -3,16 +3,19 @@ import type { UnitOfWork } from '../../application/ports/unit-of-work';
 import { createAddArticleToList } from '../../application/use-cases/add-article-to-list';
 import { createChangeItemQuantity } from '../../application/use-cases/change-item-quantity';
 import { createCreateArticleAndAddToList } from '../../application/use-cases/create-article-and-add-to-list';
+import { createCreateList } from '../../application/use-cases/create-list';
 import { createFinishShopping } from '../../application/use-cases/finish-shopping';
 import { createGetCatalog } from '../../application/use-cases/get-catalog';
 import { createGetCategories } from '../../application/use-cases/get-categories';
 import { createGetCurrentList } from '../../application/use-cases/get-current-list';
+import { createGetLists } from '../../application/use-cases/get-lists';
 import {
   createInitializeStore,
   type Seed,
 } from '../../application/use-cases/initialize-store';
 import { createRemoveItemFromList } from '../../application/use-cases/remove-item-from-list';
 import { createRestoreRemovedItem } from '../../application/use-cases/restore-removed-item';
+import { createSetCurrentList } from '../../application/use-cases/set-current-list';
 import { createToggleItemInCart } from '../../application/use-cases/toggle-item-in-cart';
 import type { Article, ArticleId, ArticleNotFound } from '../../domain/article';
 import type { CatalogView } from '../../domain/catalog-view';
@@ -26,7 +29,12 @@ import type {
 import type { NameAlreadyUsed, NameError } from '../../domain/name';
 import type { Quantity } from '../../domain/quantity';
 import type { Result } from '../../domain/result';
-import type { ListId, ListNotFound } from '../../domain/shopping-list';
+import type { ListSummary } from '../../domain/list-summary';
+import type {
+  ListId,
+  ListNotFound,
+  ShoppingList,
+} from '../../domain/shopping-list';
 
 /**
  * The use cases the store calls, one entry per use case of the driving ports, added story by
@@ -69,6 +77,13 @@ export type UseCases = {
   restoreRemovedItem: (
     removed: RemovedItem,
   ) => Promise<Result<void, AlreadyOnList | ListNotFound | ArticleNotFound>>;
+  getLists: () => Promise<ListSummary[]>;
+  createList: (
+    name: string,
+  ) => Promise<
+    Result<{ listId: ListId }, NameError | NameAlreadyUsed<ShoppingList>>
+  >;
+  setCurrentList: (listId: ListId) => Promise<Result<void, ListNotFound>>;
 };
 
 /** The name of one use case. */
@@ -93,4 +108,7 @@ export const createUseCases = (ports: {
   changeItemQuantity: createChangeItemQuantity(ports),
   removeItemFromList: createRemoveItemFromList(ports),
   restoreRemovedItem: createRestoreRemovedItem(ports),
+  getLists: createGetLists(ports),
+  createList: createCreateList(ports),
+  setCurrentList: createSetCurrentList(ports),
 });

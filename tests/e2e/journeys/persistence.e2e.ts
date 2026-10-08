@@ -2,9 +2,12 @@ import { by, device, element, expect } from 'detox';
 
 import {
   backToList,
+  chooseList,
   createArticle,
+  createList,
   expectRow,
   openAddArticles,
+  openLists,
 } from '../support/app';
 
 describe('persistence', () => {
@@ -26,5 +29,17 @@ describe('persistence', () => {
     await expectRow('Lait, 2 L, dans le caddie');
     await expect(element(by.label('Pain, pas dans le caddie'))).toBeVisible();
     await expect(element(by.text('1 article restant'))).toBeVisible();
+  });
+
+  it('FR-025 keeps the current list when the app process is ended', async () => {
+    await openLists();
+    await createList('Barbecue');
+    await chooseList('Barbecue, 0 articles', 'Barbecue');
+
+    await device.terminateApp();
+    await device.launchApp({ newInstance: true });
+
+    await expect(element(by.text('Barbecue'))).toBeVisible();
+    await expect(element(by.text('Votre liste est vide'))).toBeVisible();
   });
 });

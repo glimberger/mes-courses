@@ -8,17 +8,15 @@ import { renderWithStore } from '../testing/render-with-store';
 import { AppErrorBoundary } from './app-error-boundary';
 
 const mockFailure = new Error('render failure');
-let mockFailingTitle: string | null = null;
-jest.mock('../screens/PlaceholderScreen', () => {
-  const actual = jest.requireActual<
-    typeof import('../screens/PlaceholderScreen')
-  >('../screens/PlaceholderScreen');
+let mockListsFail = false;
+jest.mock('../screens/ListsScreen', () => {
+  const actual = jest.requireActual<typeof import('../screens/ListsScreen')>(
+    '../screens/ListsScreen',
+  );
   return {
-    PlaceholderScreen: (
-      props: Parameters<typeof actual.PlaceholderScreen>[0],
-    ) => {
-      if (props.title === mockFailingTitle) throw mockFailure;
-      return actual.PlaceholderScreen(props);
+    ListsScreen: () => {
+      if (mockListsFail) throw mockFailure;
+      return actual.ListsScreen();
     },
   };
 });
@@ -33,7 +31,7 @@ describe('AppErrorBoundary', () => {
   });
   afterEach(() => {
     consoleError.mockRestore();
-    mockFailingTitle = null;
+    mockListsFail = false;
   });
 
   const renderApp = async () => {
@@ -51,7 +49,7 @@ describe('AppErrorBoundary', () => {
 
   it('FR-039a reports a screen failing on its first render with its own route, not the one shown before', async () => {
     const recording = await renderApp();
-    mockFailingTitle = 'Mes listes';
+    mockListsFail = true;
 
     fireEvent.press(screen.getByRole('button', { name: 'Mes listes' }));
 
