@@ -3,6 +3,7 @@ import type { UnitOfWork } from '../../application/ports/unit-of-work';
 import { createAddArticleToList } from '../../application/use-cases/add-article-to-list';
 import { createChangeItemQuantity } from '../../application/use-cases/change-item-quantity';
 import { createCreateArticleAndAddToList } from '../../application/use-cases/create-article-and-add-to-list';
+import { createCreateCategory } from '../../application/use-cases/create-category';
 import { createCreateList } from '../../application/use-cases/create-list';
 import { createFinishShopping } from '../../application/use-cases/finish-shopping';
 import { createGetCatalog } from '../../application/use-cases/get-catalog';
@@ -19,7 +20,11 @@ import { createSetCurrentList } from '../../application/use-cases/set-current-li
 import { createToggleItemInCart } from '../../application/use-cases/toggle-item-in-cart';
 import type { Article, ArticleId, ArticleNotFound } from '../../domain/article';
 import type { CatalogView } from '../../domain/catalog-view';
-import type { CategoryId, CategoryNotFound } from '../../domain/category';
+import type {
+  Category,
+  CategoryId,
+  CategoryNotFound,
+} from '../../domain/category';
 import type { CurrentListView } from '../../domain/current-list-view';
 import type {
   AlreadyOnList,
@@ -84,6 +89,11 @@ export type UseCases = {
     Result<{ listId: ListId }, NameError | NameAlreadyUsed<ShoppingList>>
   >;
   setCurrentList: (listId: ListId) => Promise<Result<void, ListNotFound>>;
+  createCategory: (
+    name: string,
+  ) => Promise<
+    Result<{ categoryId: CategoryId }, NameError | NameAlreadyUsed<Category>>
+  >;
 };
 
 /** The name of one use case. */
@@ -111,4 +121,5 @@ export const createUseCases = (ports: {
   getLists: createGetLists(ports),
   createList: createCreateList(ports),
   setCurrentList: createSetCurrentList(ports),
+  createCategory: createCreateCategory(ports),
 });

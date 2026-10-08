@@ -597,29 +597,29 @@ create an article in it, add it to the current list, and check it appears under 
 
 ### Tests for User Story 4 ⚠️ (write first, confirm they fail)
 
-- [ ] T119 [P] [US4] Write failing use case tests in `apps/mobile/src/application/use-cases/create-category.test.ts`:
+- [X] T119 [P] [US4] Write failing use case tests in `apps/mobile/src/application/use-cases/create-category.test.ts`:
   - US4-2, FR-019: the category is appended with `position = max + 1` and `getCategories` lists it last;
   - US4-3: "boissons" → `NameAlreadyUsed`;
   - US4-4: `NameRequired`;
   - `NameTooLong`.
-- [ ] T120 [P] [US4] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.categories.test.ts`: `createCategory` returns its `Result` (with `categoryId`) and refreshes.
-- [ ] T121 [US4] Write failing dialog tests in `apps/mobile/src/adapters/ui/screens/create-category-dialog.test.tsx`:
+- [X] T120 [P] [US4] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.categories.test.ts`: `createCategory` returns its `Result` (with `categoryId`) and refreshes.
+- [X] T121 [US4] Write failing dialog tests in `apps/mobile/src/adapters/ui/screens/create-category-dialog.test.tsx`:
   - title "Nouvelle catégorie", buttons "Annuler" / "Créer";
   - US4-3: "Cette catégorie existe déjà.";
   - US4-4: "Indiquez un nom.";
   - FR-037: opening moves focus to the dialog title, and closing gives it back to "Nouvelle catégorie".
-- [ ] T122 [US4] Extend `apps/mobile/src/adapters/ui/screens/create-article-screen.test.tsx` with failing tests:
+- [X] T122 [US4] Extend `apps/mobile/src/adapters/ui/screens/create-article-screen.test.tsx` with failing tests:
   - US4-1: the 11 default categories are offered in the spec's order;
   - US4-2: "Nouvelle catégorie" opens CreateCategoryDialog, and on success "Bébé" is offered and preselected;
   - an article created in "Bébé" and added appears under a "Bébé" heading on CurrentList.
 
 ### Implementation for User Story 4
 
-- [ ] T123 [US4] Implement `create-category.ts` in `apps/mobile/src/application/use-cases/` to turn T119 green, and add it to `UseCases` and to the composition root.
-- [ ] T124 [US4] Add the `createCategory` action to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T120 green.
-- [ ] T125 [US4] Implement `CreateCategoryDialog.tsx` in `apps/mobile/src/adapters/ui/screens/`, with the focus moves of FR-037, to turn T121 green.
-- [ ] T126 [US4] Add the "Nouvelle catégorie" entry to the category picker of `CreateArticleScreen.tsx` and preselect the new category, to turn T122 green.
-- [ ] T127 [US4] Add `Dialogs/CreateCategoryDialog/Default` and `.../NameAlreadyUsed` to `required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/screens/CreateCategoryDialog.stories.tsx` (the error story renders the form with "Cette catégorie existe déjà.") to turn it green. Review it in Storybook. Run every journey again: `first-launch.e2e.ts` covers US4-1.
+- [X] T123 [US4] Implement `create-category.ts` in `apps/mobile/src/application/use-cases/` to turn T119 green, and add it to `UseCases` and to the composition root.
+- [X] T124 [US4] Add the `createCategory` action to `apps/mobile/src/adapters/ui/state/app-store.ts` to turn T120 green.
+- [X] T125 [US4] Implement `CreateCategoryDialog.tsx` in `apps/mobile/src/adapters/ui/screens/`, with the focus moves of FR-037, to turn T121 green.
+- [X] T126 [US4] Add the "Nouvelle catégorie" entry to the category picker of `CreateArticleScreen.tsx` and preselect the new category, to turn T122 green.
+- [X] T127 [US4] Add `Dialogs/CreateCategoryDialog/Default` and `.../NameAlreadyUsed` to `required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/screens/CreateCategoryDialog.stories.tsx` (the error story renders the form with "Cette catégorie existe déjà.") to turn it green. Review it in Storybook. Run every journey again: `first-launch.e2e.ts` covers US4-1.
 
 **Checkpoint**: all four stories work independently and together.
 

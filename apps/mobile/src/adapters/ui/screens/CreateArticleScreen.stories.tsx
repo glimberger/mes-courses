@@ -34,6 +34,7 @@ export const NameAlreadyUsed: Story = {
       quantityError={null}
       categoryId={fixture.articles[0]?.categoryId ?? null}
       onChooseCategory={noop}
+      onNewCategory={noop}
       categoryMissing={false}
       saving={false}
       onSubmit={noop}
