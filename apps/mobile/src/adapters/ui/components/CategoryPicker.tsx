@@ -14,7 +14,7 @@ import { ScreenStateView } from './ScreenStateView';
 export type CategoryPickerProps = {
   value: CategoryId | null;
   onChange: (id: CategoryId) => void;
-  /** Disables "Nouvelle catégorie", for a form being saved. */
+  /** Disables the choices and "Nouvelle catégorie", for a form being saved. */
   disabled?: boolean;
 };
 
@@ -59,6 +59,7 @@ export const CategoryPicker = ({
                   key={category.id}
                   label={category.name}
                   value={category.id}
+                  disabled={disabled}
                 />
               ))}
             </RadioButton.Group>

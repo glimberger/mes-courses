@@ -9,6 +9,7 @@ import {
 } from '../testing/in-memory-repositories';
 import { createEditArticle } from './edit-article';
 import { createGetCatalog } from './get-catalog';
+import { createGetCurrentList } from './get-current-list';
 
 const maListe = 'l-1' as ListId;
 const barbecue = 'l-2' as ListId;
@@ -231,6 +232,116 @@ describe('editArticle', () => {
       id: lait,
       name: 'Lait demi-écrémé',
       categoryId: cremerie,
+    });
+  });
+
+  describe('changing the category (US3)', () => {
+    const epicerie = 'c-3' as CategoryId;
+    const houmous = 'a-5' as ArticleId;
+    const sectionOf = async (listId: ListId, categoryId: CategoryId) =>
+      (await catalog(listId)).sections.find(
+        (section) => section.category.id === categoryId,
+      );
+
+    beforeEach(async () => {
+      await unitOfWork.run(async (repos) => {
+        await repos.categories.add({
+          id: epicerie,
+          name: 'Épicerie salée',
+          position: 2,
+        });
+        await repos.articles.add({
+          id: houmous,
+          name: 'Houmous',
+          categoryId: epicerie,
+        });
+        await repos.items.save({
+          listId: maListe,
+          articleId: houmous,
+          inCart: true,
+          quantity: { amount: 1, unit: 'kg' },
+        });
+      });
+    });
+
+    it('US3-1 moves "Houmous" to "Crèmerie" in the catalog and on the list, keeping its quantity and ticked state', async () => {
+      const outcome = await editArticle(houmous, {
+        name: 'Houmous',
+        categoryId: cremerie,
+      });
+
+      expect(outcome).toEqual(ok(undefined));
+      expect(
+        (await sectionOf(maListe, cremerie))?.articles.map((a) => a.name),
+      ).toContain('Houmous');
+      expect(
+        (await sectionOf(maListe, epicerie))?.articles.map((a) => a.name) ?? [],
+      ).not.toContain('Houmous');
+      expect(await itemsOf(maListe)).toContainEqual({
+        listId: maListe,
+        articleId: houmous,
+        inCart: true,
+        quantity: { amount: 1, unit: 'kg' },
+      });
+    });
+
+    it('US3-2 drops the section of the old category from the list view when it was its only item there', async () => {
+      const sectionIds = async () =>
+        (await createGetCurrentList({ unitOfWork })()).sections.map(
+          (section) => section.category.id,
+        );
+      expect(await sectionIds()).toContain(epicerie);
+
+      await editArticle(houmous, { name: 'Houmous', categoryId: cremerie });
+
+      const after = await sectionIds();
+      expect(after).not.toContain(epicerie);
+      expect(after).toContain(cremerie);
+    });
+
+    it('US3-3 FR-009 applies name and category together, and with a taken name neither', async () => {
+      const moved = await editArticle(houmous, {
+        name: 'Houmous nature',
+        categoryId: cremerie,
+      });
+      expect(moved).toEqual(ok(undefined));
+      expect(await articles()).toContainEqual({
+        id: houmous,
+        name: 'Houmous nature',
+        categoryId: cremerie,
+      });
+
+      const before = await articles();
+      const refused = await editArticle(houmous, {
+        name: 'beurre',
+        categoryId: fruits,
+      });
+      expect(refused.ok).toBe(false);
+      expect(await articles()).toEqual(before);
+    });
+
+    it('reports a taken name before an unknown category, so the fixable error is shown', async () => {
+      const outcome = await editArticle(houmous, {
+        name: 'beurre',
+        categoryId: 'c-unknown' as CategoryId,
+      });
+
+      expect(outcome).toMatchObject({
+        ok: false,
+        error: { type: 'NameAlreadyUsed' },
+      });
+    });
+
+    it('FR-008 returns CategoryNotFound for an unknown category, writing nothing', async () => {
+      const before = await articles();
+
+      expect(
+        await editArticle(houmous, {
+          name: 'Houmous',
+          categoryId: 'c-unknown' as CategoryId,
+        }),
+      ).toEqual(err({ type: 'CategoryNotFound' }));
+      expect(await articles()).toEqual(before);
     });
   });
 });
