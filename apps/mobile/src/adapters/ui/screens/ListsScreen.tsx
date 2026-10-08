@@ -49,13 +49,21 @@ export const ListsScreen = () => {
     void loadLists();
   }, [loadLists]);
 
+  // Set from the first tap until its choice is settled: a second tap would queue another
+  // change and go back twice.
+  const choosing = useRef(false);
   const choose = useCallback(
     async (list: ListSummary) => {
+      if (choosing.current) return;
+      choosing.current = true;
       // The current list stays as it is: nothing to save, and the undo offer stays (FR-025).
       if (!list.isCurrent) {
         const outcome = await setCurrentList(list.id);
         // A failed save stays here: the snackbar says so.
-        if (!outcome.ok) return;
+        if (!outcome.ok) {
+          choosing.current = false;
+          return;
+        }
       }
       if (navigation.canGoBack()) navigation.goBack();
     },

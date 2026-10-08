@@ -125,6 +125,19 @@ describe('Lists', () => {
     expect(screen.getByText('« Lait » retiré de la liste')).toBeOnTheScreen();
   });
 
+  it('US3-3 a second tap while the first choice is being saved changes nothing', async () => {
+    const { useCases } = await renderApp();
+    const setCurrentList = jest.spyOn(useCases, 'setCurrentList');
+    fireEvent.press(screen.getByRole('button', { name: 'Mes listes' }));
+    const barbecueRow = await row('Barbecue, 0 articles');
+
+    fireEvent.press(barbecueRow);
+    fireEvent.press(barbecueRow);
+
+    expect(await screen.findByText('Votre liste est vide')).toBeOnTheScreen();
+    expect(setCurrentList).toHaveBeenCalledTimes(1);
+  });
+
   it('SC-005 chooses another list in two taps from CurrentList: "Mes listes", then the list', async () => {
     await renderApp();
 

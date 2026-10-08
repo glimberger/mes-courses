@@ -121,6 +121,32 @@ describe('CreateListDialog', () => {
     ).toBeOnTheScreen();
   });
 
+  it('creates one list on a double tap of "Créer"', async () => {
+    const { useCases } = await renderScreen();
+    const createList = jest.spyOn(useCases, 'createList');
+    await openDialog();
+    typeName('Fête');
+
+    press('Créer');
+    press('Créer');
+
+    expect(await screen.findByText('Fête')).toBeOnTheScreen();
+    expect(createList).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers no "Annuler" while the list is being saved, so the outcome is always shown', async () => {
+    await renderScreen({ pending: ['createList'] });
+    await openDialog();
+    typeName('Fête');
+
+    press('Créer');
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Annuler' })).toBeDisabled(),
+    );
+    expect(screen.getByRole('button', { name: 'Créer' })).toBeDisabled();
+  });
+
   it('"Annuler" closes the dialog and creates nothing', async () => {
     await renderScreen();
     await openDialog();

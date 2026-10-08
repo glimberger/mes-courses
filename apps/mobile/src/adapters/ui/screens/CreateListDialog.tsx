@@ -31,6 +31,8 @@ const CreateListForm = ({ onClose }: { onClose: () => void }) => {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Set at once, so a second tap before the next render does not create a second list.
+  const savingRef = useRef(false);
   const titleRef = useRef<View>(null);
 
   // Screen reader focus goes to the title when the dialog opens (FR-037).
@@ -39,14 +41,17 @@ const CreateListForm = ({ onClose }: { onClose: () => void }) => {
   }, []);
 
   const create = async () => {
+    if (savingRef.current) return;
     const validated = validateName(name);
     if (!validated.ok) {
       setError(nameErrorText(validated.error));
       return;
     }
     setError(null);
+    savingRef.current = true;
     setSaving(true);
     const outcome = await createList(name);
+    savingRef.current = false;
     setSaving(false);
     if (outcome.ok) {
       onClose();
@@ -104,7 +109,8 @@ export const CreateListDialogForm = ({
   onSubmit,
 }: CreateListDialogFormProps) => (
   <Portal>
-    <Dialog visible onDismiss={onClose}>
+    {/* Not closed while saving, so the outcome of the save is always shown. */}
+    <Dialog visible dismissable={!saving} onDismiss={onClose}>
       {/* The title read as one header, and the target of the focus move. */}
       <View ref={titleRef} accessible accessibilityRole="header">
         <Dialog.Title>Nouvelle liste</Dialog.Title>
@@ -113,7 +119,9 @@ export const CreateListDialogForm = ({
         <NameField value={name} onChangeText={onChangeName} error={error} />
       </Dialog.Content>
       <Dialog.Actions>
-        <Button onPress={onClose}>Annuler</Button>
+        <Button disabled={saving} onPress={onClose}>
+          Annuler
+        </Button>
         <Button disabled={saving} onPress={onSubmit}>
           Créer
         </Button>
