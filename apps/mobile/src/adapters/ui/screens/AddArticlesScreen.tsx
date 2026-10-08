@@ -88,6 +88,8 @@ export const AddArticlesScreen = () => {
   const [request, setRequest] = useState<QuantityRequest | null>(null);
   const [rowRefs] = useState<RowRefs>(() => new Map());
   const opener = useRef<ArticleId | null>(null);
+  // A second tap while the usage is being read would open the dialog for the wrong row.
+  const reading = useRef(false);
 
   // Leaving clears the search, so the screen opens on the whole catalog the next time.
   useEffect(() => {
@@ -118,9 +120,15 @@ export const AddArticlesScreen = () => {
   /** Reads where the article is used, then asks before deleting it (FR-006). */
   const remove = useCallback(
     async (article: CatalogArticle) => {
+      if (reading.current) return;
+      reading.current = true;
       opener.current = article.id;
-      const outcome = await getArticleUsage(article.id);
-      if (outcome.ok) setUsage(outcome.value);
+      try {
+        const outcome = await getArticleUsage(article.id);
+        if (outcome.ok) setUsage(outcome.value);
+      } finally {
+        reading.current = false;
+      }
     },
     [getArticleUsage],
   );

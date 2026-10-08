@@ -33,15 +33,22 @@ export const DeleteArticleDialog = ({
 }: DeleteArticleDialogProps) => {
   const deleteArticle = useAppStore((state) => state.deleteArticle);
   const titleRef = useRef<HostInstance>(null);
+  // A second tap on "Supprimer" must not delete, or close, twice.
+  const deleting = useRef(false);
   const visible = usage !== null;
   useEffect(() => {
     if (visible) focusOn(titleRef);
   }, [visible]);
 
   const confirm = async () => {
-    if (usage === null) return;
-    // A failed save shows its own notice; either way the dialog closes.
-    await deleteArticle(usage.article.id);
+    if (usage === null || deleting.current) return;
+    deleting.current = true;
+    try {
+      // A failed save shows its own notice; either way the dialog closes.
+      await deleteArticle(usage.article.id);
+    } finally {
+      deleting.current = false;
+    }
     onClose();
   };
 
