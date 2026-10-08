@@ -8,6 +8,7 @@ import { SqliteUnitOfWork } from '../adapters/sqlite/unit-of-work';
 import { seed } from '../adapters/ui/seed';
 import { createAppStore, type AppStore } from '../adapters/ui/state/app-store';
 import { createUseCases } from '../adapters/ui/use-cases';
+import { seedForMeasurement } from './measurement-seed';
 
 /**
  * The error reporter of this opening of the app: Sentry when a DSN is set, in the environment of
@@ -78,9 +79,10 @@ const mutable = (reporter: ErrorReporter) => {
 
 /**
  * Starts the app (research R18a): opens and prepares the database, builds the use cases on it,
- * seeds a store with no list, then builds the store and starts the Sentry smoke test if the build
- * asks for it. When a step after the opening throws, the database is closed and the error
- * rethrown, so a retry starts from scratch. Once the app is closed, the failures of the writes and
+ * seeds a store with no list, fills it for measurement if the build asks for it (research R11),
+ * then builds the store and starts the Sentry smoke test if the build asks for it. When a step
+ * after the opening throws, the database is closed and the error rethrown, so a retry starts from
+ * scratch. Once the app is closed, the failures of the writes and
  * loads its store still had running (they fail on the closed database) are not reported, and a
  * native smoke test crash not yet due is cancelled. Nothing here deletes, recreates or overwrites
  * the database file. This is the only module that knows every adapter.
@@ -95,6 +97,8 @@ export const composeApp = async (
       ids: new CryptoIdGenerator(),
     });
     await useCases.initializeStore(seed);
+    // Expo inlines `EXPO_PUBLIC_` variables only when read as written here.
+    await seedForMeasurement(useCases, process.env.EXPO_PUBLIC_SEED_ITEMS);
     const reporting = mutable(errorReporter);
     const stopSmokeTest = startSentrySmokeTest(errorReporter);
     return {

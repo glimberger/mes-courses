@@ -194,6 +194,45 @@ describe('createErrorReporter', () => {
   });
 });
 
+describe('the measurement seed (research R11)', () => {
+  const env = { ...process.env };
+  afterEach(() => {
+    process.env = { ...env };
+  });
+
+  const articleCount = async () => {
+    const db = new NodeSqlDatabase(mockFile);
+    try {
+      return (
+        await db.getFirstAsync<{ count: number }>(
+          'SELECT COUNT(*) AS count FROM article',
+          [],
+        )
+      )?.count;
+    } finally {
+      db.close();
+    }
+  };
+
+  it("fills the store to the spec's data size when EXPO_PUBLIC_SEED_ITEMS is set", async () => {
+    process.env.EXPO_PUBLIC_SEED_ITEMS = '2';
+
+    const composed = await composeApp(new RecordingErrorReporter());
+    await composed.close();
+
+    expect(await articleCount()).toBe(1000);
+  }, 60_000);
+
+  it('adds no article when EXPO_PUBLIC_SEED_ITEMS is unset', async () => {
+    delete process.env.EXPO_PUBLIC_SEED_ITEMS;
+
+    const composed = await composeApp(new RecordingErrorReporter());
+    await composed.close();
+
+    expect(await articleCount()).toBe(0);
+  });
+});
+
 describe('the Sentry smoke test (quickstart §6 step 5)', () => {
   const env = { ...process.env };
   beforeEach(() => {
