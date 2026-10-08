@@ -101,6 +101,17 @@ describe('ArticleRow', () => {
     expect(onEdit).not.toHaveBeenCalled();
   });
 
+  it('002 runs a menu action once when it is tapped twice in a row', () => {
+    const { onDelete } = renderRow();
+
+    fireEvent.press(screen.getByRole('button', { name: MENU_BUTTON }));
+    const supprimer = screen.getByText('Supprimer');
+    fireEvent.press(supprimer);
+    fireEvent.press(supprimer);
+
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
   it('002 FR-034 has a menu button at least 48 dp square', () => {
     renderRow();
 

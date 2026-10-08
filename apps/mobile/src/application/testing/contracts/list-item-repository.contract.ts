@@ -135,7 +135,7 @@ export const listItemRepositoryContract = (
       );
     });
 
-    it('returns the items of an article on every list, with their cart state and quantity', async () => {
+    it('returns the items of an article on every list in the order they were added, with their cart state and quantity', async () => {
       await repos.items.save(
         item('l-1', 'a-1', {
           inCart: true,
@@ -147,16 +147,13 @@ export const listItemRepositoryContract = (
 
       const items = await repos.items.forArticle(articleId('a-1'));
 
-      expect(items).toHaveLength(2);
-      expect(items).toEqual(
-        expect.arrayContaining([
-          item('l-1', 'a-1', {
-            inCart: true,
-            quantity: { amount: 2, unit: 'L' },
-          }),
-          item('l-2', 'a-1'),
-        ]),
-      );
+      expect(items).toEqual([
+        item('l-1', 'a-1', {
+          inCart: true,
+          quantity: { amount: 2, unit: 'L' },
+        }),
+        item('l-2', 'a-1'),
+      ]);
     });
 
     it('removes every item of an article, leaving the other articles items', async () => {
