@@ -11,6 +11,7 @@ import { UndoSnackbar } from './components/UndoSnackbar';
 import { AddArticlesScreen } from './screens/AddArticlesScreen';
 import { CreateArticleScreen } from './screens/CreateArticleScreen';
 import { CurrentListScreen } from './screens/CurrentListScreen';
+import { EditArticleScreen } from './screens/EditArticleScreen';
 import { ListsScreen } from './screens/ListsScreen';
 import type { RootStackParamList } from './routes';
 import { useNavigationTheme } from './theme/navigation-theme';
@@ -57,6 +58,7 @@ export const Navigation = ({
           <Stack.Screen name="Lists" component={ListsScreen} />
           <Stack.Screen name="AddArticles" component={AddArticlesScreen} />
           <Stack.Screen name="CreateArticle" component={CreateArticleScreen} />
+          <Stack.Screen name="EditArticle" component={EditArticleScreen} />
         </Stack.Navigator>
       </NavigationContainer>
       <UndoSnackbar />

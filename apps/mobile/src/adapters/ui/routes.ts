@@ -1,3 +1,4 @@
+import type { ArticleId } from '../../domain/article';
 import type { CategoryId } from '../../domain/category';
 
 /** The app's routes, by name, with their parameters (contracts/ui-screens.md#navigation). */
@@ -7,6 +8,7 @@ export type RootStackParamList = {
   AddArticles: undefined;
   /** The name to start from, and the category to choose, if any (FR-008, FR-018). */
   CreateArticle: { name?: string; categoryId?: CategoryId } | undefined;
+  EditArticle: { articleId: ArticleId };
 };
 
 declare global {

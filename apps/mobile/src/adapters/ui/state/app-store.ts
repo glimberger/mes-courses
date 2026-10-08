@@ -5,6 +5,10 @@ import { StorageFull } from '../../../application/ports/storage-full';
 import { err, type Result } from '../../../domain/result';
 import type { UseCases } from '../use-cases';
 import {
+  createArticlesActions,
+  type ArticlesActions,
+} from './articles-actions';
+import {
   createCategoriesActions,
   type CategoriesActions,
 } from './categories-actions';
@@ -40,7 +44,8 @@ export type AppState = StoreCore &
   CurrentListActions &
   EditListActions &
   ListsActions &
-  CategoriesActions;
+  CategoriesActions &
+  ArticlesActions;
 
 export type AppStore = StoreApi<AppState>;
 
@@ -199,5 +204,6 @@ export const createAppStore = (deps: AppStoreDeps): AppStore =>
       ...createEditListActions(kit, currentList),
       ...createListsActions(kit),
       ...createCategoriesActions(kit),
+      ...createArticlesActions(kit),
     };
   });
