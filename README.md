@@ -11,6 +11,7 @@ them all for next time. A removed item can be put back with "Annuler". Everythin
 network: the data lives only on the device until server synchronization comes
 ([003](specs/003-server-sync/spec.md)).
 Its governing principles are in [`.specify/memory/constitution.md`](.specify/memory/constitution.md),
+its lasting technical decisions are in [`docs/adr/`](docs/adr/README.md),
 and its Material 3 color theme is in [`design/material-theme.json`](design/material-theme.json).
 
 ## Architecture
@@ -42,6 +43,7 @@ This is a Yarn workspaces monorepo ([research R20](specs/001-shopping-lists/rese
 | `tests/e2e/`                | The Detox end-to-end journeys (`@mes-courses/e2e-tests`), test-only            |
 | `apps/server/`, `packages/` | Added by later features (the server and the shared packages)                   |
 | `specs/`, `.specify/`       | Feature specifications and the Spec Kit configuration                          |
+| `docs/adr/`                 | The [architecture decision records](docs/adr/README.md)                        |
 | `design/`                   | The Material 3 theme export                                                    |
 | `flake.nix`, `flake.lock`   | The Nix dev shell                                                              |
 | `.github/`                  | The CI workflow and its helper script                                          |

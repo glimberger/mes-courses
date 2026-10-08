@@ -4,7 +4,8 @@
 
 This is the project's first feature plan, so it chooses the technology stack as well as the
 feature design. Each entry gives the decision, why it was made, and what else was considered.
-Versions are those current on 2026-10-05; the scaffold pins the exact versions in
+Decisions that outlive this feature (R1, R20, R22, R23) are also recorded as
+[ADRs](../../docs/adr/README.md). Versions are those current on 2026-10-05; the scaffold pins the exact versions in
 `apps/mobile/package.json` and the single root `yarn.lock`. R20 was added on 2026-10-06
 for constitution v2.1.0 (Principle XI, monorepo). R22 (Storybook) and R23 (Detox) were added on
 2026-10-06 at the maintainer's request, to validate screens and run end-to-end tests on a device.
@@ -12,6 +13,9 @@ R13 was amended and R13a added on 2026-10-06 for the observability clarification
 FR-030a, FR-039a).
 
 ## R1. Platform and framework
+
+> The decision and its reasons are in [ADR-0001](../../docs/adr/0001-react-native-expo.md). This entry keeps the
+> operational detail.
 
 - **Decision**: React Native with Expo (SDK 58, managed workflow, New Architecture, Hermes),
   TypeScript in strict mode, targeting Android and iOS phones.
@@ -850,6 +854,9 @@ FR-030a, FR-039a).
 
 ## R20. Monorepo layout (Principle XI)
 
+> The decision and its reasons are in [ADR-0002](../../docs/adr/0002-yarn-workspaces-monorepo.md). This entry keeps the
+> operational detail.
+
 - **Decision**: one Git repository organized as **Yarn workspaces**, managed by **Yarn 4**
   (chosen by the maintainer), set up by this first feature:
   - Yarn is pinned in the root `package.json` `"packageManager": "yarn@4.x"` field and run
@@ -924,6 +931,9 @@ FR-030a, FR-039a).
 
 ## R22. Screen validation with Storybook
 
+> The decision and its reasons are in [ADR-0003](../../docs/adr/0003-storybook-on-device.md). This entry keeps the
+> operational detail.
+
 - **Decision**: **Storybook for React Native 10** (`@storybook/react-native`), chosen by the
   maintainer, runs on the device inside the app workspace and catalogs the UI adapter:
   - **What has a story**: every component of the shared module
@@ -987,6 +997,9 @@ FR-030a, FR-039a).
   considered: a dev-only "gallery" screen in the app (rebuilds Storybook's navigation by hand).
 
 ## R23. End-to-end tests with Detox
+
+> The decision and its reasons are in [ADR-0004](../../docs/adr/0004-detox-end-to-end-tests.md). This entry keeps the
+> operational detail.
 
 - **Decision**: **Detox 20** (Wix), chosen by the maintainer, drives the app's release build on an
   Android emulator and an iOS simulator:
