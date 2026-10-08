@@ -2,6 +2,7 @@ import type { ExpoConfig } from 'expo/config';
 
 import { withAndroidAnrOff } from './build-config/android-anr-off.cjs';
 import { withAndroidNoMinify } from './build-config/android-no-minify.cjs';
+import { withNoUrlSchemes } from './build-config/no-url-schemes.cjs';
 import { assertNoTestOptionsInProduction } from './build-config/release-guard.cjs';
 
 // A `production` build stops here when it carries a test-only option or a DSN outside the EU
@@ -55,5 +56,6 @@ const config: ExpoConfig = {
   },
 };
 
-// A plugin given as a function is applied here: `plugins` only types names.
-export default withAndroidNoMinify(withAndroidAnrOff(config));
+// A plugin given as a function is applied here: `plugins` only types names. The URL schemes are
+// removed last, after every plugin that could add one (FR-041).
+export default withNoUrlSchemes(withAndroidNoMinify(withAndroidAnrOff(config)));
