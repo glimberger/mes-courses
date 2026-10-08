@@ -81,15 +81,15 @@ story uses.
 
 ### Shared UI ([contracts/ui-screens.md](contracts/ui-screens.md#shared-components-new-or-changed))
 
-- [ ] T006 [P] Write failing tests for the row menu in `apps/mobile/src/adapters/ui/components/article-row.test.tsx`:
+- [X] T006 [P] Write failing tests for the row menu in `apps/mobile/src/adapters/ui/components/article-row.test.tsx`:
   - a trailing icon button labelled "Plus d'actions pour « {name} »" opens a `Menu` with "Modifier" and "Supprimer";
   - choosing them calls `onEdit` / `onDelete`;
   - both are also accessibility actions of the row;
   - tapping the row itself still calls `onPress` (001's QuantityDialog);
   - the button is ≥ 48 dp.
-- [ ] T007 [P] Add the trailing menu button, the Paper `Menu` and the accessibility actions to `apps/mobile/src/adapters/ui/components/ArticleRow.tsx` to turn T006 green.
-- [ ] T008 [P] Extract the category picker from `apps/mobile/src/adapters/ui/screens/CreateArticleScreen.tsx` into `apps/mobile/src/adapters/ui/components/CategoryPicker.tsx`. It is a radio list of all categories by position plus "Nouvelle catégorie" (CreateCategoryDialog), with a new category preselected. This is a refactoring step: 001's CreateArticle tests stay green unchanged. Then add `apps/mobile/src/adapters/ui/components/category-picker.test.tsx`, covering the order, the selection, and the preselection of a new category.
-- [ ] T009 Add `Components/CategoryPicker/Default` and `Components/CategoryPicker/NewCategorySelected` to `apps/mobile/src/adapters/ui/required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/components/CategoryPicker.stories.tsx` from 001's fixtures (categories by position; a newly created category selected) to turn it green. Review it in Storybook in light and dark mode.
+- [X] T007 [P] Add the trailing menu button, the Paper `Menu` and the accessibility actions to `apps/mobile/src/adapters/ui/components/ArticleRow.tsx` to turn T006 green.
+- [X] T008 [P] Extract the category picker from `apps/mobile/src/adapters/ui/screens/CreateArticleScreen.tsx` into `apps/mobile/src/adapters/ui/components/CategoryPicker.tsx`. It is a radio list of all categories by position plus "Nouvelle catégorie" (CreateCategoryDialog), with a new category preselected. This is a refactoring step: 001's CreateArticle tests stay green unchanged. Then add `apps/mobile/src/adapters/ui/components/category-picker.test.tsx`, covering the order, the selection, and the preselection of a new category.
+- [X] T009 Add `Components/CategoryPicker/Default` and `Components/CategoryPicker/NewCategorySelected` to `apps/mobile/src/adapters/ui/required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/components/CategoryPicker.stories.tsx` from 001's fixtures (categories by position; a newly created category selected) to turn it green. Review it in Storybook in light and dark mode.
 
 **Checkpoint**: new repository methods green on fakes and SQLite; catalog rows offer
 "Modifier" / "Supprimer" (wired in the stories); 001's suite still green.

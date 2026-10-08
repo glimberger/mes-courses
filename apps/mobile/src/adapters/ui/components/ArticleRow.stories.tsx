@@ -5,7 +5,11 @@ import { ArticleRow } from './ArticleRow';
 const meta = {
   title: 'Components/ArticleRow',
   component: ArticleRow,
-  args: { onPress: () => undefined },
+  args: {
+    onPress: () => undefined,
+    onEdit: () => undefined,
+    onDelete: () => undefined,
+  },
 } satisfies Meta<typeof ArticleRow>;
 
 export default meta;
