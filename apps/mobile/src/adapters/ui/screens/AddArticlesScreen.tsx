@@ -88,6 +88,7 @@ export const AddArticlesScreen = () => {
   const [request, setRequest] = useState<QuantityRequest | null>(null);
   const [rowRefs] = useState<RowRefs>(() => new Map());
   const opener = useRef<ArticleId | null>(null);
+  const titleRef = useRef<HostInstance>(null);
   // A second tap while the usage is being read would open the dialog for the wrong row.
   const reading = useRef(false);
 
@@ -139,11 +140,12 @@ export const AddArticlesScreen = () => {
   };
 
   const focusRow = () => {
-    // Back to the row that opened the dialog, looked up once the dialog is gone (FR-037).
+    // Back to the row that opened the dialog, looked up once the dialog is gone (FR-037). A
+    // deleted article has no row any more: focus goes to the screen title instead.
     const id = opener.current;
     focusOn({
       get current() {
-        return id === null ? null : (rowRefs.get(id) ?? null);
+        return (id === null ? null : rowRefs.get(id)) ?? titleRef.current;
       },
     });
   };
@@ -168,7 +170,15 @@ export const AddArticlesScreen = () => {
         {navigation.canGoBack() && (
           <BackAction onPress={() => navigation.goBack()} />
         )}
-        <Appbar.Content title="Ajouter des articles" />
+        <Appbar.Content
+          title={
+            <View ref={titleRef} accessible accessibilityRole="header">
+              <Text variant="titleLarge" numberOfLines={1}>
+                Ajouter des articles
+              </Text>
+            </View>
+          }
+        />
         <AppbarIconAction
           icon="plus"
           accessibilityLabel="Nouvel article"

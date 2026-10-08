@@ -10,6 +10,10 @@ import { renderWithStore } from '../testing/render-with-store';
 import type { Fixture, StoryScenario } from '../testing/story-store';
 import { AddArticlesScreen } from './AddArticlesScreen';
 
+import { focusOn } from '../accessibility/focus';
+
+jest.mock('../accessibility/focus');
+
 const maListe = 'list-ma-liste' as ListId;
 
 const shownCategories = [
@@ -452,6 +456,24 @@ describe('AddArticles', () => {
       expect(
         screen.getByText('Aucun article dans cette catégorie'),
       ).toBeOnTheScreen();
+    });
+
+    it('FR-037 moves screen reader focus to the screen title once the article is deleted', async () => {
+      jest.mocked(focusOn).mockClear();
+      await openFromCurrentList(deletionSeed);
+      chooseSupprimerFor('Eau');
+      await screen.findByText('Supprimer « Eau » ?');
+      fireEvent.press(screen.getByRole('button', { name: 'Supprimer' }));
+      await screen.findByText('« Eau » supprimé');
+
+      expect(
+        screen.getByRole('header', { name: 'Ajouter des articles' }),
+      ).toBeOnTheScreen();
+      // The last focus move is the one made when the dialog closed: the row is gone, so its
+      // target is the title, which is a View marked as a header.
+      const target = jest.mocked(focusOn).mock.calls.at(-1)?.[0].current;
+      expect(target).not.toBeNull();
+      expect(target).toMatchObject({ props: { accessibilityRole: 'header' } });
     });
 
     it('US2-5 "Annuler" brings the article back in the catalog and on both lists', async () => {
