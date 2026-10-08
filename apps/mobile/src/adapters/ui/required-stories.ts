@@ -50,4 +50,6 @@ export const requiredStories: readonly string[] = [
   'Screens/Lists/Success',
   'Dialogs/CreateListDialog/Default',
   'Dialogs/CreateListDialog/NameAlreadyUsed',
+  'Dialogs/CreateCategoryDialog/Default',
+  'Dialogs/CreateCategoryDialog/NameAlreadyUsed',
 ];

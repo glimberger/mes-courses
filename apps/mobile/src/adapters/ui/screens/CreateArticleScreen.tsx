@@ -34,6 +34,7 @@ import type { RootStackParamList } from '../routes';
 import { useAppStoreApi } from '../state/app-store-provider';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
+import { CreateCategoryDialog } from './CreateCategoryDialog';
 import { QuantityDialog, type QuantityRequest } from './QuantityDialog';
 
 const NO_CATEGORY = 'Choisissez une catégorie.';
@@ -41,7 +42,8 @@ const NO_CATEGORY = 'Choisissez une catégorie.';
 /**
  * Creates an article in a category and adds it to the current list, with an optional quantity
  * (US2-7). The name is checked by the domain before anything is saved (FR-022); a name already in
- * the catalog offers to add that article instead (US2-9, US2-20).
+ * the catalog offers to add that article instead (US2-9, US2-20). "Nouvelle catégorie" creates a
+ * category and chooses it (US4-2).
  */
 export const CreateArticleScreen = () => {
   const navigation =
@@ -74,7 +76,14 @@ export const CreateArticleScreen = () => {
   );
   const [saving, setSaving] = useState(false);
   const [request, setRequest] = useState<QuantityRequest | null>(null);
+  const [creatingCategory, setCreatingCategory] = useState(false);
   const addExistingRef = useRef<View>(null);
+  const newCategoryRef = useRef<View>(null);
+
+  const chooseCategory = (id: CategoryId) => {
+    setCategoryId(id);
+    setCategoryMissing(false);
+  };
 
   /** The quantity typed, or null after showing its error. */
   const typedQuantity = () => {
@@ -141,6 +150,13 @@ export const CreateArticleScreen = () => {
     else focusOn(addExistingRef);
   };
 
+  /** Chooses the category just created, if any; focus goes back to the button (FR-037). */
+  const closeCategoryDialog = (created: CategoryId | null) => {
+    setCreatingCategory(false);
+    if (created) chooseCategory(created);
+    focusOn(newCategoryRef);
+  };
+
   return (
     <>
       <CreateArticleForm
@@ -160,29 +176,38 @@ export const CreateArticleScreen = () => {
         onChangeUnit={setUnit}
         quantityError={quantityError}
         categoryId={categoryId}
-        onChooseCategory={(id) => {
-          setCategoryId(id);
-          setCategoryMissing(false);
-        }}
+        onChooseCategory={chooseCategory}
+        onNewCategory={() => setCreatingCategory(true)}
+        newCategoryRef={newCategoryRef}
         categoryMissing={categoryMissing}
         saving={saving}
         onSubmit={() => void create()}
       />
       <QuantityDialog request={request} onClose={closeDialog} />
+      <CreateCategoryDialog
+        visible={creatingCategory}
+        onClose={closeCategoryDialog}
+      />
     </>
   );
 };
 
 /**
- * The categories as radio buttons, loaded when it is drawn (US2-7). The new category of US4
- * comes later.
+ * The categories as radio buttons, loaded when it is drawn (US2-7, US4-1), then
+ * "Nouvelle catégorie" (US4-2).
  */
 const CategoryPicker = ({
   value,
   onChange,
+  onNewCategory,
+  newCategoryRef,
+  saving,
 }: {
   value: CategoryId | null;
   onChange: (id: CategoryId) => void;
+  onNewCategory: () => void;
+  newCategoryRef?: Ref<View> | undefined;
+  saving: boolean;
 }) => {
   const categories = useAppStore((state) => state.categories);
   const loadCategories = useAppStore((state) => state.loadCategories);
@@ -196,19 +221,29 @@ const CategoryPicker = ({
       errorMessage="Impossible de charger les catégories."
       onRetry={() => void loadCategories()}
       renderSuccess={(data) => (
-        <RadioButton.Group
-          value={value ?? ''}
-          onValueChange={(id) => onChange(id as CategoryId)}
-        >
-          {data.map((category) => (
-            <RadioButton.Item
-              key={category.id}
-              mode="android"
-              label={category.name}
-              value={category.id}
-            />
-          ))}
-        </RadioButton.Group>
+        <>
+          <RadioButton.Group
+            value={value ?? ''}
+            onValueChange={(id) => onChange(id as CategoryId)}
+          >
+            {data.map((category) => (
+              <RadioButton.Item
+                key={category.id}
+                mode="android"
+                label={category.name}
+                value={category.id}
+              />
+            ))}
+          </RadioButton.Group>
+          <Button
+            ref={newCategoryRef}
+            icon="plus"
+            disabled={saving}
+            onPress={onNewCategory}
+          >
+            Nouvelle catégorie
+          </Button>
+        </>
       )}
     />
   );
@@ -231,6 +266,10 @@ export type CreateArticleFormProps = {
   quantityError: QuantityError | null;
   categoryId: CategoryId | null;
   onChooseCategory: (id: CategoryId) => void;
+  /** Opens CreateCategoryDialog (US4-2). */
+  onNewCategory: () => void;
+  /** "Nouvelle catégorie", which takes focus back when the dialog closes (FR-037). */
+  newCategoryRef?: Ref<View> | undefined;
   categoryMissing: boolean;
   saving: boolean;
   onSubmit: () => void;
@@ -255,6 +294,8 @@ export const CreateArticleForm = ({
   quantityError,
   categoryId,
   onChooseCategory,
+  onNewCategory,
+  newCategoryRef,
   categoryMissing,
   saving,
   onSubmit,
@@ -298,7 +339,13 @@ export const CreateArticleForm = ({
         />
         <List.Subheader accessibilityRole="header">Catégorie</List.Subheader>
         {categoryMissing && <HelperText type="error">{NO_CATEGORY}</HelperText>}
-        <CategoryPicker value={categoryId} onChange={onChooseCategory} />
+        <CategoryPicker
+          value={categoryId}
+          onChange={onChooseCategory}
+          onNewCategory={onNewCategory}
+          newCategoryRef={newCategoryRef}
+          saving={saving}
+        />
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button

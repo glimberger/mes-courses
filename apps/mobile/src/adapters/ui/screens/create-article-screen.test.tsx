@@ -8,7 +8,7 @@ import { Navigation } from '../navigation';
 import { seed as appSeed } from '../seed';
 import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
-import type { Fixture } from '../testing/story-store';
+import type { Fixture, StoryScenario } from '../testing/story-store';
 import { CreateArticleScreen } from './CreateArticleScreen';
 
 const maListe = 'list-ma-liste' as ListId;
@@ -25,8 +25,14 @@ const fewCategories: Fixture = {
 };
 
 /** CreateArticle alone, opened with no name and no category. */
-const renderScreen = async (seed: Fixture = fixture) => {
-  const rendered = await renderWithStore(<CreateArticleScreen />, { seed });
+const renderScreen = async (
+  seed: Fixture = fixture,
+  scenario: StoryScenario = {},
+) => {
+  const rendered = await renderWithStore(<CreateArticleScreen />, {
+    seed,
+    ...scenario,
+  });
   await screen.findByRole('radio', { name: 'Boissons' });
   const stored = (articleId: ArticleId) =>
     rendered.unitOfWork.run((repos) => repos.items.find(maListe, articleId));
@@ -47,6 +53,13 @@ const openFromAddArticles = async (seed: Fixture = fewCategories) => {
   const stored = (articleId: ArticleId) =>
     rendered.unitOfWork.run((repos) => repos.items.find(maListe, articleId));
   return { ...rendered, stored };
+};
+
+/** The dialog's "Nom" field: the form's own comes first. */
+const dialogNameField = () => {
+  const field = screen.getAllByLabelText('Nom').at(-1);
+  if (!field) throw new Error('No "Nom" field');
+  return field;
 };
 
 const type = (label: string, text: string) =>
@@ -74,6 +87,88 @@ describe('CreateArticle', () => {
     expect(screen.getByLabelText('Unité')).toBeOnTheScreen();
     expect(
       screen.getByRole('button', { name: 'Créer et ajouter' }),
+    ).toBeOnTheScreen();
+  });
+
+  it('US4-1 offers the 11 default categories in the order of the spec', async () => {
+    await renderScreen();
+
+    expect(
+      screen
+        .getAllByRole('radio', { name: /.+/ })
+        .map((radio) => radio.props.accessibilityLabel as string),
+    ).toEqual([
+      'Fruits et légumes',
+      'Boucherie et poissonnerie',
+      'Crèmerie',
+      'Boulangerie',
+      'Épicerie salée',
+      'Épicerie sucrée',
+      'Surgelés',
+      'Boissons',
+      'Hygiène et beauté',
+      'Entretien',
+      'Divers',
+    ]);
+  });
+
+  it('US4-2 "Nouvelle catégorie" opens CreateCategoryDialog; on success "Bébé" is offered and chosen', async () => {
+    await renderScreen();
+    choose('Boissons');
+
+    fireEvent.press(screen.getByRole('button', { name: 'Nouvelle catégorie' }));
+    await waitFor(() =>
+      expect(
+        screen.queryAllByRole('header', { name: 'Nouvelle catégorie' }),
+      ).not.toHaveLength(0),
+    );
+    fireEvent.changeText(dialogNameField(), 'Bébé');
+    fireEvent.press(screen.getByRole('button', { name: 'Créer' }));
+
+    expect(await screen.findByRole('radio', { name: 'Bébé' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Boissons' })).not.toBeChecked();
+  });
+
+  it('disables "Nouvelle catégorie" while the article is being saved', async () => {
+    await renderScreen(fixture, { pending: ['createArticleAndAddToList'] });
+
+    type('Nom', 'Houmous');
+    choose('Boissons');
+    create();
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Nouvelle catégorie' }),
+      ).toBeDisabled(),
+    );
+  });
+
+  it('US4-2 an article created in the new category "Bébé" shows under a "Bébé" heading on CurrentList', async () => {
+    // One item on the list, so the new last section is within the rows Jest draws.
+    await openFromAddArticles({
+      ...fewCategories,
+      items: fixture.items.slice(0, 1),
+    });
+
+    fireEvent.press(screen.getByRole('button', { name: 'Nouvelle catégorie' }));
+    await waitFor(() =>
+      expect(screen.getAllByLabelText('Nom')).toHaveLength(2),
+    );
+    fireEvent.changeText(dialogNameField(), 'Bébé');
+    fireEvent.press(screen.getByRole('button', { name: 'Créer' }));
+    await screen.findByRole('radio', { name: 'Bébé', checked: true });
+    type('Nom', 'Lait infantile');
+    create();
+    await screen.findByText('« Lait infantile » ajouté');
+    fireEvent.press(screen.getByLabelText('Retour'));
+
+    expect(
+      await screen.findByRole('header', { name: 'Bébé' }),
+    ).toBeOnTheScreen();
+    expect(
+      await screen.findByRole('checkbox', {
+        name: 'Lait infantile, pas dans le caddie',
+      }),
     ).toBeOnTheScreen();
   });
 
