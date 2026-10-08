@@ -185,3 +185,22 @@ describe('EditArticle opened before the catalog is loaded', () => {
     expect(screen.queryByRole('button', { name: 'Enregistrer' })).toBeNull();
   });
 });
+
+describe('EditArticle and the "ajouté" notice', () => {
+  it('clears the notice shown when it opens, so the snackbar never covers the form', async () => {
+    const { store } = await renderWithStore(<EditArticleScreen />, {
+      seed,
+      routeParams: { articleId: lait },
+      prepare: async (actions) => {
+        await actions.loadCurrentList();
+        await actions.loadCatalog();
+        await actions.addArticleToList(
+          { id: 'article-beurre' as ArticleId, name: 'Beurre' },
+          null,
+        );
+      },
+    });
+
+    await waitFor(() => expect(store.getState().notice).toBeNull());
+  });
+});

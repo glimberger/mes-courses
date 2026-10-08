@@ -7,6 +7,7 @@ import { EditArticleForm, EditArticleScreen } from './EditArticleScreen';
 const catalogLoaded: StoryScenario['prepare'] = (store) => store.loadCatalog();
 
 const lait = fixture.articles.find((article) => article.name === 'Lait');
+if (!lait) throw new Error('The fixture has no "Lait"');
 
 const meta = {
   title: 'Screens/EditArticle',
@@ -16,7 +17,7 @@ const meta = {
       seed: fixture,
       prepare: catalogLoaded,
     },
-    routeParams: { articleId: lait?.id },
+    routeParams: { articleId: lait.id },
   },
 } satisfies Meta<typeof EditArticleScreen>;
 

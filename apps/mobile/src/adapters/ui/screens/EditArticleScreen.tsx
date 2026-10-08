@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -22,6 +22,7 @@ import { BackAction } from '../components/BackAction';
 import { Button } from '../components/Button';
 import { nameErrorText, NameField } from '../components/NameField';
 import type { RootStackParamList } from '../routes';
+import { useAppStoreApi } from '../state/app-store-provider';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
 
@@ -34,7 +35,15 @@ export const EditArticleScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { params } = useRoute<RouteProp<RootStackParamList, 'EditArticle'>>();
+  const store = useAppStoreApi();
   const full = useAppStore((state) => state.catalog.full);
+
+  // The confirmation of an earlier addition no longer applies here, and no snackbar shows after
+  // a save (002 ui-screens.md). A failure notice stays, so the user still reads it.
+  useEffect(() => {
+    const { notice, dismissNotice } = store.getState();
+    if (notice?.type === 'articleAdded') dismissNotice();
+  }, [store]);
   const found = (() => {
     if (full.status !== 'success') return null;
     for (const section of full.data.sections) {
@@ -96,7 +105,8 @@ const LoadedEditArticle = ({
     });
     setSaving(false);
     if (outcome.ok) {
-      navigation.goBack();
+      // The user may have left while the save refreshed the screens.
+      if (navigation.isFocused()) navigation.goBack();
       return;
     }
     switch (outcome.error.type) {
