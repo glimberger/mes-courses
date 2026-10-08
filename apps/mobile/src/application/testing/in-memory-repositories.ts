@@ -118,6 +118,26 @@ export class InMemoryRepositories implements Repositories {
       }
       this.state.articles.set(article.id, { ...article });
     },
+    update: async (article) => {
+      const stored = this.state.articles;
+      const sameName = findByName(
+        stored.values(),
+        normalizedName(article.name),
+      );
+      if (sameName && sameName.id !== article.id) {
+        throw uniqueFailed('article.normalized_name');
+      }
+      if (!this.state.categories.has(article.categoryId)) {
+        throw missingReference();
+      }
+      if (stored.has(article.id)) stored.set(article.id, { ...article });
+    },
+    remove: async (id) => {
+      if ([...this.state.items.values()].some((i) => i.articleId === id)) {
+        throw new Error('Constraint failed: a list item still refers to it');
+      }
+      this.state.articles.delete(id);
+    },
   };
 
   readonly lists: ShoppingListRepository = {
@@ -169,6 +189,15 @@ export class InMemoryRepositories implements Repositories {
     },
     remove: async (listId, articleId) => {
       this.state.items.delete(itemRef(listId, articleId));
+    },
+    forArticle: async (articleId) =>
+      [...this.state.items.values()]
+        .filter((i) => i.articleId === articleId)
+        .map(copyItem),
+    removeAllForArticle: async (articleId) => {
+      for (const [ref, item] of this.state.items) {
+        if (item.articleId === articleId) this.state.items.delete(ref);
+      }
     },
     takeAllOutOfCart: async (listId) => {
       for (const item of this.state.items.values()) {

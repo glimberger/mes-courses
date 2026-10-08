@@ -19,6 +19,10 @@ export interface ArticleRepository {
   findById(id: ArticleId): Promise<Article | null>;
   findByNormalizedName(normalizedName: string): Promise<Article | null>;
   add(article: Article): Promise<void>;
+  /** Saves the name, the normalized name and the category of the article. */
+  update(article: Article): Promise<void>;
+  /** Rejects while a list item still refers to the article. */
+  remove(id: ArticleId): Promise<void>;
 }
 
 export interface ShoppingListRepository {
@@ -39,6 +43,9 @@ export interface ListItemRepository {
   /** Inserts the item, or updates it when the list already holds the article. */
   save(item: ListItem): Promise<void>;
   remove(listId: ListId, articleId: ArticleId): Promise<void>;
+  /** The items of the article on every list. */
+  forArticle(articleId: ArticleId): Promise<ListItem[]>;
+  removeAllForArticle(articleId: ArticleId): Promise<void>;
   /** Unticks every item of the list, keeping the items and their quantities. */
   takeAllOutOfCart(listId: ListId): Promise<void>;
 }

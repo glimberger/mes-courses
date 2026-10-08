@@ -53,7 +53,7 @@ listed in [contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-e
 
 **Purpose**: start from a green 001 baseline.
 
-- [ ] T001 Branch from `origin/main` (`git fetch`, then `git switch -c feat/002-manage-articles origin/main`) with 001 merged. Run `yarn typecheck && yarn lint && yarn format:check && yarn test && yarn test:architecture` and `yarn test:e2e:android` and confirm it is all green before any change.
+- [X] T001 Branch from `origin/main` (`git fetch`, then `git switch -c feat/002-manage-articles origin/main`) with 001 merged. Run `yarn typecheck && yarn lint && yarn format:check && yarn test && yarn test:architecture` and `yarn test:e2e:android` and confirm it is all green before any change.
 
 ---
 
@@ -66,15 +66,15 @@ story uses.
 
 ### Repository methods ([contracts/driving-ports.md](contracts/driving-ports.md#driven-port-changes))
 
-- [ ] T002 Extend `apps/mobile/src/application/testing/contracts/article-repository.contract.ts` with failing cases:
+- [X] T002 Extend `apps/mobile/src/application/testing/contracts/article-repository.contract.ts` with failing cases:
   - `update(article)` changes the name, the normalized name and the category, and `findByNormalizedName` finds it under the new name only;
   - `remove(id)` deletes the article;
   - `remove(id)` rejects while a list item still refers to it.
-- [ ] T003 Extend `apps/mobile/src/application/testing/contracts/list-item-repository.contract.ts` with failing cases:
+- [X] T003 Extend `apps/mobile/src/application/testing/contracts/list-item-repository.contract.ts` with failing cases:
   - `forArticle(articleId)` returns the article's items on every list, with `inCart` and `quantity`;
   - `removeAllForArticle(articleId)` removes them all and leaves other articles' items untouched.
-- [ ] T004 Add `ArticleRepository.update(article: Article): Promise<void>` and `remove(id: ArticleId): Promise<void>`, and `ListItemRepository.forArticle(articleId): Promise<ListItem[]>` and `removeAllForArticle(articleId): Promise<void>` to `apps/mobile/src/application/ports/repositories.ts`. Implement them in the fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts`, where `remove` throws while an item refers to the article, to turn T002–T003 green against the fakes.
-- [ ] T005 Implement the same methods in `apps/mobile/src/adapters/sqlite/article-repository.ts` and `apps/mobile/src/adapters/sqlite/list-item-repository.ts` to turn T002–T003 green against SQLite in `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`. Wrap every database call with `toStorageError` (001 R13), and add one test there: a failing `remove` rejects with a `StorageError` whose message and stack hold no article name. The SQL:
+- [X] T004 Add `ArticleRepository.update(article: Article): Promise<void>` and `remove(id: ArticleId): Promise<void>`, and `ListItemRepository.forArticle(articleId): Promise<ListItem[]>` and `removeAllForArticle(articleId): Promise<void>` to `apps/mobile/src/application/ports/repositories.ts`. Implement them in the fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts`, where `remove` throws while an item refers to the article, to turn T002–T003 green against the fakes.
+- [X] T005 Implement the same methods in `apps/mobile/src/adapters/sqlite/article-repository.ts` and `apps/mobile/src/adapters/sqlite/list-item-repository.ts` to turn T002–T003 green against SQLite in `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`. Wrap every database call with `toStorageError` (001 R13), and add one test there: a failing `remove` rejects with a `StorageError` whose message and stack hold no article name. The SQL:
   - edit: `UPDATE article SET name = ?, normalized_name = ?, category_id = ? WHERE id = ?`;
   - remove items: `DELETE FROM list_item WHERE article_id = ?`;
   - remove article: `DELETE FROM article WHERE id = ?`, where the `NO ACTION` reference from `list_item` makes it fail while an item is left ([research.md](research.md) R4).
