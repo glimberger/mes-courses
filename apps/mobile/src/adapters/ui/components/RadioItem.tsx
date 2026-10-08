@@ -5,14 +5,17 @@ import { RadioButton } from 'react-native-paper';
 export const RadioItem = ({
   label,
   value,
+  disabled = false,
 }: {
   label: string;
   value: string;
+  disabled?: boolean;
 }) => (
   <RadioButton.Item
     mode="android"
     label={label}
     value={value}
+    disabled={disabled}
     style={styles.target}
   />
 );

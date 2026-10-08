@@ -19,13 +19,20 @@ export type NameFieldProps = {
   onChangeText: (text: string) => void;
   /** The French error shown under the field, announced as it appears (FR-038). */
   error: string | null;
+  /** Locks the field, for a form being saved. */
+  disabled?: boolean;
 };
 
 /**
  * The "Nom" field of the forms. It sets no native `maxLength`, which counts UTF-16 units: the
  * 60-character limit is the domain's `NameTooLong` error (research R6).
  */
-export const NameField = ({ value, onChangeText, error }: NameFieldProps) => {
+export const NameField = ({
+  value,
+  onChangeText,
+  error,
+  disabled = false,
+}: NameFieldProps) => {
   useAnnouncement(error);
   return (
     <View>
@@ -37,6 +44,7 @@ export const NameField = ({ value, onChangeText, error }: NameFieldProps) => {
         onChangeText={onChangeText}
         autoCapitalize="sentences"
         error={error !== null}
+        disabled={disabled}
       />
       {error !== null && <HelperText type="error">{error}</HelperText>}
     </View>

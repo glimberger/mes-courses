@@ -219,6 +219,23 @@ describe('EditArticle category (US3)', () => {
     expect(screen.getByRole('radio', { name: 'Crèmerie' })).not.toBeChecked();
   });
 
+  it('locks the name and the categories while the save is in flight', async () => {
+    await openEditLait({ pending: ['editArticle'] });
+
+    fireEvent.press(await screen.findByRole('radio', { name: 'Boissons' }));
+    save();
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('radio', { name: 'Fruits et légumes' }),
+      ).toBeDisabled(),
+    );
+    expect(screen.getByLabelText('Nom')).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Nouvelle catégorie' }),
+    ).toBeDisabled();
+  });
+
   it('SC-007 changes the category in 4 taps from the catalog', async () => {
     const rendered = await renderWithStore(
       <Navigation errorReporter={new RecordingErrorReporter()} />,

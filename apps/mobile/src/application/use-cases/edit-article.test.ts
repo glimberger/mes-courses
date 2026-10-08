@@ -9,6 +9,7 @@ import {
 } from '../testing/in-memory-repositories';
 import { createEditArticle } from './edit-article';
 import { createGetCatalog } from './get-catalog';
+import { createGetCurrentList } from './get-current-list';
 
 const maListe = 'l-1' as ListId;
 const barbecue = 'l-2' as ListId;
@@ -233,6 +234,7 @@ describe('editArticle', () => {
       categoryId: cremerie,
     });
   });
+
   describe('changing the category (US3)', () => {
     const epicerie = 'c-3' as CategoryId;
     const houmous = 'a-5' as ArticleId;
@@ -283,30 +285,26 @@ describe('editArticle', () => {
       });
     });
 
-    it('US3-2 drops the section of the old category from the list when it was its only item there', async () => {
+    it('US3-2 drops the section of the old category from the list view when it was its only item there', async () => {
+      const sectionIds = async () =>
+        (await createGetCurrentList({ unitOfWork })()).sections.map(
+          (section) => section.category.id,
+        );
+      expect(await sectionIds()).toContain(epicerie);
+
       await editArticle(houmous, { name: 'Houmous', categoryId: cremerie });
 
-      const current = await unitOfWork.run((repos) =>
-        repos.items.forList(maListe),
-      );
-      const categoriesOnList = await unitOfWork.run(async (repos) => {
-        const ids = new Set<CategoryId>();
-        for (const item of current) {
-          const article = await repos.articles.findById(item.articleId);
-          if (article) ids.add(article.categoryId);
-        }
-        return ids;
-      });
-      expect(categoriesOnList.has(epicerie)).toBe(false);
-      expect(categoriesOnList.has(cremerie)).toBe(true);
+      const after = await sectionIds();
+      expect(after).not.toContain(epicerie);
+      expect(after).toContain(cremerie);
     });
 
     it('US3-3 FR-009 applies name and category together, and with a taken name neither', async () => {
-      const ok1 = await editArticle(houmous, {
+      const moved = await editArticle(houmous, {
         name: 'Houmous nature',
         categoryId: cremerie,
       });
-      expect(ok1).toEqual(ok(undefined));
+      expect(moved).toEqual(ok(undefined));
       expect(await articles()).toContainEqual({
         id: houmous,
         name: 'Houmous nature',
@@ -320,6 +318,18 @@ describe('editArticle', () => {
       });
       expect(refused.ok).toBe(false);
       expect(await articles()).toEqual(before);
+    });
+
+    it('reports a taken name before an unknown category, so the fixable error is shown', async () => {
+      const outcome = await editArticle(houmous, {
+        name: 'beurre',
+        categoryId: 'c-unknown' as CategoryId,
+      });
+
+      expect(outcome).toMatchObject({
+        ok: false,
+        error: { type: 'NameAlreadyUsed' },
+      });
     });
 
     it('FR-008 returns CategoryNotFound for an unknown category, writing nothing', async () => {

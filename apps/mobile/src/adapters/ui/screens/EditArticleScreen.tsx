@@ -181,7 +181,12 @@ export const EditArticleForm = ({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.form}
       >
-        <NameField value={name} onChangeText={onChangeName} error={nameError} />
+        <NameField
+          value={name}
+          onChangeText={onChangeName}
+          error={nameError}
+          disabled={saving}
+        />
         <CategoryPicker
           value={categoryId}
           onChange={onChangeCategory}

@@ -7,7 +7,8 @@ import { uniqueName } from './unique-name';
 
 /**
  * Renames the article and saves its category in one transaction (FR-001, FR-002). The name is
- * cleaned and unique among the other articles (FR-008, FR-008a); on any error nothing changes.
+ * cleaned and unique among the other articles (FR-008, FR-008a), checked before the category so the
+ * user sees the name error they can fix; on any error nothing changes.
  */
 export const createEditArticle =
   ({ unitOfWork }: { unitOfWork: UnitOfWork }) =>
@@ -24,16 +25,16 @@ export const createEditArticle =
       const article = await repos.articles.findById(articleId);
       if (!article) return err({ type: 'ArticleNotFound' });
 
-      if (!(await repos.categories.findById(categoryId))) {
-        return err({ type: 'CategoryNotFound' });
-      }
-
       const unique = await uniqueName(
         repos.articles,
         name,
         (existing) => existing.id === articleId,
       );
       if (!unique.ok) return unique;
+
+      if (!(await repos.categories.findById(categoryId))) {
+        return err({ type: 'CategoryNotFound' });
+      }
 
       await repos.articles.update({
         id: articleId,
