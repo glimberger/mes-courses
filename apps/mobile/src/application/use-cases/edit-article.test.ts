@@ -233,4 +233,105 @@ describe('editArticle', () => {
       categoryId: cremerie,
     });
   });
+  describe('changing the category (US3)', () => {
+    const epicerie = 'c-3' as CategoryId;
+    const houmous = 'a-5' as ArticleId;
+    const sectionOf = async (listId: ListId, categoryId: CategoryId) =>
+      (await catalog(listId)).sections.find(
+        (section) => section.category.id === categoryId,
+      );
+
+    beforeEach(async () => {
+      await unitOfWork.run(async (repos) => {
+        await repos.categories.add({
+          id: epicerie,
+          name: 'Épicerie salée',
+          position: 2,
+        });
+        await repos.articles.add({
+          id: houmous,
+          name: 'Houmous',
+          categoryId: epicerie,
+        });
+        await repos.items.save({
+          listId: maListe,
+          articleId: houmous,
+          inCart: true,
+          quantity: { amount: 1, unit: 'kg' },
+        });
+      });
+    });
+
+    it('US3-1 moves "Houmous" to "Crèmerie" in the catalog and on the list, keeping its quantity and ticked state', async () => {
+      const outcome = await editArticle(houmous, {
+        name: 'Houmous',
+        categoryId: cremerie,
+      });
+
+      expect(outcome).toEqual(ok(undefined));
+      expect(
+        (await sectionOf(maListe, cremerie))?.articles.map((a) => a.name),
+      ).toContain('Houmous');
+      expect(
+        (await sectionOf(maListe, epicerie))?.articles.map((a) => a.name) ?? [],
+      ).not.toContain('Houmous');
+      expect(await itemsOf(maListe)).toContainEqual({
+        listId: maListe,
+        articleId: houmous,
+        inCart: true,
+        quantity: { amount: 1, unit: 'kg' },
+      });
+    });
+
+    it('US3-2 drops the section of the old category from the list when it was its only item there', async () => {
+      await editArticle(houmous, { name: 'Houmous', categoryId: cremerie });
+
+      const current = await unitOfWork.run((repos) =>
+        repos.items.forList(maListe),
+      );
+      const categoriesOnList = await unitOfWork.run(async (repos) => {
+        const ids = new Set<CategoryId>();
+        for (const item of current) {
+          const article = await repos.articles.findById(item.articleId);
+          if (article) ids.add(article.categoryId);
+        }
+        return ids;
+      });
+      expect(categoriesOnList.has(epicerie)).toBe(false);
+      expect(categoriesOnList.has(cremerie)).toBe(true);
+    });
+
+    it('US3-3 FR-009 applies name and category together, and with a taken name neither', async () => {
+      const ok1 = await editArticle(houmous, {
+        name: 'Houmous nature',
+        categoryId: cremerie,
+      });
+      expect(ok1).toEqual(ok(undefined));
+      expect(await articles()).toContainEqual({
+        id: houmous,
+        name: 'Houmous nature',
+        categoryId: cremerie,
+      });
+
+      const before = await articles();
+      const refused = await editArticle(houmous, {
+        name: 'beurre',
+        categoryId: fruits,
+      });
+      expect(refused.ok).toBe(false);
+      expect(await articles()).toEqual(before);
+    });
+
+    it('FR-008 returns CategoryNotFound for an unknown category, writing nothing', async () => {
+      const before = await articles();
+
+      expect(
+        await editArticle(houmous, {
+          name: 'Houmous',
+          categoryId: 'c-unknown' as CategoryId,
+        }),
+      ).toEqual(err({ type: 'CategoryNotFound' }));
+      expect(await articles()).toEqual(before);
+    });
+  });
 });

@@ -20,6 +20,7 @@ import type { CategoryId } from '../../../domain/category';
 import { validateName } from '../../../domain/name';
 import { BackAction } from '../components/BackAction';
 import { Button } from '../components/Button';
+import { CategoryPicker } from '../components/CategoryPicker';
 import { nameErrorText, NameField } from '../components/NameField';
 import type { RootStackParamList } from '../routes';
 import { useAppStoreApi } from '../state/app-store-provider';
@@ -27,9 +28,9 @@ import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
 
 /**
- * Renames an article (002 User Story 1). It reads the article from the loaded catalog and saves
- * it in its current category; the category field comes with User Story 3. A refused name stays
- * in the field with its error; a failed save is told by the snackbar.
+ * Renames an article and changes its category (002 User Stories 1 and 3). It reads the article
+ * from the loaded catalog and saves name and category together. A refused name stays in the
+ * field with its error; a failed save is told by the snackbar.
  */
 export const EditArticleScreen = () => {
   const navigation =
@@ -90,6 +91,7 @@ const LoadedEditArticle = ({
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const editArticle = useAppStore((state) => state.editArticle);
   const [name, setName] = useState(initial.name);
+  const [categoryId, setCategoryId] = useState<CategoryId>(initial.categoryId);
   const [nameError, setNameError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -101,7 +103,7 @@ const LoadedEditArticle = ({
     setSaving(true);
     const outcome = await editArticle(articleId, {
       name,
-      categoryId: initial.categoryId,
+      categoryId,
     });
     setSaving(false);
     if (outcome.ok) {
@@ -131,6 +133,8 @@ const LoadedEditArticle = ({
       name={name}
       onChangeName={setName}
       nameError={nameError}
+      categoryId={categoryId}
+      onChangeCategory={setCategoryId}
       saving={saving}
       onSubmit={() => void save()}
     />
@@ -143,6 +147,8 @@ export type EditArticleFormProps = {
   name: string;
   onChangeName: (text: string) => void;
   nameError: string | null;
+  categoryId: CategoryId | null;
+  onChangeCategory: (id: CategoryId) => void;
   saving: boolean;
   onSubmit: () => void;
 };
@@ -156,6 +162,8 @@ export const EditArticleForm = ({
   name,
   onChangeName,
   nameError,
+  categoryId,
+  onChangeCategory,
   saving,
   onSubmit,
 }: EditArticleFormProps) => {
@@ -174,6 +182,11 @@ export const EditArticleForm = ({
         contentContainerStyle={styles.form}
       >
         <NameField value={name} onChangeText={onChangeName} error={nameError} />
+        <CategoryPicker
+          value={categoryId}
+          onChange={onChangeCategory}
+          disabled={saving}
+        />
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button

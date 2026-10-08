@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
+import type { UnitOfWork } from '../../../application/ports/unit-of-work';
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import type { ArticleId } from '../../../domain/article';
 import { EditArticleScreen } from './EditArticleScreen';
@@ -154,6 +155,87 @@ describe('EditArticle', () => {
       await screen.findByText("La modification n'a pas pu être enregistrée."),
     ).toBeOnTheScreen();
     expect(screen.getByText("Modifier l'article")).toBeOnTheScreen();
+  });
+});
+
+describe('EditArticle category (US3)', () => {
+  const storedCategory = (rendered: { unitOfWork: UnitOfWork }) =>
+    rendered.unitOfWork.run(async (repos) => {
+      const article = await repos.articles.findById(lait);
+      if (!article) throw new Error('The article is gone');
+      return (await repos.categories.findById(article.categoryId))?.name;
+    });
+
+  it('shows every category with the current one selected', async () => {
+    await openEditLait();
+
+    expect(
+      await screen.findByRole('radio', { name: 'Crèmerie' }),
+    ).toBeChecked();
+    for (const other of ['Fruits et légumes', 'Épicerie salée', 'Boissons']) {
+      expect(screen.getByRole('radio', { name: other })).not.toBeChecked();
+    }
+  });
+
+  it('US3-1 saving another category moves the article', async () => {
+    const rendered = await openEditLait();
+
+    fireEvent.press(await screen.findByRole('radio', { name: 'Boissons' }));
+    save();
+
+    expect(await screen.findByText('Ajouter des articles')).toBeOnTheScreen();
+    expect(await storedCategory(rendered)).toBe('Boissons');
+    expect(await rendered.storedName()).toBe('Lait');
+  });
+
+  it('US3-3 a taken name with a new category shows the name error and changes neither', async () => {
+    const rendered = await openEditLait();
+
+    fireEvent.press(await screen.findByRole('radio', { name: 'Boissons' }));
+    type('beurre');
+    save();
+
+    expect(
+      await screen.findByText('Un article « Beurre » existe déjà.'),
+    ).toBeOnTheScreen();
+    expect(await storedCategory(rendered)).toBe('Crèmerie');
+    expect(await rendered.storedName()).toBe('Lait');
+  });
+
+  it('US3-4 a category created from "Nouvelle catégorie" is offered and preselected', async () => {
+    await openEditLait();
+    await screen.findByRole('radio', { name: 'Crèmerie' });
+
+    fireEvent.press(screen.getByRole('button', { name: 'Nouvelle catégorie' }));
+    await waitFor(() =>
+      expect(screen.getAllByLabelText('Nom')).toHaveLength(2),
+    );
+    for (const dialogField of screen.getAllByLabelText('Nom').slice(1)) {
+      fireEvent.changeText(dialogField, 'Bébé');
+    }
+    fireEvent.press(screen.getByRole('button', { name: 'Créer' }));
+
+    expect(await screen.findByRole('radio', { name: 'Bébé' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Crèmerie' })).not.toBeChecked();
+  });
+
+  it('SC-007 changes the category in 4 taps from the catalog', async () => {
+    const rendered = await renderWithStore(
+      <Navigation errorReporter={new RecordingErrorReporter()} />,
+      { seed, asScreen: false },
+    );
+    fireEvent.press(await screen.findByRole('button', { name: 'Ajouter' }));
+    await screen.findByText('Beurre');
+
+    fireEvent.press(
+      screen.getByRole('button', { name: "Plus d'actions pour « Lait »" }),
+    ); // 1
+    fireEvent.press(screen.getByText('Modifier')); // 2
+    fireEvent.press(await screen.findByRole('radio', { name: 'Boissons' })); // 3
+    save(); // 4
+
+    await screen.findByText('Ajouter des articles');
+    expect(await storedCategory(rendered)).toBe('Boissons');
   });
 });
 

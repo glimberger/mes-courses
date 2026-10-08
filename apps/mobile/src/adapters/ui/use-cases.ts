@@ -84,7 +84,10 @@ export type UseCases = {
     articleId: ArticleId,
     article: { name: string; categoryId: CategoryId },
   ) => Promise<
-    Result<void, NameError | NameAlreadyUsed<Article> | ArticleNotFound>
+    Result<
+      void,
+      NameError | NameAlreadyUsed<Article> | ArticleNotFound | CategoryNotFound
+    >
   >;
   getArticleUsage: (
     articleId: ArticleId,

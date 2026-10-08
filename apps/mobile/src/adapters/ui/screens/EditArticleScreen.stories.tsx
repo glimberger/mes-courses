@@ -36,6 +36,8 @@ export const NameAlreadyUsed: Story = {
       name="beurre"
       onChangeName={noop}
       nameError="Un article « Beurre » existe déjà."
+      categoryId={lait.categoryId}
+      onChangeCategory={noop}
       saving={false}
       onSubmit={noop}
     />
@@ -49,6 +51,8 @@ export const NameRequired: Story = {
       name=""
       onChangeName={noop}
       nameError="Indiquez un nom."
+      categoryId={lait.categoryId}
+      onChangeCategory={noop}
       saving={false}
       onSubmit={noop}
     />

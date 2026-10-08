@@ -1,5 +1,5 @@
 import type { Article, ArticleId, ArticleNotFound } from '../../domain/article';
-import type { CategoryId } from '../../domain/category';
+import type { CategoryId, CategoryNotFound } from '../../domain/category';
 import type { NameAlreadyUsed, NameError } from '../../domain/name';
 import { err, ok, type Result } from '../../domain/result';
 import type { UnitOfWork } from '../ports/unit-of-work';
@@ -15,11 +15,18 @@ export const createEditArticle =
     articleId: ArticleId,
     { name, categoryId }: { name: string; categoryId: CategoryId },
   ): Promise<
-    Result<void, NameError | NameAlreadyUsed<Article> | ArticleNotFound>
+    Result<
+      void,
+      NameError | NameAlreadyUsed<Article> | ArticleNotFound | CategoryNotFound
+    >
   > =>
     unitOfWork.run(async (repos) => {
       const article = await repos.articles.findById(articleId);
       if (!article) return err({ type: 'ArticleNotFound' });
+
+      if (!(await repos.categories.findById(categoryId))) {
+        return err({ type: 'CategoryNotFound' });
+      }
 
       const unique = await uniqueName(
         repos.articles,
