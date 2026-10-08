@@ -21,7 +21,11 @@ const metrics = {
  */
 export const renderWithStore = async (
   ui: ReactElement,
-  { asScreen = true, ...scenario }: StoryScenario & { asScreen?: boolean } = {},
+  {
+    asScreen = true,
+    routeParams,
+    ...scenario
+  }: StoryScenario & { asScreen?: boolean; routeParams?: object } = {},
 ) => {
   const built = await buildStoryStore(scenario);
 
@@ -29,7 +33,11 @@ export const renderWithStore = async (
     <ThemeProvider>
       <AppStoreProvider store={built.store}>
         <SafeAreaProvider initialMetrics={metrics}>
-          {asScreen ? <AsScreen>{children}</AsScreen> : children}
+          {asScreen ? (
+            <AsScreen params={routeParams}>{children}</AsScreen>
+          ) : (
+            children
+          )}
         </SafeAreaProvider>
       </AppStoreProvider>
     </ThemeProvider>

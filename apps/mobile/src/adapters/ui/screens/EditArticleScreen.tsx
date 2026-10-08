@@ -6,7 +6,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { Appbar } from 'react-native-paper';
+import { Appbar, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
@@ -15,6 +15,8 @@ import {
 } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import type { ArticleId } from '../../../domain/article';
+import type { CategoryId } from '../../../domain/category';
 import { validateName } from '../../../domain/name';
 import { BackAction } from '../components/BackAction';
 import { Button } from '../components/Button';
@@ -32,9 +34,8 @@ export const EditArticleScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { params } = useRoute<RouteProp<RootStackParamList, 'EditArticle'>>();
-  const editArticle = useAppStore((state) => state.editArticle);
   const full = useAppStore((state) => state.catalog.full);
-  const current = (() => {
+  const found = (() => {
     if (full.status !== 'success') return null;
     for (const section of full.data.sections) {
       const article = section.articles.find((a) => a.id === params.articleId);
@@ -44,19 +45,52 @@ export const EditArticleScreen = () => {
     }
     return null;
   })();
+  // The first article found is kept for the life of the screen, so a reload of the catalog
+  // never resets what the user typed.
+  const [initial, setInitial] = useState(found);
+  if (initial === null && found !== null) setInitial(found);
 
-  const [initial] = useState(current);
-  const [name, setName] = useState(initial?.name ?? '');
+  if (initial === null) {
+    return (
+      <View style={styles.screen}>
+        <Appbar.Header>
+          {navigation.canGoBack() && (
+            <BackAction onPress={() => navigation.goBack()} />
+          )}
+          <Appbar.Content title="Modifier l'article" />
+        </Appbar.Header>
+        <Text style={styles.form}>
+          {full.status === 'loading' || full.status === 'idle'
+            ? 'Chargement…'
+            : 'Cet article est introuvable.'}
+        </Text>
+      </View>
+    );
+  }
+  return <LoadedEditArticle articleId={params.articleId} initial={initial} />;
+};
+
+const LoadedEditArticle = ({
+  articleId,
+  initial,
+}: {
+  articleId: ArticleId;
+  initial: { name: string; categoryId: CategoryId };
+}) => {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const editArticle = useAppStore((state) => state.editArticle);
+  const [name, setName] = useState(initial.name);
   const [nameError, setNameError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
     const validated = validateName(name);
     setNameError(validated.ok ? null : nameErrorText(validated.error));
-    if (!validated.ok || initial === null) return;
+    if (!validated.ok) return;
 
     setSaving(true);
-    const outcome = await editArticle(params.articleId, {
+    const outcome = await editArticle(articleId, {
       name,
       categoryId: initial.categoryId,
     });

@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import type { ArticleId } from '../../../domain/article';
+import { EditArticleScreen } from './EditArticleScreen';
 import { Navigation } from '../navigation';
 import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
@@ -153,5 +154,34 @@ describe('EditArticle', () => {
       await screen.findByText("La modification n'a pas pu être enregistrée."),
     ).toBeOnTheScreen();
     expect(screen.getByText("Modifier l'article")).toBeOnTheScreen();
+  });
+});
+
+describe('EditArticle opened before the catalog is loaded', () => {
+  it('shows no dead form, then the form once the article is found', async () => {
+    const { store } = await renderWithStore(<EditArticleScreen />, {
+      seed,
+      routeParams: { articleId: lait },
+    });
+
+    expect(screen.getByText('Chargement…')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Enregistrer' })).toBeNull();
+
+    await store.getState().loadCatalog();
+
+    expect(await screen.findByLabelText('Nom')).toHaveDisplayValue('Lait');
+  });
+
+  it('says the article is not found when the catalog has no such article', async () => {
+    const { store } = await renderWithStore(<EditArticleScreen />, {
+      seed,
+      routeParams: { articleId: 'article-unknown' as ArticleId },
+    });
+    await store.getState().loadCatalog();
+
+    expect(
+      await screen.findByText('Cet article est introuvable.'),
+    ).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Enregistrer' })).toBeNull();
   });
 });
