@@ -10,6 +10,8 @@ const detoxBuild = process.env.DETOX_BUILD === '1';
 const config: ExpoConfig = {
   name: 'Mes courses',
   slug: 'mes-courses',
+  // Semantic versioning, set by hand in the pull request that leads to a release (research R24);
+  // the build number is EAS's, remote and incremented on every build.
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -21,7 +23,10 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-sqlite',
-    '@sentry/react-native/expo',
+    // Source maps and native debug files are uploaded during EAS Build (research R13). The
+    // organization and project come from SENTRY_ORG and SENTRY_PROJECT, and the credential from
+    // SENTRY_AUTH_TOKEN, all EAS environment variables; the organization is in the EU region.
+    ['@sentry/react-native/expo', { url: 'https://de.sentry.io/' }],
     ...(detoxBuild ? ['expo-detox-config-plugin'] : []),
   ],
   android: {

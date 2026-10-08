@@ -446,7 +446,9 @@ FR-030a, FR-039a).
   - Symbolication (FR-030): the Expo plugin uploads source maps and native debug files during
     EAS Build, so a release build's stack trace names source files and functions (the Sentry
     build credential is stored by the maintainer as an EAS environment variable with `secret`
-    visibility). No automated test sees a real report, so this is a manual check before release
+    visibility). The plugin's `url` is the EU region's, `https://de.sentry.io/`; the organization
+    and project slugs are not committed but read from the EAS environment variables `SENTRY_ORG`
+    and `SENTRY_PROJECT` (updated 2026-10-08). No automated test sees a real report, so this is a manual check before release
     ([quickstart.md](quickstart.md) §6).
 - **Environments** (FR-030, clarified 2026-10-06): each EAS Build profile sets
   `EXPO_PUBLIC_APP_ENVIRONMENT` in `eas.json`: `production` for store releases, `preview` for

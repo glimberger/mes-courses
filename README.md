@@ -85,14 +85,62 @@ yarn storybook           # starts Metro with Storybook instead of the app
 
 `yarn android` and `yarn ios` build with `SENTRY_DISABLE_AUTO_UPLOAD=true`: a local build sends no
 source maps to Sentry, which only EAS builds do. A bare `yarn expo run:ios` fails at the "Bundle
-React Native code and images" step with "An organization ID or slug is required" until the
-Sentry organization and project are configured.
+React Native code and images" step with "An organization ID or slug is required" unless
+`SENTRY_ORG` and `SENTRY_PROJECT` are set (see [EAS builds and error tracking](#eas-builds-and-error-tracking)).
 
 `yarn storybook` is the on-device catalog of the screens. A bundle built without
 `STORYBOOK_ENABLED` holds no Storybook code.
 
 `EXPO_PUBLIC_SENTRY_DSN` is optional: it sends error reports to Sentry. Without it, errors go to
 the console only.
+
+## EAS builds and error tracking
+
+`apps/mobile/eas.json` has three build profiles. `production` makes the store builds and
+`preview` the internal builds installed on a phone; each sets `EXPO_PUBLIC_APP_ENVIRONMENT` to its
+name, which Sentry reports as the environment, and gets a new build number on every build
+(`appVersionSource: remote`, `autoIncrement`). `development` sets neither. Every profile builds
+with the Node version of the flake. `submit.production` sends Android builds to Google Play's
+internal testing track; add the App Store Connect app id (`ios.ascAppId`) once the app exists
+there (`eas submit` asks for it until then).
+
+The maintainer sets these EAS environment variables (`eas env:create`) for the `production` and
+`preview` EAS environments, never committed:
+
+| Variable                 | What it is                                                     |
+| ------------------------ | -------------------------------------------------------------- |
+| `EXPO_PUBLIC_SENTRY_DSN` | The Sentry DSN; its host ends with `.de.sentry.io` (EU region) |
+| `SENTRY_AUTH_TOKEN`      | The Sentry organization credential EAS Build uploads with      |
+| `SENTRY_ORG`             | The Sentry organization slug                                   |
+| `SENTRY_PROJECT`         | The Sentry project slug                                        |
+
+The upload credential gets EAS's most restricted visibility, so no build log or Expo page shows
+it; the other three are plain text (a DSN only allows sending reports, research R25).
+
+The Sentry config plugin warns "Missing config for organization, project" whenever the config is
+read: the slugs come from these variables on EAS, and local builds upload nothing.
+
+The Google Play service account and the App Store Connect API key used by `eas submit` are stored
+in EAS (`eas credentials`) by the maintainer; nothing in the repository or CI reads them.
+
+### Sentry alerts (FR-030c)
+
+Set once in the Sentry project, and checked once by quickstart §6 step 7:
+
+- two issue alert rules, both filtered on the `production` environment and emailing the
+  maintainer: "A new issue is created" and "The issue changes state from resolved to
+  unresolved";
+- the default alert rule Sentry created with the project, deleted;
+- the maintainer's personal workflow notifications, turned off, so no other email arrives.
+
+`preview` builds match no rule.
+
+### Store privacy details
+
+If the app is ever published on a store, its privacy details declare crash data and a random
+installation identifier, neither linked to the user nor used for tracking: Google Play "Crash
+logs" and "Device or other IDs", App Store "Crash Data" and "Device ID". Reports carry no list
+content and no other identifier (FR-030, research R13).
 
 ## End-to-end tests
 
