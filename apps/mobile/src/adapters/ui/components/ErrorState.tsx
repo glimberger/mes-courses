@@ -1,5 +1,4 @@
-import { Button } from 'react-native-paper';
-
+import { Button } from './Button';
 import { StateLayout } from './StateLayout';
 import { StateMessage } from './StateMessage';
 

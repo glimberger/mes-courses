@@ -2,6 +2,12 @@ import type { ExpoConfig } from 'expo/config';
 
 import { withAndroidAnrOff } from './build-config/android-anr-off.cjs';
 import { withAndroidNoMinify } from './build-config/android-no-minify.cjs';
+import { withNoUrlSchemes } from './build-config/no-url-schemes.cjs';
+import { assertNoTestOptionsInProduction } from './build-config/release-guard.cjs';
+
+// A `production` build stops here when it carries a test-only option or a DSN outside the EU
+// (research R24, R25).
+assertNoTestOptionsInProduction(process.env);
 
 // Detox's native changes (test runner, cleartext traffic to the emulator host) go only into
 // builds made for the end-to-end tests (research R23, R25).
@@ -10,6 +16,8 @@ const detoxBuild = process.env.DETOX_BUILD === '1';
 const config: ExpoConfig = {
   name: 'Mes courses',
   slug: 'mes-courses',
+  // Semantic versioning, set by hand in the pull request that leads to a release (research R24);
+  // the build number is EAS's, remote and incremented on every build.
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -21,7 +29,10 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-sqlite',
-    '@sentry/react-native/expo',
+    // Source maps and native debug files are uploaded during EAS Build (research R13). The
+    // organization and project come from SENTRY_ORG and SENTRY_PROJECT, and the credential from
+    // SENTRY_AUTH_TOKEN, all EAS environment variables; the organization is in the EU region.
+    ['@sentry/react-native/expo', { url: 'https://de.sentry.io/' }],
     ...(detoxBuild ? ['expo-detox-config-plugin'] : []),
   ],
   android: {
@@ -45,5 +56,6 @@ const config: ExpoConfig = {
   },
 };
 
-// A plugin given as a function is applied here: `plugins` only types names.
-export default withAndroidNoMinify(withAndroidAnrOff(config));
+// A plugin given as a function is applied here: `plugins` only types names. The URL schemes are
+// removed last, after every plugin that could add one (FR-041).
+export default withNoUrlSchemes(withAndroidNoMinify(withAndroidAnrOff(config)));

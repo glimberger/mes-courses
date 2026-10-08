@@ -446,7 +446,9 @@ FR-030a, FR-039a).
   - Symbolication (FR-030): the Expo plugin uploads source maps and native debug files during
     EAS Build, so a release build's stack trace names source files and functions (the Sentry
     build credential is stored by the maintainer as an EAS environment variable with `secret`
-    visibility). No automated test sees a real report, so this is a manual check before release
+    visibility). The plugin's `url` is the EU region's, `https://de.sentry.io/`; the organization
+    and project slugs are not committed but read from the EAS environment variables `SENTRY_ORG`
+    and `SENTRY_PROJECT` (updated 2026-10-08). No automated test sees a real report, so this is a manual check before release
     ([quickstart.md](quickstart.md) §6).
 - **Environments** (FR-030, clarified 2026-10-06): each EAS Build profile sets
   `EXPO_PUBLIC_APP_ENVIRONMENT` in `eas.json`: `production` for store releases, `preview` for
@@ -1194,6 +1196,7 @@ FR-030a, FR-039a).
 | Yarn 4 (through Corepack, pinned by `packageManager`; not an app dependency) | Package manager and workspaces for the monorepo (R20, Principle XI), chosen by the maintainer. |
 | `expo`, `react-native`, `react` | Chosen platform (R1). |
 | `react-native-paper`, `react-native-safe-area-context`, `@expo/vector-icons`, `expo-font` (a peer dependency of `@expo/vector-icons`) | Material 3 design system (R2, Principle V). |
+| A Yarn patch of `react-native-paper` 5.15.3 (`.yarn/patches/`, no new package) | Its `Dialog` drops the `Modal` option that labels the backdrop, so every dialog backdrop read "Close modal" in English to VoiceOver (FR-031, FR-032); the patch hands it on (T132, added 2026-10-08). |
 | `@react-navigation/native`, `@react-navigation/native-stack`, `react-native-screens` | Navigation between screens (R3). |
 | `zustand` | Application state shared by every screen (R10), chosen by the maintainer. |
 | `expo-sqlite` | On-device storage (R4, Principle VII). |

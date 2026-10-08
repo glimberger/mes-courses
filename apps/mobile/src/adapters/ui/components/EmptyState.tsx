@@ -1,7 +1,7 @@
 import type { Ref } from 'react';
 import type { HostInstance } from 'react-native';
-import { Button } from 'react-native-paper';
 
+import { Button } from './Button';
 import { StateLayout } from './StateLayout';
 import { StateMessage } from './StateMessage';
 

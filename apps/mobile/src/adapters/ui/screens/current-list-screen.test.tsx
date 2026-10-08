@@ -16,6 +16,26 @@ import { CurrentListScreen } from './CurrentListScreen';
 
 jest.mock('../accessibility/focus', () => ({ focusOn: jest.fn() }));
 
+/** The names of the rows drawn, in order, each time a row renders (SC-008). */
+const rowRenders: string[] = [];
+
+// The real row behind a memo that records each render, as the real one compares its props.
+jest.mock('../components/ListItemRow', () => {
+  const { createElement, memo } =
+    jest.requireActual<typeof import('react')>('react');
+  const actual = jest.requireActual<typeof import('../components/ListItemRow')>(
+    '../components/ListItemRow',
+  );
+  return {
+    ListItemRow: memo(function RecordedListItemRow(
+      props: import('../components/ListItemRow').ListItemRowProps,
+    ) {
+      rowRenders.push(props.name);
+      return createElement(actual.ListItemRow, props);
+    }),
+  };
+});
+
 const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
 
 beforeEach(() => {
@@ -481,5 +501,73 @@ describe('CurrentList, editing the list (User Story 2)', () => {
     fireEvent.press(screen.getByLabelText('Retour'));
 
     expect(await row('Beurre, pas dans le caddie')).toBeOnTheScreen();
+  });
+});
+
+describe('CurrentList at full data size', () => {
+  const pommes = 'article-pommes' as ArticleId;
+  const crèmerie = fixture.categories[2];
+  const fruits = fixture.categories[0];
+  if (crèmerie?.name !== 'Crèmerie' || fruits?.name !== 'Fruits et légumes') {
+    throw new Error('Unexpected default categories');
+  }
+  const numbered = Array.from({ length: 199 }, (_, index) => ({
+    id: `article-${index + 1}` as ArticleId,
+    name: `Article ${index + 1}`,
+    categoryId: crèmerie.id,
+  }));
+  const maListe = 'list-ma-liste' as ListId;
+
+  /**
+   * "Ma liste" with 200 unticked items: "Pommes" alone in the first category, so it keeps its
+   * place when ticked (FR-005), and "Article 1" … "Article 199" in "Crèmerie".
+   */
+  const twoHundredItems: Fixture = {
+    ...fixture,
+    articles: [
+      { id: pommes, name: 'Pommes', categoryId: fruits.id },
+      ...numbered,
+    ],
+    items: [{ id: pommes }, ...numbered].map(({ id }) => ({
+      listId: maListe,
+      articleId: id,
+      inCart: false,
+      quantity: null,
+    })),
+  };
+
+  it('SC-008 ticking an item of a 200-item list draws again only its row', async () => {
+    const { unitOfWork } = await renderWithStore(<CurrentListScreen />, {
+      seed: twoHundredItems,
+    });
+    await row('Pommes, pas dans le caddie');
+    rowRenders.length = 0;
+
+    fireEvent.press(await row('Pommes, pas dans le caddie'));
+    expect(await row('Pommes, dans le caddie')).toBeChecked();
+    // Saved, and the list loaded again from storage.
+    await waitFor(async () =>
+      expect(
+        (await unitOfWork.run((repos) => repos.items.find(maListe, pommes)))
+          ?.inCart,
+      ).toBe(true),
+    );
+    await screen.findByText('199 articles restants');
+
+    expect(rowRenders).toEqual(['Pommes']);
+  });
+
+  it('SC-008 ticking the last item of a 200-item list draws none of the rows shown again', async () => {
+    const { store } = await renderWithStore(<CurrentListScreen />, {
+      seed: twoHundredItems,
+    });
+    await row('Pommes, pas dans le caddie');
+    rowRenders.length = 0;
+
+    // The last row is past the rows Jest draws: it is ticked as its row would tick it.
+    await act(() => store.getState().toggleItem('article-199' as ArticleId));
+    expect(await screen.findByText('199 articles restants')).toBeOnTheScreen();
+
+    expect(rowRenders).toEqual([]);
   });
 });

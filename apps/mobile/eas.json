@@ -1,0 +1,36 @@
+{
+  "cli": {
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "distribution": "internal",
+      "environment": "development",
+      "node": "24.21.0"
+    },
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "autoIncrement": true,
+      "node": "24.21.0",
+      "env": {
+        "EXPO_PUBLIC_APP_ENVIRONMENT": "preview"
+      }
+    },
+    "production": {
+      "environment": "production",
+      "autoIncrement": true,
+      "node": "24.21.0",
+      "env": {
+        "EXPO_PUBLIC_APP_ENVIRONMENT": "production"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal"
+      }
+    }
+  }
+}

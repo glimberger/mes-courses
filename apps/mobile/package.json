@@ -19,7 +19,7 @@
     "react": "19.3.0",
     "react-native": "0.88.0-rc.3",
     "react-native-gesture-handler": "~3.2.1",
-    "react-native-paper": "^5.15.3",
+    "react-native-paper": "patch:react-native-paper@npm%3A5.15.3#~/.yarn/patches/react-native-paper-npm-5.15.3-9a600de527.patch",
     "react-native-reanimated": "4.7.0",
     "react-native-safe-area-context": "~5.9.1",
     "react-native-screens": "~4.28.0",

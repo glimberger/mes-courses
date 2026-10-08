@@ -4,9 +4,20 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { Quantity } from '../../../domain/quantity';
 import { LONG_ARTICLE_NAME } from '../testing/fixtures';
-import { lightTheme } from '../theme/theme';
+import { darkTheme, lightTheme } from '../theme/theme';
 import { ThemeProvider } from '../theme/theme-provider';
 import { ListItemRow } from './ListItemRow';
+
+// The system scheme the row is drawn under; light unless a test says otherwise.
+let mockColorScheme: 'light' | 'dark' = 'light';
+jest.mock('react-native/Libraries/Utilities/useColorScheme', () => ({
+  __esModule: true,
+  default: () => mockColorScheme,
+}));
+
+afterEach(() => {
+  mockColorScheme = 'light';
+});
 
 const renderRow = ({
   name = 'Lait',
@@ -94,6 +105,31 @@ describe('ListItemRow', () => {
       textDecorationLine: 'line-through',
     });
   });
+
+  it.each([
+    ['light', lightTheme],
+    ['dark', darkTheme],
+  ] as const)(
+    'FR-035 shows a ticked item with a check mark and struck-through text under the %s theme',
+    (scheme, theme) => {
+      mockColorScheme = scheme;
+      renderRow({ inCart: true, quantity: { amount: 2, unit: 'L' } });
+
+      // Drawn under that theme: the ticked text takes its onSurfaceVariant.
+      expect(screen.getByText('Lait')).toHaveStyle({
+        color: theme.colors.onSurfaceVariant,
+      });
+      expect(
+        screen.UNSAFE_queryAllByProps({ name: 'checkbox-marked' }),
+      ).not.toHaveLength(0);
+      expect(screen.getByText('Lait')).toHaveStyle({
+        textDecorationLine: 'line-through',
+      });
+      expect(screen.getByText('2 L')).toHaveStyle({
+        textDecorationLine: 'line-through',
+      });
+    },
+  );
 
   it('FR-035 shows an item not in the cart with an empty box and plain text', () => {
     renderRow({ inCart: false });

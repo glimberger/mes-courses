@@ -1,0 +1,95 @@
+diff --git a/lib/commonjs/components/Dialog/Dialog.js b/lib/commonjs/components/Dialog/Dialog.js
+index b9a690765ce3c4b0fac7083346fae41013a00ff7..d16f54771172740f16c8e9b0be8456c0012028e7 100644
+--- a/lib/commonjs/components/Dialog/Dialog.js
++++ b/lib/commonjs/components/Dialog/Dialog.js
+@@ -63,6 +63,7 @@ const Dialog = ({
+   children,
+   dismissable = true,
+   dismissableBackButton = dismissable,
++  overlayAccessibilityLabel,
+   onDismiss,
+   visible = false,
+   style,
+@@ -87,6 +88,7 @@ const Dialog = ({
+   return /*#__PURE__*/React.createElement(_Modal.default, {
+     dismissable: dismissable,
+     dismissableBackButton: dismissableBackButton,
++    overlayAccessibilityLabel: overlayAccessibilityLabel,
+     onDismiss: onDismiss,
+     visible: visible,
+     contentContainerStyle: [{
+diff --git a/lib/module/components/Dialog/Dialog.js b/lib/module/components/Dialog/Dialog.js
+index 284117d72fcc3d1bf43e6c9f2978043fc4b076fc..af01f509506d973fcca29791e684ae9a0432c7ad 100644
+--- a/lib/module/components/Dialog/Dialog.js
++++ b/lib/module/components/Dialog/Dialog.js
+@@ -55,6 +55,7 @@ const Dialog = ({
+   children,
+   dismissable = true,
+   dismissableBackButton = dismissable,
++  overlayAccessibilityLabel,
+   onDismiss,
+   visible = false,
+   style,
+@@ -79,6 +80,7 @@ const Dialog = ({
+   return /*#__PURE__*/React.createElement(Modal, {
+     dismissable: dismissable,
+     dismissableBackButton: dismissableBackButton,
++    overlayAccessibilityLabel: overlayAccessibilityLabel,
+     onDismiss: onDismiss,
+     visible: visible,
+     contentContainerStyle: [{
+diff --git a/lib/typescript/components/Dialog/Dialog.d.ts b/lib/typescript/components/Dialog/Dialog.d.ts
+index b18acd87928ccd312419b09d63311cf0be7dab7d..800da81dce06bd7d0af9ab29f0dbbc6e279324f5 100644
+--- a/lib/typescript/components/Dialog/Dialog.d.ts
++++ b/lib/typescript/components/Dialog/Dialog.d.ts
+@@ -10,6 +10,10 @@ export type Props = {
+      * Determines whether clicking Android hardware back button dismiss dialog.
+      */
+     dismissableBackButton?: boolean;
++    /**
++     * Accessibility label for the overlay. This is read by the screen reader when the user taps outside the dialog.
++     */
++    overlayAccessibilityLabel?: string;
+     /**
+      * Callback that is called when the user dismisses the dialog.
+      */
+@@ -73,7 +77,7 @@ export type Props = {
+  * ```
+  */
+ declare const Dialog: {
+-    ({ children, dismissable, dismissableBackButton, onDismiss, visible, style, theme: themeOverrides, testID, }: Props): React.JSX.Element;
++    ({ children, dismissable, dismissableBackButton, overlayAccessibilityLabel, onDismiss, visible, style, theme: themeOverrides, testID, }: Props): React.JSX.Element;
+     Content: {
+         (props: import("./DialogContent").Props): React.JSX.Element;
+         displayName: string;
+diff --git a/src/components/Dialog/Dialog.tsx b/src/components/Dialog/Dialog.tsx
+index 32cc1e4a99b9bee8aacde4efdc91c23fd8836415..8c637349c5416994f3c4d8d2b29c53cba26a1745 100644
+--- a/src/components/Dialog/Dialog.tsx
++++ b/src/components/Dialog/Dialog.tsx
+@@ -29,6 +29,10 @@ export type Props = {
+    * Determines whether clicking Android hardware back button dismiss dialog.
+    */
+   dismissableBackButton?: boolean;
++  /**
++   * Accessibility label for the overlay. This is read by the screen reader when the user taps outside the dialog.
++   */
++  overlayAccessibilityLabel?: string;
+   /**
+    * Callback that is called when the user dismisses the dialog.
+    */
+@@ -98,6 +102,7 @@ const Dialog = ({
+   children,
+   dismissable = true,
+   dismissableBackButton = dismissable,
++  overlayAccessibilityLabel,
+   onDismiss,
+   visible = false,
+   style,
+@@ -121,6 +126,7 @@ const Dialog = ({
+     <Modal
+       dismissable={dismissable}
+       dismissableBackButton={dismissableBackButton}
++      overlayAccessibilityLabel={overlayAccessibilityLabel}
+       onDismiss={onDismiss}
+       visible={visible}
+       contentContainerStyle={[
