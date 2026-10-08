@@ -1,6 +1,13 @@
 import { normalizedName } from '../../../domain/name';
 import type { Repositories } from '../../ports/unit-of-work';
-import { article, articleId, category, categoryId } from './entities';
+import {
+  article,
+  articleId,
+  category,
+  categoryId,
+  item,
+  list,
+} from './entities';
 
 export const articleRepositoryContract = (
   createRepositories: () => Promise<Repositories>,
@@ -69,6 +76,45 @@ export const articleRepositoryContract = (
       ).rejects.toThrow();
 
       expect(await repos.articles.all()).toEqual([]);
+    });
+
+    it('updates the name, the normalized name and the category', async () => {
+      await repos.articles.add(article('a-1', 'Lait', 'c-1'));
+
+      await repos.articles.update(article('a-1', 'Œufs', 'c-2'));
+
+      expect(await repos.articles.findById(articleId('a-1'))).toEqual(
+        article('a-1', 'Œufs', 'c-2'),
+      );
+      expect(
+        await repos.articles.findByNormalizedName(normalizedName('oeufs')),
+      ).toEqual(article('a-1', 'Œufs', 'c-2'));
+      expect(
+        await repos.articles.findByNormalizedName(normalizedName('Lait')),
+      ).toBeNull();
+    });
+
+    it('removes an article', async () => {
+      await repos.articles.add(article('a-1', 'Lait', 'c-1'));
+      await repos.articles.add(article('a-2', 'Pommes', 'c-2'));
+
+      await repos.articles.remove(articleId('a-1'));
+
+      expect(await repos.articles.all()).toEqual([
+        article('a-2', 'Pommes', 'c-2'),
+      ]);
+    });
+
+    it('rejects removing an article while a list item still refers to it', async () => {
+      await repos.articles.add(article('a-1', 'Lait', 'c-1'));
+      await repos.lists.add(list('l-1', 'Ma liste'));
+      await repos.items.save(item('l-1', 'a-1'));
+
+      await expect(repos.articles.remove(articleId('a-1'))).rejects.toThrow();
+
+      expect(await repos.articles.findById(articleId('a-1'))).toEqual(
+        article('a-1', 'Lait', 'c-1'),
+      );
     });
 
     it('keeps copies: changing an added or returned article changes nothing stored', async () => {

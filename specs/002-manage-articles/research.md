@@ -109,11 +109,11 @@ constitution v2.0.0, which makes a remote server the source of truth.
 
 ## R3. Name uniqueness when renaming (FR-002, US1-4, US1-5)
 
-- **Decision**: reuse `validateName` and `normalizedName` (001 R6). The rename is refused with
+- **Decision**: reuse 001's shared `uniqueName` rule (`validateName` and `normalizedName`, 001 R6), extended with an optional "ignore" predicate. The rename is refused with
   `NameAlreadyUsed` only when `findByNormalizedName` returns a **different** article. Renaming
   "Lait" to "lait" or " Lait " finds the article itself and is accepted; the name is stored
   cleaned (001 R6).
-- **Rationale**: the rule stays in the domain/use case; the `UNIQUE` index on `normalized_name`
+- **Rationale**: one naming rule for every named entity, not a second copy for articles; the `UNIQUE` index on `normalized_name`
   remains the safety net.
 
 ## R4. Deleting an article and its list items (FR-005, FR-006, FR-007)

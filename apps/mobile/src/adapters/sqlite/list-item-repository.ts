@@ -61,6 +61,15 @@ export const sqliteListItemRepository = (
       listId,
       articleId,
     ]),
+  forArticle: (articleId) =>
+    findAll(
+      db,
+      `${SELECT} WHERE article_id = ? ORDER BY rowid`,
+      [articleId],
+      toItem,
+    ),
+  removeAllForArticle: (articleId) =>
+    write(db, 'DELETE FROM list_item WHERE article_id = ?', [articleId]),
   takeAllOutOfCart: (listId) =>
     write(db, 'UPDATE list_item SET in_cart = 0 WHERE list_id = ?', [listId]),
 });

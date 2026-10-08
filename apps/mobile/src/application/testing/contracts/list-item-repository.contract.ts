@@ -135,6 +135,40 @@ export const listItemRepositoryContract = (
       );
     });
 
+    it('returns the items of an article on every list in the order they were added, with their cart state and quantity', async () => {
+      await repos.items.save(
+        item('l-1', 'a-1', {
+          inCart: true,
+          quantity: { amount: 2, unit: 'L' },
+        }),
+      );
+      await repos.items.save(item('l-2', 'a-1'));
+      await repos.items.save(item('l-1', 'a-2'));
+
+      const items = await repos.items.forArticle(articleId('a-1'));
+
+      expect(items).toEqual([
+        item('l-1', 'a-1', {
+          inCart: true,
+          quantity: { amount: 2, unit: 'L' },
+        }),
+        item('l-2', 'a-1'),
+      ]);
+    });
+
+    it('removes every item of an article, leaving the other articles items', async () => {
+      await repos.items.save(item('l-1', 'a-1'));
+      await repos.items.save(item('l-2', 'a-1', { inCart: true }));
+      await repos.items.save(item('l-1', 'a-2'));
+
+      await repos.items.removeAllForArticle(articleId('a-1'));
+
+      expect(await repos.items.forArticle(articleId('a-1'))).toEqual([]);
+      expect(await repos.items.forList(listId('l-1'))).toEqual([
+        item('l-1', 'a-2'),
+      ]);
+    });
+
     it('rejects an item of a list or an article that does not exist', async () => {
       await expect(repos.items.save(item('unknown', 'a-1'))).rejects.toThrow();
       await expect(repos.items.save(item('l-1', 'unknown'))).rejects.toThrow();

@@ -6,6 +6,7 @@ import {
   article,
   articleId,
   category,
+  item,
   list,
 } from '../../application/testing/contracts/entities';
 import { listItemRepositoryContract } from '../../application/testing/contracts/list-item-repository.contract';
@@ -124,6 +125,27 @@ describe('SQLite repositories', () => {
       expect(rejection.message).toBe('Storage operation failed');
       expect(rejection.stack).not.toContain('Houmous');
       expect(rejection.stack).not.toContain('INSERT');
+      expect({ ...rejection }).toStrictEqual({
+        name: 'StorageError',
+        code: 19,
+      });
+      expect('cause' in rejection).toBe(false);
+    });
+
+    it('rejects the removal of an article still on a list with a StorageError carrying no article name', async () => {
+      const repos = sqliteRepositories(await migratedDatabase());
+      await repos.categories.add(category('c-1', 'Épicerie salée', 0));
+      await repos.articles.add(article('a-1', 'Houmous maison', 'c-1'));
+      await repos.lists.add(list('l-1', 'Ma liste'));
+      await repos.items.save(item('l-1', 'a-1'));
+
+      const rejection = await rejectionOf(
+        repos.articles.remove(articleId('a-1')),
+      );
+
+      expect(rejection).toBeInstanceOf(StorageError);
+      expect(rejection.message).toBe('Storage operation failed');
+      expect(rejection.stack).not.toContain('Houmous');
       expect({ ...rejection }).toStrictEqual({
         name: 'StorageError',
         code: 19,

@@ -39,4 +39,17 @@ export const sqliteArticleRepository = (
         article.categoryId,
       ],
     ),
+  update: (article) =>
+    write(
+      db,
+      'UPDATE article SET name = ?, normalized_name = ?, category_id = ? WHERE id = ?',
+      [
+        article.name,
+        normalizedName(article.name),
+        article.categoryId,
+        article.id,
+      ],
+    ),
+  // Fails while a list item refers to the article: the reference is NO ACTION.
+  remove: (id) => write(db, 'DELETE FROM article WHERE id = ?', [id]),
 });

@@ -23,7 +23,7 @@ Decisions are in [research.md](research.md).
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.x (strict), React Native through Expo SDK 57, Node.js 24 LTS
+**Language/Version**: TypeScript 5.x (strict), React Native through Expo SDK 58, Node.js 24 LTS
 (unchanged from 001)
 
 **Primary Dependencies**: those of [001](../001-shopping-lists/plan.md) plus `zustand` 5
@@ -116,11 +116,9 @@ Additions to [001's layout](../001-shopping-lists/plan.md#source-code-repository
 
 ```text
 apps/mobile/src/
-├── domain/
-│   └── article.ts                    # + edit rule (uniqueness among other articles)
 ├── application/
 │   ├── ports/                        # + ArticleRepository.update/remove, ListItemRepository.forArticle/removeAllForArticle
-│   ├── use-cases/                    # + edit-article, get-article-usage, delete-article, restore-deleted-article
+│   ├── use-cases/                    # + edit-article, get-article-usage, delete-article, restore-deleted-article; unique-name gains "ignore the article itself"
 │   └── testing/                      # fakes + contract suites for the new methods
 ├── adapters/
 │   ├── sqlite/                       # new repository methods + contract tests

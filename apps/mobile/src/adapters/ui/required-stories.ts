@@ -52,4 +52,7 @@ export const requiredStories: readonly string[] = [
   'Dialogs/CreateListDialog/NameAlreadyUsed',
   'Dialogs/CreateCategoryDialog/Default',
   'Dialogs/CreateCategoryDialog/NameAlreadyUsed',
+  // 002 Manage articles
+  'Components/CategoryPicker/Default',
+  'Components/CategoryPicker/NewCategorySelected',
 ];

@@ -53,7 +53,7 @@ listed in [contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-e
 
 **Purpose**: start from a green 001 baseline.
 
-- [ ] T001 Branch from `origin/main` with 001 merged. Run `yarn typecheck && yarn lint && yarn format:check && yarn test && yarn test:architecture` and `yarn test:e2e:android` and confirm it is all green before any change. If 001 was built without the store of [contracts/ui-state.md](contracts/ui-state.md), stop: the first task is then a refactoring that moves 001's screens onto it with their tests kept green ([plan.md](plan.md#implementation-notes-for-speckit-tasks)).
+- [X] T001 Branch from `origin/main` (`git fetch`, then `git switch -c feat/002-manage-articles origin/main`) with 001 merged. Run `yarn typecheck && yarn lint && yarn format:check && yarn test && yarn test:architecture` and `yarn test:e2e:android` and confirm it is all green before any change.
 
 ---
 
@@ -66,30 +66,30 @@ story uses.
 
 ### Repository methods ([contracts/driving-ports.md](contracts/driving-ports.md#driven-port-changes))
 
-- [ ] T002 Extend `apps/mobile/src/application/testing/contracts/article-repository.contract.ts` with failing cases:
+- [X] T002 Extend `apps/mobile/src/application/testing/contracts/article-repository.contract.ts` with failing cases:
   - `update(article)` changes the name, the normalized name and the category, and `findByNormalizedName` finds it under the new name only;
   - `remove(id)` deletes the article;
   - `remove(id)` rejects while a list item still refers to it.
-- [ ] T003 Extend `apps/mobile/src/application/testing/contracts/list-item-repository.contract.ts` with failing cases:
+- [X] T003 Extend `apps/mobile/src/application/testing/contracts/list-item-repository.contract.ts` with failing cases:
   - `forArticle(articleId)` returns the article's items on every list, with `inCart` and `quantity`;
   - `removeAllForArticle(articleId)` removes them all and leaves other articles' items untouched.
-- [ ] T004 Add `ArticleRepository.update(article: Article): Promise<void>` and `remove(id: ArticleId): Promise<void>`, and `ListItemRepository.forArticle(articleId): Promise<ListItem[]>` and `removeAllForArticle(articleId): Promise<void>` to `apps/mobile/src/application/ports/repositories.ts`. Implement them in the fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts`, where `remove` throws while an item refers to the article, to turn T002–T003 green against the fakes.
-- [ ] T005 Implement the same methods in `apps/mobile/src/adapters/sqlite/article-repository.ts` and `apps/mobile/src/adapters/sqlite/list-item-repository.ts` to turn T002–T003 green against SQLite in `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`. Wrap every database call with `toStorageError` (001 R13), and add one test there: a failing `remove` rejects with a `StorageError` whose message and stack hold no article name. The SQL:
+- [X] T004 Add `ArticleRepository.update(article: Article): Promise<void>` and `remove(id: ArticleId): Promise<void>`, and `ListItemRepository.forArticle(articleId): Promise<ListItem[]>` and `removeAllForArticle(articleId): Promise<void>` to `apps/mobile/src/application/ports/repositories.ts`. Implement them in the fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts`, where `remove` throws while an item refers to the article, to turn T002–T003 green against the fakes.
+- [X] T005 Implement the same methods in `apps/mobile/src/adapters/sqlite/article-repository.ts` and `apps/mobile/src/adapters/sqlite/list-item-repository.ts` to turn T002–T003 green against SQLite in `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`. Wrap every database call with `toStorageError` (001 R13), and add one test there: a failing `remove` rejects with a `StorageError` whose message and stack hold no article name. The SQL:
   - edit: `UPDATE article SET name = ?, normalized_name = ?, category_id = ? WHERE id = ?`;
   - remove items: `DELETE FROM list_item WHERE article_id = ?`;
   - remove article: `DELETE FROM article WHERE id = ?`, where the `NO ACTION` reference from `list_item` makes it fail while an item is left ([research.md](research.md) R4).
 
 ### Shared UI ([contracts/ui-screens.md](contracts/ui-screens.md#shared-components-new-or-changed))
 
-- [ ] T006 [P] Write failing tests for the row menu in `apps/mobile/src/adapters/ui/components/article-row.test.tsx`:
+- [X] T006 [P] Write failing tests for the row menu in `apps/mobile/src/adapters/ui/components/article-row.test.tsx`:
   - a trailing icon button labelled "Plus d'actions pour « {name} »" opens a `Menu` with "Modifier" and "Supprimer";
   - choosing them calls `onEdit` / `onDelete`;
   - both are also accessibility actions of the row;
   - tapping the row itself still calls `onPress` (001's QuantityDialog);
   - the button is ≥ 48 dp.
-- [ ] T007 [P] Add the trailing menu button, the Paper `Menu` and the accessibility actions to `apps/mobile/src/adapters/ui/components/ArticleRow.tsx` to turn T006 green.
-- [ ] T008 [P] Extract the category picker from `apps/mobile/src/adapters/ui/screens/CreateArticleScreen.tsx` into `apps/mobile/src/adapters/ui/components/CategoryPicker.tsx`. It is a radio list of all categories by position plus "Nouvelle catégorie" (CreateCategoryDialog), with a new category preselected. This is a refactoring step: 001's CreateArticle tests stay green unchanged. Then add `apps/mobile/src/adapters/ui/components/category-picker.test.tsx`, covering the order, the selection, and the preselection of a new category.
-- [ ] T009 Add `Components/CategoryPicker/Default` and `Components/CategoryPicker/NewCategorySelected` to `apps/mobile/src/adapters/ui/required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/components/CategoryPicker.stories.tsx` from 001's fixtures (categories by position; a newly created category selected) to turn it green. Review it in Storybook in light and dark mode.
+- [X] T007 [P] Add the trailing menu button, the Paper `Menu` and the accessibility actions to `apps/mobile/src/adapters/ui/components/ArticleRow.tsx` to turn T006 green.
+- [X] T008 [P] Extract the category picker from `apps/mobile/src/adapters/ui/screens/CreateArticleScreen.tsx` into `apps/mobile/src/adapters/ui/components/CategoryPicker.tsx`. It is a radio list of all categories by position plus "Nouvelle catégorie" (CreateCategoryDialog), with a new category preselected. This is a refactoring step: 001's CreateArticle tests stay green unchanged. Then add `apps/mobile/src/adapters/ui/components/category-picker.test.tsx`, covering the order, the selection, and the preselection of a new category.
+- [X] T009 Add `Components/CategoryPicker/Default` and `Components/CategoryPicker/NewCategorySelected` to `apps/mobile/src/adapters/ui/required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/components/CategoryPicker.stories.tsx` from 001's fixtures (categories by position; a newly created category selected) to turn it green. Review it in Storybook in light and dark mode.
 
 **Checkpoint**: new repository methods green on fakes and SQLite; catalog rows offer
 "Modifier" / "Supprimer" (wired in the stories); 001's suite still green.
@@ -108,7 +108,7 @@ ticked states unchanged.
 ### Tests for User Story 1 ⚠️ (write first, confirm they fail)
 
 - [ ] T010 [US1] Write the failing journey `tests/e2e/journeys/rename-article.e2e.ts` ([contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-end-journeys)): on a fresh install, create "Lait", add it to "Ma liste" with "2" "L" and tick it, create "Barbecue" and add "Lait" there; from the catalog, "Plus d'actions pour « Lait »" → "Modifier", rename it "Lait demi-écrémé", save; both lists show the new name with the ticked state and quantity kept; `device.terminateApp()` then `device.launchApp({ newInstance: true })`: still renamed (002 US1-1, US1-2, SC-005). Run `yarn test:e2e:android` and confirm it fails on the missing menu.
-- [ ] T011 [P] [US1] Write failing domain tests for the edit rule in `apps/mobile/src/domain/article.test.ts`. The name follows 001's rules: "cleaned, non-blank, ≤ 60 characters". Uniqueness is "by `normalizedName` among **other** articles":
+- [ ] T011 [P] [US1] Add failing tests for the edit rule to `apps/mobile/src/application/use-cases/unique-name.test.ts`, where 001 keeps the shared naming rule (`uniqueName`). The name follows 001's rules: "cleaned, non-blank, ≤ 60 characters". With a new optional "ignore" argument, uniqueness is "by `normalizedName` among **other** articles":
   - a name used by another article → `NameAlreadyUsed` carrying that article (002 US1-4: " beurre " while "Beurre" exists);
   - the article's own name with a different case or spaces is accepted (002 US1-5: "Lait" → "lait", and "Pommes de terre" → "Pommes  de terre");
   - `NameRequired` / `NameTooLong` (002 US1-6).
@@ -137,7 +137,7 @@ ticked states unchanged.
 
 ### Implementation for User Story 1
 
-- [ ] T016 [P] [US1] Implement the edit rule (validate the name, then check uniqueness against `findByNormalizedName` ignoring the article itself) in `apps/mobile/src/domain/article.ts` to turn T011 green ([research.md](research.md) R3).
+- [ ] T016 [P] [US1] Extend `uniqueName` in `apps/mobile/src/application/use-cases/unique-name.ts` with an optional `isSelf: (existing: T) => boolean` argument: a match for which it returns true is not a conflict. Do not add a second uniqueness rule in the domain. This turns T011 green ([research.md](research.md) R3).
 - [ ] T017 [US1] Implement `editArticle(articleId, { name, categoryId })` in `apps/mobile/src/application/use-cases/edit-article.ts`, per [contracts/driving-ports.md](contracts/driving-ports.md): validate everything before writing, then one `articles.update` inside `UnitOfWork.run`. This turns T012 green. Add it to `UseCases` in `apps/mobile/src/adapters/ui/use-cases.ts` and to `apps/mobile/src/composition/composition-root.ts`.
 - [ ] T018 [US1] Add the `editArticle` action to `apps/mobile/src/adapters/ui/state/app-store.ts`, through the shared write rules, to turn T013 green.
 - [ ] T019 [US1] Implement `apps/mobile/src/adapters/ui/screens/EditArticleScreen.tsx` with the name field only; the category field comes in US3, and saving passes the current `categoryId`. Register the `EditArticle` route (param `articleId`) in `apps/mobile/src/adapters/ui/navigation.tsx`. This turns T014 green.
@@ -313,7 +313,7 @@ Task: "T037 deletedArticle text in UndoSnackbar.tsx"
 ## Parallel Example: User Story 1
 
 ```bash
-Task: "T011 edit rule tests in apps/mobile/src/domain/article.test.ts"
+Task: "T011 edit rule tests in apps/mobile/src/application/use-cases/unique-name.test.ts"
 Task: "T012 editArticle tests in apps/mobile/src/application/use-cases/edit-article.test.ts"
 Task: "T013 store tests in apps/mobile/src/adapters/ui/state/app-store.edit-article.test.ts"
 ```
