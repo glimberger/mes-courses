@@ -136,7 +136,9 @@ export const createList = async (name: string) => {
  */
 export const chooseList = async (rowLabel: string, name: string) => {
   await element(by.label(rowLabel)).tap();
-  await waitFor(element(by.text(name)))
-    .toBeVisible()
+  // Lists shows the name too: the current list is shown once Lists and its FAB are gone.
+  await waitFor(element(by.text('Nouvelle liste')))
+    .not.toExist()
     .withTimeout(2000);
+  await expect(element(by.text(name))).toBeVisible();
 };
