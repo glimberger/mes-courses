@@ -7,6 +7,7 @@ import { focusOn } from '../accessibility/focus';
 import { fixture } from '../testing/fixtures';
 import { recordFocusTargets } from '../testing/focus-targets';
 import { renderWithStore } from '../testing/render-with-store';
+import type { StoryScenario } from '../testing/story-store';
 import { AddArticlesScreen } from './AddArticlesScreen';
 import { CurrentListScreen } from './CurrentListScreen';
 import { QuantityDialog, type QuantityRequest } from './QuantityDialog';
@@ -40,13 +41,16 @@ const Host = ({ request }: { request: QuantityRequest }) => {
 };
 
 /** The dialog over the fixture's "Ma liste", shown next to it. */
-const renderDialog = async (request: QuantityRequest) => {
+const renderDialog = async (
+  request: QuantityRequest,
+  scenario: StoryScenario = {},
+) => {
   const rendered = await renderWithStore(
     <>
       <CurrentListScreen />
       <Host request={request} />
     </>,
-    { seed: fixture },
+    { seed: fixture, ...scenario },
   );
   await screen.findByRole('checkbox', {
     name: 'Lait, 2 L, pas dans le caddie',
@@ -255,6 +259,51 @@ describe('QuantityDialog', () => {
         }),
       ).toBeOnTheScreen();
       expect((await stored(farine.id))?.quantity).toBeNull();
+    });
+  });
+
+  describe('while saving', () => {
+    /** The dialog's button: drawn in a portal, it comes after the list's ("Ajouter"). */
+    const button = (name: string) =>
+      screen.getAllByRole('button', { name }).at(-1);
+
+    it('offers no "Annuler" and no "Ajouter" while the article is being added, so the outcome is always shown', async () => {
+      await renderDialog(
+        { mode: 'add', article: beurre },
+        { pending: ['addArticleToList'] },
+      );
+
+      press('Ajouter');
+
+      await waitFor(() => expect(button('Annuler')).toBeDisabled());
+      expect(button('Ajouter')).toBeDisabled();
+    });
+
+    it('offers no "Annuler" while a quantity is being saved', async () => {
+      await renderDialog(
+        {
+          mode: 'edit',
+          article: farine,
+          quantity: { amount: 1.5, unit: 'kg' },
+        },
+        { pending: ['changeItemQuantity'] },
+      );
+
+      press('Enregistrer');
+
+      await waitFor(() => expect(button('Annuler')).toBeDisabled());
+      expect(button('Effacer la quantité')).toBeDisabled();
+    });
+
+    it('adds the article once on a double tap of "Ajouter"', async () => {
+      const { useCases } = await renderDialog({ mode: 'add', article: beurre });
+      const addArticleToList = jest.spyOn(useCases, 'addArticleToList');
+
+      press('Ajouter');
+      press('Ajouter');
+
+      await closed('Beurre');
+      expect(addArticleToList).toHaveBeenCalledTimes(1);
     });
   });
 
