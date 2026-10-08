@@ -275,6 +275,25 @@ describe('AddArticles', () => {
     });
   });
 
+  it('FR-009 "Effacer la recherche" empties the search and shows the whole catalog again', async () => {
+    await renderScreen();
+    await screen.findByText('Beurre');
+    search('pâ');
+    expect(screen.queryByText('Beurre')).not.toBeOnTheScreen();
+
+    fireEvent.press(
+      screen.getByRole('button', { name: 'Effacer la recherche' }),
+    );
+
+    expect(
+      screen.getByPlaceholderText('Rechercher un article'),
+    ).toHaveDisplayValue('');
+    expect(screen.getByText('Beurre')).toBeOnTheScreen();
+    expect(
+      screen.queryByRole('button', { name: 'Effacer la recherche' }),
+    ).not.toBeOnTheScreen();
+  });
+
   it('clears the search when the screen is left, so it opens on the whole catalog the next time', async () => {
     const { store, unmount } = await renderScreen();
     await screen.findByText('Beurre');

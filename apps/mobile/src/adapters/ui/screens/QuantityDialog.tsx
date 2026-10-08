@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type Ref } from 'react';
 import { StyleSheet, View, type HostInstance } from 'react-native';
-import { Button, Dialog, Portal, Text } from 'react-native-paper';
+import { Dialog, Portal, Text } from 'react-native-paper';
 
 import type { ArticleId } from '../../../domain/article';
 import {
@@ -10,6 +10,7 @@ import {
 } from '../../../domain/quantity';
 import { focusOn } from '../accessibility/focus';
 import { formatAmount } from '../components/format-quantity';
+import { Button } from '../components/Button';
 import { QuantityFields } from '../components/QuantityFields';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
@@ -166,7 +167,12 @@ export const QuantityDialogForm = ({
 }: QuantityDialogFormProps) => (
   <Portal>
     {/* Not closed while saving, so the outcome of the save is always shown. */}
-    <Dialog visible dismissable={!saving} onDismiss={onClose}>
+    <Dialog
+      visible
+      dismissable={!saving}
+      onDismiss={onClose}
+      overlayAccessibilityLabel="Fermer la boîte de dialogue"
+    >
       {/* The title read as one header, and the target of the focus move. */}
       <View ref={titleRef} accessible accessibilityRole="header">
         <Dialog.Title>{name}</Dialog.Title>

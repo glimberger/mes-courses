@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type Ref } from 'react';
 import { View, type HostInstance } from 'react-native';
-import { Button, Dialog, Portal } from 'react-native-paper';
+import { Dialog, Portal } from 'react-native-paper';
 
 import type { NameAlreadyUsed, NameError } from '../../../domain/name';
 import { validateName } from '../../../domain/name';
 import type { Result } from '../../../domain/result';
 import { focusOn } from '../accessibility/focus';
 import type { WriteFailed } from '../state/store-kit';
+import { Button } from './Button';
 import { nameErrorText, NameField } from './NameField';
 
 /** What creating a named entity returns: the store actions' results, whatever the entity. */
@@ -125,7 +126,12 @@ export const CreateNamedDialogForm = ({
 }: CreateNamedDialogFormProps) => (
   <Portal>
     {/* Not closed while saving, so the outcome of the save is always shown. */}
-    <Dialog visible dismissable={!saving} onDismiss={onClose}>
+    <Dialog
+      visible
+      dismissable={!saving}
+      onDismiss={onClose}
+      overlayAccessibilityLabel="Fermer la boîte de dialogue"
+    >
       {/* The title read as one header, and the target of the focus move. */}
       <View ref={titleRef} accessible accessibilityRole="header">
         <Dialog.Title>{title}</Dialog.Title>

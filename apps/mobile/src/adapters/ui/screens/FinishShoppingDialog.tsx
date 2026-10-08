@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { View, type HostInstance } from 'react-native';
-import { Button, Dialog, Portal, Text } from 'react-native-paper';
+import { Dialog, Portal, Text } from 'react-native-paper';
 
 import { focusOn } from '../accessibility/focus';
+import { Button } from '../components/Button';
 
 export type FinishShoppingDialogProps = {
   visible: boolean;
@@ -26,7 +27,11 @@ export const FinishShoppingDialog = ({
 
   return (
     <Portal>
-      <Dialog visible={visible} onDismiss={onCancel}>
+      <Dialog
+        visible={visible}
+        onDismiss={onCancel}
+        overlayAccessibilityLabel="Fermer la boîte de dialogue"
+      >
         {/* The title read as one header, and the target of the focus move. */}
         <View ref={titleRef} accessible accessibilityRole="header">
           <Dialog.Title>Terminer les courses ?</Dialog.Title>

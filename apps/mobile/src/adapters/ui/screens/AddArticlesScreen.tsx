@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { SectionList, StyleSheet, View, type HostInstance } from 'react-native';
-import { Appbar, Button, List, Searchbar, Text } from 'react-native-paper';
+import { Appbar, List, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -11,7 +11,10 @@ import { cleanName } from '../../../domain/name';
 import { focusOn } from '../accessibility/focus';
 import { AppbarIconAction } from '../components/AppbarIconAction';
 import { ArticleRow } from '../components/ArticleRow';
+import { BackAction } from '../components/BackAction';
+import { Button } from '../components/Button';
 import { ScreenStateView } from '../components/ScreenStateView';
+import { SearchField } from '../components/SearchField';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
@@ -119,10 +122,7 @@ export const AddArticlesScreen = () => {
     <View style={styles.screen}>
       <Appbar.Header>
         {navigation.canGoBack() && (
-          <Appbar.BackAction
-            accessibilityLabel="Retour"
-            onPress={() => navigation.goBack()}
-          />
+          <BackAction onPress={() => navigation.goBack()} />
         )}
         <Appbar.Content title="Ajouter des articles" />
         <AppbarIconAction
@@ -131,9 +131,8 @@ export const AddArticlesScreen = () => {
           onPress={newArticle}
         />
       </Appbar.Header>
-      <Searchbar
+      <SearchField
         placeholder="Rechercher un article"
-        accessibilityLabel="Rechercher un article"
         value={query}
         onChangeText={searchCatalog}
         style={styles.search}

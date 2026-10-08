@@ -7,6 +7,7 @@ import type { ListSummary } from '../../../domain/list-summary';
 import { focusOn } from '../accessibility/focus';
 import { ListSummaryRow } from '../components/ListSummaryRow';
 import { SCREEN_FAB_CLEARANCE, ScreenFab } from '../components/ScreenFab';
+import { BackAction } from '../components/BackAction';
 import { ScreenStateView } from '../components/ScreenStateView';
 import { useAppStore } from '../state/use-app-store';
 import { CreateListDialog } from './CreateListDialog';
@@ -83,10 +84,7 @@ export const ListsScreen = () => {
     <View style={styles.screen}>
       <Appbar.Header>
         {navigation.canGoBack() && (
-          <Appbar.BackAction
-            accessibilityLabel="Retour"
-            onPress={() => navigation.goBack()}
-          />
+          <BackAction onPress={() => navigation.goBack()} />
         )}
         <Appbar.Content title="Mes listes" />
       </Appbar.Header>

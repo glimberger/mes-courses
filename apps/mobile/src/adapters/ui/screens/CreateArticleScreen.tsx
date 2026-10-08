@@ -7,13 +7,7 @@ import {
   View,
   type HostInstance,
 } from 'react-native';
-import {
-  Appbar,
-  Button,
-  HelperText,
-  List,
-  RadioButton,
-} from 'react-native-paper';
+import { Appbar, HelperText, List, RadioButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
@@ -28,8 +22,11 @@ import { validateName } from '../../../domain/name';
 import { parseQuantity, type QuantityError } from '../../../domain/quantity';
 import { focusOn } from '../accessibility/focus';
 import { useAnnouncement } from '../accessibility/announce';
+import { BackAction } from '../components/BackAction';
+import { Button } from '../components/Button';
 import { nameErrorText, NameField } from '../components/NameField';
 import { QuantityFields } from '../components/QuantityFields';
+import { RadioItem } from '../components/RadioItem';
 import { ScreenStateView } from '../components/ScreenStateView';
 import type { RootStackParamList } from '../routes';
 import { useAppStoreApi } from '../state/app-store-provider';
@@ -229,9 +226,8 @@ const CategoryPicker = ({
             onValueChange={(id) => onChange(id as CategoryId)}
           >
             {data.map((category) => (
-              <RadioButton.Item
+              <RadioItem
                 key={category.id}
-                mode="android"
                 label={category.name}
                 value={category.id}
               />
@@ -312,9 +308,7 @@ export const CreateArticleForm = ({
       style={styles.screen}
     >
       <Appbar.Header>
-        {onBack && (
-          <Appbar.BackAction accessibilityLabel="Retour" onPress={onBack} />
-        )}
+        {onBack && <BackAction onPress={onBack} />}
         <Appbar.Content title="Nouvel article" />
       </Appbar.Header>
       <ScrollView
