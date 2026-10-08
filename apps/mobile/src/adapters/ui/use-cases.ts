@@ -5,8 +5,10 @@ import { createChangeItemQuantity } from '../../application/use-cases/change-ite
 import { createCreateArticleAndAddToList } from '../../application/use-cases/create-article-and-add-to-list';
 import { createCreateCategory } from '../../application/use-cases/create-category';
 import { createCreateList } from '../../application/use-cases/create-list';
+import { createDeleteArticle } from '../../application/use-cases/delete-article';
 import { createEditArticle } from '../../application/use-cases/edit-article';
 import { createFinishShopping } from '../../application/use-cases/finish-shopping';
+import { createGetArticleUsage } from '../../application/use-cases/get-article-usage';
 import { createGetCatalog } from '../../application/use-cases/get-catalog';
 import { createGetCategories } from '../../application/use-cases/get-categories';
 import { createGetCurrentList } from '../../application/use-cases/get-current-list';
@@ -16,10 +18,17 @@ import {
   type Seed,
 } from '../../application/use-cases/initialize-store';
 import { createRemoveItemFromList } from '../../application/use-cases/remove-item-from-list';
+import { createRestoreDeletedArticle } from '../../application/use-cases/restore-deleted-article';
 import { createRestoreRemovedItem } from '../../application/use-cases/restore-removed-item';
 import { createSetCurrentList } from '../../application/use-cases/set-current-list';
 import { createToggleItemInCart } from '../../application/use-cases/toggle-item-in-cart';
-import type { Article, ArticleId, ArticleNotFound } from '../../domain/article';
+import type {
+  Article,
+  ArticleId,
+  ArticleNotFound,
+  ArticleUsage,
+  DeletedArticle,
+} from '../../domain/article';
 import type { CatalogView } from '../../domain/catalog-view';
 import type {
   Category,
@@ -77,6 +86,15 @@ export type UseCases = {
   ) => Promise<
     Result<void, NameError | NameAlreadyUsed<Article> | ArticleNotFound>
   >;
+  getArticleUsage: (
+    articleId: ArticleId,
+  ) => Promise<Result<ArticleUsage, ArticleNotFound>>;
+  deleteArticle: (
+    articleId: ArticleId,
+  ) => Promise<Result<DeletedArticle, ArticleNotFound>>;
+  restoreDeletedArticle: (
+    deleted: DeletedArticle,
+  ) => Promise<Result<void, never>>;
   changeItemQuantity: (
     listId: ListId,
     articleId: ArticleId,
@@ -123,6 +141,9 @@ export const createUseCases = (ports: {
   addArticleToList: createAddArticleToList(ports),
   createArticleAndAddToList: createCreateArticleAndAddToList(ports),
   editArticle: createEditArticle(ports),
+  getArticleUsage: createGetArticleUsage(ports),
+  deleteArticle: createDeleteArticle(ports),
+  restoreDeletedArticle: createRestoreDeletedArticle(ports),
   changeItemQuantity: createChangeItemQuantity(ports),
   removeItemFromList: createRemoveItemFromList(ports),
   restoreRemovedItem: createRestoreRemovedItem(ports),

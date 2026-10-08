@@ -159,12 +159,12 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
 
 ### Tests for User Story 2 ⚠️ (write first, confirm they fail)
 
-- [ ] T023 [US2] Write the failing journey `tests/e2e/journeys/delete-article.e2e.ts`: on a fresh install, create "Lait" and put it on "Ma liste" (ticked, "2" "L") and on "Barbecue"; from the catalog, "Plus d'actions pour « Lait »" → "Supprimer": the dialog reads "Il est dans les listes « Barbecue » et « Ma liste » et en sera retiré." (in the order the use case returns); confirm; the lists no longer show it; on the current list tap "Annuler" in "« Lait » supprimé": it is back on both lists, ticked with "2 L" on "Ma liste" (002 US2-1, US2-3, US2-5). Confirm it fails.
-- [ ] T024 [P] [US2] Write failing use case tests in `apps/mobile/src/application/use-cases/get-article-usage.test.ts`:
+- [X] T023 [US2] Write the failing journey `tests/e2e/journeys/delete-article.e2e.ts`: on a fresh install, create "Lait" and put it on "Ma liste" (ticked, "2" "L") and on "Barbecue"; from the catalog, "Plus d'actions pour « Lait »" → "Supprimer": the dialog reads "Il est dans les listes « Barbecue » et « Ma liste » et en sera retiré." (in the order the use case returns); confirm; the lists no longer show it; on the current list tap "Annuler" in "« Lait » supprimé": it is back on both lists, ticked with "2 L" on "Ma liste" (002 US2-1, US2-3, US2-5). Confirm it fails.
+- [X] T024 [P] [US2] Write failing use case tests in `apps/mobile/src/application/use-cases/get-article-usage.test.ts`:
   - it returns `ArticleUsage = { article: { id, name }, lists: Array<{ id, name }> }`, with the lists holding the article "sorted by name with 001's `compareNames` (numbers by value)" (FR-006, 002 US2-3);
   - an article on no list gives an empty `lists`;
   - `ArticleNotFound`.
-- [ ] T025 [P] [US2] Write failing use case tests in `apps/mobile/src/application/use-cases/delete-article.test.ts`:
+- [X] T025 [P] [US2] Write failing use case tests in `apps/mobile/src/application/use-cases/delete-article.test.ts`:
   - 002 US2-1: the article is gone from the catalog, its category and search;
   - 002 US2-4: it is gone from both lists, and `remainingCount` and `itemCount` drop;
   - FR-005: the category and the lists remain;
@@ -172,13 +172,13 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
   - 002 US2-8: deleting the last article of a category leaves the category, and the catalog shows it empty;
   - `ArticleNotFound`;
   - a failure midway leaves the article and every item as they were (one transaction, SC-005).
-- [ ] T026 [P] [US2] Write failing use case tests in `apps/mobile/src/application/use-cases/restore-deleted-article.test.ts`:
+- [X] T026 [P] [US2] Write failing use case tests in `apps/mobile/src/application/use-cases/restore-deleted-article.test.ts`:
   - 002 US2-5 / SC-006: the article comes back with the **same id**, name and category, and back on "Ma liste" (2 L, ticked) and "Barbecue" (no quantity, unticked);
   - it runs in one transaction;
   - a storage failure throws.
 
   Also add to `apps/mobile/src/application/use-cases/create-article-and-add-to-list.test.ts`: 002 US2-7 / FR-007, once the deletion is final, creating "Houmous" again succeeds as a new article.
-- [ ] T027 [P] [US2] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.delete-article.test.ts`:
+- [X] T027 [P] [US2] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.delete-article.test.ts`:
   - `getArticleUsage` returns the `Result` and stores nothing;
   - `deleteArticle` on success replaces any pending offer: it sets `pendingUndo = { kind: 'deletedArticle', deleted }` and refreshes;
   - `undo()` with a `deletedArticle` clears the offer, calls `restoreDeletedArticle` and refreshes;
@@ -187,12 +187,12 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
   - a new deletion or an item removal replaces the offer;
   - `dismissUndo()` ends it;
   - a store built afresh on the same fakes, standing for a killed app, has `pendingUndo = null`: the deletion is final (edge case).
-- [ ] T028 [P] [US2] Write failing tests for the French list join in `apps/mobile/src/adapters/ui/components/join-french.test.ts`: `["A"]` → "« A »", `["A","B"]` → "« A » et « B »", `["A","B","C"]` → "« A », « B » et « C »".
-- [ ] T029 [P] [US2] Extend `apps/mobile/src/adapters/ui/components/undo-snackbar.test.tsx` with failing tests:
+- [X] T028 [P] [US2] Write failing tests for the French list join in `apps/mobile/src/adapters/ui/components/join-french.test.ts`: `["A"]` → "« A »", `["A","B"]` → "« A » et « B »", `["A","B","C"]` → "« A », « B » et « C »".
+- [X] T029 [P] [US2] Extend `apps/mobile/src/adapters/ui/components/undo-snackbar.test.tsx` with failing tests:
   - `deletedArticle` shows "« Lait » supprimé" with "Annuler" calling `undo`;
   - it is dismissed after 5 s (Jest fake timers, 002 US2-6), but not while a screen reader is on (mocked `AccessibilityInfo`, FR-006a);
   - it stays visible after navigating from AddArticles to CurrentList.
-- [ ] T030 [US2] Write failing tests in `apps/mobile/src/adapters/ui/screens/delete-article-dialog.test.tsx`:
+- [X] T030 [US2] Write failing tests in `apps/mobile/src/adapters/ui/screens/delete-article-dialog.test.tsx`:
   - the title is "Supprimer « {name} » ?";
   - the body for no list is "L'article sera retiré du catalogue.";
   - the body for one list is "Il est dans la liste « Ma liste » et en sera retiré.";
@@ -200,7 +200,7 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
   - 002 US2-2: "Annuler" closes the dialog and changes nothing;
   - 002 US2-1 / US2-4: "Supprimer" deletes and closes;
   - an unexpected delete failure closes the dialog, changes nothing and shows "La modification n'a pas pu être enregistrée.", reported.
-- [ ] T031 [US2] Write failing tests in `apps/mobile/src/adapters/ui/screens/add-articles-screen.test.tsx`:
+- [X] T031 [US2] Write failing tests in `apps/mobile/src/adapters/ui/screens/add-articles-screen.test.tsx`:
   - "Plus d'actions" → "Supprimer" loads the usage and opens DeleteArticleDialog;
   - if loading the usage fails: `writeFailed` snackbar, reported with `{ operation: 'getArticleUsage', screen: 'AddArticles' }`;
   - SC-002: deleting takes 3 taps (menu, "Supprimer", confirm);
@@ -209,16 +209,16 @@ the catalog and the lists. Delete a third one and undo, and check it is back eve
 
 ### Implementation for User Story 2
 
-- [ ] T032 [US2] Implement `getArticleUsage` in `apps/mobile/src/application/use-cases/get-article-usage.ts` to turn T024 green.
-- [ ] T033 [US2] Implement `deleteArticle` in `apps/mobile/src/application/use-cases/delete-article.ts` to turn T025 green. Inside one `UnitOfWork.run`: read the article and `items.forArticle`, then `items.removeAllForArticle`, then `articles.remove`, then return the snapshot ([research.md](research.md) R4).
-- [ ] T034 [US2] Implement `restoreDeletedArticle` in `apps/mobile/src/application/use-cases/restore-deleted-article.ts` to turn T026 green. Inside one `UnitOfWork.run`: `articles.add` with the same id, then `items.save` for each item. Add T032–T034 to `UseCases` and to `apps/mobile/src/composition/composition-root.ts`.
-- [ ] T035 [US2] Add the `getArticleUsage` and `deleteArticle` actions and the `deletedArticle` branch of `undo()` to `apps/mobile/src/adapters/ui/state/app-store.ts`, and widen `pendingUndo` to `{ kind: 'deletedArticle'; deleted: DeletedArticle }`. This turns T027 green.
-- [ ] T036 [P] [US2] Implement `joinFrench` in `apps/mobile/src/adapters/ui/components/join-french.ts` to turn T028 green.
-- [ ] T037 [P] [US2] Add the `deletedArticle` text to `apps/mobile/src/adapters/ui/components/UndoSnackbar.tsx` to turn T029 green.
-- [ ] T038 [US2] Implement `apps/mobile/src/adapters/ui/screens/DeleteArticleDialog.tsx` (Paper `Dialog` in a `Portal`) to turn T030 green.
-- [ ] T039 [US2] Wire `onDelete` of `ArticleRow` in `apps/mobile/src/adapters/ui/screens/AddArticlesScreen.tsx` (load usage, then open the dialog) to turn T031 green.
-- [ ] T040 [US2] Add `Components/UndoSnackbar/DeletedArticle`, `Dialogs/DeleteArticleDialog/NoList`, `.../OneList` and `.../SeveralLists` to `required-stories.ts` and see the story test fail. Then extend `apps/mobile/src/adapters/ui/components/UndoSnackbar.stories.tsx` (a `prepare` that deletes an article) and write `apps/mobile/src/adapters/ui/screens/DeleteArticleDialog.stories.tsx` (an article on no list, on one list, on three lists) to turn it green. Review them in Storybook on both platforms, light and dark.
-- [ ] T041 [US2] Make `delete-article.e2e.ts` (T023) green with `yarn test:e2e:android` and `yarn test:e2e:ios`, every earlier journey still green.
+- [X] T032 [US2] Implement `getArticleUsage` in `apps/mobile/src/application/use-cases/get-article-usage.ts` to turn T024 green.
+- [X] T033 [US2] Implement `deleteArticle` in `apps/mobile/src/application/use-cases/delete-article.ts` to turn T025 green. Inside one `UnitOfWork.run`: read the article and `items.forArticle`, then `items.removeAllForArticle`, then `articles.remove`, then return the snapshot ([research.md](research.md) R4).
+- [X] T034 [US2] Implement `restoreDeletedArticle` in `apps/mobile/src/application/use-cases/restore-deleted-article.ts` to turn T026 green. Inside one `UnitOfWork.run`: `articles.add` with the same id, then `items.save` for each item. Add T032–T034 to `UseCases` and to `apps/mobile/src/composition/composition-root.ts`.
+- [X] T035 [US2] Add the `getArticleUsage` and `deleteArticle` actions and the `deletedArticle` branch of `undo()` to `apps/mobile/src/adapters/ui/state/app-store.ts`, and widen `pendingUndo` to `{ kind: 'deletedArticle'; deleted: DeletedArticle }`. This turns T027 green.
+- [X] T036 [P] [US2] Implement `joinFrench` in `apps/mobile/src/adapters/ui/components/join-french.ts` to turn T028 green.
+- [X] T037 [P] [US2] Add the `deletedArticle` text to `apps/mobile/src/adapters/ui/components/UndoSnackbar.tsx` to turn T029 green.
+- [X] T038 [US2] Implement `apps/mobile/src/adapters/ui/screens/DeleteArticleDialog.tsx` (Paper `Dialog` in a `Portal`) to turn T030 green.
+- [X] T039 [US2] Wire `onDelete` of `ArticleRow` in `apps/mobile/src/adapters/ui/screens/AddArticlesScreen.tsx` (load usage, then open the dialog) to turn T031 green.
+- [X] T040 [US2] Add `Components/UndoSnackbar/DeletedArticle`, `Dialogs/DeleteArticleDialog/NoList`, `.../OneList` and `.../SeveralLists` to `required-stories.ts` and see the story test fail. Then extend `apps/mobile/src/adapters/ui/components/UndoSnackbar.stories.tsx` (a `prepare` that deletes an article) and write `apps/mobile/src/adapters/ui/screens/DeleteArticleDialog.stories.tsx` (an article on no list, on one list, on three lists) to turn it green. Review them in Storybook on both platforms, light and dark.
+- [X] T041 [US2] Make `delete-article.e2e.ts` (T023) green with `yarn test:e2e:android` and `yarn test:e2e:ios`, every earlier journey still green.
 
 **Checkpoint**: US1 + US2 form the MVP. Rename and delete work everywhere, offline, with the
 5-second undo.

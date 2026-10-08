@@ -9,6 +9,7 @@ import {
 } from '../testing/in-memory-repositories';
 import { SequentialIdGenerator } from '../testing/sequential-id-generator';
 import { createCreateArticleAndAddToList } from './create-article-and-add-to-list';
+import { createDeleteArticle } from './delete-article';
 
 const maListe = 'l-1' as ListId;
 const epicerie = 'c-1' as CategoryId;
@@ -163,5 +164,22 @@ describe('createArticleAndAddToList', () => {
     expect(outcome).toEqual(err({ type: 'CategoryNotFound' }));
     expect(await articles()).toHaveLength(3);
     expect(await items()).toEqual([]);
+  });
+
+  it('US2-7 FR-007 once an article is deleted for good, creating its name again succeeds as a new article', async () => {
+    await createDeleteArticle({ unitOfWork })(beurre.id);
+
+    const outcome = await createArticleAndAddToList(
+      maListe,
+      { name: 'Beurre', categoryId: cremerie },
+      null,
+    );
+
+    expect(outcome.ok).toBe(true);
+    const created = (await articles()).filter(
+      (article) => article.name === 'Beurre',
+    );
+    expect(created).toHaveLength(1);
+    expect(created[0]?.id).not.toBe(beurre.id);
   });
 });

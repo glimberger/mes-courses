@@ -20,7 +20,9 @@ export const ABOVE_UNDO_OFFER = {
 export const UNDO_DELAY_MS = 5000;
 
 const text = (offer: PendingUndo): string =>
-  `« ${offer.name} » retiré de la liste`;
+  offer.kind === 'deletedArticle'
+    ? `« ${offer.deleted.article.name} » supprimé`
+    : `« ${offer.name} » retiré de la liste`;
 
 /**
  * The app-wide "Annuler" offer for the store's `pendingUndo`, rendered once at the root so it

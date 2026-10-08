@@ -62,10 +62,18 @@ const removeLait: StoryScenario['prepare'] = async (store) => {
   await store.removeItem(lait);
 };
 
-const renderSnackbar = async () => {
+/** "Lait" deleted from the fixture: its offer is pending. */
+const deleteLait: StoryScenario['prepare'] = async (store) => {
+  await store.loadCurrentList();
+  await store.deleteArticle(lait);
+};
+
+const renderSnackbar = async (
+  prepare: StoryScenario['prepare'] = removeLait,
+) => {
   const rendered = await renderWithStore(<UndoSnackbar />, {
     seed: fixture,
-    prepare: removeLait,
+    prepare,
   });
   // Lets the snackbar read the screen reader setting.
   await act(async () => {
@@ -204,6 +212,61 @@ describe('UndoSnackbar', () => {
 
     expect(screen.getByText('Ajouter des articles')).toBeOnTheScreen();
     expect(screen.getByText(removedText)).toBeOnTheScreen();
+  });
+
+  describe('for a deleted article', () => {
+    const deletedText = '« Lait » supprimé';
+
+    it('US2-5 shows "« Lait » supprimé" with "Annuler", which restores the article', async () => {
+      const { store, unitOfWork } = await renderSnackbar(deleteLait);
+
+      expect(screen.getByText(deletedText)).toBeOnTheScreen();
+      expect(announce).toHaveBeenCalledWith(`${deletedText}, Annuler`);
+
+      fireEvent.press(screen.getByRole('button', { name: 'Annuler' }));
+      await act(async () => {});
+
+      expect(store.getState().pendingUndo).toBeNull();
+      expect(
+        await unitOfWork.run((repos) => repos.articles.findById(lait)),
+      ).not.toBeNull();
+    });
+
+    it('US2-6 is dismissed after 5 s, and not before', async () => {
+      const { offered } = await renderSnackbar(deleteLait);
+
+      await advance(4900);
+      expect(offered()).toBe(true);
+
+      await advance(100);
+      expect(offered()).toBe(false);
+    });
+
+    it('FR-006a is kept past 5 s while a screen reader is on', async () => {
+      screenReaderOn = true;
+      const { offered } = await renderSnackbar(deleteLait);
+
+      await advance(60000);
+
+      expect(offered()).toBe(true);
+    });
+
+    it('stays visible after navigating from AddArticles to CurrentList', async () => {
+      const { store } = await renderWithStore(
+        <Navigation errorReporter={new RecordingErrorReporter()} />,
+        { seed: fixture, asScreen: false },
+      );
+      fireEvent.press(await screen.findByRole('button', { name: 'Ajouter' }));
+      await screen.findByText('Ajouter des articles');
+      await act(() => store.getState().deleteArticle(lait));
+      expect(screen.getByText(deletedText)).toBeOnTheScreen();
+
+      fireEvent.press(screen.getByRole('button', { name: 'Retour' }));
+      await act(async () => {});
+
+      expect(screen.queryByText('Ajouter des articles')).toBeNull();
+      expect(screen.getByText(deletedText)).toBeOnTheScreen();
+    });
   });
 
   it('shows above the FAB of the screen, never covering it', async () => {

@@ -213,6 +213,12 @@ export const createEditListActions = (
     const offer = get().pendingUndo;
     if (offer === null) return;
     set({ pendingUndo: null });
+    if (offer.kind === 'deletedArticle') {
+      await runWrite('restoreDeletedArticle', () =>
+        useCases.restoreDeletedArticle(offer.deleted),
+      );
+      return;
+    }
     await runWrite('restoreRemovedItem', () =>
       useCases.restoreRemovedItem(offer.removed),
     );
