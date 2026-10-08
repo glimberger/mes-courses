@@ -60,6 +60,8 @@ const QuantityForm = ({
   const [unit, setUnit] = useState(prefill?.unit ?? '');
   const [error, setError] = useState<QuantityError | null>(null);
   const [saving, setSaving] = useState(false);
+  // Set at once, so a second tap before the next render does not save twice.
+  const savingRef = useRef(false);
   const titleRef = useRef<View>(null);
 
   // Screen reader focus goes to the title when the dialog opens (FR-037).
@@ -67,14 +69,23 @@ const QuantityForm = ({
     focusOn(titleRef);
   }, []);
 
-  const save = async (write: () => Promise<{ ok: boolean }>) => {
+  const write = async <T,>(run: () => Promise<T>): Promise<T> => {
+    savingRef.current = true;
     setSaving(true);
-    const outcome = await write();
+    const outcome = await run();
+    savingRef.current = false;
     setSaving(false);
+    return outcome;
+  };
+
+  const save = async (run: () => Promise<{ ok: boolean }>) => {
+    if (savingRef.current) return;
+    const outcome = await write(run);
     if (outcome.ok) onClose(true);
   };
 
   const submit = async () => {
+    if (savingRef.current) return;
     const parsed = parseQuantity(amount, unit);
     if (!parsed.ok) {
       setError(parsed.error);
@@ -85,9 +96,7 @@ const QuantityForm = ({
       await save(() => changeItemQuantity(article.id, parsed.value));
       return;
     }
-    setSaving(true);
-    const outcome = await addArticleToList(article, parsed.value);
-    setSaving(false);
+    const outcome = await write(() => addArticleToList(article, parsed.value));
     if (outcome.ok) {
       onClose(true);
     } else if (outcome.error.type === 'AlreadyOnList') {
@@ -156,7 +165,8 @@ export const QuantityDialogForm = ({
   onSubmit,
 }: QuantityDialogFormProps) => (
   <Portal>
-    <Dialog visible onDismiss={onClose}>
+    {/* Not closed while saving, so the outcome of the save is always shown. */}
+    <Dialog visible dismissable={!saving} onDismiss={onClose}>
       {/* The title read as one header, and the target of the focus move. */}
       <View ref={titleRef} accessible accessibilityRole="header">
         <Dialog.Title>{name}</Dialog.Title>
@@ -176,7 +186,7 @@ export const QuantityDialogForm = ({
         />
       </Dialog.Content>
       <Dialog.Actions>
-        <Button onPress={onClose}>
+        <Button disabled={saving} onPress={onClose}>
           {mode === 'alreadyOnList' ? 'Fermer' : 'Annuler'}
         </Button>
         {mode === 'edit' && (
