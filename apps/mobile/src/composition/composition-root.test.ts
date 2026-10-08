@@ -193,3 +193,75 @@ describe('createErrorReporter', () => {
     expect(Sentry.init).not.toHaveBeenCalled();
   });
 });
+
+describe('the Sentry smoke test (quickstart §6 step 5)', () => {
+  const env = { ...process.env };
+  beforeEach(() => {
+    // Promises and the database run as usual; only the timers are under the test's control.
+    jest.useFakeTimers({
+      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+    });
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+    process.env = { ...env };
+  });
+
+  it('with "1", reports one test error at startup, on CurrentList', async () => {
+    process.env.EXPO_PUBLIC_SENTRY_SMOKE_TEST = '1';
+    const reporter = new RecordingErrorReporter();
+
+    const composed = await composeApp(reporter);
+    jest.advanceTimersByTime(10_000);
+
+    expect(reporter.reports).toEqual([
+      {
+        error: expect.any(Error),
+        context: { operation: 'smokeTest', screen: 'CurrentList' },
+      },
+    ]);
+    expect(reporter.nativeCrashes).toBe(0);
+    await composed.close();
+  });
+
+  it('with "native", crashes in native code 10 seconds after startup, and not before', async () => {
+    process.env.EXPO_PUBLIC_SENTRY_SMOKE_TEST = 'native';
+    const reporter = new RecordingErrorReporter();
+
+    const composed = await composeApp(reporter);
+    jest.advanceTimersByTime(9_999);
+    expect(reporter.nativeCrashes).toBe(0);
+    jest.advanceTimersByTime(1);
+
+    expect(reporter.nativeCrashes).toBe(1);
+    expect(reporter.reports).toEqual([]);
+    await composed.close();
+  });
+
+  it('with "native", crashes nothing once the app is closed before then', async () => {
+    process.env.EXPO_PUBLIC_SENTRY_SMOKE_TEST = 'native';
+    const reporter = new RecordingErrorReporter();
+
+    const composed = await composeApp(reporter);
+    await composed.close();
+    jest.advanceTimersByTime(10_000);
+
+    expect(reporter.nativeCrashes).toBe(0);
+  });
+
+  it.each([undefined, '', '0', 'true', 'NATIVE'])(
+    'with %p, reports and crashes nothing',
+    async (value) => {
+      if (value === undefined) delete process.env.EXPO_PUBLIC_SENTRY_SMOKE_TEST;
+      else process.env.EXPO_PUBLIC_SENTRY_SMOKE_TEST = value;
+      const reporter = new RecordingErrorReporter();
+
+      const composed = await composeApp(reporter);
+      jest.advanceTimersByTime(10_000);
+
+      expect(reporter.reports).toEqual([]);
+      expect(reporter.nativeCrashes).toBe(0);
+      await composed.close();
+    },
+  );
+});

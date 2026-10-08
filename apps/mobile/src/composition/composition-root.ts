@@ -25,6 +25,31 @@ export const createErrorReporter = (): ErrorReporter => {
     : new ConsoleErrorReporter();
 };
 
+/** How long after startup the native smoke test crashes, so the app is seen running first. */
+const NATIVE_CRASH_DELAY_MS = 10_000;
+
+/**
+ * The build-time Sentry smoke test (quickstart §6 step 5), off in builds for users: with
+ * `EXPO_PUBLIC_SENTRY_SMOKE_TEST=1`, one test error is reported at startup; with `native`, the
+ * app crashes in native code 10 seconds after startup. Returns how to cancel a crash not yet due.
+ */
+const startSentrySmokeTest = (reporter: ErrorReporter): (() => void) => {
+  // Expo inlines `EXPO_PUBLIC_` variables only when read as written here.
+  const mode = process.env.EXPO_PUBLIC_SENTRY_SMOKE_TEST;
+  if (mode === '1') {
+    reporter.report(new Error('Sentry smoke test'), {
+      operation: 'smokeTest',
+      screen: 'CurrentList',
+    });
+  }
+  if (mode !== 'native') return () => undefined;
+  const timer = setTimeout(
+    () => reporter.crashNatively(),
+    NATIVE_CRASH_DELAY_MS,
+  );
+  return () => clearTimeout(timer);
+};
+
 /** The app once started: its store, and how to close the database under it. */
 export type ComposedApp = {
   store: AppStore;
@@ -53,11 +78,12 @@ const mutable = (reporter: ErrorReporter) => {
 
 /**
  * Starts the app (research R18a): opens and prepares the database, builds the use cases on it,
- * seeds a store with no list, then builds the store. When a step after the opening throws, the
- * database is closed and the error rethrown, so a retry starts from scratch. Once the app is
- * closed, the failures of the writes and loads its store still had running (they fail on the
- * closed database) are not reported. Nothing here deletes, recreates or overwrites the database
- * file. This is the only module that knows every adapter.
+ * seeds a store with no list, then builds the store and starts the Sentry smoke test if the build
+ * asks for it. When a step after the opening throws, the database is closed and the error
+ * rethrown, so a retry starts from scratch. Once the app is closed, the failures of the writes and
+ * loads its store still had running (they fail on the closed database) are not reported, and a
+ * native smoke test crash not yet due is cancelled. Nothing here deletes, recreates or overwrites
+ * the database file. This is the only module that knows every adapter.
  */
 export const composeApp = async (
   errorReporter: ErrorReporter,
@@ -70,9 +96,11 @@ export const composeApp = async (
     });
     await useCases.initializeStore(seed);
     const reporting = mutable(errorReporter);
+    const stopSmokeTest = startSentrySmokeTest(errorReporter);
     return {
       store: createAppStore({ useCases, errorReporter: reporting.reporter }),
       close: () => {
+        stopSmokeTest();
         reporting.mute();
         return db.closeAsync();
       },
