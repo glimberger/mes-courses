@@ -29,7 +29,7 @@ describe('prepareDatabase', () => {
       journal_mode: 'wal',
     });
     expect(await db.getFirstAsync('PRAGMA user_version', [])).toEqual({
-      user_version: 1,
+      user_version: 2,
     });
     expect(await db.getFirstAsync('PRAGMA foreign_keys', [])).toEqual({
       foreign_keys: 1,

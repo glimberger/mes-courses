@@ -197,18 +197,18 @@ Every story needs a device that can pair with a running server.
 
 ### App: migration, ports, adapters, connection ([contracts/app-ports.md](contracts/app-ports.md))
 
-- [ ] T028 Write failing tests for migration 2 in `apps/mobile/src/adapters/sqlite/migrations.test.ts`:
+- [X] T028 Write failing tests for migration 2 in `apps/mobile/src/adapters/sqlite/migrations.test.ts`:
   - `pending_change` and `sync_state` are created exactly as in [data-model.md](data-model.md#changes-to-001s-schema-migration-2), with `kind IN ('category','article','list','listItem')` and `snapshot_done IN (0, 1)`;
   - `category.position` is no longer `UNIQUE`, and two equal positions insert;
   - `created_hlc` is added to `category`, `article` and `shopping_list`, existing rows getting the encoded `MIN(deviceId)` stamp;
   - existing rows and `list_item` data survive the table rebuild;
   - `user_version` = 2;
   - it runs in one transaction.
-- [ ] T029 Implement migration 2 in `apps/mobile/src/adapters/sqlite/migrations.ts` to turn T028 green. Update the category SQLite repository and the read models to order by `(position, created_hlc, id)` through `compareCategories`, keeping 001's ordering tests green. Wrap every database call with `toStorageError` (001 R13), so no stored value reaches a report (001 FR-030).
-- [ ] T030 Declare the app ports in `apps/mobile/src/application/ports/`, with exactly the signatures of [contracts/app-ports.md](contracts/app-ports.md#new-driven-ports-srcapplicationports):
+- [X] T029 Implement migration 2 in `apps/mobile/src/adapters/sqlite/migrations.ts` to turn T028 green. Update the category SQLite repository and the read models to order by `(position, created_hlc, id)` through `compareCategories`, keeping 001's ordering tests green. Wrap every database call with `toStorageError` (001 R13), so no stored value reaches a report (001 FR-030).
+- [X] T030 Declare the app ports in `apps/mobile/src/application/ports/`, with exactly the signatures of [contracts/app-ports.md](contracts/app-ports.md#new-driven-ports-srcapplicationports):
   - `change-recorder.ts`, `sync-state.ts` and `pulled-rows.ts`, added to `Repositories`;
   - `clock.ts`, `sync-server.ts` and `credential-store.ts`.
-- [ ] T031 Write the contract suites in `apps/mobile/src/application/testing/contracts/`:
+- [X] T031 Write the contract suites in `apps/mobile/src/application/testing/contracts/`:
   - `change-recorder.contract.ts`:
     - `record` stamps a strictly increasing HLC from the `Clock`;
     - `pending` excludes held entries and keeps order;
@@ -218,23 +218,23 @@ Every story needs a device that can pair with a running server.
   - `sync-state.contract.ts`: the defaults (`lastSeq = 0`, `snapshotDone = false`), and `save` then `get`.
 
   Run them on fakes in `apps/mobile/src/application/testing/in-memory-repositories.test.ts` and on SQLite in `apps/mobile/src/adapters/sqlite/sqlite-repositories.test.ts`, and confirm they fail.
-- [ ] T032 Implement the fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts` and `FakeClock` in `apps/mobile/src/application/testing/fake-clock.ts`. Implement the SQLite versions in `apps/mobile/src/adapters/sqlite/change-recorder.ts` and `apps/mobile/src/adapters/sqlite/sync-state-repository.ts`. Together they turn T031 green. Wrap every database call with `toStorageError` (001 R13), so no stored value reaches a report (001 FR-030).
-- [ ] T033 [P] Implement `SystemClock` (`Date.now()`) in `apps/mobile/src/adapters/clock/system-clock.ts`. Implement `CredentialStore` over `expo-secure-store` in `apps/mobile/src/adapters/secure-store/credential-store.ts`, test-first with the module mocked: it writes with the `WHEN_UNLOCKED_THIS_DEVICE_ONLY` accessibility option, and `read()` returns `null` when the module throws while decrypting (a value restored without the means to decrypt it, [research.md](research.md) R12a). Register the `expo-secure-store` config plugin with `configureAndroidBackup: true` in `apps/mobile/app.config.ts`, keeping 001's `android.allowBackup: true` and the database in the backup. Add `InMemoryCredentialStore` in `apps/mobile/src/application/testing/`. Install `expo-secure-store` with `yarn expo install`.
-- [ ] T034 Add the app's `./testing` entry: `apps/mobile/test/index.ts`, declared in `apps/mobile/package.json` `"exports"`, re-exporting 001's `node:sqlite` wrapper and the `SyncServer` adapter factory. Then write failing tests for the `SyncServer` HTTP adapter in `tests/sync/sync-server-adapter.test.ts`, importing the adapter from `@mes-courses/mobile/testing` and `startTestServer()` from `@mes-courses/server/testing` (the app never imports the server, Principle XI):
+- [X] T032 Implement the fakes in `apps/mobile/src/application/testing/in-memory-repositories.ts` and `FakeClock` in `apps/mobile/src/application/testing/fake-clock.ts`. Implement the SQLite versions in `apps/mobile/src/adapters/sqlite/change-recorder.ts` and `apps/mobile/src/adapters/sqlite/sync-state-repository.ts`. Together they turn T031 green. Wrap every database call with `toStorageError` (001 R13), so no stored value reaches a report (001 FR-030).
+- [X] T033 [P] Implement `SystemClock` (`Date.now()`) in `apps/mobile/src/adapters/clock/system-clock.ts`. Implement `CredentialStore` over `expo-secure-store` in `apps/mobile/src/adapters/secure-store/credential-store.ts`, test-first with the module mocked: it writes with the `WHEN_UNLOCKED_THIS_DEVICE_ONLY` accessibility option, and `read()` returns `null` when the module throws while decrypting (a value restored without the means to decrypt it, [research.md](research.md) R12a). Register the `expo-secure-store` config plugin with `configureAndroidBackup: true` in `apps/mobile/app.config.ts`, keeping 001's `android.allowBackup: true` and the database in the backup. Add `InMemoryCredentialStore` in `apps/mobile/src/application/testing/`. Install `expo-secure-store` with `yarn expo install`.
+- [X] T034 Add the app's `./testing` entry: `apps/mobile/test/index.ts`, declared in `apps/mobile/package.json` `"exports"`, re-exporting 001's `node:sqlite` wrapper and the `SyncServer` adapter factory. Then write failing tests for the `SyncServer` HTTP adapter in `tests/sync/src/sync-server-adapter.test.ts`, importing the adapter from `@mes-courses/mobile/testing` and `startTestServer()` from `@mes-courses/server/testing` (the app never imports the server, Principle XI):
   - `health` returns `HealthInfo`;
   - `claim` maps `200` / `400` / `429` to `Pairing` / `InvalidCode` / `TooManyAttempts` (with minutes to wait);
   - each request sends `X-App-Version` and, when authenticated, `Authorization: Bearer`;
   - connection refused or a timeout of 10 s → `Offline` / `ServerUnreachable`;
   - a TLS verification error, simulated by an injected `fetch` that throws the platform's TLS error, → `UntrustedServer` and never a retry over `http://`;
   - `401` → `DeviceNotAuthorized`, `426` → `UpdateRequired`, `5xx` → `ServerError`.
-- [ ] T035 Implement `apps/mobile/src/adapters/sync-http/sync-server.ts` (over `fetch`, with an injectable `fetch` and timeout) to turn the T034 tests for `health` and `claim` green. The other methods follow in the stories.
-- [ ] T036 Write failing use case tests in `apps/mobile/src/application/use-cases/connect-to-server.test.ts`, on fakes and a fake `SyncServer`:
+- [X] T035 Implement `apps/mobile/src/adapters/sync-http/sync-server.ts` (over `fetch`, with an injectable `fetch` and timeout) to turn the T034 tests for `health` and `claim` green. The other methods follow in the stories.
+- [X] T036 Write failing use case tests in `apps/mobile/src/application/use-cases/connect-to-server.test.ts`, on fakes and a fake `SyncServer`:
   - "courses.example.fr" becomes `https://courses.example.fr`;
   - `http://` → `InvalidUrl`, unless the composition passes `allowInsecure` (development only);
   - `health` is called before `claim`, and `ServerUnreachable` / `UntrustedServer` change nothing;
   - `InvalidCode` and `TooManyAttempts` change nothing;
   - on success the credential goes to `CredentialStore` only, and `sync_state` stores `serverUrl`, `serverId` and `deviceId`, with `lastSeq = 0` and `snapshotDone = false`.
-- [ ] T037 Implement `apps/mobile/src/application/use-cases/connect-to-server.ts` to turn T036 green. Add it to `UseCases` and to `apps/mobile/src/composition/composition-root.ts`, with `SystemClock`, `CredentialStore` and `SyncServer` wired, and `allowInsecure` only when `__DEV__ && EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL === '1'`.
+- [X] T037 Implement `apps/mobile/src/application/use-cases/connect-to-server.ts` to turn T036 green. Add it to `UseCases` and to `apps/mobile/src/composition/composition-root.ts`, with `SystemClock`, `CredentialStore` and `SyncServer` wired, and `allowInsecure` only when `__DEV__ && EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL === '1'`.
 
 **Checkpoint**: a development build can pair with a local server. Every existing test and the architecture test are green.
 

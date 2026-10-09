@@ -26,6 +26,11 @@ jest.mock('expo-sqlite', () => ({
     return db;
   },
 }));
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: { version: '1.0.0' } },
+}));
+jest.mock('expo-secure-store', () => ({}));
 jest.mock('expo-crypto', () => ({ randomUUID: () => crypto.randomUUID() }));
 jest.mock('@sentry/react-native', () => ({
   init: jest.fn(),

@@ -1,3 +1,4 @@
+import { nextHlc, type Change, type EntityKind } from '@mes-courses/sync-core';
 import type { Article } from '../../domain/article';
 import type { Category } from '../../domain/category';
 import type { ListItem } from '../../domain/list-item';
@@ -10,7 +11,20 @@ import type {
   ListItemRepository,
   ShoppingListRepository,
 } from '../ports/repositories';
+import type { ChangeRecorder, PendingChange } from '../ports/change-recorder';
+import type { Clock } from '../ports/clock';
+import type { IdGenerator } from '../ports/id-generator';
+import {
+  LOCAL_DEVICE_ID,
+  initialSyncState,
+  type SyncState,
+  type SyncStateRepository,
+} from '../ports/sync-state';
 import type { Repositories, UnitOfWork } from '../ports/unit-of-work';
+import { FakeClock } from './fake-clock';
+import { SequentialIdGenerator } from './sequential-id-generator';
+
+type Entry = { change: PendingChange; heldBy: string | null };
 
 type State = {
   categories: Map<string, Category>;
@@ -18,7 +32,20 @@ type State = {
   lists: Map<string, ShoppingList>;
   items: Map<string, ListItem>;
   currentListId: ListId | null;
+  outbox: Entry[];
+  nextSeq: number;
+  syncState: SyncState;
 };
+
+const copySyncState = (state: SyncState): SyncState => ({
+  ...state,
+  maxHlc: { ...state.maxHlc },
+});
+
+const copyEntry = ({ change, heldBy }: Entry): Entry => ({
+  change: JSON.parse(JSON.stringify(change)) as PendingChange,
+  heldBy,
+});
 
 const emptyState = (): State => ({
   categories: new Map(),
@@ -26,6 +53,9 @@ const emptyState = (): State => ({
   lists: new Map(),
   items: new Map(),
   currentListId: null,
+  outbox: [],
+  nextSeq: 1,
+  syncState: initialSyncState(),
 });
 
 // Every value goes in and out as a copy, as it would through storage.
@@ -40,6 +70,9 @@ const copyState = (state: State): State => ({
   lists: new Map([...state.lists].map(([id, l]) => [id, { ...l }])),
   items: new Map([...state.items].map(([ref, i]) => [ref, copyItem(i)])),
   currentListId: state.currentListId,
+  outbox: state.outbox.map(copyEntry),
+  nextSeq: state.nextSeq,
+  syncState: copySyncState(state.syncState),
 });
 
 const itemRef = (listId: string, articleId: string) =>
@@ -72,11 +105,21 @@ const checkNewNamed = <T extends { id: string; name: string }>(
 /** Repositories kept in memory, for domain, use case and UI tests. */
 export class InMemoryRepositories implements Repositories {
   private state = emptyState();
+  private readonly clock: Clock;
+  private readonly ids: IdGenerator;
+
+  constructor(deps: { clock?: Clock; ids?: IdGenerator } = {}) {
+    this.clock = deps.clock ?? new FakeClock();
+    this.ids = deps.ids ?? new SequentialIdGenerator();
+  }
 
   readonly categories: CategoryRepository = {
     all: async () =>
       [...this.state.categories.values()]
-        .sort((a, b) => a.position - b.position)
+        .sort(
+          (a, b) =>
+            a.position - b.position || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+        )
         .map((c) => ({ ...c })),
     findById: async (id) => {
       const found = this.state.categories.get(id);
@@ -94,9 +137,6 @@ export class InMemoryRepositories implements Repositories {
     add: async (category) => {
       const stored = this.state.categories;
       checkNewNamed('category', stored, category);
-      if ([...stored.values()].some((c) => c.position === category.position)) {
-        throw uniqueFailed('category.position');
-      }
       stored.set(category.id, { ...category });
     },
   };
@@ -214,6 +254,64 @@ export class InMemoryRepositories implements Repositories {
     },
   };
 
+  readonly changes: ChangeRecorder = {
+    record: async (kind, id, fields, options) => {
+      const { syncState } = this.state;
+      const hlc = nextHlc(
+        {
+          ...syncState.maxHlc,
+          deviceId: syncState.deviceId ?? LOCAL_DEVICE_ID,
+        },
+        this.clock.nowMs(),
+      );
+      syncState.maxHlc = hlc;
+      const seq = this.state.nextSeq;
+      this.state.nextSeq += 1;
+      const change = {
+        seq,
+        changeId: this.ids.next(),
+        hlc,
+        kind: kind as EntityKind,
+        id,
+        fields: JSON.parse(JSON.stringify(fields)) as object,
+      } as PendingChange & Change;
+      this.state.outbox.push({ change, heldBy: options?.heldBy ?? null });
+    },
+    pending: async (limit) =>
+      this.state.outbox
+        .filter((entry) => entry.heldBy === null)
+        .slice(0, limit)
+        .map((entry) => copyEntry(entry).change),
+    acknowledge: async (changeIds) => {
+      const acknowledged = new Set(changeIds);
+      this.state.outbox = this.state.outbox.filter(
+        (entry) => !acknowledged.has(entry.change.changeId),
+      );
+    },
+    release: async (heldBy) => {
+      for (const entry of this.state.outbox) {
+        if (entry.heldBy === heldBy) entry.heldBy = null;
+      }
+    },
+    releaseAll: async () => {
+      for (const entry of this.state.outbox) entry.heldBy = null;
+    },
+    discard: async (heldBy) => {
+      this.state.outbox = this.state.outbox.filter(
+        (entry) => entry.heldBy !== heldBy,
+      );
+    },
+    count: async () =>
+      this.state.outbox.filter((entry) => entry.heldBy === null).length,
+  };
+
+  readonly syncState: SyncStateRepository = {
+    get: async () => copySyncState(this.state.syncState),
+    save: async (state) => {
+      this.state.syncState = copySyncState(state);
+    },
+  };
+
   /** A copy of everything stored, to give back to `restore`. */
   snapshot(): State {
     return copyState(this.state);
@@ -270,6 +368,8 @@ export class InMemoryUnitOfWork implements UnitOfWork {
         lists: guarded(repos.lists, isOpen),
         items: guarded(repos.items, isOpen),
         appState: guarded(repos.appState, isOpen),
+        changes: guarded(repos.changes, isOpen),
+        syncState: guarded(repos.syncState, isOpen),
       });
     } catch (error) {
       repos.restore(before);

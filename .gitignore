@@ -53,3 +53,6 @@ tests/e2e/artifacts/
 apps/server/.data/
 apps/server/dist/
 packages/*/dist/
+
+# Talisman scan reports
+talisman_report/

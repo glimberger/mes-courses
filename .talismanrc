@@ -11,6 +11,10 @@ allowed_patterns:
   - 'keyof'
   # A React Native ScrollView prop (taps reach the list while typing), not a secret.
   - 'keyboardShouldPersistTaps'
+  # An expo-secure-store option naming when the keychain entry is readable, not a secret.
+  - 'WHEN_UNLOCKED_THIS_DEVICE_ONLY'
+  # expo-secure-store option naming when a keychain entry is readable, not a secret.
+  - 'keychainAccessible'
 fileignoreconfig:
   # flake.lock pins Nix inputs with content hashes and git revisions, not secrets.
   - filename: flake.lock

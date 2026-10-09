@@ -1,9 +1,14 @@
+import Constants from 'expo-constants';
+
 import type { ErrorReporter } from '../application/ports/error-reporter';
 import { ConsoleErrorReporter } from '../adapters/error-reporting/console-error-reporter';
 import { createSentryErrorReporter } from '../adapters/error-reporting/sentry-error-reporter';
 import { CryptoIdGenerator } from '../adapters/id/crypto-id-generator';
 import { closeOnFailure } from '../adapters/sqlite/close-on-failure';
+import { SecureStoreCredentialStore } from '../adapters/secure-store/credential-store';
+import { createSyncServer } from '../adapters/sync-http/sync-server';
 import { openDatabase } from '../adapters/sqlite/open-database';
+import { SystemClock } from '../adapters/clock/system-clock';
 import { SqliteUnitOfWork } from '../adapters/sqlite/unit-of-work';
 import { seed } from '../adapters/ui/seed';
 import { createAppStore, type AppStore } from '../adapters/ui/state/app-store';
@@ -91,10 +96,19 @@ export const composeApp = async (
   errorReporter: ErrorReporter,
 ): Promise<ComposedApp> => {
   const db = await openDatabase();
+  const ids = new CryptoIdGenerator();
+  const clock = new SystemClock();
   return closeOnFailure(db, async () => {
     const useCases = createUseCases({
-      unitOfWork: new SqliteUnitOfWork(db),
-      ids: new CryptoIdGenerator(),
+      unitOfWork: new SqliteUnitOfWork(db, { clock, ids }),
+      ids,
+      syncServer: createSyncServer({
+        appVersion: Constants.expoConfig?.version ?? '0.0.0',
+      }),
+      credentials: new SecureStoreCredentialStore(),
+      // Expo inlines `EXPO_PUBLIC_` variables only when read as written here.
+      allowInsecure:
+        __DEV__ && process.env.EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL === '1',
     });
     await useCases.initializeStore(seed);
     // Expo inlines `EXPO_PUBLIC_` variables only when read as written here.

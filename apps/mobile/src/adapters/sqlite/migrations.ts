@@ -1,3 +1,5 @@
+import { encodeHlc, minHlc } from '@mes-courses/sync-core';
+import { LOCAL_DEVICE_ID } from '../../application/ports/sync-state';
 import { DataFromNewerVersion } from '../../application/ports/data-from-newer-version';
 import type { SqlDatabase } from './sql-database';
 import { withStorageErrors } from './storage-error';
@@ -46,8 +48,54 @@ const migration1: Migration = (db) =>
     );
   `);
 
+/** The stamp of existing rows and the default `created_hlc` and `max_hlc`: older than any real one. */
+export const LOCAL_MIN_STAMP = encodeHlc(minHlc(LOCAL_DEVICE_ID));
+
+// Migration 2 (data-model.md, "Changes to 001's schema"). `category.position` loses its UNIQUE
+// constraint, which needs a table rebuild. `created_hlc` keeps a default so that 001's inserts,
+// which do not know it, still work; the outbox work stamps real values.
+const migration2: Migration = (db) =>
+  db.execAsync(`
+    CREATE TABLE category_new (
+      id              TEXT PRIMARY KEY,
+      name            TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 60),
+      normalized_name TEXT NOT NULL UNIQUE,
+      position        INTEGER NOT NULL,
+      created_hlc     TEXT NOT NULL DEFAULT '${LOCAL_MIN_STAMP}'
+    );
+    INSERT INTO category_new (id, name, normalized_name, position)
+      SELECT id, name, normalized_name, position FROM category;
+    DROP TABLE category;
+    ALTER TABLE category_new RENAME TO category;
+
+    ALTER TABLE article ADD COLUMN created_hlc TEXT NOT NULL DEFAULT '${LOCAL_MIN_STAMP}';
+    ALTER TABLE shopping_list ADD COLUMN created_hlc TEXT NOT NULL DEFAULT '${LOCAL_MIN_STAMP}';
+
+    CREATE TABLE pending_change (
+      seq       INTEGER PRIMARY KEY AUTOINCREMENT,
+      change_id TEXT NOT NULL UNIQUE,
+      hlc       TEXT NOT NULL,
+      kind      TEXT NOT NULL CHECK (kind IN ('category','article','list','listItem')),
+      entity_id TEXT NOT NULL,
+      fields    TEXT NOT NULL,
+      held_by   TEXT
+    );
+    CREATE INDEX pending_change_held ON pending_change(held_by);
+
+    CREATE TABLE sync_state (
+      id            INTEGER PRIMARY KEY CHECK (id = 1),
+      server_url    TEXT,
+      server_id     TEXT,
+      device_id     TEXT,
+      last_seq      INTEGER NOT NULL DEFAULT 0,
+      max_hlc       TEXT NOT NULL,
+      last_sync_at  TEXT,
+      snapshot_done INTEGER NOT NULL DEFAULT 0 CHECK (snapshot_done IN (0, 1))
+    );
+  `);
+
 /** Migration `n` is at index `n - 1`; `PRAGMA user_version` holds the last one applied. */
-export const MIGRATIONS: readonly Migration[] = [migration1];
+export const MIGRATIONS: readonly Migration[] = [migration1, migration2];
 
 /**
  * The migration `PRAGMA user_version` records, once checked: data written by a newer version is

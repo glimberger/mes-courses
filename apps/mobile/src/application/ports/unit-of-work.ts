@@ -5,6 +5,8 @@ import type {
   ListItemRepository,
   ShoppingListRepository,
 } from './repositories';
+import type { ChangeRecorder } from './change-recorder';
+import type { SyncStateRepository } from './sync-state';
 
 export interface Repositories {
   categories: CategoryRepository;
@@ -12,6 +14,8 @@ export interface Repositories {
   lists: ShoppingListRepository;
   items: ListItemRepository;
   appState: AppStateRepository;
+  changes: ChangeRecorder;
+  syncState: SyncStateRepository;
 }
 
 export interface UnitOfWork {

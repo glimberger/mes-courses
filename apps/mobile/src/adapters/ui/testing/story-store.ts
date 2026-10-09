@@ -1,3 +1,5 @@
+import { InMemoryCredentialStore } from '../../../application/testing/in-memory-credential-store';
+import { OfflineSyncServer } from '../../../application/testing/offline-sync-server';
 import { StorageFull } from '../../../application/ports/storage-full';
 import {
   InMemoryRepositories,
@@ -105,7 +107,12 @@ const scenarioUseCase = <K extends UseCaseName>(
 export const buildStoryStore = async (scenario: StoryScenario) => {
   const unitOfWork = new InMemoryUnitOfWork(new InMemoryRepositories());
   if (scenario.seed) await storeFixture(unitOfWork, scenario.seed);
-  const real = createUseCases({ unitOfWork, ids: new SequentialIdGenerator() });
+  const real = createUseCases({
+    syncServer: new OfflineSyncServer(),
+    credentials: new InMemoryCredentialStore(),
+    unitOfWork,
+    ids: new SequentialIdGenerator(),
+  });
   // Settles when a use case held pending is called: `prepare` may be waiting on it for ever.
   let pendingCalled!: () => void;
   const reachedPending = new Promise<void>((resolve) => {
