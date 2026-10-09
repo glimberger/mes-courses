@@ -1,3 +1,5 @@
+import { InMemoryCredentialStore } from '../../../application/testing/in-memory-credential-store';
+import { OfflineSyncServer } from '../../../application/testing/offline-sync-server';
 import { StorageFull } from '../../../application/ports/storage-full';
 import {
   InMemoryRepositories,
@@ -51,6 +53,8 @@ const buildStore = () => {
   const errorReporter = new RecordingErrorReporter();
   const unitOfWork = new InMemoryUnitOfWork(new InMemoryRepositories());
   const useCases: UseCases = createUseCases({
+    syncServer: new OfflineSyncServer(),
+    credentials: new InMemoryCredentialStore(),
     unitOfWork,
     ids: new SequentialIdGenerator(),
   });

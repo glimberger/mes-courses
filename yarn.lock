@@ -2614,9 +2614,11 @@ __metadata:
     "@types/react": "npm:~19.3.0"
     "@types/react-test-renderer": "npm:^19"
     expo: "npm:~58.0.6"
+    expo-constants: "npm:~58.0.10"
     expo-crypto: "npm:~58.0.5"
     expo-detox-config-plugin: "npm:^13.0.0"
     expo-font: "npm:~58.0.7"
+    expo-secure-store: "npm:~58.0.2"
     expo-sqlite: "npm:~58.0.10"
     expo-status-bar: "npm:~58.0.3"
     jest: "npm:^30"
@@ -7917,6 +7919,15 @@ __metadata:
   version: 0.15.0
   resolution: "expo-modules-macros@npm:0.15.0"
   checksum: 10c0/e3425fafd6c36ef652f97685080a61f0090c96258b9f9059a8008addfa7dfd97647521f4074585145d121957c8363ef3e56e8668bbef17c0e2946a95f236c99f
+  languageName: node
+  linkType: hard
+
+"expo-secure-store@npm:~58.0.2":
+  version: 58.0.2
+  resolution: "expo-secure-store@npm:58.0.2"
+  peerDependencies:
+    expo: "*"
+  checksum: 10c0/da34a2eece40098c104e8f9564b51dec99ea0032095068772a4ccab9fc2c0da63f1505eae43d426b1e89fef948999bde8b46a2ee45fa89b66d2ed070bd46fc40
   languageName: node
   linkType: hard
 

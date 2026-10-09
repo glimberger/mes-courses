@@ -1,8 +1,14 @@
+import type { CredentialStore } from '../../application/ports/credential-store';
 import type { IdGenerator } from '../../application/ports/id-generator';
+import type { SyncServer } from '../../application/ports/sync-server';
 import type { UnitOfWork } from '../../application/ports/unit-of-work';
 import { createAddArticleToList } from '../../application/use-cases/add-article-to-list';
 import { createChangeItemQuantity } from '../../application/use-cases/change-item-quantity';
 import { createCreateArticleAndAddToList } from '../../application/use-cases/create-article-and-add-to-list';
+import {
+  createConnectToServer,
+  type ConnectError,
+} from '../../application/use-cases/connect-to-server';
 import { createCreateCategory } from '../../application/use-cases/create-category';
 import { createCreateList } from '../../application/use-cases/create-list';
 import { createDeleteArticle } from '../../application/use-cases/delete-article';
@@ -122,6 +128,11 @@ export type UseCases = {
   ) => Promise<
     Result<{ categoryId: CategoryId }, NameError | NameAlreadyUsed<Category>>
   >;
+  connectToServer: (
+    url: string,
+    code: string,
+    deviceName: string,
+  ) => Promise<Result<void, ConnectError>>;
 };
 
 /** The name of one use case. */
@@ -134,6 +145,10 @@ export type UseCaseName = keyof UseCases;
 export const createUseCases = (ports: {
   unitOfWork: UnitOfWork;
   ids: IdGenerator;
+  syncServer: SyncServer;
+  credentials: CredentialStore;
+  /** Accepts `http://` server addresses; development builds only. */
+  allowInsecure?: boolean;
 }): UseCases => ({
   initializeStore: createInitializeStore(ports),
   getCurrentList: createGetCurrentList(ports),
@@ -154,4 +169,5 @@ export const createUseCases = (ports: {
   createList: createCreateList(ports),
   setCurrentList: createSetCurrentList(ports),
   createCategory: createCreateCategory(ports),
+  connectToServer: createConnectToServer(ports),
 });

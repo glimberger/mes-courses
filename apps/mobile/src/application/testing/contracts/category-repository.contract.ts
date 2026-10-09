@@ -65,7 +65,7 @@ export const categoryRepositoryContract = (
       expect(await repos.categories.nextPosition()).toBe(11);
     });
 
-    it('rejects a category whose id, normalized name or position is taken, keeping the first', async () => {
+    it('rejects a category whose id or normalized name is taken, keeping the first', async () => {
       await repos.categories.add(category('c-1', 'Crèmerie', 0));
 
       await expect(
@@ -74,12 +74,21 @@ export const categoryRepositoryContract = (
       await expect(
         repos.categories.add(category('c-2', ' CRÈMERIE ', 1)),
       ).rejects.toThrow();
-      await expect(
-        repos.categories.add(category('c-2', 'Divers', 0)),
-      ).rejects.toThrow();
 
       expect(await repos.categories.all()).toEqual([
         category('c-1', 'Crèmerie', 0),
+      ]);
+    });
+
+    it('003 FR-014 accepts two categories at the same position, ordered by creation then id', async () => {
+      await repos.categories.add(category('c-b', 'Divers', 0));
+      await repos.categories.add(category('c-a', 'Crèmerie', 0));
+      await repos.categories.add(category('c-c', 'Boucherie', 1));
+
+      expect((await repos.categories.all()).map((c) => c.id)).toEqual([
+        'c-a',
+        'c-b',
+        'c-c',
       ]);
     });
 

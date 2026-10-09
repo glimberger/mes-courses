@@ -1,4 +1,9 @@
 /** @jest-environment node */
+import { changeRecorderContract } from '../../application/testing/contracts/change-recorder.contract';
+import { syncStateRepositoryContract } from '../../application/testing/contracts/sync-state.contract';
+import { FakeClock } from '../../application/testing/fake-clock';
+import { SequentialIdGenerator } from '../../application/testing/sequential-id-generator';
+import { encodeHlc } from '@mes-courses/sync-core';
 import { appStateRepositoryContract } from '../../application/testing/contracts/app-state-repository.contract';
 import { articleRepositoryContract } from '../../application/testing/contracts/article-repository.contract';
 import { categoryRepositoryContract } from '../../application/testing/contracts/category-repository.contract';
@@ -18,6 +23,11 @@ import { migrate } from './migrations';
 import type { SqlDatabase } from './sql-database';
 import { StorageError } from './storage-error';
 import { SqliteUnitOfWork, sqliteRepositories } from './unit-of-work';
+
+const newDeps = () => ({
+  clock: new FakeClock(),
+  ids: new SequentialIdGenerator(),
+});
 
 const failingDatabase = (error: unknown): SqlDatabase => ({
   execAsync: () => Promise.reject(error),
@@ -52,16 +62,49 @@ describe('SQLite repositories', () => {
   });
 
   const createRepositories = async () =>
-    sqliteRepositories(await migratedDatabase());
+    sqliteRepositories(await migratedDatabase(), newDeps());
 
   categoryRepositoryContract(createRepositories);
   articleRepositoryContract(createRepositories);
   shoppingListRepositoryContract(createRepositories);
   listItemRepositoryContract(createRepositories);
   appStateRepositoryContract(createRepositories);
+  syncStateRepositoryContract(createRepositories);
   unitOfWorkContract(
-    async () => new SqliteUnitOfWork(await migratedDatabase()),
+    async () => new SqliteUnitOfWork(await migratedDatabase(), newDeps()),
   );
+  changeRecorderContract(async () => {
+    const clock = new FakeClock();
+    return {
+      clock,
+      unitOfWork: new SqliteUnitOfWork(await migratedDatabase(), {
+        clock,
+        ids: new SequentialIdGenerator(),
+      }),
+    };
+  });
+
+  describe('003 FR-014 category order', () => {
+    it('orders equal positions by created_hlc, then id', async () => {
+      const db = await migratedDatabase();
+      const early = encodeHlc({ wallMs: 1, counter: 0, deviceId: 'd' });
+      const late = encodeHlc({ wallMs: 2, counter: 0, deviceId: 'd' });
+      for (const [id, name, hlc] of [
+        ['c-a', 'A', late],
+        ['c-c', 'C', early],
+        ['c-b', 'B', early],
+      ] as const) {
+        await db.runAsync(
+          'INSERT INTO category (id, name, normalized_name, position, created_hlc) VALUES (?, ?, ?, 0, ?)',
+          [id, name, name.toLowerCase(), hlc],
+        );
+      }
+
+      const found = await sqliteRepositories(db, newDeps()).categories.all();
+
+      expect(found.map((c) => c.id)).toEqual(['c-b', 'c-c', 'c-a']);
+    });
+  });
 
   describe('FR-030 a full storage', () => {
     it.each([
@@ -82,7 +125,7 @@ describe('SQLite repositories', () => {
     ])(
       'rejects with StorageFull for %s, keeping no other text',
       async (_, error) => {
-        const repos = sqliteRepositories(failingDatabase(error));
+        const repos = sqliteRepositories(failingDatabase(error), newDeps());
 
         const rejection = await rejectionOf(
           repos.articles.add(article('a-1', 'Houmous maison', 'c-1')),
@@ -99,6 +142,7 @@ describe('SQLite repositories', () => {
     it('rejects a run with StorageFull when the transaction cannot start', async () => {
       const unitOfWork = new SqliteUnitOfWork(
         failingDatabase(new Error('database or disk is full')),
+        newDeps(),
       );
 
       await expect(
@@ -110,7 +154,7 @@ describe('SQLite repositories', () => {
   describe('FR-030 a storage failure keeps no stored value', () => {
     it('rejects a write refused by a constraint with a StorageError carrying only the result code', async () => {
       const db = await migratedDatabase();
-      const repos = sqliteRepositories(db);
+      const repos = sqliteRepositories(db, newDeps());
       await repos.categories.add(category('c-1', 'Épicerie salée', 0));
       await db.runAsync(
         `INSERT INTO article (id, name, normalized_name, category_id) VALUES ('a-0', 'Houmous', 'houmous maison', 'c-1')`,
@@ -133,7 +177,7 @@ describe('SQLite repositories', () => {
     });
 
     it('rejects the removal of an article still on a list with a StorageError carrying no article name', async () => {
-      const repos = sqliteRepositories(await migratedDatabase());
+      const repos = sqliteRepositories(await migratedDatabase(), newDeps());
       await repos.categories.add(category('c-1', 'Épicerie salée', 0));
       await repos.articles.add(article('a-1', 'Houmous maison', 'c-1'));
       await repos.lists.add(list('l-1', 'Ma liste'));
@@ -155,7 +199,7 @@ describe('SQLite repositories', () => {
 
     it('rejects a run on a closed database with a StorageError', async () => {
       const db = await migratedDatabase();
-      const unitOfWork = new SqliteUnitOfWork(db);
+      const unitOfWork = new SqliteUnitOfWork(db, newDeps());
       db.close();
       opened.splice(opened.indexOf(db), 1);
 
@@ -170,7 +214,10 @@ describe('SQLite repositories', () => {
     });
 
     it('rethrows the error of a run that throws unchanged', async () => {
-      const unitOfWork = new SqliteUnitOfWork(await migratedDatabase());
+      const unitOfWork = new SqliteUnitOfWork(
+        await migratedDatabase(),
+        newDeps(),
+      );
       const failure = new Error('failed in the use case');
 
       await expect(
@@ -195,7 +242,7 @@ describe('SQLite repositories', () => {
     };
 
     await expect(
-      new SqliteUnitOfWork(rollbackFailing).run(async () => {
+      new SqliteUnitOfWork(rollbackFailing, newDeps()).run(async () => {
         throw failure;
       }),
     ).rejects.toBe(failure);
@@ -203,7 +250,7 @@ describe('SQLite repositories', () => {
 
   it('R25 binds every value as a parameter: a name made of SQL is saved and read back unchanged', async () => {
     const db = await migratedDatabase();
-    const repos = sqliteRepositories(db);
+    const repos = sqliteRepositories(db, newDeps());
     const name = "'); DROP TABLE article; --";
     await repos.categories.add(category('c-1', 'Divers', 0));
     await repos.lists.add(list('l-1', name));

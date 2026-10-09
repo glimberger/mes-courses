@@ -1,22 +1,34 @@
+import type { Clock } from '../../application/ports/clock';
+import type { IdGenerator } from '../../application/ports/id-generator';
 import type {
   Repositories,
   UnitOfWork,
 } from '../../application/ports/unit-of-work';
 import { sqliteAppStateRepository } from './app-state-repository';
 import { sqliteArticleRepository } from './article-repository';
+import { sqliteChangeRecorder } from './change-recorder';
 import { sqliteCategoryRepository } from './category-repository';
 import { sqliteListItemRepository } from './list-item-repository';
 import { sqliteShoppingListRepository } from './shopping-list-repository';
 import type { SqlDatabase } from './sql-database';
+import { sqliteSyncStateRepository } from './sync-state-repository';
 import { toStorageError } from './storage-error';
 
+/** What the outbox needs to stamp and identify a change. */
+export type RepositoryDeps = { clock: Clock; ids: IdGenerator };
+
 /** Every repository, on the given database. */
-export const sqliteRepositories = (db: SqlDatabase): Repositories => ({
+export const sqliteRepositories = (
+  db: SqlDatabase,
+  { clock, ids }: RepositoryDeps,
+): Repositories => ({
   categories: sqliteCategoryRepository(db),
   articles: sqliteArticleRepository(db),
   lists: sqliteShoppingListRepository(db),
   items: sqliteListItemRepository(db),
   appState: sqliteAppStateRepository(db),
+  changes: sqliteChangeRecorder(db, clock, ids),
+  syncState: sqliteSyncStateRepository(db),
 });
 
 /** Wraps every method so that it rejects once `isOpen` returns false. */
@@ -43,8 +55,11 @@ export class SqliteUnitOfWork implements UnitOfWork {
   private queue: Promise<unknown> = Promise.resolve();
   private readonly repositories: Repositories;
 
-  constructor(private readonly db: SqlDatabase) {
-    this.repositories = sqliteRepositories(db);
+  constructor(
+    private readonly db: SqlDatabase,
+    deps: RepositoryDeps,
+  ) {
+    this.repositories = sqliteRepositories(db, deps);
   }
 
   run<T>(work: (repos: Repositories) => Promise<T>): Promise<T> {
@@ -69,6 +84,8 @@ export class SqliteUnitOfWork implements UnitOfWork {
             lists: guarded(repos.lists, isOpen),
             items: guarded(repos.items, isOpen),
             appState: guarded(repos.appState, isOpen),
+            changes: guarded(repos.changes, isOpen),
+            syncState: guarded(repos.syncState, isOpen),
           });
         } catch (error) {
           outcome.failure = { error };

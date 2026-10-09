@@ -29,6 +29,13 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-sqlite',
+    // The credential is excluded from Android's Auto Backup, while the database stays in it
+    // (003 research R12a, with 001's `allowBackup: true`). No biometrics, so no Face ID usage
+    // description (FR-041).
+    [
+      'expo-secure-store',
+      { configureAndroidBackup: true, faceIDPermission: false },
+    ],
     // Source maps and native debug files are uploaded during EAS Build (research R13). The
     // organization and project come from SENTRY_ORG and SENTRY_PROJECT, and the credential from
     // SENTRY_AUTH_TOKEN, all EAS environment variables; the organization is in the EU region.

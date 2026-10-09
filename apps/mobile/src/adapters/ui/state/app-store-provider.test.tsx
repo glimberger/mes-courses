@@ -1,3 +1,5 @@
+import { InMemoryCredentialStore } from '../../../application/testing/in-memory-credential-store';
+import { OfflineSyncServer } from '../../../application/testing/offline-sync-server';
 import { Text } from 'react-native';
 import { act, render, screen } from '@testing-library/react-native';
 
@@ -15,6 +17,8 @@ import { useAppStore } from './use-app-store';
 const buildStore = () =>
   createAppStore({
     useCases: createUseCases({
+      syncServer: new OfflineSyncServer(),
+      credentials: new InMemoryCredentialStore(),
       unitOfWork: new InMemoryUnitOfWork(new InMemoryRepositories()),
       ids: new SequentialIdGenerator(),
     }),

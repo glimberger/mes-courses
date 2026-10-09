@@ -1,4 +1,6 @@
 /** @jest-environment node */
+import { InMemoryCredentialStore } from '../application/testing/in-memory-credential-store';
+import { OfflineSyncServer } from '../application/testing/offline-sync-server';
 import {
   InMemoryRepositories,
   InMemoryUnitOfWork,
@@ -15,6 +17,8 @@ import { seedForMeasurement } from './measurement-seed';
 const freshStore = async () => {
   const unitOfWork = new InMemoryUnitOfWork(new InMemoryRepositories());
   const useCases = createUseCases({
+    syncServer: new OfflineSyncServer(),
+    credentials: new InMemoryCredentialStore(),
     unitOfWork,
     ids: new SequentialIdGenerator(),
   });
