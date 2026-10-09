@@ -13,6 +13,9 @@ import { renderWithStore } from '../testing/render-with-store';
 
 const ROLES = ['button', 'checkbox', 'radio', 'switch', 'link', 'tab'] as const;
 
+// Each view opens the app and walks to a screen: on CI that outlasts Jest's 5 s default.
+jest.setTimeout(30_000);
+
 /** These views open more layers than the others: CI is slower than the default wait. */
 const slow = { timeout: 5000 };
 
