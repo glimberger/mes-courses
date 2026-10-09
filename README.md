@@ -81,8 +81,11 @@ React Native Paper carries one Yarn patch (`.yarn/patches/`): its `Dialog` passe
 French. Check it still applies when Paper is upgraded, and drop it once Paper does this itself.
 
 `yarn install` also installs the Git hooks ([Lefthook](https://lefthook.dev), `lefthook.yml`).
-Before each commit, Prettier formats the staged files and stages the result, then Talisman
-checks what is about to be committed. Install Talisman first, or the hook fails.
+Before each commit, Prettier formats the staged files and stages the result, ESLint checks
+them, then Talisman checks what is about to be committed. Install Talisman first, or the hook
+fails. Before each push, `yarn typecheck`, `yarn test` and `yarn test:architecture` run in
+parallel on the whole repository (about 20 seconds), so uncommitted work in the tree can block
+a push. The E2E suites never run from a hook.
 
 ## Check
 
