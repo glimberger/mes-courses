@@ -1,12 +1,34 @@
 # Git hooks, installed by `yarn install` (the postinstall script runs `lefthook install`).
-# Jobs run in order: Prettier formats the staged files and stages the result, then Talisman
-# checks what is about to be committed.
+#
+# pre-commit only looks at the staged files, so it stays fast and a file still being written
+# elsewhere in the tree never blocks a commit. Jobs run in order: Prettier formats the staged
+# files and stages the result, ESLint checks them, then Talisman checks what is about to be
+# committed.
+#
+# pre-push runs the whole-repository checks that CI also runs, in parallel. The Detox E2E suites
+# are too slow for a hook and stay in their own workflow.
 pre-commit:
   jobs:
     - name: prettier
       run: yarn prettier --write --ignore-unknown {staged_files}
       stage_fixed: true
 
+    - name: eslint
+      glob: '*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}'
+      run: yarn eslint --no-warn-ignored {staged_files}
+
     # Talisman is not installed through Yarn: see the README.
     - name: talisman
       run: talisman --githook pre-commit
+
+pre-push:
+  parallel: true
+  jobs:
+    - name: typecheck
+      run: yarn typecheck
+
+    - name: test
+      run: yarn test
+
+    - name: architecture
+      run: yarn test:architecture
