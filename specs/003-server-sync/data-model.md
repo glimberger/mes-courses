@@ -248,6 +248,7 @@ CREATE TABLE pairing_code (
 CREATE TABLE pairing_failure (           -- rate limit (FR-019b): ≤ 5 in any 10-minute window
   at TEXT NOT NULL
 );
+CREATE INDEX pairing_failure_at ON pairing_failure(at);
 ```
 
 Rules enforced by the server's domain (each with tests):
