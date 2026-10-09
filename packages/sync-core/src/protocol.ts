@@ -7,7 +7,7 @@ export type SyncedQuantity = { amount: number; unit: string | null };
 
 export type SyncedFields = {
   category: { name: string; position: number };
-  /** `deleted: true` is a tombstone and is final. */
+  /** `deleted: true` is the intent to tombstone; the server turns it into `deletedHlc`. */
   article: { name: string; categoryId: string; deleted: true };
   list: { name: string };
   listItem: {
@@ -38,8 +38,12 @@ export type ServerRow = {
     kind: K;
     id: string;
     seq: number;
+    // The tombstone is `deletedHlc` alone: a row never carries `deleted` as a field.
     fields: {
-      [F in keyof SyncedFields[K]]?: { value: SyncedFields[K][F]; hlc: Hlc };
+      [F in Exclude<keyof SyncedFields[K], 'deleted'>]?: {
+        value: SyncedFields[K][F];
+        hlc: Hlc;
+      };
     };
     createdHlc: Hlc;
     /** Set for a tombstone: a deleted article, or an entity merged into another. */
@@ -104,9 +108,10 @@ export const ERROR_CODES = {
   UpdateRequired: 426,
   TooManyAttempts: 429,
   ServerError: 500,
+  /** Unknown, expired or used pairing code (claim route only). */
+  InvalidCode: 400,
 } as const;
 
-/** A code the server returns; `InvalidCode` is a `400` of the claim route. */
-export type ErrorCode = keyof typeof ERROR_CODES | 'InvalidCode';
+export type ErrorCode = keyof typeof ERROR_CODES;
 
 export type ErrorBody = { error: ErrorCode };

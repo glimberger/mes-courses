@@ -1,3 +1,5 @@
+import { compareStrings } from './compare';
+
 /** Hybrid logical clock stamp (research R6). */
 export type Hlc = { wallMs: number; counter: number; deviceId: string };
 
@@ -6,9 +8,6 @@ export const MAX_CLOCK_AHEAD_MS = 60_000;
 
 const WALL_DIGITS = 15;
 const COUNTER_DIGITS = 6;
-
-const compareStrings = (a: string, b: string): number =>
-  a < b ? -1 : a > b ? 1 : 0;
 
 /** Orders by `wallMs`, then `counter`, then `deviceId` (string order). */
 export const compareHlc = (a: Hlc, b: Hlc): number =>
@@ -55,15 +54,37 @@ export const clampHlc = (hlc: Hlc, serverNowMs: number): Hlc => {
   return hlc.wallMs > limit ? { ...hlc, wallMs: limit } : hlc;
 };
 
-/** A string for SQLite columns that sorts like `compareHlc`. */
-export const encodeHlc = (hlc: Hlc): string =>
-  `${String(hlc.wallMs).padStart(WALL_DIGITS, '0')}-${String(hlc.counter).padStart(COUNTER_DIGITS, '0')}-${hlc.deviceId}`;
+const WALL_MAX = 10 ** WALL_DIGITS - 1;
+const COUNTER_MAX = 10 ** COUNTER_DIGITS - 1;
+const ENCODED = new RegExp(
+  `^(\\d{${WALL_DIGITS}})-(\\d{${COUNTER_DIGITS}})-(.+)$`,
+  'su',
+);
 
+/**
+ * A string for SQLite columns that sorts like `compareHlc`. Throws a `RangeError` for a stamp
+ * the fixed-width format cannot hold, rather than writing a string that sorts wrongly.
+ */
+export const encodeHlc = (hlc: Hlc): string => {
+  if (
+    !Number.isInteger(hlc.wallMs) ||
+    hlc.wallMs < 0 ||
+    hlc.wallMs > WALL_MAX ||
+    !Number.isInteger(hlc.counter) ||
+    hlc.counter < 0 ||
+    hlc.counter > COUNTER_MAX ||
+    hlc.deviceId === ''
+  ) {
+    throw new RangeError('HLC out of range');
+  }
+  return `${String(hlc.wallMs).padStart(WALL_DIGITS, '0')}-${String(hlc.counter).padStart(COUNTER_DIGITS, '0')}-${hlc.deviceId}`;
+};
+
+/** The inverse of `encodeHlc`. Throws a `RangeError` on a malformed string. */
 export const decodeHlc = (encoded: string): Hlc => {
-  const wallMs = Number(encoded.slice(0, WALL_DIGITS));
-  const counter = Number(
-    encoded.slice(WALL_DIGITS + 1, WALL_DIGITS + 1 + COUNTER_DIGITS),
-  );
-  const deviceId = encoded.slice(WALL_DIGITS + COUNTER_DIGITS + 2);
-  return { wallMs, counter, deviceId };
+  const [, wallMs, counter, deviceId] = ENCODED.exec(encoded) ?? [];
+  if (wallMs === undefined || counter === undefined || deviceId === undefined) {
+    throw new RangeError('Malformed HLC');
+  }
+  return { wallMs: Number(wallMs), counter: Number(counter), deviceId };
 };

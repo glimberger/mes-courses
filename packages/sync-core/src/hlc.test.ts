@@ -102,6 +102,21 @@ describe('clampHlc', () => {
 });
 
 describe('encodeHlc / decodeHlc', () => {
+  it('refuses a stamp the fixed-width format cannot hold', () => {
+    expect(() => encodeHlc(hlc(1, 1_000_000, 'd'))).toThrow(RangeError);
+    expect(() => encodeHlc(hlc(1, -1, 'd'))).toThrow(RangeError);
+    expect(() => encodeHlc(hlc(1, 1.5, 'd'))).toThrow(RangeError);
+    expect(() => encodeHlc(hlc(10 ** 15, 0, 'd'))).toThrow(RangeError);
+    expect(() => encodeHlc(hlc(1, 0, ''))).toThrow(RangeError);
+  });
+
+  it.each(['', 'abc', '000000000000001-000001', '00000000000000x-000001-d'])(
+    'refuses to decode the malformed string "%s"',
+    (text) => {
+      expect(() => decodeHlc(text)).toThrow(RangeError);
+    },
+  );
+
   it('decodes what it encodes, with a deviceId holding dashes', () => {
     const stamp = hlc(1_760_000_000_123, 42, '0b9e-4c1f-aa');
     expect(decodeHlc(encodeHlc(stamp))).toEqual(stamp);

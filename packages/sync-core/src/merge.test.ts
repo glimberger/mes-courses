@@ -48,6 +48,12 @@ describe('mergeField', () => {
     expect(mergeField(current, field('a', hlc(2, 1, 'a')))).toBe(current);
   });
 
+  it('SC-003 keeps the same value whatever the order when two values share a stamp', () => {
+    const a = field('one', hlc(2, 1, 'a'));
+    const b = field('two', hlc(2, 1, 'a'));
+    expect(mergeField(a, b)).toBe(mergeField(b, a));
+  });
+
   it('SC-003 gives the same result for every permutation of the same changes', () => {
     const changes = [
       field('one', hlc(10, 0, 'a')),
