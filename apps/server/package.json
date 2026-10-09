@@ -6,10 +6,11 @@
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {
-    "dev": "tsx watch --clear-screen=false src/composition/main.ts",
+    "dev": "MES_COURSES_DB=.data/mes-courses.db tsx watch --clear-screen=false src/composition/main.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/composition/main.js",
     "pairing-code": "tsx src/composition/pairing-code.ts",
+    "pairing-code:dev": "MES_COURSES_DB=.data/mes-courses.db tsx src/composition/pairing-code.ts",
     "test": "jest --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },

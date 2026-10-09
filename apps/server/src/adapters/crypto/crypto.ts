@@ -1,5 +1,7 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
+import type { IdGenerator } from '../../application/ports/id-generator';
+import type { PairingCrypto } from '../../application/ports/pairing-crypto';
 import type { Random } from '../../application/ports/random';
 
 export const systemRandom: Random = {
@@ -40,3 +42,12 @@ export const generateCredential = (random: Random): string =>
 
 export const sha256Hex = (input: string): string =>
   createHash('sha256').update(input).digest('hex');
+
+export const systemIdGenerator: IdGenerator = { next: () => randomUUID() };
+
+export const createPairingCrypto = (random: Random): PairingCrypto => ({
+  generateCode: () => generatePairingCode(random),
+  normalizeCode,
+  generateCredential: () => generateCredential(random),
+  sha256Hex,
+});

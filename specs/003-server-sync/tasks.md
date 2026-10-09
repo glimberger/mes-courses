@@ -168,15 +168,15 @@ Every story needs a device that can pair with a running server.
 
 ### Server: pairing ([contracts/sync-api.md](contracts/sync-api.md))
 
-- [ ] T022 Write failing use case tests on fakes in `apps/server/src/application/use-cases/pairing.test.ts`.
+- [X] T022 Write failing use case tests on fakes in `apps/server/src/application/use-cases/pairing.test.ts`.
   - **`claimPairingCode(code, deviceName)`**:
     - a valid code creates a device with only the credential's SHA-256 stored, marks the code used, and returns `{ deviceId, credential }` (US4-4);
     - an unknown, expired (older than 10 minutes) or used code → `InvalidCode`, recorded as a failure (US4-5);
     - the 6th failure within any rolling 10 minutes → `TooManyAttempts` with the seconds to wait, persisting across a new store instance (FR-019b, US4-12);
     - `deviceName` is trimmed, 1–60 characters.
   - **`createPairingCode(createdBy | null)`**: it returns a code that expires in 10 minutes and stores only its hash (US4-2, US4-3).
-- [ ] T023 Implement `apps/server/src/domain/pairing.ts` and `apps/server/src/application/use-cases/claim-pairing-code.ts` / `create-pairing-code.ts` to turn T022 green.
-- [ ] T024 Write failing HTTP tests with Fastify `inject` in `apps/server/src/adapters/http/app.test.ts`, for the common rules and the pairing routes:
+- [X] T023 Implement `apps/server/src/domain/pairing.ts` and `apps/server/src/application/use-cases/claim-pairing-code.ts` / `create-pairing-code.ts` to turn T022 green.
+- [X] T024 Write failing HTTP tests with Fastify `inject` in `apps/server/src/adapters/http/app.test.ts`, for the common rules and the pairing routes:
   - every response carries `serverId`, `apiVersion: 1` and `minAppVersion`;
   - `X-App-Version` below `minAppVersion` → `426 UpdateRequired`, nothing read;
   - a missing, unknown or revoked credential → `401 DeviceNotAuthorized` before any read;
@@ -185,9 +185,9 @@ Every story needs a device that can pair with a running server.
   - `POST /v1/pairing/claim` → `200` / `400 InvalidCode` / `429 TooManyAttempts` with `Retry-After`;
   - `POST /v1/pairing-codes` (auth) → `{ code, expiresAt }`;
   - an unexpected throw → `500 ServerError`, reported with `{ operation, route }`.
-- [ ] T025 Implement `apps/server/src/adapters/http/app.ts` (`buildApp(deps)`), `auth.ts` (the Bearer hook), `schemas.ts` (JSON schemas from [contracts/sync-api.md](contracts/sync-api.md)), `errors.ts` and `routes/{health,pairing}.ts` to turn T024 green.
-- [ ] T026 Write a failing test, then implement the Pi command in `apps/server/src/composition/pairing-code.ts` (`yarn workspace @mes-courses/server pairing-code`). It opens the database, creates a code with `created_by = NULL`, and prints exactly `pairing code: ABCD-EF23 (valid for 10 minutes)` (English technical output for the maintainer, not user-facing text, Principle X).
-- [ ] T027 Implement `apps/server/src/composition/main.ts`:
+- [X] T025 Implement `apps/server/src/adapters/http/app.ts` (`buildApp(deps)`), `auth.ts` (the Bearer hook), `schemas.ts` (JSON schemas from [contracts/sync-api.md](contracts/sync-api.md)), `errors.ts` and `routes/{health,pairing}.ts` to turn T024 green.
+- [X] T026 Write a failing test, then implement the Pi command in `apps/server/src/composition/pairing-code.ts` (`yarn workspace @mes-courses/server pairing-code`). It opens the database, creates a code with `created_by = NULL`, and prints exactly `pairing code: ABCD-EF23 (valid for 10 minutes)` (English technical output for the maintainer, not user-facing text, Principle X).
+- [X] T027 Implement `apps/server/src/composition/main.ts`:
   - open and migrate the database at `MES_COURSES_DB` (default `/var/lib/mes-courses/mes-courses.db`, or `apps/server/.data/` in dev);
   - pick the Sentry reporter when `SENTRY_DSN` is set, the console one otherwise;
   - listen on `127.0.0.1:3000` only;

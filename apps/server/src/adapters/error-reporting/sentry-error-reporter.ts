@@ -2,6 +2,8 @@ import * as Sentry from '@sentry/node';
 
 import type { ErrorReporter } from '../../application/ports/error-reporter';
 
+const FLUSH_TIMEOUT_MS = 2000;
+
 /**
  * Sentry reporter (research R15). Request bodies, headers and cookies never leave the Pi, nor do
  * breadcrumbs, `extra` data and the user; the only contexts are the fixed `{ operation, route }`
@@ -54,6 +56,9 @@ export const createSentryErrorReporter = ({
       } catch {
         // Reporting never breaks the server.
       }
+    },
+    flush: async () => {
+      await Sentry.flush(FLUSH_TIMEOUT_MS);
     },
   };
 };
