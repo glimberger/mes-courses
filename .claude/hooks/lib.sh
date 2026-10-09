@@ -48,11 +48,15 @@ is_protected() {
   grep -Eiq "(^|/)($PROTECTED_REGEX)" <<<"$1"
 }
 
-# Prints a fingerprint of the working tree: HEAD, tracked changes and untracked files.
-tree_fingerprint() {
+# Prints a fingerprint of the working tree: HEAD, tracked changes, and the path and content of
+# every untracked file. Always computed from the top of the tree, whatever the current directory.
+tree_fingerprint() (
+  cd "$(git rev-parse --show-toplevel)" || exit 1
   {
     git rev-parse HEAD
     git diff HEAD
-    git ls-files --others --exclude-standard -z | xargs -0 git hash-object --
+    git ls-files --others --exclude-standard -z | while IFS= read -r -d '' file; do
+      printf '%s %s\n' "$file" "$(git hash-object -- "$file" 2>/dev/null)"
+    done
   } | git hash-object --stdin
-}
+)

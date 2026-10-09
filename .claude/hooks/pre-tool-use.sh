@@ -25,6 +25,10 @@ check_file() {
   local file=$1 dir top rel branch default feature_dir scope number pattern
   case "$file" in /*) ;; *) file="$cwd/$file" ;; esac
   dir=$(existing_dir "$file")
+  # A ".." in the part of the path that does not exist yet would not be normalised below.
+  case "${file#"$dir"}" in
+    */../* | */.. | ../*) block "$file contains '..' after a folder that does not exist yet: use a normalised path." ;;
+  esac
   # Resolve symbolic links (/tmp is /private/tmp on macOS), as git rev-parse does.
   file="$(cd "$dir" && pwd -P)${file#"$dir"}"
   dir=$(existing_dir "$file")
@@ -73,13 +77,24 @@ check_file() {
 }
 
 check_bash() {
-  local cmd=$1 branch default git push mutators
-  branch=$(git -C "$cwd" branch --show-current 2>/dev/null)
-  default=$(default_branch "$cwd")
+  local cmd=$1 workdir dest branch default git push mutators cp_targets bash_protected
+  # Where the command runs: a "cd <dir>" or "git -C <dir>" in it wins over the session directory.
+  workdir=$cwd
+  dest=$(grep -Eo -- '(^|[;&|[:space:]])(cd|git[[:space:]]+-C)[[:space:]]+[^[:space:];&|]+' <<<"$cmd" | tail -n 1 | awk '{print $NF}' | tr -d "\"'")
+  if [ -n "$dest" ]; then
+    case "$dest" in
+      "~"*) dest="$HOME${dest#"~"}" ;;
+      /*) ;;
+      *) dest="$workdir/$dest" ;;
+    esac
+    [ -d "$dest" ] && workdir=$dest
+  fi
+  branch=$(git -C "$workdir" branch --show-current 2>/dev/null)
+  default=$(default_branch "$workdir")
   # "git", optionally followed by -C <dir> or -c <key=value>.
   git='git([[:space:]]+-[Cc][[:space:]]+[^[:space:]]+)*[[:space:]]+'
 
-  if grep -Eiq -- '--no-verify|(^|[[:space:]])(LEFTHOOK|HUSKY)=(0|false)([[:space:]]|$)|LEFTHOOK_EXCLUDE=|core\.hooksPath' <<<"$cmd"; then
+  if grep -Eiq -- '--no-verify|(LEFTHOOK|HUSKY)=["'"'"']?(0|false)["'"'"']?([^[:alnum:]_]|$)|LEFTHOOK_EXCLUDE=|core\.hooksPath' <<<"$cmd"; then
     block "Git hooks must always run: fix what the hook reports instead. (If these words only appear in a message, reword it.)"
   fi
   # -n, possibly inside a cluster of short flags (-an, -nm).
@@ -102,10 +117,17 @@ check_bash() {
   if grep -Eq 'gh[[:space:]]+pr[[:space:]]+merge' <<<"$cmd"; then
     block "merging a pull request is the user's decision."
   fi
-  # A redirection or tee into a guardrail file, or a file-changing command that names one.
-  mutators=$(grep -Eo -- "(sed[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*-i|perl[[:space:]]+-[a-zA-Z]*i|\b(mv|cp|rm|truncate)[[:space:]]|${git}(checkout|restore|rm|mv)[[:space:]])[^|;&]*" <<<"$cmd" || true)
-  if grep -Eiq "(>|\btee([[:space:]]+-a)?)[[:space:]]*[^[:space:]]*($PROTECTED_REGEX)" <<<"$cmd" ||
-    grep -Eiq "$PROTECTED_REGEX" <<<"$mutators"; then
+  # A redirection or tee into a guardrail file (or inside a .git directory), or a file-changing
+  # command that names one. For cp only the destination, the last argument, counts.
+  bash_protected="$PROTECTED_REGEX|(^|[[:space:]/])\.git/"
+  mutators=$(grep -Eo -- "(sed[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*-i|perl[[:space:]]+-[a-zA-Z]*i|\b(mv|rm|truncate)[[:space:]]|${git}(checkout|restore|rm|mv)[[:space:]])[^|;&]*" <<<"$cmd" || true)
+  cp_targets=$(grep -Eo -- '\bcp[[:space:]][^|;&]*' <<<"$cmd" | awk '{print $NF}' || true)
+  if grep -Eq 'lefthook[[:space:]]+uninstall' <<<"$cmd"; then
+    block "lefthook uninstall removes the Git hooks: they must always run."
+  fi
+  if grep -Eiq "(>|\btee([[:space:]]+-a)?)[[:space:]]*[^[:space:]]*($bash_protected)" <<<"$cmd" ||
+    grep -Eiq "$bash_protected" <<<"$mutators" ||
+    grep -Eiq "$bash_protected" <<<"$cp_targets"; then
     block "this command looks like it changes a guardrail file. Only the user edits those: propose the change instead."
   fi
 }

@@ -63,6 +63,7 @@ edit 0 'edit a listed file' package.json
 edit 0 'edit the feature folder' specs/003-sync/tasks.md
 edit 2 'edit out of scope' apps/mobile/src/a.ts
 edit 2 'create out of scope in a new folder' packages/new/src/a.ts
+edit 2 '.. after a folder that does not exist' apps/server/new/../../mobile/src/a.ts
 rm "$repo/.specify/feature.json"
 edit 2 'out of scope without feature.json' apps/mobile/src/a.ts
 
@@ -79,6 +80,8 @@ bash_cmd 2 'push -fu' 'git push -fu origin feat/003-sync'
 bash_cmd 2 'push to refs/heads/main' 'git push origin HEAD:refs/heads/main'
 bash_cmd 0 'push then read main' 'git push origin feat/003-sync && git log main'
 bash_cmd 0 'rm then read a guardrail file' 'rm -rf dist && cat lefthook.yml'
+bash_cmd 2 'export LEFTHOOK=0' 'export LEFTHOOK=0; git commit -m x'
+bash_cmd 2 "LEFTHOOK='false'" "LEFTHOOK='false' git commit -m x"
 bash_cmd 2 'LEFTHOOK=0' 'LEFTHOOK=0 git commit -m x'
 bash_cmd 2 'hooksPath override' 'git -c core.hooksPath=/dev/null commit -m x'
 bash_cmd 0 'push the feature branch' 'git push -u origin feat/003-sync'
@@ -109,6 +112,40 @@ else
   failures=$((failures + 1))
 fi
 rm -rf "$nojq"
+
+echo '# Which tree a command runs in'
+git -C "$repo" worktree add -q --detach "$repo.wt" main 2>/dev/null
+git -C "$repo.wt" switch -q -c chore/wt
+git -C "$repo" switch -q main
+bash_cmd 2 'git -C <main checkout> commit from a feature session' "cd $repo.wt && git -C $repo commit -m x"
+bash_cmd 0 'cd to a feature worktree, session on main' "cd $repo.wt && git commit -m x"
+git -C "$repo" worktree remove --force "$repo.wt"
+git -C "$repo" switch -q feat/003-sync
+
+echo '# Tree fingerprint and Stop hook'
+source "$(dirname "$hook")/lib.sh"
+mkdir -p "$repo/apps/server/src"
+echo 'export const a = 1' >"$repo/apps/server/src/a.ts"
+top_fp=$(cd "$repo" && tree_fingerprint)
+sub_fp=$(cd "$repo/apps/server" && tree_fingerprint)
+[ "$top_fp" = "$sub_fp" ] && echo 'ok   same fingerprint from a subfolder' || { echo 'FAIL same fingerprint from a subfolder'; failures=$((failures + 1)); }
+mkdir -p "$repo/apps/server/lib"
+mv "$repo/apps/server/src/a.ts" "$repo/apps/server/lib/a.ts"
+moved_fp=$(cd "$repo" && tree_fingerprint)
+[ "$top_fp" != "$moved_fp" ] && echo 'ok   renaming an untracked file changes the fingerprint' || { echo 'FAIL renaming an untracked file changes the fingerprint'; failures=$((failures + 1)); }
+# The tree was already dirty when the turn started: the Stop hook has nothing to check.
+mkdir -p "$repo/node_modules"
+jq -n --arg cwd "$repo/apps/server" '{cwd: $cwd}' | CLAUDE_PROJECT_DIR=$repo "$(dirname "$hook")/prompt-submit.sh"
+jq -n --arg cwd "$repo/apps/server" '{cwd: $cwd}' | CLAUDE_PROJECT_DIR=$repo "$(dirname "$hook")/stop.sh" >/dev/null 2>&1
+[ $? = 0 ] && echo 'ok   Stop hook skips a turn that changed nothing' || { echo 'FAIL Stop hook skips a turn that changed nothing'; failures=$((failures + 1)); }
+rm -rf "$repo/node_modules" "$repo/apps/server/lib"
+
+echo '# Bash and .git'
+bash_cmd 2 'rm a Git hook' 'rm .git/hooks/pre-commit'
+bash_cmd 2 'write into .git/claude-guardrails' 'echo x > .git/claude-guardrails/stop-ok'
+bash_cmd 2 'lefthook uninstall' 'yarn lefthook uninstall'
+bash_cmd 0 'cp a guardrail file elsewhere' 'cp .github/workflows/ci.yml /tmp/ci.yml'
+bash_cmd 2 'cp over a guardrail file' 'cp /tmp/ci.yml .github/workflows/ci.yml'
 
 echo '# Escape hatch'
 if jq -n --arg cwd "$repo" '{tool_name: "Edit", cwd: $cwd, tool_input: {file_path: ($cwd + "/lefthook.yml")}}' |
