@@ -21,6 +21,7 @@
             pkgs.nodejs_24
             pkgs.corepack_24
             pkgs.watchman
+            pkgs.jq
           ];
         };
       });

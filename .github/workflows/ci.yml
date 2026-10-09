@@ -54,6 +54,7 @@ jobs:
       - run: nix develop --command yarn install --immutable
       - run: nix develop --command yarn test
       - run: nix develop --command yarn test:architecture
+      - run: nix develop --command yarn test:hooks
 
   build:
     runs-on: ubuntu-latest
