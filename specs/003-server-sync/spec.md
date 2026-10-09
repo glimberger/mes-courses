@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-05
 
-**Status**: Draft
+**Status**: Clarified
 
 **Input**: User description: "feature synchro"
 
@@ -84,7 +84,7 @@ check every list, item, tick and quantity is back.
 
 **Acceptance Scenarios**:
 
-1. **Given** the device can reach the server, **When** I tick "Lait", **Then** the tick is shown at once (as in 001) and is saved on the server within a few seconds, without any action from me.
+1. **Given** the device can reach the server, **When** I tick "Lait", **Then** the tick is shown at once (as in 001) and is saved on the server within a few seconds (SC-001), without any action from me.
 2. **Given** the device has no network, **When** I add, tick, rename and delete items, **Then** every change works and is shown at once, and no error is shown.
 3. **Given** I made changes offline, **When** the server becomes reachable again (network back, server restarted), **Then** every pending change is sent, in the order I made it, and none is lost or applied twice.
 4. **Given** the app is killed while changes are waiting to be sent, **When** I reopen it with the server reachable, **Then** the waiting changes are sent.
@@ -201,7 +201,7 @@ from another one and check it can no longer sync while it keeps working on its l
   onto its own hardware (iOS can bring the credential back there), it syncs at once as the
   same device. Once paired again, the restored changes are
   merged by FR-009 to FR-014; changes made since on other devices are more recent, so they win.
-- A dialog or form is open (quantity, rename, category) when a sync changes what it edits: the
+- A dialog or form is open (the quantity dialog, or the edit screen where the name and category are changed) when a sync changes what it edits: the
   form keeps what the user typed, and saving it is a new change, merged by FR-009 to FR-014
   (FR-020a). If what it edits was deleted or removed on another device meanwhile, it closes
   with a French message instead.
@@ -242,7 +242,7 @@ from another one and check it can no longer sync while it keeps working on its l
 
 **Connecting a device**
 
-- **FR-016**: Users MUST be able to connect the app to their server from the settings, see which server it is connected to and when it last synced, and disconnect it.
+- **FR-016**: Users MUST be able to connect the app to their server from the settings, see which server it is connected to and when it last synced, change the server address without pairing again when the server at the new address is the same one (same server identity), and disconnect it.
 - **FR-017**: A device connected to a server that already holds data MUST take that data, merging its own local data into it by FR-012, and MUST NOT create the default categories or "Ma liste" a second time.
 - **FR-018**: A device connected to an empty server MUST send all its local data to it.
 - **FR-018a**: When a device finds that the server no longer knows it (the server was reset or reinstalled), it MUST keep its local copy and its pending changes, show in French that it must be connected again, and, once paired again, send its full local copy, merged by FR-009 to FR-014 with what other re-paired devices already sent. The feature provides no server backup.
@@ -270,7 +270,7 @@ from another one and check it can no longer sync while it keeps working on its l
   article a été retiré de la liste sur un autre appareil." for a removed item.
 - **FR-021**: Users MUST be able to start a sync now and to retry after a failure.
 - **FR-022**: Repeated sync failures MUST be reported to error tracking following [001 FR-030 and FR-030a](../001-shopping-lists/spec.md) (001 FR-030b): the same report fields, no list content, name or identifier, the same offline queue and the same once-per-opening rule. This feature adds two expected situations, never reported: being offline, and the server being unreachable.
-- **FR-022a**: The server MUST report its own unexpected errors (failed writes, crashes, failed certificate renewal) to the same error tracking tool as the app, with its version and environment and without any list content, name or device name. Refused pairing attempts and refused unauthorized requests are expected events, not errors, and are not reported individually.
+- **FR-022a**: The server MUST report its own unexpected errors (failed writes, crashes) to the same error tracking tool as the app, with its version and environment and without any list content, name or device name. A failed certificate renewal is seen in the reverse proxy's log and, on the devices, as an untrusted server (FR-019, FR-022). Refused pairing attempts and refused unauthorized requests are expected events, not errors, and are not reported individually.
 - **FR-023**: All user-facing text MUST be in French. Screen readers MUST announce the status only when sync fails ("Échec de la synchronisation") and when it is back to "Synchronisé" after a failure; the routine change between sending and saved, the waiting count, and rows added, changed or removed by a sync MUST NOT be announced. A sync MUST NOT move screen reader focus, except when it removes the row the user last activated: focus then moves as after a removal (001 FR-037). A row the user only moved to without activating it is left to the screen reader, which moves focus off a removed element itself.
 
 ### Key Entities
