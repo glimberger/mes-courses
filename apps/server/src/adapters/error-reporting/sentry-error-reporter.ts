@@ -3,8 +3,10 @@ import * as Sentry from '@sentry/node';
 import type { ErrorReporter } from '../../application/ports/error-reporter';
 
 /**
- * Sentry reporter (research R15). Request bodies, headers and cookies never leave the Pi; the
- * only contexts are the fixed `{ operation, route }` tags. The caller picks the console reporter
+ * Sentry reporter (research R15). Request bodies, headers and cookies never leave the Pi, nor do
+ * breadcrumbs, `extra` data and the user; the only contexts are the fixed `{ operation, route }`
+ * tags. An exception message is kept, so callers must not put a pairing code or a credential in
+ * one. `Sentry.init` is global: the reporter is built once, at start-up. The caller picks the console reporter
  * when no DSN is set.
  */
 export const createSentryErrorReporter = ({
@@ -38,6 +40,9 @@ export const createSentryErrorReporter = ({
         delete event.request.cookies;
         delete event.request.query_string;
       }
+      delete event.breadcrumbs;
+      delete event.extra;
+      delete event.user;
       return event;
     },
   });

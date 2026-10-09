@@ -13,7 +13,7 @@ import type {
   Repositories,
   ServerStore,
 } from '../../application/ports/store';
-import type { SqlDatabase } from './sql-database';
+import { rollbackQuietly, type SqlDatabase } from './sql-database';
 
 const hlcOrNull = (encoded: string | null): Hlc | null =>
   encoded === null ? null : decodeHlc(encoded);
@@ -81,7 +81,13 @@ const entityRepository = <T extends EntityRecord, R extends StampedRow>(
     },
     save: async (record) => {
       db.run(
-        `INSERT OR REPLACE INTO ${table} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
+        // An upsert, not INSERT OR REPLACE: REPLACE also deletes the other row that clashes on the
+        // live-name index, where this must fail.
+        `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})
+         ON CONFLICT(id) DO UPDATE SET ${columns
+           .slice(1)
+           .map((column) => `${column} = excluded.${column}`)
+           .join(', ')}`,
         [
           record.id,
           record.name,
@@ -98,12 +104,19 @@ const entityRepository = <T extends EntityRecord, R extends StampedRow>(
     changedSince: async (seq, limit) =>
       db
         .all<R>(
-          `SELECT * FROM ${table} WHERE seq > ? ORDER BY seq, id LIMIT ?`,
-          [seq, limit],
+          `SELECT * FROM ${table} WHERE seq > ? AND seq <= ${pageEnd(table)} ORDER BY seq, id`,
+          [seq, seq, Math.max(limit - 1, 0)],
         )
         .map(fromRow),
   };
 };
+
+/**
+ * The upper `seq` bound of a page (parameters: cursor, offset): the `seq` of the row that ends
+ * the page, so the rows sharing it come along; no bound when fewer rows remain.
+ */
+const pageEnd = (table: string) =>
+  `COALESCE((SELECT seq FROM ${table} WHERE seq > ? ORDER BY seq LIMIT 1 OFFSET ?), ${Number.MAX_SAFE_INTEGER})`;
 
 type ItemRow = {
   list_id: string;
@@ -165,16 +178,22 @@ const pairingCodeFromRow = (row: PairingCodeRow): PairingCodeRecord => ({
   usedAt: row.used_at,
 });
 
+/** The single meta row; a missing one means a damaged database, not a fresh server. */
+const metaRow = (db: SqlDatabase) => {
+  const row = db.get<{ server_id: string; seq: number }>(
+    'SELECT server_id, seq FROM meta',
+  );
+  if (!row) throw new Error('The meta row is missing: the database is damaged');
+  return row;
+};
+
 const repositories = (db: SqlDatabase): Repositories => ({
   meta: {
-    serverId: async () =>
-      db.get<{ server_id: string }>('SELECT server_id FROM meta')?.server_id ??
-      '',
-    currentSeq: async () =>
-      db.get<{ seq: number }>('SELECT seq FROM meta')?.seq ?? 0,
+    serverId: async () => metaRow(db).server_id,
+    currentSeq: async () => metaRow(db).seq,
     nextSeq: async () => {
       db.run('UPDATE meta SET seq = seq + 1');
-      return db.get<{ seq: number }>('SELECT seq FROM meta')?.seq ?? 0;
+      return metaRow(db).seq;
     },
   },
   categories: entityRepository<CategoryRecord, CategoryRow>(
@@ -237,8 +256,8 @@ const repositories = (db: SqlDatabase): Repositories => ({
     changedSince: async (seq, limit) =>
       db
         .all<ItemRow>(
-          'SELECT * FROM list_item WHERE seq > ? ORDER BY seq, list_id, article_id LIMIT ?',
-          [seq, limit],
+          `SELECT * FROM list_item WHERE seq > ? AND seq <= ${pageEnd('list_item')} ORDER BY seq, list_id, article_id`,
+          [seq, seq, Math.max(limit - 1, 0)],
         )
         .map(itemFromRow),
   },
@@ -328,6 +347,9 @@ const repositories = (db: SqlDatabase): Repositories => ({
         'SELECT COUNT(*) AS n FROM pairing_failure WHERE at >= ?',
         [since],
       )?.n ?? 0,
+    pruneBefore: async (before) => {
+      db.run('DELETE FROM pairing_failure WHERE at < ?', [before]);
+    },
     earliestSince: async (since) =>
       db.get<{ at: string | null }>(
         'SELECT MIN(at) AS at FROM pairing_failure WHERE at >= ?',
@@ -357,7 +379,7 @@ export class SqliteStore implements ServerStore {
         this.db.exec('COMMIT');
         return value;
       } catch (error) {
-        this.db.exec('ROLLBACK');
+        rollbackQuietly(this.db);
         throw error;
       }
     });

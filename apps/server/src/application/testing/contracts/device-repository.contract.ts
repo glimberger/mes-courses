@@ -30,6 +30,17 @@ export const deviceRepositoryContract = (
       });
     });
 
+    it('rejects a duplicate id or credential hash', async () => {
+      await store.run(({ devices }) => devices.add(device('d-1', 'h-1')));
+
+      await expect(
+        store.run(({ devices }) => devices.add(device('d-1', 'h-2'))),
+      ).rejects.toThrow();
+      await expect(
+        store.run(({ devices }) => devices.add(device('d-2', 'h-1'))),
+      ).rejects.toThrow();
+    });
+
     it('update replaces the device with the same id', async () => {
       await store.run(({ devices }) => devices.add(device('d-1', 'h-1')));
       const revoked = device('d-1', 'h-1', {

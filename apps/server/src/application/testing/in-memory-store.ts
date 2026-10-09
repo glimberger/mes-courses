@@ -31,12 +31,14 @@ const changedSince = <T extends { seq: number }>(
   rows: Map<string, T>,
   seq: number,
   limit: number,
-): T[] =>
-  [...rows.values()]
-    .filter((row) => row.seq > seq)
-    .sort(bySeq)
-    .slice(0, limit)
+): T[] => {
+  const changed = [...rows.values()].filter((row) => row.seq > seq).sort(bySeq);
+  // A page ends on a whole `seq`: the rows of one change are never split.
+  const end = changed[Math.max(limit - 1, 0)]?.seq ?? Infinity;
+  return changed
+    .filter((row) => row.seq <= end)
     .map((row) => structuredClone(row));
+};
 
 const entityRepository = <T extends EntityRecord>(
   rows: Map<string, T>,
@@ -50,6 +52,16 @@ const entityRepository = <T extends EntityRecord>(
       ) ?? null,
     ),
   save: async (record) => {
+    // The live-name unique index of the SQLite schema.
+    const clash = [...rows.values()].find(
+      (row) =>
+        row.id !== record.id &&
+        row.deletedHlc === null &&
+        record.deletedHlc === null &&
+        row.normalizedName === record.normalizedName,
+    );
+    if (clash)
+      throw new Error(`Live name already taken: ${record.normalizedName}`);
     rows.set(record.id, structuredClone(record));
   },
   changedSince: async (seq, limit) => changedSince(rows, seq, limit),
@@ -81,11 +93,20 @@ const repositories = (state: State): Repositories => ({
   appliedChanges: {
     has: async (changeId) => state.appliedChanges.has(changeId),
     add: async (record) => {
+      if (state.appliedChanges.has(record.changeId)) {
+        throw new Error(`Change already applied: ${record.changeId}`);
+      }
       state.appliedChanges.set(record.changeId, { ...record });
     },
   },
   devices: {
     add: async (record) => {
+      const taken = [...state.devices.values()].some(
+        (device) =>
+          device.id === record.id ||
+          device.credentialHash === record.credentialHash,
+      );
+      if (taken) throw new Error(`Device already exists: ${record.id}`);
       state.devices.set(record.id, { ...record });
     },
     get: async (id) => structuredClone(state.devices.get(id) ?? null),
@@ -108,6 +129,9 @@ const repositories = (state: State): Repositories => ({
   },
   pairingCodes: {
     add: async (record) => {
+      if (state.pairingCodes.has(record.codeHash)) {
+        throw new Error('Pairing code already exists');
+      }
       state.pairingCodes.set(record.codeHash, { ...record });
     },
     findByHash: async (codeHash) => {
@@ -122,6 +146,11 @@ const repositories = (state: State): Repositories => ({
   pairingFailures: {
     add: async (at) => {
       state.pairingFailures.push(at);
+    },
+    pruneBefore: async (before) => {
+      state.pairingFailures = state.pairingFailures.filter(
+        (at) => at >= before,
+      );
     },
     countSince: async (since) =>
       state.pairingFailures.filter((at) => at >= since).length,

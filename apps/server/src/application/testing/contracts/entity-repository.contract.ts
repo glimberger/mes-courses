@@ -62,6 +62,30 @@ export const entityRepositoryContract = <T extends EntityRecord>(
       });
     });
 
+    it('rejects a second live row with the same normalized name', async () => {
+      await expect(
+        inRun(async (repo) => {
+          await repo.save(make('x-1', 'Lait', { seq: 1 } as Partial<T>));
+          await repo.save(make('x-2', 'Lait', { seq: 2 } as Partial<T>));
+        }),
+      ).rejects.toThrow();
+    });
+
+    it('does not split the rows sharing a seq across pages', async () => {
+      await inRun(async (repo) => {
+        await repo.save(make('x-1', 'Lait', { seq: 1 } as Partial<T>));
+        await repo.save(make('x-2', 'Beurre', { seq: 2 } as Partial<T>));
+        await repo.save(make('x-3', 'Oeufs', { seq: 2 } as Partial<T>));
+        await repo.save(make('x-4', 'Pain', { seq: 2 } as Partial<T>));
+        await repo.save(make('x-5', 'Sel', { seq: 3 } as Partial<T>));
+
+        const ids = async (since: number, limit: number) =>
+          (await repo.changedSince(since, limit)).map((r) => r.id);
+        expect(await ids(0, 2)).toEqual(['x-1', 'x-2', 'x-3', 'x-4']);
+        expect(await ids(2, 2)).toEqual(['x-5']);
+      });
+    });
+
     it('finds a live row by normalized name, and ignores tombstones', async () => {
       await inRun(async (repo) => {
         await repo.save(

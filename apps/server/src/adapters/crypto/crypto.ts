@@ -25,7 +25,7 @@ export const generatePairingCode = (random: Random): string => {
 
 /**
  * Upper case, without spaces or dashes, then `XXXX-XXXX` when it has 8 characters. Any other
- * length is returned as it is, so it can never match a stored code.
+ * length is returned upper-cased and stripped but not dashed, so it can never match a stored code.
  */
 export const normalizeCode = (input: string): string => {
   const compact = input.toUpperCase().replace(/[\s-]/g, '');

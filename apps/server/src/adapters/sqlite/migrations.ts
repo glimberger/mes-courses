@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { SqlDatabase } from './sql-database';
+import { rollbackQuietly, type SqlDatabase } from './sql-database';
 
 /** Changes the schema from the previous version; it runs inside the transaction `migrate` opens. */
 export type Migration = (db: SqlDatabase) => void;
@@ -86,6 +86,7 @@ const migration1: Migration = (db) => {
     CREATE TABLE pairing_failure (
       at TEXT NOT NULL
     );
+    CREATE INDEX pairing_failure_at ON pairing_failure(at);
   `);
   db.run('INSERT INTO meta (id, server_id, seq) VALUES (1, ?, 0)', [
     randomUUID(),
@@ -119,7 +120,7 @@ export const migrate = (
       db.exec(`PRAGMA user_version = ${next + 1}`);
       db.exec('COMMIT');
     } catch (error) {
-      db.exec('ROLLBACK');
+      rollbackQuietly(db);
       throw error;
     }
   }

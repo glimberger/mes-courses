@@ -21,6 +21,18 @@ export const pairingFailureRepositoryContract = (
       });
     });
 
+    it('pruneBefore forgets the older failures only', async () => {
+      await store.run(async ({ pairingFailures }) => {
+        await pairingFailures.add('2026-10-01T10:00:00.000Z');
+        await pairingFailures.add('2026-10-01T10:05:00.000Z');
+        await pairingFailures.pruneBefore('2026-10-01T10:05:00.000Z');
+
+        expect(
+          await pairingFailures.countSince('2026-10-01T00:00:00.000Z'),
+        ).toBe(1);
+      });
+    });
+
     it('countSince counts the failures at or after the instant', async () => {
       await store.run(async ({ pairingFailures }) => {
         await pairingFailures.add('2026-10-01T10:00:00.000Z');

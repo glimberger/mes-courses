@@ -12,3 +12,15 @@ export interface SqlDatabase {
   get<T>(source: string, params?: SqlValue[]): T | undefined;
   close(): void;
 }
+
+/**
+ * Rolls the open transaction back without hiding the error that caused it: a ROLLBACK that fails
+ * too (the COMMIT already failed, no transaction left) must not replace that error.
+ */
+export const rollbackQuietly = (db: SqlDatabase): void => {
+  try {
+    db.exec('ROLLBACK');
+  } catch {
+    // The original error is the one worth reporting.
+  }
+};

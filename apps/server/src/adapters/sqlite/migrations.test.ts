@@ -67,6 +67,7 @@ describe('server migrations', () => {
       'list_item_seq',
       'list_live_name',
       'list_seq',
+      'pairing_failure_at',
     ]);
   });
 

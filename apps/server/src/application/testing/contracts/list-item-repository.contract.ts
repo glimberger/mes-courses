@@ -94,5 +94,27 @@ export const listItemRepositoryContract = (
         expect(await ids(2, 10)).toEqual([]);
       });
     });
+
+    it('does not split the rows sharing a seq across pages', async () => {
+      await store.run(async (repos) => {
+        await prepare(repos);
+        await repos.articles.save(article('a-3', 'Oeufs', 'c-1'));
+        await repos.articles.save(article('a-4', 'Pain', 'c-1'));
+        await repos.items.save(item('l-1', 'a-1', { seq: 1 }));
+        await repos.items.save(item('l-1', 'a-2', { seq: 2 }));
+        await repos.items.save(item('l-1', 'a-3', { seq: 2 }));
+        await repos.items.save(item('l-1', 'a-4', { seq: 2 }));
+      });
+
+      await store.run(async ({ items }) => {
+        const page = await items.changedSince(0, 2);
+        expect(page.map((r) => r.articleId)).toEqual([
+          'a-1',
+          'a-2',
+          'a-3',
+          'a-4',
+        ]);
+      });
+    });
   });
 };

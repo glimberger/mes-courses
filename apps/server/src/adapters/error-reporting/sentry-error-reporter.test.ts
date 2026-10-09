@@ -53,6 +53,20 @@ describe('createSentryErrorReporter', () => {
       return options().beforeSend?.(event, {});
     };
 
+    it('drops breadcrumbs, extra data and the user', async () => {
+      const sent = await send({
+        type: undefined,
+        message: 'boom',
+        breadcrumbs: [{ message: 'pairing code ABCD-2345' }],
+        extra: { code: 'ABCD-2345' },
+        user: { id: 'd-1' },
+      });
+
+      expect(sent?.breadcrumbs).toBeUndefined();
+      expect(sent?.extra).toBeUndefined();
+      expect(sent?.user).toBeUndefined();
+    });
+
     it('drops request bodies, headers and cookies', async () => {
       const event: ErrorEvent = {
         type: undefined,

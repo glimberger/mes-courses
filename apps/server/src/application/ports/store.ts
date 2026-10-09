@@ -92,7 +92,11 @@ export interface EntityRepository<T extends EntityRecord> {
   findLiveByNormalizedName(normalizedName: string): Promise<T | null>;
   /** Inserts the row, or replaces the one with the same id. */
   save(record: T): Promise<void>;
-  /** Rows with `seq` greater than the given one, by increasing `seq`, at most `limit`. */
+  /**
+   * Rows with `seq` greater than the given one, by increasing `seq`. Rows of one change share a
+   * `seq`, so a page never splits them: it holds at least `limit` rows when there are that many,
+   * and ends on a whole `seq`. The next cursor is the last row's `seq`.
+   */
   changedSince(seq: number, limit: number): Promise<T[]>;
 }
 
@@ -103,6 +107,7 @@ export type ListRepository = EntityRepository<ListRecord>;
 export interface ListItemRepository {
   get(listId: string, articleId: string): Promise<ListItemRecord | null>;
   save(record: ListItemRecord): Promise<void>;
+  /** As `EntityRepository.changedSince`: a page never splits the rows sharing one `seq`. */
   changedSince(seq: number, limit: number): Promise<ListItemRecord[]>;
 }
 
@@ -133,6 +138,8 @@ export interface PairingFailureRepository {
   countSince(since: Instant): Promise<number>;
   /** The earliest failure recorded at or after `since`, if any. */
   earliestSince(since: Instant): Promise<Instant | null>;
+  /** Forgets the failures recorded before `before`, which no rate-limit window reads any more. */
+  pruneBefore(before: Instant): Promise<void>;
 }
 
 export type Repositories = {

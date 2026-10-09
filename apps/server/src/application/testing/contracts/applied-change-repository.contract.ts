@@ -20,6 +20,15 @@ export const appliedChangeRepositoryContract = (
       });
     });
 
+    it('rejects a change applied twice', async () => {
+      await expect(
+        store.run(async ({ appliedChanges }) => {
+          await appliedChanges.add(appliedChange('ch-1'));
+          await appliedChanges.add(appliedChange('ch-1'));
+        }),
+      ).rejects.toThrow();
+    });
+
     it('keeps the changes across runs', async () => {
       await store.run(({ appliedChanges }) =>
         appliedChanges.add(appliedChange('ch-1')),
