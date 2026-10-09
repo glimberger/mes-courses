@@ -7,6 +7,11 @@ guardrails_off() {
   [ "${CLAUDE_GUARDRAILS_OFF:-}" = "1" ]
 }
 
+# Without jq the hooks cannot read their input and would let everything through: fail closed.
+require_jq() {
+  command -v jq >/dev/null 2>&1 || block "jq is required by the hooks in .claude/hooks (it is in the Nix dev shell)."
+}
+
 # Prints a message for the agent and blocks the tool call (exit code 2).
 block() {
   printf 'Blocked by .claude/hooks: %s\n' "$*" >&2
@@ -35,14 +40,19 @@ default_branch() {
 }
 
 # Files that hold the guardrails themselves. An agent must not loosen its own limits: only
-# the user edits them.
+# the user edits them. One regular expression serves the file checks and the Bash command
+# heuristics, and is matched case-insensitively (the default macOS file system is).
+PROTECTED_REGEX='\.claude/settings(\.local)?\.json|\.claude/hooks/|lefthook\.yml|\.github/workflows/|\.dependency-cruiser\.cjs|\.talismanrc|agent-scope\.txt'
+
 is_protected() {
-  case "$1" in
-    .claude/settings.json | .claude/hooks/* | lefthook.yml | .github/workflows/* | \
-      .dependency-cruiser.cjs | .talismanrc | specs/*/agent-scope.txt) return 0 ;;
-  esac
-  return 1
+  grep -Eiq "(^|/)($PROTECTED_REGEX)" <<<"$1"
 }
 
-# Same list as a regular expression, for the Bash command heuristics.
-PROTECTED_REGEX='\.claude/settings\.json|\.claude/hooks/|lefthook\.yml|\.github/workflows/|\.dependency-cruiser\.cjs|\.talismanrc|agent-scope\.txt'
+# Prints a fingerprint of the working tree: HEAD, tracked changes and untracked files.
+tree_fingerprint() {
+  {
+    git rev-parse HEAD
+    git diff HEAD
+    git ls-files --others --exclude-standard -z | xargs -0 git hash-object --
+  } | git hash-object --stdin
+}

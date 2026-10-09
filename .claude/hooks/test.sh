@@ -50,7 +50,11 @@ edit 2 'edit a hook' .claude/hooks/stop.sh
 edit 2 'edit lefthook.yml' lefthook.yml
 edit 2 'edit a workflow' .github/workflows/ci.yml
 edit 2 'edit the scope file' specs/003-sync/agent-scope.txt
-edit 0 'edit settings.local.json' .claude/settings.local.json
+edit 2 'edit settings.local.json' .claude/settings.local.json
+edit 2 'edit LEFTHOOK.yml (case-insensitive file system)' LEFTHOOK.yml
+edit 2 'edit .Claude/hooks (case-insensitive file system)' .Claude/hooks/stop.sh
+edit 2 'edit a Git hook' .git/hooks/pre-commit
+edit 2 'edit the Git config' .git/config
 
 git -C "$repo" switch -q -c feat/003-sync
 echo '# On feat/003-sync (scope applies)'
@@ -59,6 +63,8 @@ edit 0 'edit a listed file' package.json
 edit 0 'edit the feature folder' specs/003-sync/tasks.md
 edit 2 'edit out of scope' apps/mobile/src/a.ts
 edit 2 'create out of scope in a new folder' packages/new/src/a.ts
+rm "$repo/.specify/feature.json"
+edit 2 'out of scope without feature.json' apps/mobile/src/a.ts
 
 echo '# Bash commands'
 bash_cmd 0 'plain commit' 'git commit -m "feat: x"'
@@ -66,6 +72,13 @@ bash_cmd 0 'commit with heredoc' $'git commit -F - <<\'EOF\'\nfeat: x\nEOF'
 bash_cmd 2 'commit --no-verify' 'git commit --no-verify -m x'
 bash_cmd 2 'commit -n' 'git commit -n -m x'
 bash_cmd 2 'commit -am then -n' 'git commit -a -n -m x'
+bash_cmd 2 'commit -an' 'git commit -an -m x'
+bash_cmd 2 'commit -nm' 'git commit -nm x'
+bash_cmd 2 'LEFTHOOK=false' 'LEFTHOOK=false git commit -m x'
+bash_cmd 2 'push -fu' 'git push -fu origin feat/003-sync'
+bash_cmd 2 'push to refs/heads/main' 'git push origin HEAD:refs/heads/main'
+bash_cmd 0 'push then read main' 'git push origin feat/003-sync && git log main'
+bash_cmd 0 'rm then read a guardrail file' 'rm -rf dist && cat lefthook.yml'
 bash_cmd 2 'LEFTHOOK=0' 'LEFTHOOK=0 git commit -m x'
 bash_cmd 2 'hooksPath override' 'git -c core.hooksPath=/dev/null commit -m x'
 bash_cmd 0 'push the feature branch' 'git push -u origin feat/003-sync'
@@ -84,6 +97,18 @@ bash_cmd 2 'tee into a guardrail file' 'echo x | tee .claude/settings.json'
 bash_cmd 2 'sed -i a guardrail file' "sed -i '' s/a/b/ .github/workflows/ci.yml"
 bash_cmd 2 'remove a hook' 'rm .claude/hooks/stop.sh'
 bash_cmd 2 'restore a guardrail file' 'git checkout origin/main -- .talismanrc'
+
+echo '# Without jq'
+nojq=$(mktemp -d)
+for tool in bash env dirname cat git; do ln -s "$(command -v $tool)" "$nojq/$tool"; done
+echo '{}' | PATH=$nojq CLAUDE_PROJECT_DIR=$repo "$hook" 2>/dev/null
+if [ $? = 2 ]; then
+  echo 'ok   fails closed without jq'
+else
+  echo 'FAIL fails closed without jq'
+  failures=$((failures + 1))
+fi
+rm -rf "$nojq"
 
 echo '# Escape hatch'
 if jq -n --arg cwd "$repo" '{tool_name: "Edit", cwd: $cwd, tool_input: {file_path: ($cwd + "/lefthook.yml")}}' |
