@@ -93,7 +93,7 @@ const views: Record<string, () => Promise<void>> = {
     // The catalog is fully drawn: a row redrawn later would close its menu.
     await screen.findByText('Beurre', {}, slow);
     fireEvent.press(
-      await screen.findByRole('button', {
+      screen.getByRole('button', {
         name: "Plus d'actions pour « Lait »",
       }),
     );
@@ -105,11 +105,11 @@ const views: Record<string, () => Promise<void>> = {
     // The catalog is fully drawn: a row redrawn later would close its menu.
     await screen.findByText('Beurre', {}, slow);
     fireEvent.press(
-      await screen.findByRole('button', {
+      screen.getByRole('button', {
         name: "Plus d'actions pour « Lait »",
       }),
     );
-    fireEvent.press(await screen.findByText('Modifier'));
+    fireEvent.press(screen.getByText('Modifier'));
     await screen.findByRole('radio', { name: 'Boissons' }, slow);
   },
   DeleteArticleDialog: async () => {
@@ -118,11 +118,11 @@ const views: Record<string, () => Promise<void>> = {
     // The catalog is fully drawn: a row redrawn later would close its menu.
     await screen.findByText('Beurre', {}, slow);
     fireEvent.press(
-      await screen.findByRole('button', {
+      screen.getByRole('button', {
         name: "Plus d'actions pour « Lait »",
       }),
     );
-    fireEvent.press(await screen.findByText('Supprimer'));
+    fireEvent.press(screen.getByText('Supprimer'));
     await header('Supprimer « Lait » ?');
   },
   'undo snackbar after a deletion': async () => {
@@ -131,11 +131,11 @@ const views: Record<string, () => Promise<void>> = {
     // The catalog is fully drawn: a row redrawn later would close its menu.
     await screen.findByText('Beurre', {}, slow);
     fireEvent.press(
-      await screen.findByRole('button', {
+      screen.getByRole('button', {
         name: "Plus d'actions pour « Lait »",
       }),
     );
-    fireEvent.press(await screen.findByText('Supprimer'));
+    fireEvent.press(screen.getByText('Supprimer'));
     await screen.findByText('Supprimer « Lait » ?', {}, slow);
     await press('Supprimer');
     await screen.findByText('« Lait » supprimé', {}, slow);
