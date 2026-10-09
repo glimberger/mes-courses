@@ -132,13 +132,13 @@ const views: Record<string, () => Promise<void>> = {
     await screen.findByText('Beurre', {}, slow);
     fireEvent.press(
       await screen.findByRole('button', {
-        name: "Plus d'actions pour « Beurre »",
+        name: "Plus d'actions pour « Lait »",
       }),
     );
     fireEvent.press(await screen.findByText('Supprimer'));
-    await screen.findByText('Supprimer « Beurre » ?', {}, slow);
+    await screen.findByText('Supprimer « Lait » ?', {}, slow);
     await press('Supprimer');
-    await screen.findByText('« Beurre » supprimé', {}, slow);
+    await screen.findByText('« Lait » supprimé', {}, slow);
     await screen.findByRole('button', { name: 'Annuler' });
   },
   CreateCategoryDialog: async () => {
