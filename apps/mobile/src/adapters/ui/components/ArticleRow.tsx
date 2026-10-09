@@ -93,6 +93,7 @@ export const ArticleRow = memo(function ArticleRow({
         <Menu
           visible={menuVisible}
           onDismiss={() => setMenuVisible(false)}
+          overlayAccessibilityLabel="Fermer le menu"
           anchorPosition="bottom"
           anchor={
             <AppbarIconAction

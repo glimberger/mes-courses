@@ -259,10 +259,10 @@ the new category heading on the list and in the catalog.
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T047 Extend 001's offline scenario in `apps/mobile/src/adapters/ui/offline.test.tsx` with `global.fetch` throwing: rename, change category, delete and undo. Every step succeeds and nothing is reported (FR-010, SC-004).
-- [ ] T048 [P] Extend `apps/mobile/src/adapters/ui/state/error-context.test.ts` so the reports raised in the 002 store tests carry only the `operation` and `screen` fields, never an article or list name (FR-011).
-- [ ] T049 [P] Extend `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx` to cover EditArticle, DeleteArticleDialog, the row menu and the undo snackbar: French labels and ≥ 48 dp targets.
-- [ ] T050 [P] Update `README.md` to list renaming, recategorizing and deleting articles (with undo) among the app's features.
+- [X] T047 Extend 001's offline scenario in `apps/mobile/src/adapters/ui/offline.test.tsx` with `global.fetch` throwing: rename, change category, delete and undo. Every step succeeds and nothing is reported (FR-010, SC-004).
+- [X] T048 [P] Extend `apps/mobile/src/adapters/ui/state/error-context.test.ts` so the reports raised in the 002 store tests carry only the `operation` and `screen` fields, never an article or list name (FR-011).
+- [X] T049 [P] Extend `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx` to cover EditArticle, DeleteArticleDialog, the row menu and the undo snackbar: French labels and ≥ 48 dp targets.
+- [X] T050 [P] Update `README.md` to list renaming, recategorizing and deleting articles (with undo) among the app's features.
 - [ ] T051 Review every 002 story in Storybook on Android and iOS, in light and dark mode and at 200% text size, and run `yarn test:e2e:android` and `yarn test:e2e:ios` green. Then run [quickstart.md](quickstart.md) section 2 on Android and iOS: the 8 hands-on scenarios, including airplane mode, killing the app while "Annuler" is shown, and TalkBack/VoiceOver. Record the results, and anything not checked, in the pull request's test plan.
 
 ---

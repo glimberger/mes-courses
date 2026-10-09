@@ -13,6 +13,12 @@ import { renderWithStore } from '../testing/render-with-store';
 
 const ROLES = ['button', 'checkbox', 'radio', 'switch', 'link', 'tab'] as const;
 
+// Each view opens the app and walks to a screen: on CI that outlasts Jest's 5 s default.
+jest.setTimeout(30_000);
+
+/** These views open more layers than the others: CI is slower than the default wait. */
+const slow = { timeout: 5000 };
+
 const press = async (name: string) => {
   await screen.findAllByRole('button', { name });
   const button = screen.getAllByRole('button', { name }).at(-1);
@@ -21,7 +27,9 @@ const press = async (name: string) => {
 };
 
 const header = (name: string) =>
-  screen.findAllByRole('header', { name }).then((found) => found.length > 0);
+  screen
+    .findAllByRole('header', { name }, slow)
+    .then((found) => found.length > 0);
 
 /** The app on the fixture, opened on CurrentList. */
 const openApp = async () => {
@@ -79,6 +87,60 @@ const views: Record<string, () => Promise<void>> = {
     await press('Nouvelle liste');
     await screen.findByRole('button', { name: 'Créer' });
   },
+  'AddArticles row menu': async () => {
+    await openApp();
+    await press('Ajouter');
+    // The catalog is fully drawn: a row redrawn later would close its menu.
+    await screen.findByText('Beurre', {}, slow);
+    fireEvent.press(
+      screen.getByRole('button', {
+        name: "Plus d'actions pour « Lait »",
+      }),
+    );
+    await screen.findByText('Modifier', {}, slow);
+  },
+  EditArticle: async () => {
+    await openApp();
+    await press('Ajouter');
+    // The catalog is fully drawn: a row redrawn later would close its menu.
+    await screen.findByText('Beurre', {}, slow);
+    fireEvent.press(
+      screen.getByRole('button', {
+        name: "Plus d'actions pour « Lait »",
+      }),
+    );
+    fireEvent.press(screen.getByText('Modifier'));
+    await screen.findByRole('radio', { name: 'Boissons' }, slow);
+  },
+  DeleteArticleDialog: async () => {
+    await openApp();
+    await press('Ajouter');
+    // The catalog is fully drawn: a row redrawn later would close its menu.
+    await screen.findByText('Beurre', {}, slow);
+    fireEvent.press(
+      screen.getByRole('button', {
+        name: "Plus d'actions pour « Lait »",
+      }),
+    );
+    fireEvent.press(screen.getByText('Supprimer'));
+    await header('Supprimer « Lait » ?');
+  },
+  'undo snackbar after a deletion': async () => {
+    await openApp();
+    await press('Ajouter');
+    // The catalog is fully drawn: a row redrawn later would close its menu.
+    await screen.findByText('Beurre', {}, slow);
+    fireEvent.press(
+      screen.getByRole('button', {
+        name: "Plus d'actions pour « Lait »",
+      }),
+    );
+    fireEvent.press(screen.getByText('Supprimer'));
+    await screen.findByText('Supprimer « Lait » ?', {}, slow);
+    await press('Supprimer');
+    await screen.findByText('« Lait » supprimé', {}, slow);
+    await screen.findByRole('button', { name: 'Annuler' });
+  },
   CreateCategoryDialog: async () => {
     await openApp();
     await press('Ajouter');
@@ -130,7 +192,7 @@ const nameOf = (node: ReactTestInstance): string => {
 
 /** Labels the libraries give when the app gives none: English, so never acceptable. */
 const ENGLISH_DEFAULTS =
-  /^(back|close|close modal|clear|search|dismiss|menu|more options|open|loading|ok|cancel)$/i;
+  /^(back|close|close modal|close menu|clear|search|dismiss|menu|more options|open|loading|ok|cancel)$/i;
 
 const describeNode = (node: ReactTestInstance) =>
   `${String(node.type)} "${nameOf(node)}"`;
@@ -157,6 +219,14 @@ const onlyChild = (node: ReactTestInstance): ReactTestInstance | null => {
 /** Whether the element stretches over a layer that covers the screen, as a dialog's backdrop. */
 const coversScreen = (node: ReactTestInstance): boolean => {
   const own = StyleSheet.flatten(node.props.style) ?? {};
+  // A menu's backdrop: stretched over the screen and holding no text.
+  if (
+    textOf(node) === '' &&
+    own.position === 'absolute' &&
+    [own.top, own.bottom, own.left, own.right].every((at) => at === 0)
+  ) {
+    return true;
+  }
   // The nearest element above with a style of its own: wrappers repeat the element's.
   const ownJson = JSON.stringify(own);
   let above = node.parent;
