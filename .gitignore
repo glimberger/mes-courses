@@ -48,3 +48,8 @@ apps/mobile/.rnstorybook/storybook.requires.ts
 
 # Detox artifacts
 tests/e2e/artifacts/
+
+# Server SQLite database (dev) and build output of the server and shared packages
+apps/server/.data/
+apps/server/dist/
+packages/*/dist/
