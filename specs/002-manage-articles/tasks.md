@@ -251,7 +251,7 @@ the new category heading on the list and in the catalog.
 
 - [X] T044 [US3] Make `editArticle` in `apps/mobile/src/application/use-cases/edit-article.ts` check `categories.findById` before writing, returning `CategoryNotFound`, to turn T042 green. Only the category validation is new; T017 already saves both fields in one update.
 - [X] T045 [US3] Add `CategoryPicker` (from T008) to `apps/mobile/src/adapters/ui/screens/EditArticleScreen.tsx` and save the chosen `categoryId`, to turn T043 green.
-- [ ] T046 [US3] Check that `Screens/EditArticle/Default` now shows the category picker with the current category selected, and review it in Storybook. No new required story: the picker's own stories exist (T009).
+- [X] T046 [US3] Check that `Screens/EditArticle/Default` now shows the category picker with the current category selected, and review it in Storybook. No new required story: the picker's own stories exist (T009).
 
 **Checkpoint**: all three stories work independently and together.
 
