@@ -1,0 +1,13 @@
+diff --git a/src/devices/common/drivers/ios/tools/AppleSimUtils.js b/src/devices/common/drivers/ios/tools/AppleSimUtils.js
+index e722f16e58de4f9447eed0ebac0476c30d8e292e..6ba9c63716fa6d7873478c9e0b0b1ccdd939eeb5 100644
+--- a/src/devices/common/drivers/ios/tools/AppleSimUtils.js
++++ b/src/devices/common/drivers/ios/tools/AppleSimUtils.js
+@@ -191,7 +191,7 @@ class AppleSimUtils {
+ 
+   async _openSimulatorApp(udid) {
+     try {
+-      await childProcess.execWithRetriesAndLogs(`open -a Simulator --args -CurrentDeviceUDID ${udid}`, { retries: 0 });
++      await childProcess.execWithRetriesAndLogs('open -a DeviceHub', { retries: 0 });
+     } catch (error) {
+       this._logUnableToOpenSimulator();
+     }
