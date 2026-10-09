@@ -12,8 +12,12 @@ import type { UnitOfWork } from '../ports/unit-of-work';
 /** The address typed is not a usable server address. */
 export type InvalidUrl = { type: 'InvalidUrl' };
 
+/** The credential or the connection could not be saved on this device; the code is used up. */
+export type StorageFailed = { type: 'StorageFailed' };
+
 export type ConnectError =
   | InvalidUrl
+  | StorageFailed
   | ServerUnreachable
   | UntrustedServer
   | InvalidCode
@@ -71,17 +75,23 @@ export const createConnectToServer =
 
     // The credential first: a connection with no credential reads as disconnected (FR-018b),
     // while a credential with no connection is simply unused.
-    await credentials.write(pairing.value.credential);
-    await unitOfWork.run(async (repos) => {
-      const current = await repos.syncState.get();
-      await repos.syncState.save({
-        ...current,
-        serverUrl: url,
-        serverId: pairing.value.serverId,
-        deviceId: pairing.value.deviceId,
-        lastSeq: 0,
-        snapshotDone: false,
+    try {
+      await credentials.write(pairing.value.credential);
+      await unitOfWork.run(async (repos) => {
+        const current = await repos.syncState.get();
+        await repos.syncState.save({
+          ...current,
+          serverUrl: url,
+          serverId: pairing.value.serverId,
+          deviceId: pairing.value.deviceId,
+          lastSeq: 0,
+          lastSyncAt: null,
+          // The first sync re-stamps the snapshot with the new device id (research R13).
+          snapshotDone: false,
+        });
       });
-    });
+    } catch {
+      return err({ type: 'StorageFailed' });
+    }
     return ok(undefined);
   };

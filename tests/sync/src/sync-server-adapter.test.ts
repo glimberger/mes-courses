@@ -60,6 +60,54 @@ describe('SyncServer HTTP adapter', () => {
       expect(requests[0]?.headers.has('Authorization')).toBe(false);
     });
 
+    it.each([['Wed, 21 Oct 2026 07:28:00 GMT'], [null]])(
+      'waits 1 minute when Retry-After is %s',
+      async (header) => {
+        const limited: FetchFn = async () =>
+          new Response('{}', {
+            status: 429,
+            headers: header === null ? {} : { 'Retry-After': header },
+          });
+        const syncServer = createSyncServer({
+          appVersion: APP_VERSION,
+          fetch: limited,
+        });
+
+        const result = await syncServer.claim(server.url, 'ABCD-EF23', 'A');
+
+        expect(result).toEqual({
+          ok: false,
+          error: { type: 'TooManyAttempts', minutesToWait: 1 },
+        });
+      },
+    );
+
+    it('rejects a health answer that is not the server identity', async () => {
+      const portal: FetchFn = async () =>
+        new Response('<html>login</html>', { status: 200 });
+      const syncServer = createSyncServer({
+        appVersion: APP_VERSION,
+        fetch: portal,
+      });
+
+      expect(await syncServer.health(server.url)).toEqual({
+        ok: false,
+        error: { type: 'ServerUnreachable' },
+      });
+    });
+
+    it('returns an error, not a rejection, for methods not implemented yet', async () => {
+      const syncServer = createSyncServer({ appVersion: APP_VERSION });
+
+      const result = await syncServer.listDevices({
+        url: server.url,
+        deviceId: 'd',
+        credential: 'c',
+      });
+
+      expect(result).toEqual({ ok: false, error: { type: 'ServerError' } });
+    });
+
     it('reports ServerUnreachable when the connection is refused', async () => {
       const syncServer = createSyncServer({ appVersion: APP_VERSION });
 

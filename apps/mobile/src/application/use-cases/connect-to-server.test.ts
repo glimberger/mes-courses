@@ -185,4 +185,28 @@ describe('connectToServer', () => {
 
     expect((await syncState()).maxHlc).toEqual(before.maxHlc);
   });
+
+  it('forgets the last sync of the previous server', async () => {
+    await unitOfWork.run((repos) =>
+      repos.syncState.save({
+        ...initialSyncState(),
+        lastSyncAt: '2026-01-01T00:00:00.000Z',
+      }),
+    );
+
+    await connect('courses.example.fr');
+
+    expect((await syncState()).lastSyncAt).toBeNull();
+  });
+
+  it('returns StorageFailed when the credential cannot be written', async () => {
+    credentials.write = async () => {
+      throw new Error('keychain unavailable');
+    };
+
+    const outcome = await connect('courses.example.fr');
+
+    expect(outcome).toEqual(err({ type: 'StorageFailed' }));
+    expect((await syncState()).serverUrl).toBeNull();
+  });
 });

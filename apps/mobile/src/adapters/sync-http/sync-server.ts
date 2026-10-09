@@ -28,12 +28,29 @@ export type SyncServerOptions = {
  * ("self-signed certificate", `CERT_` codes).
  */
 const TLS_ERROR =
-  /ssl|tls|certificate|trust anchor|cert_|self[- ]signed|handshake/i;
+  /\b(?:ssl|tls)\b|certificate|trust anchor|\bcert_|self[- ]signed|handshake/i;
 
 type Answer =
   | { kind: 'response'; status: number; headers: Headers; body: unknown }
   | { kind: 'untrusted' }
   | { kind: 'unreachable' };
+
+const isHealthInfo = (body: unknown): body is HealthInfo =>
+  typeof body === 'object' &&
+  body !== null &&
+  typeof (body as HealthInfo).serverId === 'string' &&
+  typeof (body as HealthInfo).apiVersion === 'number' &&
+  typeof (body as HealthInfo).minAppVersion === 'string';
+
+/** `Retry-After` in seconds; an HTTP-date or a missing header gives a 1 minute wait. */
+const minutesToWait = (header: string | null): number => {
+  const seconds = header === null ? NaN : Number(header);
+  return Number.isFinite(seconds) ? Math.max(1, Math.ceil(seconds / 60)) : 1;
+};
+
+/** Until the stories that need them: a failure the caller can handle, never a rejection. */
+const notImplemented = async (): Promise<Result<never, SyncFailure>> =>
+  err({ type: 'ServerError' });
 
 const parseBody = async (response: Response): Promise<unknown> => {
   try {
@@ -106,7 +123,10 @@ export const createSyncServer = ({
       if (answer.kind === 'unreachable' || answer.status !== 200) {
         return err({ type: 'ServerUnreachable' });
       }
-      return ok(answer.body as HealthInfo);
+      // A captive portal may answer 200 with something that is not the server's identity.
+      return isHealthInfo(answer.body)
+        ? ok(answer.body)
+        : err({ type: 'ServerUnreachable' });
     },
 
     async claim(url, code, deviceName) {
@@ -120,10 +140,9 @@ export const createSyncServer = ({
       }
       if (answer.status === 200) return ok(answer.body as Pairing);
       if (answer.status === 429) {
-        const seconds = Number(answer.headers.get('Retry-After'));
         return err({
           type: 'TooManyAttempts',
-          minutesToWait: Math.max(1, Math.ceil(seconds / 60)),
+          minutesToWait: minutesToWait(answer.headers.get('Retry-After')),
         });
       }
       if (answer.status === 400 && errorCode(answer.body) === 'InvalidCode') {
@@ -150,12 +169,9 @@ export const createSyncServer = ({
     },
 
     // The remaining methods follow in the stories that need them.
-    sync: () => Promise.reject(new Error('SyncServer.sync is not implemented')),
-    listDevices: () =>
-      Promise.reject(new Error('SyncServer.listDevices is not implemented')),
-    renameDevice: () =>
-      Promise.reject(new Error('SyncServer.renameDevice is not implemented')),
-    revokeDevice: () =>
-      Promise.reject(new Error('SyncServer.revokeDevice is not implemented')),
+    sync: notImplemented,
+    listDevices: notImplemented,
+    renameDevice: notImplemented,
+    revokeDevice: notImplemented,
   };
 };
