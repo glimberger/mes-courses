@@ -6,6 +6,7 @@ import { createSentryErrorReporter } from './sentry-error-reporter';
 jest.mock('@sentry/node', () => ({
   init: jest.fn(),
   captureException: jest.fn(),
+  flush: jest.fn().mockResolvedValue(true),
 }));
 
 const init = jest.mocked(Sentry.init);

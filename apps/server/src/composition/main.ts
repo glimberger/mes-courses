@@ -6,6 +6,7 @@ import { SqliteStore } from '../adapters/sqlite/sqlite-store';
 import type { ErrorReporter } from '../application/ports/error-reporter';
 import { databasePath, LISTEN_HOST, listenPort } from './config';
 import { installCrashHandlers, type ProcessLike } from './crash-handlers';
+import { installShutdownHandlers } from './shutdown';
 import { appDeps } from './wiring';
 
 type Env = Record<string, string | undefined>;
@@ -50,8 +51,10 @@ export const main = async (
 };
 
 if (require.main === module) {
-  main(process.env, process, process.exit).catch((error: unknown) => {
-    console.error('could not start', error);
-    process.exit(1);
-  });
+  main(process.env, process, process.exit)
+    .then((server) => installShutdownHandlers(process, server, process.exit))
+    .catch((error: unknown) => {
+      console.error('could not start', error);
+      process.exit(1);
+    });
 }

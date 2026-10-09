@@ -13,7 +13,12 @@ const BODY_LIMIT = 1024 * 1024;
 export type { AppDeps } from './deps';
 
 export const buildApp = (deps: AppDeps): FastifyInstance => {
-  const app = Fastify({ bodyLimit: BODY_LIMIT, logger: false });
+  const app = Fastify({
+    bodyLimit: BODY_LIMIT,
+    logger: false,
+    // Reject a wrong type or an unknown property instead of coercing or stripping it.
+    ajv: { customOptions: { coerceTypes: false, removeAdditional: false } },
+  });
 
   let serverId: string | undefined;
   const identity = async (): Promise<ServerIdentity> => {
@@ -28,7 +33,16 @@ export const buildApp = (deps: AppDeps): FastifyInstance => {
   // Every JSON object body carries the server's identity (the app detects a reset server with it).
   app.addHook('onSend', async (_request, _reply, payload) => {
     if (typeof payload !== 'string' || !payload.startsWith('{')) return payload;
-    return JSON.stringify({ ...JSON.parse(payload), ...(await identity()) });
+    try {
+      return JSON.stringify({ ...JSON.parse(payload), ...(await identity()) });
+    } catch (error) {
+      // A failing lookup must not turn a clean error body into a broken response.
+      deps.errorReporter.report(error, {
+        operation: 'http',
+        route: 'identity',
+      });
+      return payload;
+    }
   });
 
   // Version first, then authorization: a refused request reads and changes nothing. A request

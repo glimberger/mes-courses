@@ -10,7 +10,7 @@ export type ProcessLike = {
 
 /**
  * Reports a crash and exits non-zero so systemd restarts the service (FR-022a). `exit` runs after
- * the report whatever the reporter does.
+ * the report has been flushed, whatever the reporter does.
  */
 export const installCrashHandlers = (
   proc: ProcessLike,
@@ -18,11 +18,13 @@ export const installCrashHandlers = (
   exit: (code: number) => void,
 ): void => {
   const onCrash = (error: unknown) => {
-    try {
-      reporter.report(error, { operation: 'process', route: 'none' });
-    } finally {
-      exit(1);
-    }
+    void Promise.resolve()
+      .then(async () => {
+        reporter.report(error, { operation: 'process', route: 'none' });
+        await reporter.flush?.();
+      })
+      .catch(() => undefined)
+      .finally(() => exit(1));
   };
   proc.on('uncaughtException', onCrash);
   proc.on('unhandledRejection', onCrash);

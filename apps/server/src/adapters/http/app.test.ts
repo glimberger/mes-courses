@@ -255,6 +255,39 @@ describe('HTTP app', () => {
       expect(response.json().error).toBe('InvalidCode');
     });
 
+    it('rejects a wrong type or an unknown property instead of coercing it', async () => {
+      const { app } = harness();
+      const claim = (payload: object) =>
+        app.inject({ method: 'POST', url: '/v1/pairing/claim', payload });
+
+      expect((await claim({ code: 42, deviceName: 'Phone' })).statusCode).toBe(
+        400,
+      );
+      expect(
+        (await claim({ code: 'ABCD-EFGH', deviceName: 123 })).statusCode,
+      ).toBe(400);
+      expect(
+        (await claim({ code: 'ABCD-EFGH', deviceName: 'P', extra: 1 }))
+          .statusCode,
+      ).toBe(400);
+    });
+
+    it('keeps the error body when the identity lookup fails', async () => {
+      const { app, store, reporter } = harness();
+      jest.spyOn(store, 'run').mockRejectedValue(new Error('database locked'));
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/pairing/claim',
+        headers: { 'x-app-version': '0.1.0' },
+        payload: { code: 'ABCD-EFGH', deviceName: 'Phone' },
+      });
+
+      expect(response.statusCode).toBe(426);
+      expect(response.json()).toEqual({ error: 'UpdateRequired' });
+      expect(reporter.report).toHaveBeenCalled();
+    });
+
     it('answers 400 for an empty device name', async () => {
       const { app } = harness();
 

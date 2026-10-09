@@ -10,12 +10,13 @@ type Env = Record<string, string | undefined>;
 export const databasePath = (env: Env): string =>
   env.MES_COURSES_DB || DEFAULT_DATABASE_PATH;
 
+/** Unset or empty: the default. Set but not a port: an error, so a typo is not silently ignored. */
 export const listenPort = (env: Env): number => {
-  const port = Number(env.MES_COURSES_PORT);
-  return Number.isInteger(port) &&
-    port >= 0 &&
-    port <= 65535 &&
-    env.MES_COURSES_PORT
-    ? port
-    : DEFAULT_PORT;
+  const raw = env.MES_COURSES_PORT;
+  if (!raw) return DEFAULT_PORT;
+  const port = Number(raw);
+  if (!Number.isInteger(port) || port < 0 || port > 65535) {
+    throw new Error(`MES_COURSES_PORT is not a valid port: ${raw}`);
+  }
+  return port;
 };
