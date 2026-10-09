@@ -15,6 +15,7 @@ const content = [
   'Lait',
   'Beurre',
   'Houmous maison',
+  'Lait entier',
   'Ma liste',
   'Barbecue',
   'Pique-nique',
@@ -31,7 +32,7 @@ type Case = {
   run: (state: AppState) => Promise<unknown>;
 };
 
-/** Every store action of US1 to US4 that reads or writes, each with its use case failing. */
+/** Every store action of 001 (US1 to US4) and 002 that reads or writes, each with its use case failing. */
 const cases: Record<string, Case> = {
   'US1 loadCurrentList': {
     failing: 'getCurrentList',
@@ -99,6 +100,26 @@ const cases: Record<string, Case> = {
   'US4 createCategory': {
     failing: 'createCategory',
     run: (state) => state.createCategory('Bébé'),
+  },
+  '002 editArticle': {
+    failing: 'editArticle',
+    run: (state) =>
+      state.editArticle(lait, { name: 'Lait entier', categoryId: crèmerie }),
+  },
+  '002 getArticleUsage': {
+    failing: 'getArticleUsage',
+    run: (state) => state.getArticleUsage(lait),
+  },
+  '002 deleteArticle': {
+    failing: 'deleteArticle',
+    run: (state) => state.deleteArticle(lait),
+  },
+  '002 restoreDeletedArticle': {
+    failing: 'restoreDeletedArticle',
+    run: async (state) => {
+      await state.deleteArticle(lait);
+      await state.undo();
+    },
   },
 };
 

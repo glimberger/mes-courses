@@ -215,4 +215,58 @@ describe('the app with no network', () => {
     expect(navigationReporter.reports).toEqual([]);
     expect(offlineFetch).not.toHaveBeenCalled();
   });
+
+  it('002 FR-010 SC-004 renames, recategorizes and deletes an article, then undoes it, with nothing reported', async () => {
+    const navigationReporter = new RecordingErrorReporter();
+    const { errorReporter, unitOfWork } = await renderWithStore(
+      <Navigation errorReporter={navigationReporter} />,
+      { seed, asScreen: false },
+    );
+    const storedBeurre = () =>
+      unitOfWork.run(async (repos) =>
+        (await repos.articles.all()).find((article) =>
+          article.name.startsWith('Beurre'),
+        ),
+      );
+    const chooseFromMenu = async (name: string, action: string) => {
+      fireEvent.press(
+        await screen.findByRole('button', {
+          name: `Plus d'actions pour « ${name} »`,
+        }),
+      );
+      fireEvent.press(screen.getByText(action));
+    };
+    await press('Ajouter');
+
+    // Rename.
+    await chooseFromMenu('Beurre', 'Modifier');
+    await screen.findByText("Modifier l'article");
+    fireEvent.changeText(screen.getByLabelText('Nom'), 'Beurre doux');
+    // Change the category.
+    fireEvent.press(await screen.findByRole('radio', { name: 'Boissons' }));
+    await press('Enregistrer');
+    await screen.findByText('Ajouter des articles');
+    expect(await screen.findByText('Beurre doux')).toBeOnTheScreen();
+    const renamed = await storedBeurre();
+    expect(renamed?.name).toBe('Beurre doux');
+    const boissons = seed.categories.find((c) => c.name === 'Boissons');
+    expect(renamed?.categoryId).toBe(boissons?.id);
+
+    // Delete, then undo.
+    await chooseFromMenu('Beurre doux', 'Supprimer');
+    await screen.findByText('Supprimer « Beurre doux » ?');
+    await pressLast('Supprimer');
+    await screen.findByText('« Beurre doux » supprimé');
+    expect(await storedBeurre()).toBeUndefined();
+    await press('Annuler');
+    expect(await screen.findByText('Beurre doux')).toBeOnTheScreen();
+    expect((await storedBeurre())?.name).toBe('Beurre doux');
+
+    for (const text of errorTexts) {
+      expect(screen.queryByText(text)).not.toBeOnTheScreen();
+    }
+    await waitFor(() => expect(errorReporter.reports).toEqual([]));
+    expect(navigationReporter.reports).toEqual([]);
+    expect(offlineFetch).not.toHaveBeenCalled();
+  });
 });

@@ -7,7 +7,10 @@ first feature, [001 shopping lists](specs/001-shopping-lists/spec.md), you keep 
 shopping lists on your phone and choose the current one; you add articles from a catalog sorted
 in categories, by browsing or searching, or create them on the way, with an optional quantity
 ("2 L", "1,5 kg"); in the store you tick items into the cart, then finish shopping, which unticks
-them all for next time. A removed item can be put back with "Annuler". Everything works with no
+them all for next time. A removed item can be put back with "Annuler". The second feature,
+[002 manage articles](specs/002-manage-articles/spec.md), lets you rename an article, change its
+category or delete it from the catalog (it then leaves every list, and "Annuler" brings it back
+with its quantities). Everything works with no
 network: the data lives only on the device until server synchronization comes
 ([003](specs/003-server-sync/spec.md)).
 Its governing principles are in [`.specify/memory/constitution.md`](.specify/memory/constitution.md),

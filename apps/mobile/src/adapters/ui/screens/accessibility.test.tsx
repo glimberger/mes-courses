@@ -79,6 +79,52 @@ const views: Record<string, () => Promise<void>> = {
     await press('Nouvelle liste');
     await screen.findByRole('button', { name: 'Créer' });
   },
+  'AddArticles row menu': async () => {
+    await openApp();
+    await press('Ajouter');
+    fireEvent.press(
+      await screen.findByRole('button', {
+        name: "Plus d'actions pour « Lait »",
+      }),
+    );
+    await screen.findByText('Modifier');
+  },
+  EditArticle: async () => {
+    await openApp();
+    await press('Ajouter');
+    fireEvent.press(
+      await screen.findByRole('button', {
+        name: "Plus d'actions pour « Lait »",
+      }),
+    );
+    fireEvent.press(await screen.findByText('Modifier'));
+    await screen.findByRole('radio', { name: 'Boissons' });
+  },
+  DeleteArticleDialog: async () => {
+    await openApp();
+    await press('Ajouter');
+    fireEvent.press(
+      await screen.findByRole('button', {
+        name: "Plus d'actions pour « Lait »",
+      }),
+    );
+    fireEvent.press(await screen.findByText('Supprimer'));
+    await header('Supprimer « Lait » ?');
+  },
+  'undo snackbar after a deletion': async () => {
+    await openApp();
+    await press('Ajouter');
+    fireEvent.press(
+      await screen.findByRole('button', {
+        name: "Plus d'actions pour « Beurre »",
+      }),
+    );
+    fireEvent.press(await screen.findByText('Supprimer'));
+    await screen.findByText('Supprimer « Beurre » ?');
+    await press('Supprimer');
+    await screen.findByText('« Beurre » supprimé');
+    await screen.findByRole('button', { name: 'Annuler' });
+  },
   CreateCategoryDialog: async () => {
     await openApp();
     await press('Ajouter');
@@ -130,7 +176,7 @@ const nameOf = (node: ReactTestInstance): string => {
 
 /** Labels the libraries give when the app gives none: English, so never acceptable. */
 const ENGLISH_DEFAULTS =
-  /^(back|close|close modal|clear|search|dismiss|menu|more options|open|loading|ok|cancel)$/i;
+  /^(back|close|close modal|close menu|clear|search|dismiss|menu|more options|open|loading|ok|cancel)$/i;
 
 const describeNode = (node: ReactTestInstance) =>
   `${String(node.type)} "${nameOf(node)}"`;
@@ -157,6 +203,13 @@ const onlyChild = (node: ReactTestInstance): ReactTestInstance | null => {
 /** Whether the element stretches over a layer that covers the screen, as a dialog's backdrop. */
 const coversScreen = (node: ReactTestInstance): boolean => {
   const own = StyleSheet.flatten(node.props.style) ?? {};
+  // A menu's backdrop is itself stretched over the screen.
+  if (
+    own.position === 'absolute' &&
+    [own.top, own.bottom, own.left, own.right].every((at) => at === 0)
+  ) {
+    return true;
+  }
   // The nearest element above with a style of its own: wrappers repeat the element's.
   const ownJson = JSON.stringify(own);
   let above = node.parent;
