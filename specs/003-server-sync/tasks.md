@@ -112,22 +112,22 @@ Every story needs a device that can pair with a running server.
 
 ### sync-core ([data-model.md](data-model.md#shared-types-packagessync-core))
 
-- [ ] T008 [P] Write failing tests in `packages/sync-core/src/hlc.test.ts`:
+- [X] T008 [P] Write failing tests in `packages/sync-core/src/hlc.test.ts`:
   - `compare` orders by `wallMs`, then `counter`, then `deviceId`;
   - `next(state, nowMs)` moves forward with the wall clock and bumps `counter` when the wall clock stalls or goes back;
   - `receive(state, remote, nowMs)` never goes backwards and jumps past a remote stamp;
   - `MIN(deviceId) = { wallMs: 0, counter: 0, deviceId }`;
   - `clamp(hlc, serverNowMs)` caps `wallMs` at `serverNowMs + 60_000` ([research.md](research.md) R6);
   - `encode` / `decode` give strings that sort like `compare`, for SQLite columns.
-- [ ] T009 [P] Implement `packages/sync-core/src/hlc.ts` to turn T008 green.
-- [ ] T010 [P] Write failing tests in `packages/sync-core/src/merge.test.ts`:
+- [X] T009 [P] Implement `packages/sync-core/src/hlc.ts` to turn T008 green.
+- [X] T010 [P] Write failing tests in `packages/sync-core/src/merge.test.ts`:
   - `mergeField(current, incoming)` keeps the greater `(hlc, deviceId)`;
   - applying the same fixed set of field changes in **every** permutation gives the same result (SC-003, deterministic, not random);
   - `pickSurvivor(a, b)` returns the smaller `(createdHlc, id)` (R8);
   - `compareCategories` orders by `(position, createdHlc, id)` (FR-014).
-- [ ] T011 [P] Implement `packages/sync-core/src/merge.ts` to turn T010 green.
-- [ ] T012 [P] Move `cleanName` and `normalizedName` into `packages/sync-core/src/name.ts`, with its tests moved from 001's `apps/mobile/src/domain/name.test.ts` into `packages/sync-core/src/name.test.ts`. Make `apps/mobile/src/domain/name.ts` re-export both. 001's name tests stay green unchanged. This is a refactoring step.
-- [ ] T013 [P] Write the protocol types `Change`, `ServerRow`, `SyncRequest`, `SyncResponse`, the error codes, `HealthInfo` and `Pairing` in `packages/sync-core/src/protocol.ts`, exactly as in [contracts/sync-api.md](contracts/sync-api.md) and [data-model.md](data-model.md). Export everything from `packages/sync-core/src/index.ts`.
+- [X] T011 [P] Implement `packages/sync-core/src/merge.ts` to turn T010 green.
+- [X] T012 [P] Move `cleanName` and `normalizedName` into `packages/sync-core/src/name.ts`, with its tests moved from 001's `apps/mobile/src/domain/name.test.ts` into `packages/sync-core/src/name.test.ts`. Make `apps/mobile/src/domain/name.ts` re-export both. 001's name tests stay green unchanged. This is a refactoring step.
+- [X] T013 [P] Write the protocol types `Change`, `ServerRow`, `SyncRequest`, `SyncResponse`, the error codes, `HealthInfo` and `Pairing` in `packages/sync-core/src/protocol.ts`, exactly as in [contracts/sync-api.md](contracts/sync-api.md) and [data-model.md](data-model.md). Export everything from `packages/sync-core/src/index.ts`.
 
 ### Server: ports, storage, crypto, error reporting
 
