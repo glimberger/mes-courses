@@ -52,8 +52,8 @@ listed in [contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-e
 
 - **No test reaches the Pi or any address other than `127.0.0.1`** (Principles III and VII).
   Time and ids come from fake `Clock` and `IdGenerator`.
-- **French text only in the app's UI adapter**. The server returns error codes. The single
-  exception is the Pi command's output (R11).
+- **French text only in the app's UI adapter**. The server returns error codes, and the Pi
+  command prints English technical output (R11).
 - **Error reports**:
   - the app sends `{ operation, screen? }`;
   - the server sends `{ operation, route }`;
@@ -186,11 +186,12 @@ Every story needs a device that can pair with a running server.
   - `POST /v1/pairing-codes` (auth) → `{ code, expiresAt }`;
   - an unexpected throw → `500 ServerError`, reported with `{ operation, route }`.
 - [ ] T025 Implement `apps/server/src/adapters/http/app.ts` (`buildApp(deps)`), `auth.ts` (the Bearer hook), `schemas.ts` (JSON schemas from [contracts/sync-api.md](contracts/sync-api.md)), `errors.ts` and `routes/{health,pairing}.ts` to turn T024 green.
-- [ ] T026 Write a failing test, then implement the Pi command in `apps/server/src/composition/pairing-code.ts` (`yarn workspace @mes-courses/server pairing-code`). It opens the database, creates a code with `created_by = NULL`, and prints exactly `Code d'appairage : ABCD-EF23 (valable 10 minutes)`.
+- [ ] T026 Write a failing test, then implement the Pi command in `apps/server/src/composition/pairing-code.ts` (`yarn workspace @mes-courses/server pairing-code`). It opens the database, creates a code with `created_by = NULL`, and prints exactly `pairing code: ABCD-EF23 (valid for 10 minutes)` (English technical output for the maintainer, not user-facing text, Principle X).
 - [ ] T027 Implement `apps/server/src/composition/main.ts`:
   - open and migrate the database at `MES_COURSES_DB` (default `/var/lib/mes-courses/mes-courses.db`, or `apps/server/.data/` in dev);
   - pick the Sentry reporter when `SENTRY_DSN` is set, the console one otherwise;
-  - listen on `127.0.0.1:3000` only.
+  - listen on `127.0.0.1:3000` only;
+  - install `uncaughtException` and `unhandledRejection` handlers that call `ErrorReporter.report` with `{ operation: 'process', route: 'none' }` and exit non-zero so systemd restarts the service, tested on an injected process-like event emitter (FR-022a).
 
   Then implement `apps/server/src/testing/start-test-server.ts`, exported from `apps/server/src/testing/index.ts` (the server's `./testing` entry): `startTestServer({ clock? })` starts `buildApp` on `127.0.0.1` with a random port and an in-memory database, and returns `{ url, createPairingCode(), close() }`. Cover `main` with a test that starts and stops it on a temporary file.
 
@@ -278,7 +279,7 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
   - `apply` returns `effects`: the articles it deleted, the items it removed (`present = false`) and the merges (`kind`, `loserId`, `survivorId`), and empty lists when the rows changed nothing of the kind ([data-model.md](data-model.md#remote-effects-returned-by-pulledrowsapplierapply-research-r10a));
 - [ ] T043 [P] [US1] Write failing use case tests in `apps/mobile/src/application/use-cases/synchronize.test.ts`, with fakes and a fake `SyncServer`:
   - `notConnected` when there is no `serverUrl`;
-  - `disconnectedByServer` when `serverUrl` is set but `CredentialStore.read()` gives `null` (a phone restored from a backup), with no request sent and every row and pending change kept; `getSyncInfo` reports the same connection (FR-018b, [research.md](research.md) R12a);
+  - `disconnectedByServer` when `serverUrl` is set but `CredentialStore.read()` gives `null` (a phone restored from a backup), with no request sent and every row and pending change kept; `getSyncInfo` reports the same connection, see T054a (FR-018b, [research.md](research.md) R12a);
   - the result carries the applier's `effects` next to the outcome, and empty effects when nothing was pulled;
   - the first cycle pushes a snapshot of every local row and field stamped with `MIN(deviceId)` before the outbox, then sets `snapshotDone` (R13, US1-6);
   - outbox entries are pushed in order, in batches of at most 500, until empty (US1-3);
@@ -325,8 +326,9 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
 - [ ] T052 [US1] Implement `apps/mobile/src/adapters/sqlite/pulled-rows-applier.ts` to turn T042 green. Wrap every database call with `toStorageError` (001 R13), so no stored value reaches a report (001 FR-030).
 - [ ] T053 [US1] Add `sync` to `apps/mobile/src/adapters/sync-http/sync-server.ts`, extending `tests/sync/sync-server-adapter.test.ts` first with a round trip against `startTestServer()`.
 - [ ] T054 [US1] Implement `apps/mobile/src/application/use-cases/synchronize.ts` to turn T043 green.
+- [ ] T054a [US1] Test-first, implement `apps/mobile/src/application/use-cases/get-sync-info.ts` with its test, per [contracts/app-ports.md](contracts/app-ports.md): it returns `SyncInfo` (`serverUrl`, `lastSyncAt`, `connection`); `disconnectedByServer` when `serverUrl` is set and `CredentialStore.read()` gives `null` (FR-018b); `notConnected` when there is no `serverUrl`. Add it to `UseCases` and to the composition root.
 - [ ] T055 [US1] Implement `apps/mobile/src/application/use-cases/release-held-changes.ts` and call `changes.releaseAll()` in `initialize-store.ts`, to turn T044 green.
-- [ ] T056 [P] [US1] Test-first, record the seeded categories (`name`, `position`) and the first list (`name`) with `changes.record` in `apps/mobile/src/application/use-cases/initialize-store.ts` ([contracts/app-ports.md](contracts/app-ports.md#changes-to-existing-use-cases-001-and-002)). Keep every existing test green.
+- [ ] T056 [US1] Test-first, record the seeded categories (`name`, `position`) and the first list (`name`) with `changes.record` in `apps/mobile/src/application/use-cases/initialize-store.ts` ([contracts/app-ports.md](contracts/app-ports.md#changes-to-existing-use-cases-001-and-002)). Keep every existing test green.
 - [ ] T057 [P] [US1] Test-first, record `listItem.inCart` in `apps/mobile/src/application/use-cases/toggle-item-in-cart.ts`.
 - [ ] T058 [P] [US1] Test-first, record `listItem.inCart = false` for each item ticked at that moment, with one HLC, in `apps/mobile/src/application/use-cases/finish-shopping.ts` (FR-013).
 - [ ] T059 [P] [US1] Test-first, record `listItem { listId, articleId, present: true, inCart: false, quantity }` in `apps/mobile/src/application/use-cases/add-article-to-list.ts`.
@@ -381,6 +383,7 @@ offline at the same time, and check they end identical after syncing, per US2's 
   - 003 US2-7: A finishes shopping, then B ticks "Œufs" later → only "Œufs" ticked;
   - 003 US2-8: two new categories → both after the existing ones, same order on both;
   - 003 US2-9: each device keeps its own current list;
+  - 003 US2-10: both create "Barbecue" offline and B has its own as current → after both sync, B's current list is the surviving "Barbecue" holding the items of both, with no message;
   - 003 FR-017 / SC-007: B with its own seeded defaults and data joins a server holding A's data → no duplicated default category or "Ma liste", and B's own articles are added;
   - SC-003: after every scenario, A's and B's full read models are deep-equal.
 - [ ] T078 [US2] Write a failing scenario test in `tests/sync/reset-server.test.ts` (FR-018a):
@@ -388,12 +391,12 @@ offline at the same time, and check they end identical after syncing, per US2's 
   - each device reports `disconnectedByServer` and keeps its data and outbox;
   - A pairs again and repopulates; B pairs again and merges with no duplicates;
   - A's and B's read models are deep-equal at the end.
+- [ ] T081 [US2] Write failing tests for open forms during a sync (FR-020a, [research.md](research.md) R10a, [contracts/ui-screens.md](contracts/ui-screens.md#changes-a-pull-makes-to-open-screens-fr-020a-fr-008-fr-015-fr-023)):
 
 ### Implementation for User Story 2
 
 - [ ] T079 [US2] Implement `apps/server/src/domain/merge-by-name.ts` and call it from `apply-change.ts` on creates and renames, to turn T075 green.
 - [ ] T080 [US2] Add the HLC clamp and the server HLC state to `apps/server/src/application/use-cases/sync.ts` to turn T076 green.
-- [ ] T081 [US2] Write failing tests for open forms during a sync (FR-020a, [research.md](research.md) R10a, [contracts/ui-screens.md](contracts/ui-screens.md#changes-a-pull-makes-to-open-screens-fr-020a-fr-008-fr-015-fr-023)):
   - in `apps/mobile/src/adapters/ui/state/app-store.remote-effects.test.ts`: a cycle's `effects.merges` fill the slice's `redirects` (kept in memory only); a store write action called with a merged id calls the use case with the survivor's id, following chains;
   - in `apps/mobile/src/adapters/ui/state/use-remote-removal.test.tsx`: `useRemoteRemoval({ articleId })` calls its callback when a later cycle deletes that article, and `useRemoteRemoval({ listId, articleId })` when it removes that item; it ignores effects from cycles before it mounted;
   - in `apps/mobile/src/adapters/ui/screens/quantity-dialog.test.tsx` (001) and `edit-article-screen.test.tsx` (002): with "3" typed, a cycle that changes the item's quantity on the server keeps "3" in the field, and saving records "3"; a cycle that removes the item closes QuantityDialog with the snackbar "Cet article a été retiré de la liste sur un autre appareil."; a cycle that deletes the article closes QuantityDialog or EditArticle with "Cet article a été supprimé sur un autre appareil.", and focus goes back as when the form closes (001 FR-037).
@@ -482,11 +485,12 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
 - [ ] T097 [US4] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/settings-screen.test.tsx`, with the texts of [contracts/ui-screens.md](contracts/ui-screens.md#settings-new-screen):
   - the Appareils section: rows with the name, "Dernière synchronisation : …" and "Cet appareil"; loading; error "Impossible de charger les appareils." with "Réessayer"; offline "Liste des appareils indisponible hors connexion." (not reported);
   - "Renommer" dialog;
+  - "Modifier l'adresse" dialog with each outcome message of T101a, including "Cette adresse ne correspond pas à votre serveur.";
   - "Révoquer « … » ?" dialog with "Cet appareil ne pourra plus synchroniser. Ses données restent sur l'appareil.", not offered on this device;
   - "Déconnecter cet appareil ?" dialog;
   - `PairingCodeDialog` "Ajouter un appareil" showing "ABCD-EF23" and "Valable jusqu'à {heure}.", with the offline message "Connexion au serveur nécessaire pour ajouter un appareil.";
   - with `connection = disconnectedByServer`, the bar shows "Cet appareil n'est plus connecté au serveur." and "Se reconnecter" opens ConnectServer (US4-10).
-- [ ] T098 [US4] Write a failing scenario test in `tests/sync/revocation.test.ts`:
+- [ ] T098 [US4] Write a failing scenario test in `tests/sync/revocation.test.ts` (and one in `tests/sync/change-server-url.test.ts`: a second `startTestServer()` on the same database answers at a new address, the device switches to it, keeps its credential and syncs; a server with another identity is refused):
   - A creates a code and B claims it (US4-3, US4-4);
   - A revokes B; B's next cycle → `disconnectedByServer`, with B's data and outbox kept (US4-10, SC-009);
   - B pairs again with a new code and its waiting changes are sent;
@@ -498,8 +502,9 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
 - [ ] T099 [US4] Implement `apps/server/src/application/use-cases/{list-devices,rename-device,revoke-device}.ts` and `apps/server/src/adapters/http/routes/devices.ts` to turn T093–T094 green.
 - [ ] T100 [US4] Add `createPairingCode`, `listDevices`, `renameDevice` and `revokeDevice` to `apps/mobile/src/adapters/sync-http/sync-server.ts` to turn T096 green.
 - [ ] T101 [US4] Implement `apps/mobile/src/application/use-cases/{create-pairing-code,list-devices,rename-device,revoke-device,disconnect}.ts` to turn T095 green. Add them to `UseCases`, to the composition root and to store actions in `apps/mobile/src/adapters/ui/state/app-store.ts`.
-- [ ] T102 [US4] Implement the Appareils and Actions sections of `SettingsScreen.tsx`, `apps/mobile/src/adapters/ui/screens/PairingCodeDialog.tsx`, `RenameDeviceDialog.tsx`, `RevokeDeviceDialog.tsx`, `DisconnectDialog.tsx`, and the "Se reconnecter" action of `SyncStatusBar`, to turn T097 green.
-- [ ] T103 [US4] Add `Screens/Settings/DevicesLoading`, `.../DevicesError`, `.../DevicesOffline`, `Dialogs/PairingCodeDialog/Code`, `.../Offline`, `Dialogs/RevokeDeviceDialog/Default`, `Dialogs/DisconnectDialog/Default` and `Dialogs/RenameDeviceDialog/Default` to `required-stories.ts` and see the story test fail. Then extend `SettingsScreen.stories.tsx` (`pending` and `failing` `listDevices`, and the fake unreachable) and write `PairingCodeDialog.stories.tsx`, `RevokeDeviceDialog.stories.tsx`, `DisconnectDialog.stories.tsx` and `RenameDeviceDialog.stories.tsx` in `apps/mobile/src/adapters/ui/screens/` to turn it green. Review them in Storybook on both platforms.
+- [ ] T101a [US4] Test-first, implement `apps/mobile/src/application/use-cases/change-server-url.ts` with its test: it normalizes the address like `connectToServer`; calls `health` on the new address; when its `serverId` equals the stored one, it updates `serverUrl` only and keeps the credential, the pending changes and `lastSeq`; a different `serverId` returns `ServerMismatch`, `ServerUnreachable` and `UntrustedServer` are returned as such, and in every failure nothing changes (spec edge case "domain name changes", FR-016). Add it to `UseCases`, to the composition root and to a store action in `apps/mobile/src/adapters/ui/state/app-store.ts`.
+- [ ] T102 [US4] Implement the Appareils and Actions sections of `SettingsScreen.tsx`, the "Modifier l'adresse" button and `ChangeServerUrlDialog.tsx`, `apps/mobile/src/adapters/ui/screens/PairingCodeDialog.tsx`, `RenameDeviceDialog.tsx`, `RevokeDeviceDialog.tsx`, `DisconnectDialog.tsx`, and the "Se reconnecter" action of `SyncStatusBar`, to turn T097 green.
+- [ ] T103 [US4] Add `Screens/Settings/DevicesLoading`, `.../DevicesError`, `.../DevicesOffline`, `Dialogs/PairingCodeDialog/Code`, `.../Offline`, `Dialogs/RevokeDeviceDialog/Default`, `Dialogs/DisconnectDialog/Default` and `Dialogs/RenameDeviceDialog/Default`, `Dialogs/ChangeServerUrlDialog/Default` and `.../ServerMismatch` to `required-stories.ts` and see the story test fail. Then extend `SettingsScreen.stories.tsx` (`pending` and `failing` `listDevices`, and the fake unreachable) and write `PairingCodeDialog.stories.tsx`, `RevokeDeviceDialog.stories.tsx`, `DisconnectDialog.stories.tsx`, `RenameDeviceDialog.stories.tsx` and `ChangeServerUrlDialog.stories.tsx` in `apps/mobile/src/adapters/ui/screens/` to turn it green. Review them in Storybook on both platforms.
 - [ ] T104 [US4] Make `tests/sync/revocation.test.ts` (T098) green. Each fix it forces starts with its own failing unit test first.
 
 **Checkpoint**: all four stories work. Devices are paired, managed and revoked from the app.
@@ -610,7 +615,7 @@ Task: "App track: T028 → T033"
 
 Each pull request is merged only when `gh pr checks` is all green and, unless it is
 documentation-only (`.github/scripts/app-changed.sh`), an `e2e-android` run started with
-`gh workflow run e2e.yml --ref <branch>` is green on its latest commit (constitution v2.3.0,
+`gh workflow run e2e.yml --ref <branch>` is green on its latest commit (constitution v2.4.0,
 Quality Gates).
 
 ---
@@ -623,7 +628,7 @@ Quality Gates).
   Tasks only check them (T111).
 - A deletion or removal that is undone never reaches the server (FR-008): held outbox entries
   are the only mechanism, so any new undoable change must record its changes held.
-- Test gates (constitution v2.3.0, Quality Gates): before each commit, `yarn test` (the fast
+- Test gates (constitution v2.4.0, Quality Gates): before each commit, `yarn test` (the fast
   suite) is green; before each push, `yarn test:e2e:android` (the device suite) is green, unless
   the branch changes only documentation (`specs/`, `.specify/`, Markdown files, as
   `.github/scripts/app-changed.sh` decides); before merging a pull request that is not

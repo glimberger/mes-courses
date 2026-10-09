@@ -67,7 +67,7 @@ vos autres appareils." and the button "Connecter à un serveur", which opens Con
 
 | Section | Content |
 |---|---|
-| Serveur | Address (`courses.example.fr`), "Dernière synchronisation : {date relative}" (or "Jamais"), button "Synchroniser maintenant" (US3-5) |
+| Serveur | Address (`courses.example.fr`), "Dernière synchronisation : {date relative}" (or "Jamais"), buttons "Synchroniser maintenant" (US3-5) and "Modifier l'adresse" |
 | Appareils | One row per device: name, "Dernière synchronisation : …", "Cet appareil" mark. Row menu: "Renommer", "Révoquer" (not offered on this device) |
 | Actions | "Ajouter un appareil" (PairingCodeDialog), "Déconnecter cet appareil" |
 
@@ -79,6 +79,7 @@ vos autres appareils." and the button "Connecter à un serveur", which opens Con
 |---|---|
 | "Renommer" | Dialog "Renommer l'appareil", `NameField` "Nom", buttons "Annuler" and "Enregistrer"; name errors as in 001. |
 | "Révoquer" | Dialog "Révoquer « {name} » ?", "Cet appareil ne pourra plus synchroniser. Ses données restent sur l'appareil.", buttons "Annuler" and "Révoquer" (US4-9). |
+| "Modifier l'adresse" | Dialog "Modifier l'adresse du serveur", field "Adresse du serveur" prefilled, buttons "Annuler" and "Enregistrer". Errors: "Impossible de joindre le serveur. Vérifiez l'adresse et votre connexion." (unreachable), "La connexion au serveur n'est pas sécurisée. Vérifiez l'adresse ou le certificat du serveur." (untrusted), "Cette adresse ne correspond pas à votre serveur." (other server identity), "Saisissez une adresse comme courses.example.fr." (invalid). On success the authorization is kept and a sync starts (spec edge case "domain name changes"). |
 | "Déconnecter cet appareil" | Dialog "Déconnecter cet appareil ?", "Vos listes restent sur cet appareil mais ne seront plus synchronisées.", buttons "Annuler" and "Déconnecter" (US4-11). |
 
 ## ConnectServer (new screen)
