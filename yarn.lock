@@ -2541,7 +2541,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mes-courses/mobile@workspace:apps/mobile":
+"@mes-courses/mobile@workspace:*, @mes-courses/mobile@workspace:apps/mobile":
   version: 0.0.0-use.local
   resolution: "@mes-courses/mobile@workspace:apps/mobile"
   dependencies:
@@ -2580,6 +2580,18 @@ __metadata:
     storybook: "npm:^10.6.1"
     typescript: "npm:~6.0.3"
     zustand: "npm:^5.0.15"
+  languageName: unknown
+  linkType: soft
+
+"@mes-courses/sync-tests@workspace:tests/sync":
+  version: 0.0.0-use.local
+  resolution: "@mes-courses/sync-tests@workspace:tests/sync"
+  dependencies:
+    "@mes-courses/mobile": "workspace:*"
+    "@types/jest": "npm:^30"
+    jest: "npm:^30"
+    ts-jest: "npm:^29"
+    typescript: "npm:~6.0.3"
   languageName: unknown
   linkType: soft
 
