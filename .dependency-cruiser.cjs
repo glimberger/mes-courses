@@ -166,8 +166,8 @@ module.exports = {
       name: 'server-adapters-imported-only-by-composition-and-adapters',
       severity: 'error',
       comment:
-        'Only server adapters and the server composition root import server adapters.',
-      from: { pathNot: `${SERVER_SRC}/(adapters|composition)/` },
+        'Only server adapters, the server composition root and the server `./testing` entry import server adapters.',
+      from: { pathNot: `${SERVER_SRC}/(adapters|composition|testing)/` },
       to: { path: `${SERVER_SRC}/adapters/` },
     },
     {
