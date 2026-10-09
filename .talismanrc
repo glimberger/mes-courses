@@ -38,6 +38,8 @@ fileignoreconfig:
   # A Yarn patch's diff headers carry Git blob hashes, not secrets.
   - filename: .yarn/patches/react-native-paper-npm-5.15.3-9a600de527.patch
     ignore_detectors: [filecontent]
+  - filename: .yarn/patches/detox-npm-20.51.4-f0776917eb.patch
+    ignore_detectors: [filecontent]
   # Spec Kit manifests record SHA-256 content hashes of generated files, not secrets.
   - filename: .specify/integrations/speckit.manifest.json
     ignore_detectors: [filecontent]
