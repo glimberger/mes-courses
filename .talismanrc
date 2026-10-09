@@ -72,4 +72,19 @@ fileignoreconfig:
     ignore_detectors: [filename]
   - filename: apps/mobile/test/sqlite/node-sql-database.ts
     ignore_detectors: [filename]
+  - filename: apps/server/src/adapters/sqlite/sql-database.ts
+    ignore_detectors: [filename]
+  - filename: apps/server/src/adapters/sqlite/sqlite-store.ts
+    ignore_detectors: [filename]
+  - filename: apps/server/src/adapters/sqlite/sqlite-store.test.ts
+    ignore_detectors: [filename]
+  # The crypto test asserts the published SHA-256 vectors, and the pairing-code alphabet is a
+  # fixed character set (no 0/O/1/I); neither is a secret.
+  - filename: apps/server/src/adapters/crypto/crypto.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/crypto/crypto.ts
+    ignore_detectors: [filecontent]
+  # `itemKey(listId, articleId)` builds a Map key for a list item, which trips the pattern detector.
+  - filename: apps/server/src/application/testing/in-memory-store.ts
+    ignore_detectors: [filecontent]
 version: "1.0"

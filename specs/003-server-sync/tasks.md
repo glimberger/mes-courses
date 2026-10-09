@@ -131,13 +131,13 @@ Every story needs a device that can pair with a running server.
 
 ### Server: ports, storage, crypto, error reporting
 
-- [ ] T014 Declare the server ports in `apps/server/src/application/ports/`:
+- [X] T014 Declare the server ports in `apps/server/src/application/ports/`:
   - `store.ts`: `ServerStore` with `run(work)` as one transaction, and repositories for meta (serverId, seq), categories, articles, lists, list items, applied changes, devices, pairing codes and pairing failures;
   - `clock.ts`;
   - `id-generator.ts`;
   - `random.ts` (secure random bytes);
   - `error-reporter.ts`, with `report(error, { operation, route })`.
-- [ ] T015 Write the shared repository contract suites in `apps/server/src/application/testing/contracts/`, one file per repository. They cover:
+- [X] T015 Write the shared repository contract suites in `apps/server/src/application/testing/contracts/`, one file per repository. They cover:
   - every read and write used by the use cases;
   - `meta.nextSeq()`, which increments and returns;
   - `appliedChanges.has` / `add`;
@@ -146,22 +146,22 @@ Every story needs a device that can pair with a running server.
   - `pairingFailures.countSince(t)`.
 
   Add `apps/server/src/application/testing/in-memory-store.test.ts`, which runs them on in-memory fakes, and confirm it fails.
-- [ ] T016 Implement the in-memory fakes, with rollback on throw, in `apps/server/src/application/testing/in-memory-store.ts` to turn T015 green.
-- [ ] T017 Write failing migration tests in `apps/server/src/adapters/sqlite/migrations.test.ts`:
+- [X] T016 Implement the in-memory fakes, with rollback on throw, in `apps/server/src/application/testing/in-memory-store.ts` to turn T015 green.
+- [X] T017 Write failing migration tests in `apps/server/src/adapters/sqlite/migrations.test.ts`:
   - migration 1 creates exactly the tables and indexes of [data-model.md](data-model.md#server-database-pi-sqlite), including the partial unique indexes `... ON ...(normalized_name) WHERE deleted_hlc IS NULL`;
   - `meta` gets a random `server_id` once;
   - `user_version` becomes 1, and running again is a no-op;
   - WAL mode and `synchronous = FULL` are set;
   - `device.name` rejects 0 and 61 characters.
-- [ ] T018 Implement `apps/server/src/adapters/sqlite/migrations.ts` and `open-database.ts` on `node:sqlite`, with the `better-sqlite3` fallback behind the same interface if needed (R3), to turn T017 green.
-- [ ] T019 Write `apps/server/src/adapters/sqlite/sqlite-store.test.ts`, which runs every T015 suite on an in-memory migrated database. Then implement `apps/server/src/adapters/sqlite/sqlite-store.ts` to turn it green.
-- [ ] T020 [P] Write failing tests in `apps/server/src/adapters/crypto/crypto.test.ts`, then implement `apps/server/src/adapters/crypto/crypto.ts`:
+- [X] T018 Implement `apps/server/src/adapters/sqlite/migrations.ts` and `open-database.ts` on `node:sqlite`, with the `better-sqlite3` fallback behind the same interface if needed (R3), to turn T017 green.
+- [X] T019 Write `apps/server/src/adapters/sqlite/sqlite-store.test.ts`, which runs every T015 suite on an in-memory migrated database. Then implement `apps/server/src/adapters/sqlite/sqlite-store.ts` to turn it green.
+- [X] T020 [P] Write failing tests in `apps/server/src/adapters/crypto/crypto.test.ts`, then implement `apps/server/src/adapters/crypto/crypto.ts`:
   - pairing codes are 8 characters from the alphabet without `0 O 1 I L`, formatted `XXXX-XXXX`;
   - `normalizeCode` accepts lower case and a missing dash;
   - credentials are 32 random bytes in base64url;
   - `sha256Hex` matches known vectors.
-- [ ] T021 [P] Write failing tests in `apps/server/src/adapters/error-reporting/sentry-error-reporter.test.ts`, with `@sentry/node` mocked, then implement it and `console-error-reporter.ts` ([research.md](research.md) R15):
-  - `init` with `sendDefaultPii: false`, the release and the environment;
+- [X] T021 [P] Write failing tests in `apps/server/src/adapters/error-reporting/sentry-error-reporter.test.ts`, with `@sentry/node` mocked, then implement it and `console-error-reporter.ts` ([research.md](research.md) R15):
+  - `init` with every `dataCollection` category off (`@sentry/node` 11 replaced `sendDefaultPii: false` by it), the release and the environment;
   - `beforeSend` drops request bodies, headers and cookies;
   - `report` sends only `{ operation, route }` tags;
   - `report` never throws.
