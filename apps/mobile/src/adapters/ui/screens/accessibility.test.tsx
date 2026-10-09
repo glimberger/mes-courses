@@ -90,6 +90,8 @@ const views: Record<string, () => Promise<void>> = {
   'AddArticles row menu': async () => {
     await openApp();
     await press('Ajouter');
+    // The catalog is fully drawn: a row redrawn later would close its menu.
+    await screen.findByText('Beurre', {}, slow);
     fireEvent.press(
       await screen.findByRole('button', {
         name: "Plus d'actions pour « Lait »",
@@ -100,6 +102,8 @@ const views: Record<string, () => Promise<void>> = {
   EditArticle: async () => {
     await openApp();
     await press('Ajouter');
+    // The catalog is fully drawn: a row redrawn later would close its menu.
+    await screen.findByText('Beurre', {}, slow);
     fireEvent.press(
       await screen.findByRole('button', {
         name: "Plus d'actions pour « Lait »",
@@ -111,6 +115,8 @@ const views: Record<string, () => Promise<void>> = {
   DeleteArticleDialog: async () => {
     await openApp();
     await press('Ajouter');
+    // The catalog is fully drawn: a row redrawn later would close its menu.
+    await screen.findByText('Beurre', {}, slow);
     fireEvent.press(
       await screen.findByRole('button', {
         name: "Plus d'actions pour « Lait »",
@@ -122,6 +128,8 @@ const views: Record<string, () => Promise<void>> = {
   'undo snackbar after a deletion': async () => {
     await openApp();
     await press('Ajouter');
+    // The catalog is fully drawn: a row redrawn later would close its menu.
+    await screen.findByText('Beurre', {}, slow);
     fireEvent.press(
       await screen.findByRole('button', {
         name: "Plus d'actions pour « Beurre »",
