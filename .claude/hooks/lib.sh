@@ -42,7 +42,7 @@ default_branch() {
 # Files that hold the guardrails themselves. An agent must not loosen its own limits: only
 # the user edits them. One regular expression serves the file checks and the Bash command
 # heuristics, and is matched case-insensitively (the default macOS file system is).
-PROTECTED_REGEX='\.claude/settings(\.local)?\.json|\.claude/hooks/|lefthook\.yml|\.github/workflows/|\.dependency-cruiser\.cjs|\.talismanrc|agent-scope\.txt'
+PROTECTED_REGEX='\.claude/settings(\.local)?\.json|\.claude/hooks([/[:space:]]|$)|\.?lefthook(-local)?\.(ya?ml|json|toml)|\.github/workflows([/[:space:]]|$)|\.dependency-cruiser\.cjs|\.talismanrc|agent-scope\.txt'
 
 is_protected() {
   grep -Eiq "(^|/)($PROTECTED_REGEX)" <<<"$1"
@@ -54,9 +54,11 @@ tree_fingerprint() (
   cd "$(git rev-parse --show-toplevel)" || exit 1
   {
     git rev-parse HEAD
-    git diff HEAD
-    git ls-files --others --exclude-standard -z | while IFS= read -r -d '' file; do
-      printf '%s %s\n' "$file" "$(git hash-object -- "$file" 2>/dev/null)"
-    done
+    git diff --no-ext-diff --no-textconv --binary HEAD
+    untracked=$(git ls-files --others --exclude-standard -z | tr '\0' '\n')
+    if [ -n "$untracked" ]; then
+      printf '%s\n' "$untracked"
+      printf '%s\n' "$untracked" | git hash-object --stdin-paths 2>/dev/null
+    fi
   } | git hash-object --stdin
 )
