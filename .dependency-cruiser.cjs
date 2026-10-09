@@ -4,14 +4,16 @@
  */
 
 // Workspace packages that are pure (no framework, no side effects, importing only other pure
-// packages). Domain and application code may import them. Empty in 001: 003 adds
-// `packages/sync-core`.
-const PURE_PACKAGES = [];
+// packages). Domain and application code may import them. 003 adds `packages/sync-core`.
+const PURE_PACKAGES = ['sync-core'];
 
 const pure =
   PURE_PACKAGES.length > 0 ? `|^packages/(${PURE_PACKAGES.join('|')})/` : '';
 
 const MOBILE_SRC = '^apps/mobile/src';
+
+const SERVER_SRC = '^apps/server/src';
+const SYNC_CORE = '^packages/sync-core/';
 
 const STORIES = '\\.stories\\.tsx$';
 const STORYBOOK_CONFIG = '^apps/mobile/\\.rnstorybook/';
@@ -135,6 +137,65 @@ module.exports = {
       to: {
         path: '^(apps|packages)/|^tests/(?!e2e/)|node_modules/@mes-courses/',
       },
+    },
+    {
+      name: 'sync-core-imports-nothing-outside-itself',
+      severity: 'error',
+      comment:
+        'packages/sync-core is pure: it imports nothing outside itself, no npm package and no Node built-in (research R16).',
+      from: { path: SYNC_CORE },
+      to: { pathNot: SYNC_CORE },
+    },
+    {
+      name: 'server-domain-imports-only-domain-and-sync-core',
+      severity: 'error',
+      comment:
+        'The server domain imports only itself and @mes-courses/sync-core (research R16).',
+      from: { path: `${SERVER_SRC}/domain/` },
+      to: { pathNot: `${SERVER_SRC}/domain/|${SYNC_CORE}` },
+    },
+    {
+      name: 'server-application-imports-only-domain-application-and-sync-core',
+      severity: 'error',
+      comment:
+        'The server application layer imports the server domain, itself and @mes-courses/sync-core only (research R16).',
+      from: { path: `${SERVER_SRC}/application/` },
+      to: { pathNot: `${SERVER_SRC}/(domain|application)/|${SYNC_CORE}` },
+    },
+    {
+      name: 'server-adapters-imported-only-by-composition-and-adapters',
+      severity: 'error',
+      comment:
+        'Only server adapters and the server composition root import server adapters.',
+      from: { pathNot: `${SERVER_SRC}/(adapters|composition)/` },
+      to: { path: `${SERVER_SRC}/adapters/` },
+    },
+    {
+      name: 'no-server-adapter-imports-another-adapter',
+      severity: 'error',
+      comment: 'Server adapters never import each other, not even types.',
+      from: { path: `${SERVER_SRC}/adapters/([^/]+)/` },
+      to: {
+        path: `${SERVER_SRC}/adapters/`,
+        pathNot: `${SERVER_SRC}/adapters/$1/`,
+      },
+    },
+    {
+      name: 'testing-entries-imported-only-by-tests',
+      severity: 'error',
+      comment:
+        'The ./testing entries of the app and the server are imported only by tests/** (Principle XI).',
+      from: { pathNot: '^tests/' },
+      to: {
+        path: `^apps/mobile/test/index\\.ts$|${SERVER_SRC}/testing/index\\.ts$`,
+      },
+    },
+    {
+      name: 'nothing-imports-tests',
+      severity: 'error',
+      comment: 'Nothing imports tests/**.',
+      from: { pathNot: '^tests/' },
+      to: { path: '^tests/' },
     },
     {
       name: 'no-circular',

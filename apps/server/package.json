@@ -1,0 +1,29 @@
+{
+  "name": "@mes-courses/server",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/composition/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/composition/main.js",
+    "pairing-code": "tsx src/composition/pairing-code.ts",
+    "test": "jest --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mes-courses/sync-core": "workspace:*",
+    "@sentry/node": "^11.5.0",
+    "fastify": "5"
+  },
+  "devDependencies": {
+    "@types/jest": "^30",
+    "@types/node": "^24",
+    "jest": "^30",
+    "ts-jest": "^29",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
+  }
+}

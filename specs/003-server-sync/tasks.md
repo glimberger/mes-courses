@@ -73,14 +73,14 @@ listed in [contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-e
 
 **Purpose**: workspaces, the new packages, architecture rules and CI across the workspaces.
 
-- [ ] T001 Branch from `origin/main` with 001 and 002 merged. Run `yarn typecheck && yarn lint && yarn format:check && yarn test && yarn test:architecture` and confirm it is all green before any change.
-- [ ] T002 Check that the root `package.json` `"workspaces"` holds `"tests/*"` (001 added it for `tests/e2e/`). Scaffold `tests/sync/` (name `@mes-courses/sync-tests`, private): `package.json` with devDependencies `"@mes-courses/mobile": "workspace:*"` and `"@mes-courses/server": "workspace:*"`, `tsconfig.json` extending the root base, and `jest.config.js` (ts preset, node environment). Check that `yarn build` still bundles the app.
-- [ ] T003 [P] Scaffold `packages/sync-core/` (name `@mes-courses/sync-core`, private): `package.json` with **no dependencies**, `tsconfig.json` (strict, extending the root one), `jest.config.js` (ts preset, node environment) and `packages/sync-core/src/index.ts` as its only public entry point. Add `"@mes-courses/sync-core": "workspace:*"` as a dependency of the app (`apps/mobile/package.json`) and the server, then run `yarn install` to update `yarn.lock`.
-- [ ] T004 [P] Scaffold `apps/server/`:
+- [X] T001 Branch from `origin/main` with 001 and 002 merged. Run `yarn typecheck && yarn lint && yarn format:check && yarn test && yarn test:architecture` and confirm it is all green before any change.
+- [X] T002 Check that the root `package.json` `"workspaces"` holds `"tests/*"` (001 added it for `tests/e2e/`). Scaffold `tests/sync/` (name `@mes-courses/sync-tests`, private): `package.json` with devDependencies `"@mes-courses/mobile": "workspace:*"` and `"@mes-courses/server": "workspace:*"`, `tsconfig.json` extending the root base, and `jest.config.js` (ts preset, node environment). Check that `yarn build` still bundles the app.
+- [X] T003 [P] Scaffold `packages/sync-core/` (name `@mes-courses/sync-core`, private): `package.json` with **no dependencies**, `tsconfig.json` (strict, extending the root one), `jest.config.js` (ts preset, node environment) and `packages/sync-core/src/index.ts` as its only public entry point. Add `"@mes-courses/sync-core": "workspace:*"` as a dependency of the app (`apps/mobile/package.json`) and the server, then run `yarn install` to update `yarn.lock`.
+- [X] T004 [P] Scaffold `apps/server/`:
   - `package.json` (name `@mes-courses/server`, private) with dependencies `fastify@5` and `@sentry/node`, `"exports": { "./testing": "./src/testing/index.ts" }`, and scripts `dev` (watch on `127.0.0.1:3000`, database in `apps/server/.data/`), `build` (`tsc` to `apps/server/dist/`), `start` (`node dist/composition/main.js`), `pairing-code` and `test`;
   - `tsconfig.json` (extending the root `tsconfig.base.json`) and `jest.config.js` (node environment);
   - Node 24 comes from 001's Nix dev shell (`flake.nix`), shared by every workspace.
-- [ ] T005 Extend `.dependency-cruiser.cjs` ([research.md](research.md) R16):
+- [X] T005 Extend `.dependency-cruiser.cjs` ([research.md](research.md) R16):
   - `packages/sync-core/**` imports nothing outside itself;
   - `apps/server/src/domain/**` imports only itself and `@mes-courses/sync-core`;
   - `apps/server/src/application/**` imports only server domain, application and `@mes-courses/sync-core`;
@@ -90,8 +90,8 @@ listed in [contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-e
   - only `tests/**` imports `@mes-courses/mobile/testing` and `@mes-courses/server/testing`, and nothing imports `tests/**`.
 
   Prove each new rule fails on a throwaway violation, then delete the violation.
-- [ ] T006 Check that `.github/workflows/ci.yml` (001) covers the new workspaces with no new job: the root scripts already run in every workspace, and the `build` job's root `yarn build` now also compiles the server. Fix the workflow only if a workspace is missed. `.github/workflows/e2e.yml` (001, constitution v2.3.0: on every push to `main` and on demand on a branch) needs no change: it builds the app and runs every journey of `tests/e2e/journeys/`, this feature's included. There is no deployment step.
-- [ ] T007 [P] Add `apps/server/.data/`, `apps/server/dist/` and `packages/*/dist/` to `.gitignore`.
+- [X] T006 Check that `.github/workflows/ci.yml` (001) covers the new workspaces with no new job: the root scripts already run in every workspace, and the `build` job's root `yarn build` now also compiles the server. Fix the workflow only if a workspace is missed. `.github/workflows/e2e.yml` (001, constitution v2.3.0: on every push to `main` and on demand on a branch) needs no change: it builds the app and runs every journey of `tests/e2e/journeys/`, this feature's included. There is no deployment step.
+- [X] T007 [P] Add `apps/server/.data/`, `apps/server/dist/` and `packages/*/dist/` to `.gitignore`.
 
 **Checkpoint**: the workspaces install with one `yarn install --immutable`, every existing test is still green, and CI is green on the setup pull request.
 

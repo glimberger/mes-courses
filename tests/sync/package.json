@@ -1,0 +1,17 @@
+{
+  "name": "@mes-courses/sync-tests",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "jest --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@mes-courses/mobile": "workspace:*",
+    "@mes-courses/server": "workspace:*",
+    "@types/jest": "^30",
+    "jest": "^30",
+    "ts-jest": "^29",
+    "typescript": "~6.0.3"
+  }
+}
