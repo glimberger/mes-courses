@@ -223,10 +223,8 @@ describe('the app with no network', () => {
       { seed, asScreen: false },
     );
     const storedBeurre = () =>
-      unitOfWork.run(async (repos) =>
-        (await repos.articles.all()).find((article) =>
-          article.name.startsWith('Beurre'),
-        ),
+      unitOfWork.run((repos) =>
+        repos.articles.findById('article-beurre' as ArticleId),
       );
     const chooseFromMenu = async (name: string, action: string) => {
       fireEvent.press(
@@ -257,8 +255,8 @@ describe('the app with no network', () => {
     await screen.findByText('Supprimer « Beurre doux » ?');
     await pressLast('Supprimer');
     await screen.findByText('« Beurre doux » supprimé');
-    expect(await storedBeurre()).toBeUndefined();
-    await press('Annuler');
+    expect(await storedBeurre()).toBeNull();
+    await pressLast('Annuler');
     expect(await screen.findByText('Beurre doux')).toBeOnTheScreen();
     expect((await storedBeurre())?.name).toBe('Beurre doux');
 

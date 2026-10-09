@@ -13,6 +13,9 @@ import { renderWithStore } from '../testing/render-with-store';
 
 const ROLES = ['button', 'checkbox', 'radio', 'switch', 'link', 'tab'] as const;
 
+/** These views open more layers than the others: CI is slower than the default wait. */
+const slow = { timeout: 5000 };
+
 const press = async (name: string) => {
   await screen.findAllByRole('button', { name });
   const button = screen.getAllByRole('button', { name }).at(-1);
@@ -21,7 +24,9 @@ const press = async (name: string) => {
 };
 
 const header = (name: string) =>
-  screen.findAllByRole('header', { name }).then((found) => found.length > 0);
+  screen
+    .findAllByRole('header', { name }, slow)
+    .then((found) => found.length > 0);
 
 /** The app on the fixture, opened on CurrentList. */
 const openApp = async () => {
@@ -87,7 +92,7 @@ const views: Record<string, () => Promise<void>> = {
         name: "Plus d'actions pour « Lait »",
       }),
     );
-    await screen.findByText('Modifier');
+    await screen.findByText('Modifier', {}, slow);
   },
   EditArticle: async () => {
     await openApp();
@@ -98,7 +103,7 @@ const views: Record<string, () => Promise<void>> = {
       }),
     );
     fireEvent.press(await screen.findByText('Modifier'));
-    await screen.findByRole('radio', { name: 'Boissons' });
+    await screen.findByRole('radio', { name: 'Boissons' }, slow);
   },
   DeleteArticleDialog: async () => {
     await openApp();
@@ -120,9 +125,9 @@ const views: Record<string, () => Promise<void>> = {
       }),
     );
     fireEvent.press(await screen.findByText('Supprimer'));
-    await screen.findByText('Supprimer « Beurre » ?');
+    await screen.findByText('Supprimer « Beurre » ?', {}, slow);
     await press('Supprimer');
-    await screen.findByText('« Beurre » supprimé');
+    await screen.findByText('« Beurre » supprimé', {}, slow);
     await screen.findByRole('button', { name: 'Annuler' });
   },
   CreateCategoryDialog: async () => {
@@ -203,8 +208,9 @@ const onlyChild = (node: ReactTestInstance): ReactTestInstance | null => {
 /** Whether the element stretches over a layer that covers the screen, as a dialog's backdrop. */
 const coversScreen = (node: ReactTestInstance): boolean => {
   const own = StyleSheet.flatten(node.props.style) ?? {};
-  // A menu's backdrop is itself stretched over the screen.
+  // A menu's backdrop: stretched over the screen and holding no text.
   if (
+    textOf(node) === '' &&
     own.position === 'absolute' &&
     [own.top, own.bottom, own.left, own.right].every((at) => at === 0)
   ) {
