@@ -30,6 +30,7 @@ import type {
   WriteFailed,
   WriteOptions,
 } from './store-kit';
+import { followRedirects } from './store-kit';
 import { UnexpectedResult } from './unexpected-result';
 
 export type {
@@ -161,6 +162,7 @@ export const createAppStoreWith = <Actions extends object>(
       useCases,
       endUndo,
       releaseOffer,
+      follow: (id) => followRedirects(get().sync.redirects, id),
       onLocalWrite: () => onLocalWrite?.(),
       endedRemotely,
       runWrite: <T, E extends { type: string }, X extends E['type']>(
@@ -227,6 +229,11 @@ export const createAppStoreWith = <Actions extends object>(
         pendingCount: 0,
         lastSyncAt: null,
         serverUrl: null,
+        redirects: {},
+        remote: {
+          cycle: 0,
+          effects: { deletedArticles: [], removedItems: [], merges: [] },
+        },
       },
       notice: null,
       refresh,

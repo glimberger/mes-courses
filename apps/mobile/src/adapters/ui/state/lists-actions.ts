@@ -24,6 +24,7 @@ export const createListsActions = ({
   useCases,
   runWrite,
   region,
+  follow,
 }: StoreKit): ListsActions => ({
   loadLists: region('lists', 'getLists', async () => ({
     status: 'success',
@@ -31,5 +32,5 @@ export const createListsActions = ({
   })),
   createList: (name) => runWrite('createList', () => useCases.createList(name)),
   setCurrentList: (listId) =>
-    runWrite('setCurrentList', () => useCases.setCurrentList(listId)),
+    runWrite('setCurrentList', () => useCases.setCurrentList(follow(listId))),
 });

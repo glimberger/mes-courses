@@ -12,6 +12,8 @@ export type SyncActions = {
    * the pull removed (R10a). `failed` is true when the cycle ended in `waiting` or `failed`.
    */
   syncNow: () => Promise<{ failed: boolean }>;
+  /** Tells the user a pull removed what a form was editing; the form then closes itself. */
+  noticeRemoteRemoval: (reason: 'articleDeleted' | 'itemRemoved') => void;
   /** Pairs this device with a server (US4-4). */
   connectToServer: (
     url: string,
@@ -95,6 +97,31 @@ export const createSyncActions = ({
     endedRemotely.add(undoId);
   };
 
+  /** Remembers the merges and tells the open forms what the pull removed (research R10a). */
+  const publishEffects = (effects: SyncResult['effects']) => {
+    // An idle cycle changes nothing: leave the slice alone so no subscriber wakes.
+    if (
+      effects.deletedArticles.length === 0 &&
+      effects.removedItems.length === 0 &&
+      effects.merges.length === 0
+    ) {
+      return;
+    }
+    const { redirects, remote } = get().sync;
+    setSync({
+      redirects: {
+        ...redirects,
+        ...Object.fromEntries(
+          effects.merges.map(({ loserId, survivorId }) => [
+            loserId,
+            survivorId,
+          ]),
+        ),
+      },
+      remote: { cycle: remote.cycle + 1, effects },
+    });
+  };
+
   const applyOutcome = (result: SyncResult) => {
     const { outcome } = result;
     switch (outcome.type) {
@@ -157,7 +184,13 @@ export const createSyncActions = ({
     }
     applyOutcome(result);
     endOfferOfDeleted(result.effects);
-    if (result.pulledRows > 0) await get().refresh();
+    try {
+      if (result.pulledRows > 0) await get().refresh();
+    } finally {
+      // After the refresh, so a form that closes lands on screens already showing the pull; and
+      // even when it fails, so the merges and removals of this cycle are not lost.
+      publishEffects(result.effects);
+    }
     // `disconnectedByServer` and `updateRequired` come from the cycle, which knows more.
     await loadSyncInfo(
       result.outcome.type === 'disconnectedByServer' ||
@@ -214,5 +247,19 @@ export const createSyncActions = ({
     return ok(undefined);
   };
 
-  return { syncNow, connectToServer };
+  const noticeRemoteRemoval: SyncActions['noticeRemoteRemoval'] = (reason) => {
+    // The form is closing: the user must be told why. Only the storage-full notice, shown once
+    // per streak, is kept.
+    if (get().notice?.type === 'storageFull') return;
+    set({
+      notice: {
+        type:
+          reason === 'articleDeleted'
+            ? 'articleDeletedElsewhere'
+            : 'itemRemovedElsewhere',
+      },
+    });
+  };
+
+  return { syncNow, connectToServer, noticeRemoteRemoval };
 };

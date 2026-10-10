@@ -1,11 +1,16 @@
 import { useState } from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import type { ServerRow } from '@mes-courses/sync-core';
 
 import type { ArticleId } from '../../../domain/article';
 import type { ListId } from '../../../domain/shopping-list';
 import { focusOn } from '../accessibility/focus';
 import { fixture } from '../testing/fixtures';
 import { recordFocusTargets } from '../testing/focus-targets';
+import {
+  OTHER_DEVICE_HLC,
+  pullingSyncServer,
+} from '../testing/pulling-sync-server';
 import { renderWithStore } from '../testing/render-with-store';
 import type { StoryScenario } from '../testing/story-store';
 import { AddArticlesScreen } from './AddArticlesScreen';
@@ -324,6 +329,140 @@ describe('QuantityDialog', () => {
         props: { accessibilityRole?: string };
       } | null;
       expect(target?.props.accessibilityRole).toBe('button');
+    });
+  });
+
+  describe('a pull while the dialog is open (FR-020a)', () => {
+    const stamp = OTHER_DEVICE_HLC;
+
+    /** A device connected to a fake server that sends `rows` once, at the next cycle. */
+    const openEdit = async (request: QuantityRequest) => {
+      const server = pullingSyncServer();
+      const rendered = await renderDialog(request, {
+        connected: {
+          serverUrl: 'https://courses.example.fr',
+          lastSyncAt: null,
+        },
+        syncServer: server.syncServer,
+      });
+      const pull = (sent: ServerRow[]) =>
+        act(async () => {
+          server.send(sent);
+          await rendered.store.getState().syncNow();
+        });
+      return { ...rendered, pull };
+    };
+
+    const itemRow = (articleId: string, present: boolean): ServerRow => ({
+      kind: 'listItem',
+      id: `${maListe}:${articleId}`,
+      seq: 1,
+      fields: {
+        listId: { value: maListe, hlc: stamp },
+        articleId: { value: articleId, hlc: stamp },
+        present: { value: present, hlc: stamp },
+        inCart: { value: false, hlc: stamp },
+        quantity: { value: { amount: 5, unit: 'L' }, hlc: stamp },
+      },
+      createdHlc: stamp,
+      deletedHlc: null,
+      mergedInto: null,
+    });
+
+    const deletedArticle = (id: string): ServerRow => ({
+      kind: 'article',
+      id,
+      seq: 1,
+      fields: {
+        name: { value: 'Lait', hlc: stamp },
+        categoryId: { value: 'category-0', hlc: stamp },
+      },
+      createdHlc: stamp,
+      deletedHlc: stamp,
+      mergedInto: null,
+    });
+
+    it('keeps what was typed when the pull changes the quantity, and saving records it', async () => {
+      const { pull, stored } = await openEdit({
+        mode: 'edit',
+        article: lait,
+        quantity: { amount: 2, unit: 'L' },
+      });
+      type('Quantité', '3');
+
+      await pull([itemRow(lait.id, true)]);
+
+      expect(screen.getByLabelText('Quantité')).toHaveDisplayValue('3');
+      press('Enregistrer');
+      await closed('Lait');
+      expect(await stored(lait.id)).toMatchObject({
+        quantity: { amount: 3, unit: 'L' },
+      });
+    });
+
+    it('closes with "Cet article a été retiré de la liste sur un autre appareil." when the pull removes the item', async () => {
+      const { pull, store } = await openEdit({
+        mode: 'edit',
+        article: lait,
+        quantity: { amount: 2, unit: 'L' },
+      });
+      type('Quantité', '3');
+
+      await pull([itemRow(lait.id, false)]);
+
+      await closed('Lait');
+      expect(store.getState().notice).toEqual({ type: 'itemRemovedElsewhere' });
+    });
+
+    it('closes with "Cet article a été supprimé sur un autre appareil." when the pull deletes the article', async () => {
+      const { pull, store } = await openEdit({
+        mode: 'edit',
+        article: lait,
+        quantity: { amount: 2, unit: 'L' },
+      });
+
+      await pull([deletedArticle(lait.id)]);
+
+      await closed('Lait');
+      expect(store.getState().notice).toEqual({
+        type: 'articleDeletedElsewhere',
+      });
+    });
+
+    it('stays open when the pull concerns another article', async () => {
+      const { pull } = await openEdit({
+        mode: 'edit',
+        article: lait,
+        quantity: { amount: 2, unit: 'L' },
+      });
+
+      await pull([itemRow(farine.id, false)]);
+
+      expect(isOpen('Lait')).toBe(true);
+    });
+
+    it('FR-037 gives focus back to the row that opened the dialog when the pull closes it', async () => {
+      const server = pullingSyncServer();
+      const rendered = await renderWithStore(<AddArticlesScreen />, {
+        seed: fixture,
+        connected: {
+          serverUrl: 'https://courses.example.fr',
+          lastSyncAt: null,
+        },
+        syncServer: server.syncServer,
+      });
+      fireEvent.press(await screen.findByRole('button', { name: 'Beurre' }));
+      await waitFor(() => expect(focusTargets).toEqual(['Beurre']));
+
+      await act(async () => {
+        server.send([deletedArticle(beurre.id)]);
+        await rendered.store.getState().syncNow();
+      });
+
+      await closed('Beurre');
+      // The row went with the article: focus leaves the closed dialog for the screen.
+      await waitFor(() => expect(focusTargets).toHaveLength(2));
+      expect(focusTargets[1]).not.toBe('Beurre');
     });
   });
 });

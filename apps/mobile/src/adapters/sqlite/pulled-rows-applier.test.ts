@@ -201,6 +201,22 @@ describe('pulled rows applier', () => {
     expect(row?.created_hlc).toContain('d-2');
   });
 
+  it('003 US2-8 gives a row made here the created_hlc the server holds, so every device orders alike', async () => {
+    const { db, applier } = await setup();
+    await db.runAsync(
+      `INSERT INTO category (id, name, normalized_name, position) VALUES ('c-1', 'Fruits', 'fruits', 1)`,
+      [],
+    );
+
+    await applier.apply([categoryRow('c-1', 'Fruits', 1)], NO_PENDING);
+
+    const [row] = await all<{ created_hlc: string }>(
+      db,
+      `SELECT created_hlc FROM category WHERE id = 'c-1'`,
+    );
+    expect(row?.created_hlc).toContain('d-2');
+  });
+
   describe('list items', () => {
     const withItem = async () => {
       const ctx = await setup();

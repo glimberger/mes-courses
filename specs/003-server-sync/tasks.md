@@ -370,10 +370,10 @@ offline at the same time, and check they end identical after syncing, per US2's 
   - a later change to a merged id is redirected, following chains;
   - a rename that collides triggers the same merge (spec edge case);
   - all of it happens in the transaction of the change that caused it.
-- [ ] T076 [P] [US2] Extend `apps/server/src/application/use-cases/sync.test.ts` with failing tests:
+- [X] T076 [P] [US2] Extend `apps/server/src/application/use-cases/sync.test.ts` with failing tests:
   - an incoming HLC more than 60 s ahead of the server clock is clamped, so a device with its clock in the future does not win a later honest change made 2 minutes after (spec edge case "wrong clock");
   - the server's HLC returned to a slow device makes that device's next change win over older ones.
-- [ ] T077 [US2] Write failing two-device scenario tests in `tests/sync/two-devices.test.ts`: two app stacks (A and B) on separate databases, one `startTestServer()`, and a fake clock shared or skewed per test. Each US2 scenario of the spec is one test, with both devices offline (server closed) between their changes:
+- [X] T077 [US2] Write failing two-device scenario tests in `tests/sync/two-devices.test.ts`: two app stacks (A and B) on separate databases, one `startTestServer()`, and a fake clock shared or skewed per test. Each US2 scenario of the spec is one test, with both devices offline (server closed) between their changes:
   - 003 US2-1: "Pain" added on A appears on B after B's next cycle;
   - 003 US2-2: A ticks, then B unticks later → unticked on both;
   - 003 US2-3: a rename on A and a quantity change on B → "Lait entier, 2 L" on both;
@@ -386,22 +386,22 @@ offline at the same time, and check they end identical after syncing, per US2's 
   - 003 US2-10: both create "Barbecue" offline and B has its own as current → after both sync, B's current list is the surviving "Barbecue" holding the items of both, with no message;
   - 003 FR-017 / SC-007: B with its own seeded defaults and data joins a server holding A's data → no duplicated default category or "Ma liste", and B's own articles are added;
   - SC-003: after every scenario, A's and B's full read models are deep-equal.
-- [ ] T078 [US2] Write a failing scenario test in `tests/sync/reset-server.test.ts` (FR-018a):
+- [X] T078 [US2] Write a failing scenario test in `tests/sync/reset-server.test.ts` (FR-018a):
   - both devices hold data, then the server is replaced by an empty one with a new `serverId`;
   - each device reports `disconnectedByServer` and keeps its data and outbox;
   - A pairs again and repopulates; B pairs again and merges with no duplicates;
   - A's and B's read models are deep-equal at the end.
-- [ ] T081 [US2] Write failing tests for open forms during a sync (FR-020a, [research.md](research.md) R10a, [contracts/ui-screens.md](contracts/ui-screens.md#changes-a-pull-makes-to-open-screens-fr-020a-fr-008-fr-015-fr-023)):
+- [X] T081 [US2] Write failing tests for open forms during a sync (FR-020a, [research.md](research.md) R10a, [contracts/ui-screens.md](contracts/ui-screens.md#changes-a-pull-makes-to-open-screens-fr-020a-fr-008-fr-015-fr-023)):
 
 ### Implementation for User Story 2
 
 - [X] T079 [US2] Implement `apps/server/src/domain/merge-by-name.ts` and call it from `apply-change.ts` on creates and renames, to turn T075 green.
-- [ ] T080 [US2] Add the HLC clamp and the server HLC state to `apps/server/src/application/use-cases/sync.ts` to turn T076 green.
+- [X] T080 [US2] Add the HLC clamp and the server HLC state to `apps/server/src/application/use-cases/sync.ts` to turn T076 green.
   - in `apps/mobile/src/adapters/ui/state/app-store.remote-effects.test.ts`: a cycle's `effects.merges` fill the slice's `redirects` (kept in memory only); a store write action called with a merged id calls the use case with the survivor's id, following chains;
   - in `apps/mobile/src/adapters/ui/state/use-remote-removal.test.tsx`: `useRemoteRemoval({ articleId })` calls its callback when a later cycle deletes that article, and `useRemoteRemoval({ listId, articleId })` when it removes that item; it ignores effects from cycles before it mounted;
   - in `apps/mobile/src/adapters/ui/screens/quantity-dialog.test.tsx` (001) and `edit-article-screen.test.tsx` (002): with "3" typed, a cycle that changes the item's quantity on the server keeps "3" in the field, and saving records "3"; a cycle that removes the item closes QuantityDialog with the snackbar "Cet article a été retiré de la liste sur un autre appareil."; a cycle that deletes the article closes QuantityDialog or EditArticle with "Cet article a été supprimé sur un autre appareil.", and focus goes back as when the form closes (001 FR-037).
-- [ ] T082 [US2] Implement `redirects` and the redirect of write actions in `apps/mobile/src/adapters/ui/state/app-store.ts`, the `useRemoteRemoval` hook in `apps/mobile/src/adapters/ui/state/use-remote-removal.ts`, and its use in `QuantityDialog.tsx` and `EditArticleScreen.tsx`, the two forms that edit a synced item or article (creation dialogs have nothing a pull can remove, and device names are not synced data), to turn T081 green. Then add `Components/NoticeSnackbar/ArticleDeletedElsewhere` and `.../ItemRemovedElsewhere` to `required-stories.ts`, see the story test fail, and add both to `apps/mobile/src/adapters/ui/components/NoticeSnackbar.stories.tsx`, each reached through a scenario whose fake `SyncServer` pulls the deletion or removal while the form is open.
-- [ ] T083 [US2] Make `tests/sync/two-devices.test.ts` (T077) and `tests/sync/reset-server.test.ts` (T078) green. Every production fix they force starts with its own failing unit test in the layer where it belongs: `sync-core`, server domain, `PulledRowsApplier` or `synchronize`.
+- [X] T082 [US2] Implement `redirects` and the redirect of write actions in `apps/mobile/src/adapters/ui/state/app-store.ts`, the `useRemoteRemoval` hook in `apps/mobile/src/adapters/ui/state/use-remote-removal.ts`, and its use in `QuantityDialog.tsx` and `EditArticleScreen.tsx`, the two forms that edit a synced item or article (creation dialogs have nothing a pull can remove, and device names are not synced data), to turn T081 green. Then add `Components/NoticeSnackbar/ArticleDeletedElsewhere` and `.../ItemRemovedElsewhere` to `required-stories.ts`, see the story test fail, and add both to `apps/mobile/src/adapters/ui/components/NoticeSnackbar.stories.tsx`, each reached through a scenario whose fake `SyncServer` pulls the deletion or removal while the form is open.
+- [X] T083 [US2] Make `tests/sync/two-devices.test.ts` (T077) and `tests/sync/reset-server.test.ts` (T078) green. Every production fix they force starts with its own failing unit test in the layer where it belongs: `sync-core`, server domain, `PulledRowsApplier` or `synchronize`.
 
 **Checkpoint**: US1 and US2 together form the MVP. The server is the source of truth, and every
 device converges.

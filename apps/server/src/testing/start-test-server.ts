@@ -30,9 +30,14 @@ export const buildTestApp = ({ clock }: { clock?: Clock } = {}) => {
 /** A real server on a random local port over an in-memory database, for adapter tests. */
 export const startTestServer = async ({
   clock,
-}: { clock?: Clock } = {}): Promise<TestServer> => {
+  port: wantedPort = 0,
+}: {
+  clock?: Clock;
+  /** To come back at the address of a server just closed, with a database of its own. */
+  port?: number;
+} = {}): Promise<TestServer> => {
   const { app, deps, db } = buildTestApp(clock ? { clock } : {});
-  await app.listen({ host: '127.0.0.1', port: 0 });
+  await app.listen({ host: '127.0.0.1', port: wantedPort });
   const address = app.server.address();
   const port = typeof address === 'object' && address ? address.port : 0;
   return {

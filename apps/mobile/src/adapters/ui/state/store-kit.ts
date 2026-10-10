@@ -1,3 +1,4 @@
+import type { RemoteEffects } from '../../../application/ports/pulled-rows';
 import type { DeletedArticle } from '../../../domain/article';
 import type { CatalogView } from '../../../domain/catalog-view';
 import type { CategoryId } from '../../../domain/category';
@@ -21,7 +22,9 @@ export type Notice =
   /** The device is paired with a server; the first sync starts (US4-4). */
   | { type: 'deviceConnected' }
   /** A pull deleted the article of an undo offer, or of a form (FR-008, FR-020a). */
-  | { type: 'articleDeletedElsewhere' };
+  | { type: 'articleDeletedElsewhere' }
+  /** A pull removed the item a form was editing from its list (FR-020a). */
+  | { type: 'itemRemovedElsewhere' };
 
 /** The one change that "Annuler" can still revert (FR-010). */
 export type PendingUndo =
@@ -37,6 +40,13 @@ export type SyncSlice = {
   pendingCount: number;
   lastSyncAt: string | null;
   serverUrl: string | null;
+  /**
+   * The merged id → its survivor, from the merges pulled during this session. Kept in memory
+   * only: a write action maps the id it is given through it (FR-020a, research R10a).
+   */
+  redirects: Record<string, string>;
+  /** What the latest cycles removed; `cycle` grows with each one, so a form sees only later ones. */
+  remote: { cycle: number; effects: RemoteEffects };
 };
 
 /** What the current list region shows when the list has no item: its name (US1-10). */
@@ -111,6 +121,8 @@ export interface StoreKit {
   endUndo: () => void;
   /** Releases the held changes of an offer that is no longer pending. */
   releaseOffer: (offer: PendingUndo) => void;
+  /** The id a write must use: the survivor of the merges pulled so far, following chains. */
+  follow: <T extends string>(id: T) => T;
   /** Tells the sync scheduler a local change was saved. */
   onLocalWrite: () => void;
   /** The undo ids of the offers a pull ended (research R10a); an undo of one restores nothing. */
@@ -135,3 +147,18 @@ export interface StoreKit {
     reload: () => Promise<void>,
   ) => void;
 }
+
+/** The survivor of the merges in `redirects`, following chains; `id` itself when not merged. */
+export const followRedirects = <T extends string>(
+  redirects: Record<string, string>,
+  id: T,
+): T => {
+  let current: string = id;
+  // A merge never loops (the survivor is older), but a guard keeps a bad map harmless.
+  for (let hops = 0; hops <= Object.keys(redirects).length; hops += 1) {
+    const next = redirects[current];
+    if (next === undefined) break;
+    current = next;
+  }
+  return current as T;
+};

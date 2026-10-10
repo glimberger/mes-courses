@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -25,6 +25,7 @@ import { nameErrorText, NameField } from '../components/NameField';
 import type { RootStackParamList } from '../routes';
 import { useAppStoreApi } from '../state/app-store-provider';
 import { useAppStore } from '../state/use-app-store';
+import { useRemoteRemoval } from '../state/use-remote-removal';
 import { spacing } from '../theme/spacing';
 
 /**
@@ -90,6 +91,29 @@ const LoadedEditArticle = ({
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const editArticle = useAppStore((state) => state.editArticle);
+  const noticeRemoteRemoval = useAppStore((state) => state.noticeRemoteRemoval);
+  // A pull that deletes the article closes the form (FR-020a).
+  const removed = useRef(false);
+  const leave = () => {
+    if (navigation.canGoBack()) navigation.goBack();
+  };
+  useRemoteRemoval({ articleId }, (reason) => {
+    noticeRemoteRemoval(reason);
+    // A modal on top (the category picker) has the focus: leave once it is back.
+    if (navigation.isFocused()) leave();
+    else removed.current = true;
+  });
+  useEffect(
+    () =>
+      navigation.addListener('focus', () => {
+        if (!removed.current) return;
+        removed.current = false;
+        leave();
+      }),
+    // `leave` only reads `navigation`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [navigation],
+  );
   const [name, setName] = useState(initial.name);
   const [categoryId, setCategoryId] = useState<CategoryId>(initial.categoryId);
   const [nameError, setNameError] = useState<string | null>(null);

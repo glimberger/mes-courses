@@ -19,6 +19,8 @@ const text = (notice: Notice): string => {
       return 'Appareil connecté. Synchronisation en cours…';
     case 'articleDeletedElsewhere':
       return 'Cet article a été supprimé sur un autre appareil.';
+    case 'itemRemovedElsewhere':
+      return 'Cet article a été retiré de la liste sur un autre appareil.';
   }
 };
 

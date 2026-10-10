@@ -33,12 +33,15 @@ export const createArticlesActions = ({
   runWrite,
   report,
   set,
+  follow,
 }: StoreKit): ArticlesActions => ({
   editArticle: (articleId, article) =>
-    runWrite('editArticle', () => useCases.editArticle(articleId, article)),
+    runWrite('editArticle', () =>
+      useCases.editArticle(follow(articleId), article),
+    ),
   getArticleUsage: async (articleId) => {
     try {
-      return await useCases.getArticleUsage(articleId);
+      return await useCases.getArticleUsage(follow(articleId));
     } catch (error) {
       // Only the add screen opens the delete dialog.
       report(error, 'getArticleUsage', 'AddArticles');
@@ -49,7 +52,7 @@ export const createArticlesActions = ({
   deleteArticle: async (articleId) => {
     const outcome = await runWrite(
       'deleteArticle',
-      () => useCases.deleteArticle(articleId),
+      () => useCases.deleteArticle(follow(articleId)),
       {
         expected: ['ArticleNotFound'],
         offer: (deleted) => ({ kind: 'deletedArticle', deleted }),
