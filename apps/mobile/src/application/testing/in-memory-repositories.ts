@@ -278,9 +278,9 @@ export class InMemoryRepositories implements Repositories {
       } as PendingChange & Change;
       this.state.outbox.push({ change, heldBy: options?.heldBy ?? null });
     },
-    pending: async (limit) =>
+    pending: async (limit, options) =>
       this.state.outbox
-        .filter((entry) => entry.heldBy === null)
+        .filter((entry) => options?.includeHeld || entry.heldBy === null)
         .slice(0, limit)
         .map((entry) => copyEntry(entry).change),
     acknowledge: async (changeIds) => {

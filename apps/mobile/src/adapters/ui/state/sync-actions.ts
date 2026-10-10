@@ -59,15 +59,30 @@ export const createSyncActions = ({
     }
   };
 
-  /** A pull deleted the article of the pending undo offer: the offer ends (research R10a). */
-  const endOfferOfDeleted = (deletedArticles: readonly string[]) => {
+  /**
+   * A pull deleted or merged away the article (or the list) of the pending undo offer: the offer
+   * ends, since restoring would clash with what the pull left (research R10a).
+   */
+  const endOfferOfDeleted = ({
+    deletedArticles,
+    merges,
+  }: SyncResult['effects']) => {
     const offer = get().pendingUndo;
     if (offer === null) return;
-    const concerned =
+    const articleId =
       offer.kind === 'removedItem'
         ? offer.removed.articleId
         : offer.deleted.article.id;
-    if (!deletedArticles.includes(concerned)) return;
+    const listIds: string[] =
+      offer.kind === 'removedItem' ? [offer.removed.listId] : [];
+    const gone =
+      deletedArticles.includes(articleId) ||
+      merges.some(
+        ({ kind, loserId }) =>
+          (kind === 'article' && loserId === articleId) ||
+          (kind === 'list' && listIds.includes(loserId)),
+      );
+    if (!gone) return;
     const { undoId } =
       offer.kind === 'removedItem' ? offer.removed : offer.deleted;
     set({ pendingUndo: null });
@@ -136,7 +151,7 @@ export const createSyncActions = ({
       return { failed: true };
     }
     applyOutcome(result);
-    endOfferOfDeleted(result.effects.deletedArticles);
+    endOfferOfDeleted(result.effects);
     if (result.pulledRows > 0) await get().refresh();
     // `disconnectedByServer` and `updateRequired` come from the cycle, which knows more.
     await loadSyncInfo(
@@ -144,8 +159,11 @@ export const createSyncActions = ({
         result.outcome.type === 'updateRequired',
     );
     return {
+      // A revoked or outdated app backs off like a failing one, instead of asking every 5 s. An
+      // unpaired one has nothing to send and shows no status, so it keeps the base delay.
       failed:
-        result.outcome.type === 'waiting' || result.outcome.type === 'failed',
+        result.outcome.type !== 'saved' &&
+        result.outcome.type !== 'notConnected',
     };
   };
 

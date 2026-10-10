@@ -17,7 +17,8 @@ export const formatLastSync = (iso: string | null, now: Date): string => {
   if (elapsed >= 0 && elapsed < 60 * 60_000) {
     return `il y a ${Math.floor(elapsed / 60_000)} min`;
   }
-  const days = (startOfDay(now) - startOfDay(at)) / DAY_MS;
+  // Rounded: a day lasts 23 or 25 hours when the clocks change.
+  const days = Math.round((startOfDay(now) - startOfDay(at)) / DAY_MS);
   if (days === 0) return `aujourd'hui à ${time(at)}`;
   if (days === 1) return `hier à ${time(at)}`;
   return `le ${pad(at.getDate())}/${pad(at.getMonth() + 1)}/${at.getFullYear()} à ${time(at)}`;

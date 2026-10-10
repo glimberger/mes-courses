@@ -179,6 +179,19 @@ describe('sync', () => {
     expect(second.more).toBeUndefined();
   });
 
+  it('answers with the highest hlc it holds, so a device behind catches up', async () => {
+    const { run } = await setup();
+    await run(
+      [createList('ch-1', 'l-1', 'Courses', NOW - 100)],
+      0,
+      hlc(NOW - 100),
+    );
+
+    const behind = await run([], 0, hlc(NOW - 5000, 'd-2'), 'd-1');
+
+    expect(behind.hlc).toEqual(hlc(NOW - 100));
+  });
+
   it('returns the whole state when lastSeq is 0', async () => {
     const { run } = await setup();
     await run([
@@ -219,6 +232,33 @@ describe('sync', () => {
     expect(second.rows).toHaveLength(1);
     expect(second.more).toBeUndefined();
     expect(second.seq).toBe(MAX_ROWS_PER_RESPONSE + 1);
+  });
+
+  it('sends a seq holding more rows than a response whole', async () => {
+    const { run, store } = await setup();
+    await store.run(async ({ lists, meta }) => {
+      const seq = await meta.nextSeq();
+      for (let i = 1; i <= MAX_ROWS_PER_RESPONSE + 100; i += 1) {
+        const record: ListRecord = {
+          id: `l-${i}`,
+          name: `Liste ${i}`,
+          nameHlc: hlc(1),
+          normalizedName: `liste ${i}`,
+          createdHlc: hlc(1),
+          deletedHlc: null,
+          mergedInto: null,
+          seq,
+        };
+        await lists.save(record);
+      }
+    });
+
+    const first = await run([], 0);
+
+    expect(first.rows).toHaveLength(MAX_ROWS_PER_RESPONSE + 100);
+    expect(first.seq).toBe(1);
+    const second = await run([], first.seq);
+    expect(second.rows).toHaveLength(0);
   });
 
   it('refuses more than 500 changes and applies nothing', async () => {

@@ -369,6 +369,39 @@ describe('pulled rows applier', () => {
     });
   });
 
+  describe('removals waiting for their undo offer', () => {
+    it('does not bring back an item removed here', async () => {
+      const { db, applier } = await setup();
+      await applier.apply(
+        [
+          categoryRow('c-1', 'Fruits', 1),
+          articleRow('a-1', 'Pommes', 'c-1'),
+          listRow('l-1', 'Fête'),
+        ],
+        NO_PENDING,
+      );
+
+      await applier.apply(
+        [itemRow('l-1', 'a-1')],
+        new Set(['listItem:l-1:a-1:present']),
+      );
+
+      expect(await all(db, `SELECT * FROM list_item`)).toEqual([]);
+    });
+
+    it('does not bring back an article deleted here', async () => {
+      const { db, applier } = await setup();
+      await applier.apply([categoryRow('c-1', 'Fruits', 1)], NO_PENDING);
+
+      await applier.apply(
+        [articleRow('a-1', 'Pommes', 'c-1')],
+        new Set(['article:a-1:deleted']),
+      );
+
+      expect(await all(db, `SELECT * FROM article`)).toEqual([]);
+    });
+  });
+
   describe('name conflicts with a pending local create', () => {
     it('R8 defers a row that would break UNIQUE (normalized_name), without failing', async () => {
       const { db, applier } = await setup();

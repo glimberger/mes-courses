@@ -190,7 +190,10 @@ export const createSynchronize =
       await unitOfWork.run(async (repos) => {
         await repos.changes.acknowledge(response.acknowledged);
         if (response.rows.length > 0) {
-          const waiting = await repos.changes.pending(Number.MAX_SAFE_INTEGER);
+          // Held entries count too: a removal waiting for its undo offer must not be undone by a pull.
+          const waiting = await repos.changes.pending(Number.MAX_SAFE_INTEGER, {
+            includeHeld: true,
+          });
           const applied = await repos.pulledRows.apply(
             response.rows,
             pendingKeys(waiting),

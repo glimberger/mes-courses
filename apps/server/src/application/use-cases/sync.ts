@@ -2,6 +2,7 @@ import {
   MAX_CHANGES_PER_REQUEST,
   MAX_ROWS_PER_RESPONSE,
   clampHlc,
+  compareHlc,
   type Hlc,
   type ServerRow,
   type SyncRequest,
@@ -86,20 +87,41 @@ const itemRow = (r: ListItemRecord): ServerRow => ({
   mergedInto: null,
 });
 
+/** The highest HLC among `start` and the stamps of `rows`: what the device must catch up with. */
+const highestHlc = (start: Hlc, rows: ServerRow[]): Hlc => {
+  let highest = start;
+  for (const row of rows) {
+    const stamps = [
+      row.createdHlc,
+      row.deletedHlc,
+      ...Object.values(row.fields).map((field) => field.hlc),
+    ];
+    for (const stamp of stamps) {
+      if (stamp !== null && compareHlc(stamp, highest) > 0) highest = stamp;
+    }
+  }
+  return highest;
+};
+
+const readSince = async (
+  repos: Repositories,
+  lastSeq: number,
+  limit: number,
+): Promise<ServerRow[]> =>
+  [
+    ...(await repos.categories.changedSince(lastSeq, limit)).map(categoryRow),
+    ...(await repos.articles.changedSince(lastSeq, limit)).map(articleRow),
+    ...(await repos.lists.changedSince(lastSeq, limit)).map(listRow),
+    ...(await repos.items.changedSince(lastSeq, limit)).map(itemRow),
+  ].sort((a, b) => a.seq - b.seq);
+
 /** The rows after `lastSeq`, by increasing `seq`, ending on a whole `seq` (never splitting a change). */
 const pull = async (
   repos: Repositories,
   lastSeq: number,
 ): Promise<{ rows: ServerRow[]; more: boolean }> => {
   const limit = MAX_ROWS_PER_RESPONSE;
-  const all = [
-    ...(await repos.categories.changedSince(lastSeq, limit + 1)).map(
-      categoryRow,
-    ),
-    ...(await repos.articles.changedSince(lastSeq, limit + 1)).map(articleRow),
-    ...(await repos.lists.changedSince(lastSeq, limit + 1)).map(listRow),
-    ...(await repos.items.changedSince(lastSeq, limit + 1)).map(itemRow),
-  ].sort((a, b) => a.seq - b.seq);
+  const all = await readSince(repos, lastSeq, limit + 1);
 
   if (all.length <= limit) return { rows: all, more: false };
 
@@ -107,10 +129,11 @@ const pull = async (
   if (all[limit]?.seq !== cutSeq)
     return { rows: all.slice(0, limit), more: true };
   const whole = all.filter((row) => row.seq < cutSeq);
-  return {
-    rows: whole.length > 0 ? whole : all.filter((row) => row.seq <= cutSeq),
-    more: true,
-  };
+  if (whole.length > 0) return { rows: whole, more: true };
+  // One seq holds more rows than a response (a merge moving many children): send it whole, since
+  // the next pull starts after it.
+  const atCut = await readSince(repos, cutSeq - 1, Number.MAX_SAFE_INTEGER);
+  return { rows: atCut.filter((row) => row.seq === cutSeq), more: true };
 };
 
 export const sync = async (
@@ -150,6 +173,12 @@ export const sync = async (
     const { rows, more } = await pull(repos, request.lastSeq);
     const last = rows[rows.length - 1];
     const seq = more && last ? last.seq : await repos.meta.currentSeq();
-    return { acknowledged, rows, seq, hlc, ...(more && { more }) };
+    return {
+      acknowledged,
+      rows,
+      seq,
+      hlc: highestHlc(hlc, rows),
+      ...(more && { more }),
+    };
   });
 };

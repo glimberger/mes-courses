@@ -64,11 +64,11 @@ export const sqliteChangeRecorder = (
       );
       await syncState.save({ ...state, maxHlc: hlc });
     },
-    pending: (limit) =>
+    pending: (limit, options) =>
       findAll(
         db,
         `SELECT seq, change_id, hlc, kind, entity_id, fields FROM pending_change
-         WHERE held_by IS NULL ORDER BY seq LIMIT ?`,
+         ${options?.includeHeld ? '' : 'WHERE held_by IS NULL'} ORDER BY seq LIMIT ?`,
         [limit],
         toPending,
       ),

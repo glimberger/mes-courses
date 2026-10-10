@@ -90,6 +90,8 @@ export const sqlitePulledRowsApplier = (
       ]);
       if (!present) {
         if (name === undefined || extra.some((e) => e.value === null)) return;
+        // Deleted here and waiting to be sent (or for its undo offer): do not bring it back.
+        if (pending(kind, row.id, 'deleted')) return;
         if (await nameTaken(table, row.id, name)) {
           deferred += 1;
           return;
@@ -287,6 +289,8 @@ export const sqlitePulledRowsApplier = (
         const inCart = row.fields.inCart?.value;
         const quantity = row.fields.quantity;
         if (!present) {
+          // Removed here and waiting to be sent (or for its undo offer): do not bring it back.
+          if (pending('listItem', key, 'present')) continue;
           const parents =
             (await exists(db, 'SELECT 1 FROM shopping_list WHERE id = ?', [
               listId,

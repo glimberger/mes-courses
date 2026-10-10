@@ -18,8 +18,11 @@ export interface ChangeRecorder {
     fields: object,
     options?: { heldBy?: string },
   ): Promise<void>;
-  /** At most `limit` entries, held ones excluded, in `seq` order. */
-  pending(limit: number): Promise<PendingChange[]>;
+  /** At most `limit` entries, held ones excluded unless `includeHeld`, in `seq` order. */
+  pending(
+    limit: number,
+    options?: { includeHeld?: boolean },
+  ): Promise<PendingChange[]>;
   /** Removes the entries the server applied. */
   acknowledge(changeIds: string[]): Promise<void>;
   /** Held entries of this undo offer become pending. */
