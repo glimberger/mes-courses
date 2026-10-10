@@ -1,14 +1,9 @@
-import { AccessibilityInfo, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 
 import { renderWithStore } from '../testing/render-with-store';
 import type { AppState } from '../state/app-store';
 import { SyncStatusBar } from './SyncStatusBar';
-
-const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
-
-beforeEach(() => announce.mockReset());
-afterAll(() => announce.mockRestore());
 
 const renderBar = async () => {
   const rendered = await renderWithStore(<SyncStatusBar />);
@@ -134,7 +129,7 @@ describe('SyncStatusBar', () => {
     expect(minHeight ?? 48).toBeGreaterThanOrEqual(48);
   });
 
-  describe('announcements (US3-6, FR-023)', () => {
+  describe('accessibility (US3-6)', () => {
     it('is not a live region', async () => {
       const { show } = await renderBar();
       await show({ status: 'failed' });
@@ -142,31 +137,6 @@ describe('SyncStatusBar', () => {
       expect(
         screen.getByTestId('sync-status-bar').props.accessibilityLiveRegion,
       ).toBeUndefined();
-    });
-
-    it('announces entering failed, then the first saved after the failure', async () => {
-      const { show } = await renderBar();
-      await show({ status: 'saved' });
-      await show({ status: 'failed' });
-      expect(announce).toHaveBeenLastCalledWith('Échec de la synchronisation');
-
-      await show({ status: 'sending' });
-      await show({ status: 'saved' });
-
-      expect(announce).toHaveBeenLastCalledWith('Synchronisé');
-      expect(announce).toHaveBeenCalledTimes(2);
-    });
-
-    it('announces nothing for waiting, sending and saved cycles or a new count', async () => {
-      const { show } = await renderBar();
-
-      await show({ status: 'saved' });
-      await show({ status: 'waiting', pendingCount: 1 });
-      await show({ status: 'waiting', pendingCount: 2 });
-      await show({ status: 'sending' });
-      await show({ status: 'saved', pendingCount: 0 });
-
-      expect(announce).not.toHaveBeenCalled();
     });
   });
 });

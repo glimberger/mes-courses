@@ -16,6 +16,7 @@ import { ConnectServerScreen } from './screens/ConnectServerScreen';
 import { ListsScreen } from './screens/ListsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import type { RootStackParamList } from './routes';
+import { SyncAnnouncer } from './components/SyncAnnouncer';
 import { useNavigationTheme } from './theme/navigation-theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -65,6 +66,7 @@ export const Navigation = ({
           <Stack.Screen name="ConnectServer" component={ConnectServerScreen} />
         </Stack.Navigator>
       </NavigationContainer>
+      <SyncAnnouncer />
       <UndoSnackbar />
       <NoticeSnackbar />
     </>

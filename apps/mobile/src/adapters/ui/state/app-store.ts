@@ -102,7 +102,7 @@ export const createAppStoreWith = <Actions extends object>(
       const { undoId } =
         offer.kind === 'removedItem' ? offer.removed : offer.deleted;
       // The release is a write of its own: a failure is reported, and the user is not told.
-      useCases.releaseHeldChanges(undoId).catch((error: unknown) => {
+      return useCases.releaseHeldChanges(undoId).catch((error: unknown) => {
         errorReporter.report(error, { operation: 'releaseHeldChanges' });
       });
     };
@@ -110,7 +110,7 @@ export const createAppStoreWith = <Actions extends object>(
       const offer = get().pendingUndo;
       if (offer === null) return;
       update({ pendingUndo: null });
-      releaseOffer(offer);
+      void releaseOffer(offer);
     };
 
     /** A saved write has a change in the outbox: shown as waiting, unless a cycle says more. */
@@ -165,10 +165,11 @@ export const createAppStoreWith = <Actions extends object>(
           : fail(operation, new UnexpectedResult(type));
       }
       onLocalWrite?.();
-      await noteLocalWrite();
-      // The offer a write replaces or ends is final: its held changes are released.
+      // The offer a write replaces or ends is final: its held changes are released, and so
+      // counted as waiting by the note below.
       const previous = get().pendingUndo;
-      if (previous !== null) releaseOffer(previous);
+      if (previous !== null) await releaseOffer(previous);
+      await noteLocalWrite();
       // A new offer also ends the notice: its snackbar would cover "Annuler".
       update(
         offer

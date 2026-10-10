@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import { err } from '../../../domain/result';
@@ -46,6 +46,31 @@ describe('Settings', () => {
     );
 
     await waitFor(() => expect(sync).toHaveBeenCalledTimes(1));
+  });
+
+  it('003 US3-5 "Synchroniser maintenant" is disabled while sending or when the app cannot sync', async () => {
+    const { store } = await openSettings({
+      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+    });
+    const button = async () =>
+      screen.findByRole('button', { name: 'Synchroniser maintenant' });
+    expect(await button()).toBeEnabled();
+
+    await act(() =>
+      store.setState({ sync: { ...store.getState().sync, status: 'sending' } }),
+    );
+    expect(await button()).toBeDisabled();
+
+    await act(() =>
+      store.setState({
+        sync: {
+          ...store.getState().sync,
+          status: 'waiting',
+          connection: 'updateRequired',
+        },
+      }),
+    );
+    expect(await button()).toBeDisabled();
   });
 
   it('003 US3-5 a device that never connected has no sync status or button', async () => {

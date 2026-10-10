@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'react';
-import { AccessibilityInfo, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Icon, Text, TouchableRipple, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -73,7 +72,7 @@ const display = ({
 
 /**
  * The state of the synchronization, under the Appbar of every data screen (FR-020). Not a live
- * region: only a failure and the recovery after it are announced (FR-023, research R14).
+ * region: the failure and the recovery are announced by `SyncAnnouncer`, once for all the bars.
  */
 export const SyncStatusBar = () => {
   const navigation =
@@ -81,23 +80,6 @@ export const SyncStatusBar = () => {
   const sync = useAppStore((state) => state.sync);
   const retry = useAppStore((state) => state.retry);
   const shown = display(sync);
-
-  const wasFailed = useRef(false);
-  const connected = sync.connection === 'connected';
-  const { status } = sync;
-  useEffect(() => {
-    if (connected && status === 'failed') {
-      if (!wasFailed.current) {
-        AccessibilityInfo.announceForAccessibility(
-          'Échec de la synchronisation',
-        );
-      }
-      wasFailed.current = true;
-    } else if (connected && status === 'saved' && wasFailed.current) {
-      AccessibilityInfo.announceForAccessibility('Synchronisé');
-      wasFailed.current = false;
-    }
-  }, [connected, status]);
 
   const { colors } = useTheme();
   if (shown === null) return null;

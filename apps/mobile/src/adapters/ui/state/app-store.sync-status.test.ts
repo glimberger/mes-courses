@@ -62,6 +62,19 @@ describe('the sync status (US3, data-model sync status)', () => {
     });
   });
 
+  it('003 US3-2 the count includes the changes of the undo offer a new write ends', async () => {
+    const { store } = await buildStore();
+    await store.getState().removeItem(lait);
+    expect(store.getState().sync.pendingCount).toBe(0);
+
+    await store.getState().toggleItem('article-farine' as ArticleId);
+
+    expect(store.getState().sync).toMatchObject({
+      status: 'waiting',
+      pendingCount: 2,
+    });
+  });
+
   it('003 US3-1 a cycle goes through sending, then saved when the outbox is empty', async () => {
     const { store, replyWith } = await buildStore();
     await store.getState().toggleItem(lait);

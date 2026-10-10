@@ -50,7 +50,7 @@ export const createSyncActions = ({
    * Reads the address, the last sync and, unless `keepConnection`, the connection; a failed read
    * keeps what is shown.
    */
-  const loadSyncInfo = async (keepConnection = false) => {
+  const loadSyncInfo = async (keepConnection = false): Promise<boolean> => {
     try {
       const info = await useCases.getSyncInfo();
       setSync({
@@ -59,8 +59,10 @@ export const createSyncActions = ({
         pendingCount: info.pendingCount,
         ...(!keepConnection && { connection: info.connection }),
       });
+      return true;
     } catch (error) {
       report(error, 'getSyncInfo');
+      return false;
     }
   };
 
@@ -132,7 +134,7 @@ export const createSyncActions = ({
         failureStreak = 0;
         failureReported = false;
         storageFullShown = false;
-        setSync({ status: 'saved' });
+        // `saved` is set by the cycle, once it knows how many changes still wait.
         return;
       case 'waiting':
         // Offline or unreachable: never reported (FR-022).
@@ -199,9 +201,13 @@ export const createSyncActions = ({
       result.outcome.type === 'disconnectedByServer' ||
         result.outcome.type === 'updateRequired',
     );
-    // A write made during the cycle is still waiting, though the cycle itself succeeded.
-    const { status, pendingCount } = get().sync;
-    if (status === 'saved' && pendingCount > 0) setSync({ status: 'waiting' });
+    if (result.outcome.type === 'saved') {
+      // A write made during the cycle is still waiting, though the cycle itself succeeded. When
+      // the count could not be read, the last known one stands (the failure is reported).
+      setSync({
+        status: get().sync.pendingCount > 0 ? 'waiting' : 'saved',
+      });
+    }
     return {
       // A revoked or outdated app backs off like a failing one, instead of asking every 5 s. An
       // unpaired one has nothing to send and shows no status, so it keeps the base delay.

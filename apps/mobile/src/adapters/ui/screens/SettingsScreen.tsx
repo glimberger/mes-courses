@@ -21,7 +21,7 @@ const withoutScheme = (url: string) => url.replace(/^https?:\/\//, '');
 export const SettingsScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { connection, serverUrl, lastSyncAt } = useAppStore(
+  const { connection, serverUrl, lastSyncAt, status } = useAppStore(
     (state) => state.sync,
   );
   const syncNow = useAppStore((state) => state.syncNow);
@@ -33,7 +33,12 @@ export const SettingsScreen = () => {
       server={
         connection === 'notConnected' || serverUrl === null
           ? null
-          : { url: serverUrl, lastSyncAt }
+          : {
+              url: serverUrl,
+              lastSyncAt,
+              // A revoked or outdated app cannot sync, and a cycle already runs.
+              canSyncNow: connection === 'connected' && status !== 'sending',
+            }
       }
     />
   );
@@ -45,7 +50,11 @@ export type SettingsViewProps = {
   /** "Synchroniser maintenant": runs a cycle at once (US3-5). */
   onSyncNow: () => void;
   /** The server this device is connected to, or null when it never was. */
-  server: { url: string; lastSyncAt: string | null } | null;
+  server: {
+    url: string;
+    lastSyncAt: string | null;
+    canSyncNow: boolean;
+  } | null;
 };
 
 /** The content of Settings, its data given as props so a story can show each state. */
@@ -84,7 +93,11 @@ export const SettingsView = ({
               </Text>
             )}
           />
-          <Button mode="outlined" onPress={onSyncNow}>
+          <Button
+            mode="outlined"
+            disabled={!server.canSyncNow}
+            onPress={onSyncNow}
+          >
             Synchroniser maintenant
           </Button>
         </>
