@@ -26,7 +26,7 @@ import {
   type SyncState,
   type SyncStateRepository,
 } from '../ports/sync-state';
-import type { PulledRowsApplier } from '../ports/pulled-rows';
+import type { PulledRowsApplier, RemoteEffects } from '../ports/pulled-rows';
 import type { Repositories, UnitOfWork } from '../ports/unit-of-work';
 import { FakeClock } from './fake-clock';
 import { SequentialIdGenerator } from './sequential-id-generator';
@@ -317,14 +317,49 @@ export class InMemoryRepositories implements Repositories {
   };
 
   /**
-   * Applies nothing and reports no effect: tests of the sync use cases spy on it or replace it,
-   * and the SQLite applier has its own tests.
+   * Applies only what the screens react to, and reports it: a deleted article goes with its
+   * items, a list item with `present = false` goes, and merges are reported (the loser article
+   * goes). The SQLite applier, with its own tests, applies everything.
    */
   pulledRows: PulledRowsApplier = {
-    apply: async () => ({
-      deferred: 0,
-      effects: { deletedArticles: [], removedItems: [], merges: [] },
-    }),
+    apply: async (rows) => {
+      const effects: RemoteEffects = {
+        deletedArticles: [],
+        removedItems: [],
+        merges: [],
+      };
+      const dropArticle = (articleId: string) => {
+        this.state.articles.delete(articleId);
+        for (const [ref, item] of this.state.items) {
+          if (item.articleId === articleId) this.state.items.delete(ref);
+        }
+      };
+      for (const row of rows) {
+        if (row.mergedInto !== null) {
+          effects.merges.push({
+            kind: row.kind,
+            loserId: row.id,
+            survivorId: row.mergedInto,
+          });
+          if (row.kind === 'article') dropArticle(row.id);
+        } else if (row.kind === 'article' && row.deletedHlc !== null) {
+          if (this.state.articles.has(row.id)) {
+            effects.deletedArticles.push(row.id);
+            dropArticle(row.id);
+          }
+        } else if (
+          row.kind === 'listItem' &&
+          row.fields.present?.value === false
+        ) {
+          const listId = String(row.fields.listId?.value);
+          const articleId = String(row.fields.articleId?.value);
+          if (this.state.items.delete(itemRef(listId, articleId))) {
+            effects.removedItems.push({ listId, articleId });
+          }
+        }
+      }
+      return { deferred: 0, effects };
+    },
   };
 
   /** A copy of everything stored, to give back to `restore`. */

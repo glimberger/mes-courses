@@ -98,6 +98,7 @@ export const createEditListActions = (
     endUndo,
     releaseOffer,
     endedRemotely,
+    follow,
   }: StoreKit,
   { loadCurrentList }: Pick<CurrentListActions, 'loadCurrentList'>,
 ): EditListActions => {
@@ -176,7 +177,8 @@ export const createEditListActions = (
   ) => {
     const outcome = await writeOnList(
       'addArticleToList',
-      (listId) => useCases.addArticleToList(listId, article.id, quantity),
+      (listId) =>
+        useCases.addArticleToList(listId, follow(article.id), quantity),
       { expected: ['AlreadyOnList'] },
     );
     if (outcome.ok) confirmAdded(article.name);
@@ -197,7 +199,7 @@ export const createEditListActions = (
     quantity,
   ) =>
     writeOnList('changeItemQuantity', (listId) =>
-      useCases.changeItemQuantity(listId, articleId, quantity),
+      useCases.changeItemQuantity(listId, follow(articleId), quantity),
     );
 
   /** The name the current list shows for the item. */
@@ -215,7 +217,7 @@ export const createEditListActions = (
     const name = shownName(articleId);
     const outcome = await writeOnList(
       'removeItemFromList',
-      (listId) => useCases.removeItemFromList(listId, articleId),
+      (listId) => useCases.removeItemFromList(listId, follow(articleId)),
       {
         expected: ['ItemNotOnList'],
         offer: (removed) => ({ kind: 'removedItem', removed, name }),

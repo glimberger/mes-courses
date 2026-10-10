@@ -12,7 +12,9 @@ import { focusOn } from '../accessibility/focus';
 import { formatAmount } from '../components/format-quantity';
 import { Button } from '../components/Button';
 import { QuantityFields } from '../components/QuantityFields';
+import { shownList } from '../state/current-list-actions';
 import { useAppStore } from '../state/use-app-store';
+import { useRemoteRemoval } from '../state/use-remote-removal';
 import { spacing } from '../theme/spacing';
 
 type DialogArticle = { id: ArticleId; name: string };
@@ -52,7 +54,22 @@ const QuantityForm = ({
 }) => {
   const addArticleToList = useAppStore((state) => state.addArticleToList);
   const changeItemQuantity = useAppStore((state) => state.changeItemQuantity);
+  const noticeRemoteRemoval = useAppStore((state) => state.noticeRemoteRemoval);
+  const listId = useAppStore(
+    (state) => shownList(state.currentList)?.id ?? null,
+  );
   const { article } = request;
+  // A pull that deletes the article, or takes the item off the list, closes the form (FR-020a).
+  useRemoteRemoval(
+    {
+      articleId: article.id,
+      ...(request.mode !== 'add' && listId !== null && { listId }),
+    },
+    (reason) => {
+      noticeRemoteRemoval(reason);
+      onClose(false);
+    },
+  );
   const [mode, setMode] = useState(request.mode);
   const prefill = request.mode === 'add' ? null : request.quantity;
   const [amount, setAmount] = useState(

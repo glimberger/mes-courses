@@ -116,8 +116,10 @@ export const sqlitePulledRowsApplier = (
         );
         return;
       }
-      const sets: string[] = [];
-      const params: (string | number | null)[] = [];
+      // The server's creation stamp is the same everywhere, unlike the placeholder of a row made
+      // here, so it fixes the display order (FR-014) alike on every device.
+      const sets: string[] = ['created_hlc = ?'];
+      const params: (string | number | null)[] = [encodeHlc(row.createdHlc)];
       if (name !== undefined && !pending(kind, row.id, 'name')) {
         if (await nameTaken(table, row.id, name)) {
           deferred += 1;
@@ -132,7 +134,6 @@ export const sqlitePulledRowsApplier = (
           params.push(e.value);
         }
       }
-      if (sets.length === 0) return;
       await write(db, `UPDATE ${table} SET ${sets.join(', ')} WHERE id = ?`, [
         ...params,
         row.id,

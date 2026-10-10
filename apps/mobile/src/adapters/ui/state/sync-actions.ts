@@ -12,6 +12,8 @@ export type SyncActions = {
    * the pull removed (R10a). `failed` is true when the cycle ended in `waiting` or `failed`.
    */
   syncNow: () => Promise<{ failed: boolean }>;
+  /** Tells the user a pull removed what a form was editing; the form then closes itself. */
+  noticeRemoteRemoval: (reason: 'articleDeleted' | 'itemRemoved') => void;
   /** Pairs this device with a server (US4-4). */
   connectToServer: (
     url: string,
@@ -95,6 +97,23 @@ export const createSyncActions = ({
     endedRemotely.add(undoId);
   };
 
+  /** Remembers the merges and tells the open forms what the pull removed (research R10a). */
+  const publishEffects = (effects: SyncResult['effects']) => {
+    const { redirects, remote } = get().sync;
+    setSync({
+      redirects: {
+        ...redirects,
+        ...Object.fromEntries(
+          effects.merges.map(({ loserId, survivorId }) => [
+            loserId,
+            survivorId,
+          ]),
+        ),
+      },
+      remote: { cycle: remote.cycle + 1, effects },
+    });
+  };
+
   const applyOutcome = (result: SyncResult) => {
     const { outcome } = result;
     switch (outcome.type) {
@@ -157,6 +176,7 @@ export const createSyncActions = ({
     }
     applyOutcome(result);
     endOfferOfDeleted(result.effects);
+    publishEffects(result.effects);
     if (result.pulledRows > 0) await get().refresh();
     // `disconnectedByServer` and `updateRequired` come from the cycle, which knows more.
     await loadSyncInfo(
@@ -214,5 +234,15 @@ export const createSyncActions = ({
     return ok(undefined);
   };
 
-  return { syncNow, connectToServer };
+  const noticeRemoteRemoval: SyncActions['noticeRemoteRemoval'] = (reason) =>
+    set({
+      notice: {
+        type:
+          reason === 'articleDeleted'
+            ? 'articleDeletedElsewhere'
+            : 'itemRemovedElsewhere',
+      },
+    });
+
+  return { syncNow, connectToServer, noticeRemoteRemoval };
 };

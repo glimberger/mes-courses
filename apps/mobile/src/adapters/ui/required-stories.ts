@@ -18,6 +18,8 @@ export const requiredStories: readonly string[] = [
   'Components/ListItemRow/LongName',
   'Components/NoticeSnackbar/WriteFailed',
   'Components/NoticeSnackbar/StorageFull',
+  'Components/NoticeSnackbar/ArticleDeletedElsewhere',
+  'Components/NoticeSnackbar/ItemRemovedElsewhere',
   'Screens/CurrentList/Loading',
   'Screens/CurrentList/Error',
   'Screens/CurrentList/Empty',

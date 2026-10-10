@@ -25,6 +25,7 @@ import { nameErrorText, NameField } from '../components/NameField';
 import type { RootStackParamList } from '../routes';
 import { useAppStoreApi } from '../state/app-store-provider';
 import { useAppStore } from '../state/use-app-store';
+import { useRemoteRemoval } from '../state/use-remote-removal';
 import { spacing } from '../theme/spacing';
 
 /**
@@ -90,6 +91,12 @@ const LoadedEditArticle = ({
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const editArticle = useAppStore((state) => state.editArticle);
+  const noticeRemoteRemoval = useAppStore((state) => state.noticeRemoteRemoval);
+  // A pull that deletes the article closes the form (FR-020a).
+  useRemoteRemoval({ articleId }, (reason) => {
+    noticeRemoteRemoval(reason);
+    if (navigation.isFocused() && navigation.canGoBack()) navigation.goBack();
+  });
   const [name, setName] = useState(initial.name);
   const [categoryId, setCategoryId] = useState<CategoryId>(initial.categoryId);
   const [nameError, setNameError] = useState<string | null>(null);

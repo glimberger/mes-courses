@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import type { ServerRow } from '@mes-courses/sync-core';
 
 import type { UnitOfWork } from '../../../application/ports/unit-of-work';
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
@@ -6,6 +7,10 @@ import type { ArticleId } from '../../../domain/article';
 import { EditArticleScreen } from './EditArticleScreen';
 import { Navigation } from '../navigation';
 import { fixture } from '../testing/fixtures';
+import {
+  OTHER_DEVICE_HLC,
+  pullingSyncServer,
+} from '../testing/pulling-sync-server';
 import { renderWithStore } from '../testing/render-with-store';
 import type { Fixture, StoryScenario } from '../testing/story-store';
 
@@ -301,5 +306,61 @@ describe('EditArticle and the "ajouté" notice', () => {
     });
 
     await waitFor(() => expect(store.getState().notice).toBeNull());
+  });
+
+  describe('a pull while the form is open (FR-020a)', () => {
+    const stamp = OTHER_DEVICE_HLC;
+    const server = pullingSyncServer();
+    const connectedScenario: StoryScenario = {
+      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      syncServer: server.syncServer,
+    };
+    const pull = (
+      store: { getState: () => { syncNow: () => Promise<unknown> } },
+      sent: ServerRow[],
+    ) =>
+      act(async () => {
+        server.send(sent);
+        await store.getState().syncNow();
+      });
+    const articleRow = (deleted: boolean, name = 'Lait'): ServerRow => ({
+      kind: 'article',
+      id: lait,
+      seq: 1,
+      fields: {
+        name: { value: name, hlc: stamp },
+        categoryId: { value: 'category-0', hlc: stamp },
+      },
+      createdHlc: stamp,
+      deletedHlc: deleted ? stamp : null,
+      mergedInto: null,
+    });
+
+    it('keeps the typed name when the pull changes the article', async () => {
+      const { store, storedName } = await openEditLait(connectedScenario);
+      type('Lait entier');
+
+      await pull(store, [articleRow(false, 'Lait demi-écrémé')]);
+
+      expect(screen.getByLabelText('Nom')).toHaveDisplayValue('Lait entier');
+      save();
+      await waitFor(async () => expect(await storedName()).toBe('Lait entier'));
+    });
+
+    it('closes with "Cet article a été supprimé sur un autre appareil." when the pull deletes the article', async () => {
+      const { store } = await openEditLait(connectedScenario);
+      type('Lait entier');
+
+      await pull(store, [articleRow(true)]);
+
+      await waitFor(() =>
+        expect(screen.queryByText("Modifier l'article")).toBeNull(),
+      );
+      expect(
+        await screen.findByText(
+          'Cet article a été supprimé sur un autre appareil.',
+        ),
+      ).toBeOnTheScreen();
+    });
   });
 });

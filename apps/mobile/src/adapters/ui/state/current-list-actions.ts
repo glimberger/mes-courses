@@ -59,6 +59,7 @@ export const createCurrentListActions = ({
   useCases,
   runWrite,
   region,
+  follow,
 }: StoreKit): CurrentListActions => {
   // Per item of a list, its taps not saved yet. A view read from storage is shown with the items
   // whose count is odd flipped, so a reload never undoes a tick still waiting in the queue. A
@@ -116,7 +117,10 @@ export const createCurrentListActions = ({
         if (unsaved.get(ref) !== taps) return err({ type: 'Dropped' });
         // The item's state is settled here, before the next write of the queue starts.
         try {
-          const saved = await useCases.toggleItemInCart(listId, articleId);
+          const saved = await useCases.toggleItemInCart(
+            listId,
+            follow(articleId),
+          );
           taps.count -= 1;
           if (!saved.ok || taps.count === 0) unsaved.delete(ref);
           return saved;

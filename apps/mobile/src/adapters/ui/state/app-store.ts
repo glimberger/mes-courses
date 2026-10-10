@@ -161,6 +161,17 @@ export const createAppStoreWith = <Actions extends object>(
       useCases,
       endUndo,
       releaseOffer,
+      follow: <T extends string>(id: T): T => {
+        const { redirects } = get().sync;
+        let current: string = id;
+        // A merge never loops (the survivor is older), but a guard keeps a bad map harmless.
+        for (let hops = 0; hops <= Object.keys(redirects).length; hops += 1) {
+          const next = redirects[current];
+          if (next === undefined) break;
+          current = next;
+        }
+        return current as T;
+      },
       onLocalWrite: () => onLocalWrite?.(),
       endedRemotely,
       runWrite: <T, E extends { type: string }, X extends E['type']>(
@@ -227,6 +238,11 @@ export const createAppStoreWith = <Actions extends object>(
         pendingCount: 0,
         lastSyncAt: null,
         serverUrl: null,
+        redirects: {},
+        remote: {
+          cycle: 0,
+          effects: { deletedArticles: [], removedItems: [], merges: [] },
+        },
       },
       notice: null,
       refresh,

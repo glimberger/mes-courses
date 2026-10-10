@@ -322,6 +322,79 @@ describe('sync', () => {
     expect(serverHlc.wallMs).toBeLessThanOrEqual(NOW + 60_000);
   });
 
+  it('003 US2 wrong clock: a device with its clock in the future does not beat an honest change made 2 minutes later', async () => {
+    const { run, clock } = await setup();
+    const future = NOW + 24 * 3600 * 1000;
+    const rename = (changeId: string, name: string, at: number): Change => ({
+      changeId,
+      hlc: hlc(at),
+      kind: 'list',
+      id: 'l-1',
+      fields: { name },
+    });
+    await run([createList('ch-0', 'l-1', 'Départ', NOW - 1000)]);
+
+    await run([rename('ch-1', 'Horloge fausse', future)], 0, hlc(future));
+    clock.ms = NOW + 120_000;
+    const { rows } = await run(
+      [rename('ch-2', 'Horloge juste', NOW + 120_000)],
+      0,
+      hlc(NOW + 120_000),
+    );
+
+    const list = rowOf(rows, 'list', 'l-1');
+    expect(list?.kind === 'list' && list.fields.name?.value).toBe(
+      'Horloge juste',
+    );
+  });
+
+  it('003 US2 the server hlc returned to a slow device makes its next change win over older ones', async () => {
+    const { run, clock } = await setup();
+    await run([createList('ch-0', 'l-1', 'Départ', NOW - 1000)]);
+    clock.ms = NOW + 30_000;
+    await run(
+      [
+        {
+          changeId: 'ch-1',
+          hlc: hlc(NOW + 30_000, 'd-2'),
+          kind: 'list',
+          id: 'l-1',
+          fields: { name: 'Récent' },
+        },
+      ],
+      0,
+      hlc(NOW + 30_000, 'd-2'),
+      'd-1',
+    );
+
+    // A slow device (clock 10 minutes behind) pulls, receives the server HLC, then writes.
+    const slow = await run([], 0, hlc(NOW - 600_000, 'd-3'));
+    expect(slow.hlc.wallMs).toBeGreaterThanOrEqual(NOW + 30_000);
+    const next: Hlc = {
+      ...slow.hlc,
+      counter: slow.hlc.counter + 1,
+      deviceId: 'd-3',
+    };
+    const { rows } = await run(
+      [
+        {
+          changeId: 'ch-2',
+          hlc: next,
+          kind: 'list',
+          id: 'l-1',
+          fields: { name: 'Après rattrapage' },
+        },
+      ],
+      0,
+      next,
+    );
+
+    const list = rowOf(rows, 'list', 'l-1');
+    expect(list?.kind === 'list' && list.fields.name?.value).toBe(
+      'Après rattrapage',
+    );
+  });
+
   it('applies nothing when a change fails midway', async () => {
     const { run, store } = await setup();
     const realRun = store.run.bind(store);
