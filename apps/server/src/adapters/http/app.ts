@@ -5,6 +5,7 @@ import { isBelow } from '../../domain/version';
 import { authenticate } from './auth';
 import type { AppDeps } from './deps';
 import { sendError } from './errors';
+import { registerDeviceRoutes } from './routes/devices';
 import { registerHealthRoutes } from './routes/health';
 import { registerPairingRoutes } from './routes/pairing';
 import { registerSyncRoutes } from './routes/sync';
@@ -81,6 +82,7 @@ export const buildApp = (deps: AppDeps): FastifyInstance => {
   });
 
   registerHealthRoutes(app);
+  registerDeviceRoutes(app, deps);
   registerPairingRoutes(app, deps);
   registerSyncRoutes(app, deps);
 

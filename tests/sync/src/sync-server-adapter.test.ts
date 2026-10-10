@@ -96,18 +96,6 @@ describe('SyncServer HTTP adapter', () => {
       });
     });
 
-    it('returns an error, not a rejection, for methods not implemented yet', async () => {
-      const syncServer = createSyncServer({ appVersion: APP_VERSION });
-
-      const result = await syncServer.listDevices({
-        url: server.url,
-        deviceId: 'd',
-        credential: 'c',
-      });
-
-      expect(result).toEqual({ ok: false, error: { type: 'ServerError' } });
-    });
-
     it('reports ServerUnreachable when the connection is refused', async () => {
       const syncServer = createSyncServer({ appVersion: APP_VERSION });
 
@@ -491,6 +479,121 @@ describe('SyncServer HTTP adapter', () => {
       );
 
       expect(result).toEqual({ ok: false, error: { type: 'ServerError' } });
+    });
+  });
+  describe('device management', () => {
+    const pairDevice = async (
+      syncServer: ReturnType<typeof createSyncServer>,
+    ) => {
+      const pairing = await syncServer.claim(
+        server.url,
+        await server.createPairingCode(),
+        'Pixel',
+      );
+      if (!pairing.ok) throw new Error('claim failed');
+      return {
+        url: server.url,
+        deviceId: pairing.value.deviceId,
+        credential: pairing.value.credential,
+      };
+    };
+
+    it('003 US4-8 listDevices returns the authorized devices', async () => {
+      const syncServer = createSyncServer({ appVersion: APP_VERSION });
+      const conn = await pairDevice(syncServer);
+      const other = await pairDevice(syncServer);
+
+      const result = await syncServer.listDevices(conn);
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.value.map((d) => d.id).sort()).toEqual(
+        [conn.deviceId, other.deviceId].sort(),
+      );
+      expect(result.value[0]).toEqual({
+        id: expect.any(String),
+        name: 'Pixel',
+        createdAt: expect.any(String),
+        lastSyncAt: null,
+      });
+    });
+
+    it('renameDevice renames, and maps an unknown id to NotFound', async () => {
+      const syncServer = createSyncServer({ appVersion: APP_VERSION });
+      const conn = await pairDevice(syncServer);
+
+      const renamed = await syncServer.renameDevice(
+        conn,
+        conn.deviceId,
+        'Pixel de Marie',
+      );
+      const listed = await syncServer.listDevices(conn);
+      const missing = await syncServer.renameDevice(conn, 'unknown', 'X');
+
+      expect(renamed).toEqual({ ok: true, value: undefined });
+      expect(listed.ok && listed.value[0]?.name).toBe('Pixel de Marie');
+      expect(missing).toEqual({ ok: false, error: { type: 'NotFound' } });
+    });
+
+    it('003 US4-9 revokeDevice revokes: the device gets DeviceNotAuthorized', async () => {
+      const syncServer = createSyncServer({ appVersion: APP_VERSION });
+      const conn = await pairDevice(syncServer);
+      const other = await pairDevice(syncServer);
+
+      const revoked = await syncServer.revokeDevice(conn, other.deviceId);
+      const again = await syncServer.revokeDevice(conn, other.deviceId);
+      const refused = await syncServer.listDevices(other);
+
+      expect(revoked).toEqual({ ok: true, value: undefined });
+      expect(again).toEqual({ ok: false, error: { type: 'NotFound' } });
+      expect(refused).toEqual({
+        ok: false,
+        error: { type: 'DeviceNotAuthorized' },
+      });
+    });
+
+    it.each([
+      [401, { type: 'DeviceNotAuthorized' }],
+      [426, { type: 'UpdateRequired' }],
+      [500, { type: 'ServerError' }],
+    ])('maps %i to %o on every device method', async (status, error) => {
+      const syncServer = createSyncServer({
+        appVersion: APP_VERSION,
+        fetch: async () => new Response('{}', { status }),
+      });
+      const conn = { url: server.url, deviceId: 'd', credential: 'c' };
+
+      for (const result of [
+        await syncServer.listDevices(conn),
+        await syncServer.renameDevice(conn, 'x', 'Name'),
+        await syncServer.revokeDevice(conn, 'x'),
+      ]) {
+        expect(result).toEqual({ ok: false, error });
+      }
+    });
+
+    it('maps a refused connection to Offline and a TLS error to UntrustedServer', async () => {
+      const closed = createSyncServer({ appVersion: APP_VERSION });
+      const tls = createSyncServer({
+        appVersion: APP_VERSION,
+        fetch: async () => {
+          throw new Error('TLS certificate verification failed');
+        },
+      });
+      const gone = {
+        url: 'http://127.0.0.1:9',
+        deviceId: 'd',
+        credential: 'c',
+      };
+
+      expect(await closed.listDevices(gone)).toEqual({
+        ok: false,
+        error: { type: 'Offline' },
+      });
+      expect(await tls.revokeDevice(gone, 'x')).toEqual({
+        ok: false,
+        error: { type: 'UntrustedServer' },
+      });
     });
   });
 });

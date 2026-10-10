@@ -2,11 +2,12 @@ import { StorageFull } from '../../../application/ports/storage-full';
 import type { ConnectError } from '../../../application/use-cases/connect-to-server';
 import type { SyncResult } from '../../../application/use-cases/synchronize';
 import { err, ok, type Result } from '../../../domain/result';
+import { createDeviceActions, type DeviceActions } from './device-actions';
 import type { StoreKit, SyncSlice, WriteFailed } from './store-kit';
 import { UnexpectedResult } from './unexpected-result';
 
 /** The actions of the `sync` slice (research R14). */
-export type SyncActions = {
+export type SyncActions = DeviceActions & {
   /**
    * Runs one cycle: sets the slice, reloads the regions when rows were pulled, and reacts to what
    * the pull removed (R10a). `failed` is true when the cycle ended in `waiting` or `failed`.
@@ -29,15 +30,16 @@ export type SyncActions = {
 /** Failures in a row (5xx, unexpected response, unverifiable certificate) before `failed`. */
 const FAILURES_BEFORE_FAILED = 3;
 
-export const createSyncActions = ({
-  get,
-  set,
-  useCases,
-  report,
-  releaseOffer,
-  endedRemotely,
-  onLocalWrite,
-}: StoreKit): SyncActions => {
+export const createSyncActions = (kit: StoreKit): SyncActions => {
+  const {
+    get,
+    set,
+    useCases,
+    report,
+    releaseOffer,
+    endedRemotely,
+    onLocalWrite,
+  } = kit;
   const setSync = (partial: Partial<SyncSlice>) =>
     set({ sync: { ...get().sync, ...partial } });
 
@@ -273,5 +275,24 @@ export const createSyncActions = ({
     });
   };
 
-  return { syncNow, retry: syncNow, connectToServer, noticeRemoteRemoval };
+  const devices = createDeviceActions(kit, {
+    loadSyncInfo,
+    waitForCycle: async () => {
+      // A failed cycle is not ours to report here: only its end matters.
+      await inFlight?.catch(() => undefined);
+    },
+    setSync,
+    resetFailures: () => {
+      failureStreak = 0;
+      failureReported = false;
+    },
+  });
+
+  return {
+    syncNow,
+    retry: syncNow,
+    connectToServer,
+    noticeRemoteRemoval,
+    ...devices,
+  };
 };

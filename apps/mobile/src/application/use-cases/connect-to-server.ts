@@ -8,6 +8,7 @@ import type {
   UntrustedServer,
 } from '../ports/sync-server';
 import type { UnitOfWork } from '../ports/unit-of-work';
+import { normalizeUrl } from './normalize-url';
 
 /** The address typed is not a usable server address. */
 export type InvalidUrl = { type: 'InvalidUrl' };
@@ -22,24 +23,6 @@ export type ConnectError =
   | UntrustedServer
   | InvalidCode
   | TooManyAttempts;
-
-/** `host`, `host:port` or an IPv4 address; letters, digits, dots and hyphens in the host. */
-const HOST = /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{1,5})?$/;
-
-/**
- * The server address as stored: `https://` added when no scheme is typed, host in lower case,
- * trailing slashes dropped. `http://` is refused unless `allowInsecure` (development only,
- * FR-019). Returns `null` for anything else.
- */
-const normalizeUrl = (typed: string, allowInsecure: boolean): string | null => {
-  const match = /^(?:([a-z][a-z0-9+.-]*):\/\/)?(.*)$/i.exec(typed.trim());
-  const scheme = (match?.[1] ?? 'https').toLowerCase();
-  if (scheme !== 'https' && !(scheme === 'http' && allowInsecure)) return null;
-  const rest = (match?.[2] ?? '').replace(/\/+$/, '');
-  const [authority = '', ...path] = rest.split('/');
-  if (!HOST.test(authority.toLowerCase())) return null;
-  return `${scheme}://${[authority.toLowerCase(), ...path].join('/')}`;
-};
 
 /**
  * Pairs this device with a server (US4-4, US4-6): checks the server answers, claims the code, then

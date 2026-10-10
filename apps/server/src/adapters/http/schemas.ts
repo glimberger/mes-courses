@@ -17,6 +17,14 @@ export const pairingCodesBodySchema = {
   type: ['object', 'null'],
 } as const;
 
+/** `PATCH /v1/devices/:id`; the use case enforces 1–60 characters after trimming. */
+export const renameDeviceBodySchema = {
+  type: 'object',
+  required: ['name'],
+  additionalProperties: false,
+  properties: { name: { type: 'string', maxLength: 200 } },
+} as const;
+
 const hlcSchema = {
   type: 'object',
   required: ['wallMs', 'counter', 'deviceId'],

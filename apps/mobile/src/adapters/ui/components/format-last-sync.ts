@@ -1,5 +1,8 @@
 const pad = (n: number) => String(n).padStart(2, '0');
 const time = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+/** The hour of day of an instant, "14:05", in the device's time zone. */
+export const formatClockTime = (iso: string): string => time(new Date(iso));
 const startOfDay = (d: Date) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 const DAY_MS = 24 * 60 * 60 * 1000;
