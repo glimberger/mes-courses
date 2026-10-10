@@ -491,6 +491,24 @@ describe('pulled rows applier', () => {
       );
     });
 
+    it('applies a plain delete before a new row of the same name', async () => {
+      const { db, applier } = await setup();
+      await applier.apply(
+        [categoryRow('c-1', 'Fruits', 1), articleRow('a-1', 'Lait', 'c-1')],
+        NO_PENDING,
+      );
+
+      await applier.apply(
+        [
+          articleRow('a-1', 'Lait', 'c-1', { deletedHlc: hlc(20) }),
+          articleRow('a-2', 'Lait', 'c-1'),
+        ],
+        NO_PENDING,
+      );
+
+      expect(await all(db, `SELECT id FROM article`)).toEqual([{ id: 'a-2' }]);
+    });
+
     it('R8a follows the mergedInto chain to the final survivor', async () => {
       const { db, applier } = await setup();
 

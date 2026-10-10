@@ -138,18 +138,22 @@ const resendChildren = async (
   survivorId: string,
   seq: number,
 ) => {
+  const resendItems = async (items: ListItemRecord[]) => {
+    for (const item of items) {
+      if (item.present) await repos.items.save({ ...item, seq });
+    }
+  };
   if (kind === 'category') {
     for (const article of await repos.articles.inCategory(survivorId)) {
-      if (article.deletedHlc === null)
-        await repos.articles.save({ ...article, seq });
+      if (article.deletedHlc !== null) continue;
+      await repos.articles.save({ ...article, seq });
+      await resendItems(await repos.items.forArticle(article.id));
     }
-    return;
+  } else if (kind === 'article') {
+    await resendItems(await repos.items.forArticle(survivorId));
+  } else {
+    await resendItems(await repos.items.forList(survivorId));
   }
-  const items =
-    kind === 'article'
-      ? await repos.items.forArticle(survivorId)
-      : await repos.items.forList(survivorId);
-  for (const item of items) await repos.items.save({ ...item, seq });
 };
 
 /**

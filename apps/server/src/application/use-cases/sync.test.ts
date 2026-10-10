@@ -703,6 +703,32 @@ describe('sync', () => {
       ]);
     });
 
+    it('sends the items of the articles of a surviving category again with it', async () => {
+      const { run } = await setup();
+      await run([
+        createCategory('ch-1', 'c-1', 'Bio', NOW - 4000),
+        createArticle('ch-2', 'a-1', 'Lait', 'c-1', NOW - 4000),
+        createList('ch-3', 'l-1', 'Ma liste', NOW - 4000),
+        putItem('ch-4', 'l-1', 'a-1', NOW - 3900),
+      ]);
+      const before = (await state(run)).reduce(
+        (max, row) => Math.max(max, row.seq),
+        0,
+      );
+
+      const { rows } = await run(
+        [createCategory('ch-5', 'c-2', 'bio', NOW - 100)],
+        before,
+      );
+
+      expect(rows.map((row) => row.id).sort()).toEqual([
+        'a-1',
+        'c-1',
+        'c-2',
+        'l-1:a-1',
+      ]);
+    });
+
     it('sends the items of a surviving article again with it', async () => {
       const { run } = await setup();
       await run([
