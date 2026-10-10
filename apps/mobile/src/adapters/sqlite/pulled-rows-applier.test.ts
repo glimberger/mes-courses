@@ -469,6 +469,28 @@ describe('pulled rows applier', () => {
       ]);
     });
 
+    it('merges whatever the order of the survivor and the tombstone in the batch', async () => {
+      const { db, applier } = await setup();
+
+      await applier.apply(
+        [
+          listRow('l-0', 'Ma liste', {
+            deletedHlc: hlc(20),
+            mergedInto: 'l-1',
+          }),
+          listRow('l-1', 'Ma liste'),
+        ],
+        NO_PENDING,
+      );
+
+      expect(await all(db, `SELECT current_list_id FROM app_state`)).toEqual([
+        { current_list_id: 'l-1' },
+      ]);
+      expect(await all(db, `SELECT id FROM shopping_list ORDER BY id`)).toEqual(
+        [{ id: 'l-1' }],
+      );
+    });
+
     it('R8a follows the mergedInto chain to the final survivor', async () => {
       const { db, applier } = await setup();
 

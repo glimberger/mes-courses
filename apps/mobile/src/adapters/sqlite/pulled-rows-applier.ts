@@ -139,8 +139,12 @@ export const sqlitePulledRowsApplier = (
       ]);
     };
 
+    // By kind, then tombstones last: a merge tombstone needs its survivor written first, and both
+    // can come under one seq.
     const ordered = [...rows].sort(
-      (a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind],
+      (a, b) =>
+        KIND_ORDER[a.kind] - KIND_ORDER[b.kind] ||
+        Number(a.deletedHlc !== null) - Number(b.deletedHlc !== null),
     );
 
     for (const row of ordered) {
