@@ -67,6 +67,17 @@ export const requiredStories: readonly string[] = [
   // 003 Server sync
   'Screens/Settings/NotConnected',
   'Screens/Settings/Connected',
+  // User Story 4
+  'Screens/Settings/DevicesLoading',
+  'Screens/Settings/DevicesError',
+  'Screens/Settings/DevicesOffline',
+  'Dialogs/PairingCodeDialog/Code',
+  'Dialogs/PairingCodeDialog/Offline',
+  'Dialogs/RevokeDeviceDialog/Default',
+  'Dialogs/DisconnectDialog/Default',
+  'Dialogs/RenameDeviceDialog/Default',
+  'Dialogs/ChangeServerUrlDialog/Default',
+  'Dialogs/ChangeServerUrlDialog/ServerMismatch',
   'Screens/ConnectServer/Default',
   'Screens/ConnectServer/ServerUnreachable',
   'Screens/ConnectServer/InvalidCode',

@@ -469,20 +469,20 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
 
 ### Tests for User Story 4 ⚠️ (write first, confirm they fail)
 
-- [ ] T093 [P] [US4] Write failing server use case tests in `apps/server/src/application/use-cases/devices.test.ts`:
+- [X] T093 [P] [US4] Write failing server use case tests in `apps/server/src/application/use-cases/devices.test.ts`:
   - `listDevices` excludes revoked ones and returns `{ id, name, createdAt, lastSyncAt }` (US4-8);
   - `renameDevice` trims to 1–60 characters, or `NotFound`;
   - `revokeDevice` sets `revokedAt`, and the next request from that device is refused (US4-9, SC-009);
   - a device may revoke itself (US4-11).
-- [ ] T094 [P] [US4] Write failing HTTP tests in `apps/server/src/adapters/http/devices-route.test.ts` for `GET /v1/devices`, `PATCH /v1/devices/:id` and `DELETE /v1/devices/:id` (`200`/`204`/`404`, auth required).
-- [ ] T095 [P] [US4] Write failing app use case tests in `apps/mobile/src/application/use-cases/`, one file each, on fakes and a fake `SyncServer`:
+- [X] T094 [P] [US4] Write failing HTTP tests in `apps/server/src/adapters/http/devices-route.test.ts` for `GET /v1/devices`, `PATCH /v1/devices/:id` and `DELETE /v1/devices/:id` (`200`/`204`/`404`, auth required).
+- [X] T095 [P] [US4] Write failing app use case tests in `apps/mobile/src/application/use-cases/`, one file each, on fakes and a fake `SyncServer`:
   - `create-pairing-code.test.ts`: US4-3, and `Offline`;
   - `list-devices.test.ts`: marks `isThisDevice`;
   - `rename-device.test.ts`: 001's `validateName` errors;
   - `revoke-device.test.ts`: US4-9;
   - `disconnect.test.ts` (US4-11): it revokes itself when the server is reachable, otherwise best effort; it clears the credential and the connection fields; it keeps the local data and the outbox; `connection` becomes `notConnected`.
-- [ ] T096 [US4] Extend `tests/sync/sync-server-adapter.test.ts` with failing tests for `createPairingCode`, `listDevices`, `renameDevice` and `revokeDevice` against `startTestServer()`.
-- [ ] T097 [US4] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/settings-screen.test.tsx`, with the texts of [contracts/ui-screens.md](contracts/ui-screens.md#settings-new-screen):
+- [X] T096 [US4] Extend `tests/sync/sync-server-adapter.test.ts` with failing tests for `createPairingCode`, `listDevices`, `renameDevice` and `revokeDevice` against `startTestServer()`.
+- [X] T097 [US4] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/settings-screen.test.tsx`, with the texts of [contracts/ui-screens.md](contracts/ui-screens.md#settings-new-screen):
   - the Appareils section: rows with the name, "Dernière synchronisation : …" and "Cet appareil"; loading; error "Impossible de charger les appareils." with "Réessayer"; offline "Liste des appareils indisponible hors connexion." (not reported);
   - "Renommer" dialog;
   - "Modifier l'adresse" dialog with each outcome message of T101a, including "Cette adresse ne correspond pas à votre serveur.";
@@ -490,7 +490,7 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
   - "Déconnecter cet appareil ?" dialog;
   - `PairingCodeDialog` "Ajouter un appareil" showing "ABCD-EF23" and "Valable jusqu'à {heure}.", with the offline message "Connexion au serveur nécessaire pour ajouter un appareil.";
   - with `connection = disconnectedByServer`, the bar shows "Cet appareil n'est plus connecté au serveur." and "Se reconnecter" opens ConnectServer (US4-10).
-- [ ] T098 [US4] Write a failing scenario test in `tests/sync/revocation.test.ts` (and one in `tests/sync/change-server-url.test.ts`: a second `startTestServer()` on the same database answers at a new address, the device switches to it, keeps its credential and syncs; a server with another identity is refused):
+- [X] T098 [US4] Write a failing scenario test in `tests/sync/revocation.test.ts` (and one in `tests/sync/change-server-url.test.ts`: a second `startTestServer()` on the same database answers at a new address, the device switches to it, keeps its credential and syncs; a server with another identity is refused):
   - A creates a code and B claims it (US4-3, US4-4);
   - A revokes B; B's next cycle → `disconnectedByServer`, with B's data and outbox kept (US4-10, SC-009);
   - B pairs again with a new code and its waiting changes are sent;
@@ -499,13 +499,13 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
 
 ### Implementation for User Story 4
 
-- [ ] T099 [US4] Implement `apps/server/src/application/use-cases/{list-devices,rename-device,revoke-device}.ts` and `apps/server/src/adapters/http/routes/devices.ts` to turn T093–T094 green.
-- [ ] T100 [US4] Add `createPairingCode`, `listDevices`, `renameDevice` and `revokeDevice` to `apps/mobile/src/adapters/sync-http/sync-server.ts` to turn T096 green.
-- [ ] T101 [US4] Implement `apps/mobile/src/application/use-cases/{create-pairing-code,list-devices,rename-device,revoke-device,disconnect}.ts` to turn T095 green. Add them to `UseCases`, to the composition root and to store actions in `apps/mobile/src/adapters/ui/state/app-store.ts`.
-- [ ] T101a [US4] Test-first, implement `apps/mobile/src/application/use-cases/change-server-url.ts` with its test: it normalizes the address like `connectToServer`; calls `health` on the new address; when its `serverId` equals the stored one, it updates `serverUrl` only and keeps the credential, the pending changes and `lastSeq`; a different `serverId` returns `ServerMismatch`, `ServerUnreachable` and `UntrustedServer` are returned as such, and in every failure nothing changes (spec edge case "domain name changes", FR-016). Add it to `UseCases`, to the composition root and to a store action in `apps/mobile/src/adapters/ui/state/app-store.ts`.
-- [ ] T102 [US4] Implement the Appareils and Actions sections of `SettingsScreen.tsx`, the "Modifier l'adresse" button and `ChangeServerUrlDialog.tsx`, `apps/mobile/src/adapters/ui/screens/PairingCodeDialog.tsx`, `RenameDeviceDialog.tsx`, `RevokeDeviceDialog.tsx`, `DisconnectDialog.tsx`, and the "Se reconnecter" action of `SyncStatusBar`, to turn T097 green.
-- [ ] T103 [US4] Add `Screens/Settings/DevicesLoading`, `.../DevicesError`, `.../DevicesOffline`, `Dialogs/PairingCodeDialog/Code`, `.../Offline`, `Dialogs/RevokeDeviceDialog/Default`, `Dialogs/DisconnectDialog/Default` and `Dialogs/RenameDeviceDialog/Default`, `Dialogs/ChangeServerUrlDialog/Default` and `.../ServerMismatch` to `required-stories.ts` and see the story test fail. Then extend `SettingsScreen.stories.tsx` (`pending` and `failing` `listDevices`, and the fake unreachable) and write `PairingCodeDialog.stories.tsx`, `RevokeDeviceDialog.stories.tsx`, `DisconnectDialog.stories.tsx`, `RenameDeviceDialog.stories.tsx` and `ChangeServerUrlDialog.stories.tsx` in `apps/mobile/src/adapters/ui/screens/` to turn it green. Review them in Storybook on both platforms.
-- [ ] T104 [US4] Make `tests/sync/revocation.test.ts` (T098) green. Each fix it forces starts with its own failing unit test first.
+- [X] T099 [US4] Implement `apps/server/src/application/use-cases/{list-devices,rename-device,revoke-device}.ts` and `apps/server/src/adapters/http/routes/devices.ts` to turn T093–T094 green.
+- [X] T100 [US4] Add `createPairingCode`, `listDevices`, `renameDevice` and `revokeDevice` to `apps/mobile/src/adapters/sync-http/sync-server.ts` to turn T096 green.
+- [X] T101 [US4] Implement `apps/mobile/src/application/use-cases/{create-pairing-code,list-devices,rename-device,revoke-device,disconnect}.ts` to turn T095 green. Add them to `UseCases`, to the composition root and to store actions in `apps/mobile/src/adapters/ui/state/app-store.ts`.
+- [X] T101a [US4] Test-first, implement `apps/mobile/src/application/use-cases/change-server-url.ts` with its test: it normalizes the address like `connectToServer`; calls `health` on the new address; when its `serverId` equals the stored one, it updates `serverUrl` only and keeps the credential, the pending changes and `lastSeq`; a different `serverId` returns `ServerMismatch`, `ServerUnreachable` and `UntrustedServer` are returned as such, and in every failure nothing changes (spec edge case "domain name changes", FR-016). Add it to `UseCases`, to the composition root and to a store action in `apps/mobile/src/adapters/ui/state/app-store.ts`.
+- [X] T102 [US4] Implement the Appareils and Actions sections of `SettingsScreen.tsx`, the "Modifier l'adresse" button and `ChangeServerUrlDialog.tsx`, `apps/mobile/src/adapters/ui/screens/PairingCodeDialog.tsx`, `RenameDeviceDialog.tsx`, `RevokeDeviceDialog.tsx`, `DisconnectDialog.tsx`, and the "Se reconnecter" action of `SyncStatusBar`, to turn T097 green.
+- [X] T103 [US4] Add `Screens/Settings/DevicesLoading`, `.../DevicesError`, `.../DevicesOffline`, `Dialogs/PairingCodeDialog/Code`, `.../Offline`, `Dialogs/RevokeDeviceDialog/Default`, `Dialogs/DisconnectDialog/Default` and `Dialogs/RenameDeviceDialog/Default`, `Dialogs/ChangeServerUrlDialog/Default` and `.../ServerMismatch` to `required-stories.ts` and see the story test fail. Then extend `SettingsScreen.stories.tsx` (`pending` and `failing` `listDevices`, and the fake unreachable) and write `PairingCodeDialog.stories.tsx`, `RevokeDeviceDialog.stories.tsx`, `DisconnectDialog.stories.tsx`, `RenameDeviceDialog.stories.tsx` and `ChangeServerUrlDialog.stories.tsx` in `apps/mobile/src/adapters/ui/screens/` to turn it green. Review them in Storybook on both platforms.
+- [X] T104 [US4] Make `tests/sync/revocation.test.ts` (T098) green. Each fix it forces starts with its own failing unit test first.
 
 **Checkpoint**: all four stories work. Devices are paired, managed and revoked from the app.
 

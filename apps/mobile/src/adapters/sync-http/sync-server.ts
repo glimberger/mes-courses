@@ -1,6 +1,7 @@
 import type {
   ErrorBody,
   HealthInfo,
+  DeviceSummary,
   Pairing,
   PairingCode,
   SyncRequest,
@@ -9,6 +10,7 @@ import type {
 import { err, ok, type Result } from '../../domain/result';
 import type {
   Connection,
+  DeviceNotFound,
   SyncFailure,
   SyncServer,
 } from '../../application/ports/sync-server';
@@ -57,10 +59,6 @@ const minutesToWait = (header: string | null): number => {
   return Number.isFinite(seconds) ? Math.max(1, Math.ceil(seconds / 60)) : 1;
 };
 
-/** Until the stories that need them: a failure the caller can handle, never a rejection. */
-const notImplemented = async (): Promise<Result<never, SyncFailure>> =>
-  err({ type: 'ServerError' });
-
 const parseBody = async (response: Response): Promise<unknown> => {
   try {
     return await response.json();
@@ -81,7 +79,11 @@ export const createSyncServer = ({
   const send = async (
     url: string,
     path: string,
-    init: { method: 'GET' | 'POST'; body?: unknown; credential?: string },
+    init: {
+      method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+      body?: unknown;
+      credential?: string;
+    },
   ): Promise<Answer> => {
     const headers: Record<string, string> = { 'X-App-Version': appVersion };
     if (init.body !== undefined) headers['Content-Type'] = 'application/json';
@@ -123,6 +125,22 @@ export const createSyncServer = ({
     if (answer.status === 401) return { type: 'DeviceNotAuthorized' };
     if (answer.status === 426) return { type: 'UpdateRequired' };
     return { type: 'ServerError' };
+  };
+
+  const transportFailure = (
+    answer: Exclude<Answer, { kind: 'response' }>,
+  ): Result<never, SyncFailure> =>
+    err({ type: answer.kind === 'untrusted' ? 'UntrustedServer' : 'Offline' });
+
+  /** A rename or a revocation: `success` is the status of a done request, 404 an unknown device. */
+  const deviceOutcome = (
+    answer: Answer,
+    success: number,
+  ): Result<void, SyncFailure | DeviceNotFound> => {
+    if (answer.kind !== 'response') return transportFailure(answer);
+    if (answer.status === success) return ok(undefined);
+    if (answer.status === 404) return err({ type: 'NotFound' });
+    return err(syncFailure(answer));
   };
 
   return {
@@ -197,9 +215,44 @@ export const createSyncServer = ({
       return err(syncFailure(answer));
     },
 
-    // The remaining methods follow in the stories that need them.
-    listDevices: notImplemented,
-    renameDevice: notImplemented,
-    revokeDevice: notImplemented,
+    async listDevices(
+      conn: Connection,
+    ): Promise<Result<DeviceSummary[], SyncFailure>> {
+      const answer = await send(conn.url, '/v1/devices', {
+        method: 'GET',
+        credential: conn.credential,
+      });
+      if (answer.kind !== 'response') return transportFailure(answer);
+      const devices = (answer.body as { devices?: unknown } | null)?.devices;
+      if (answer.status === 200 && Array.isArray(devices)) {
+        return ok(devices as DeviceSummary[]);
+      }
+      return err(syncFailure(answer));
+    },
+
+    async renameDevice(conn, id, name) {
+      const answer = await send(
+        conn.url,
+        `/v1/devices/${encodeURIComponent(id)}`,
+        {
+          method: 'PATCH',
+          body: { name },
+          credential: conn.credential,
+        },
+      );
+      return deviceOutcome(answer, 200);
+    },
+
+    async revokeDevice(conn, id) {
+      const answer = await send(
+        conn.url,
+        `/v1/devices/${encodeURIComponent(id)}`,
+        {
+          method: 'DELETE',
+          credential: conn.credential,
+        },
+      );
+      return deviceOutcome(answer, 204);
+    },
   };
 };

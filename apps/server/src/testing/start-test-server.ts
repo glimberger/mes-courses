@@ -9,6 +9,11 @@ export type TestServer = {
   url: string;
   /** A fresh code, as the Pi command would create one. */
   createPairingCode(): Promise<string>;
+  /**
+   * Answers at a second address over the same database, as a server whose domain name changed:
+   * same identity, new URL. Closing the server leaves it open; close it apart.
+   */
+  listenAlso(): Promise<{ url: string; close(): Promise<void> }>;
   close(): Promise<void>;
 };
 
@@ -37,12 +42,19 @@ export const startTestServer = async ({
   port?: number;
 } = {}): Promise<TestServer> => {
   const { app, deps, db } = buildTestApp(clock ? { clock } : {});
-  await app.listen({ host: '127.0.0.1', port: wantedPort });
-  const address = app.server.address();
-  const port = typeof address === 'object' && address ? address.port : 0;
+  const listen = async (instance: typeof app, port: number) => {
+    await instance.listen({ host: '127.0.0.1', port });
+    const address = instance.server.address();
+    return `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
+  };
+  const url = await listen(app, wantedPort);
   return {
-    url: `http://127.0.0.1:${port}`,
+    url,
     createPairingCode: async () => (await createPairingCode(deps, null)).code,
+    listenAlso: async () => {
+      const other = buildApp(deps);
+      return { url: await listen(other, 0), close: () => other.close() };
+    },
     close: async () => {
       await app.close();
       db.close();

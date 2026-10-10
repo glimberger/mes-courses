@@ -1,9 +1,17 @@
 import type { Clock } from '../../application/ports/clock';
 import type { CredentialStore } from '../../application/ports/credential-store';
 import type { IdGenerator } from '../../application/ports/id-generator';
-import type { SyncServer } from '../../application/ports/sync-server';
+import type {
+  DeviceNotFound,
+  SyncFailure,
+  SyncServer,
+} from '../../application/ports/sync-server';
 import type { UnitOfWork } from '../../application/ports/unit-of-work';
 import { createAddArticleToList } from '../../application/use-cases/add-article-to-list';
+import {
+  createChangeServerUrl,
+  type ChangeServerUrlError,
+} from '../../application/use-cases/change-server-url';
 import { createChangeItemQuantity } from '../../application/use-cases/change-item-quantity';
 import { createCreateArticleAndAddToList } from '../../application/use-cases/create-article-and-add-to-list';
 import {
@@ -12,7 +20,9 @@ import {
 } from '../../application/use-cases/connect-to-server';
 import { createCreateCategory } from '../../application/use-cases/create-category';
 import { createCreateList } from '../../application/use-cases/create-list';
+import { createCreatePairingCode } from '../../application/use-cases/create-pairing-code';
 import { createDeleteArticle } from '../../application/use-cases/delete-article';
+import { createDisconnect } from '../../application/use-cases/disconnect';
 import { createEditArticle } from '../../application/use-cases/edit-article';
 import { createFinishShopping } from '../../application/use-cases/finish-shopping';
 import { createGetArticleUsage } from '../../application/use-cases/get-article-usage';
@@ -23,6 +33,10 @@ import {
   createGetSyncInfo,
   type SyncInfo,
 } from '../../application/use-cases/get-sync-info';
+import {
+  createListDevices,
+  type DeviceInfo,
+} from '../../application/use-cases/list-devices';
 import { createGetLists } from '../../application/use-cases/get-lists';
 import {
   createInitializeStore,
@@ -30,6 +44,8 @@ import {
 } from '../../application/use-cases/initialize-store';
 import { createRemoveItemFromList } from '../../application/use-cases/remove-item-from-list';
 import { createReleaseHeldChanges } from '../../application/use-cases/release-held-changes';
+import { createRenameDevice } from '../../application/use-cases/rename-device';
+import { createRevokeDevice } from '../../application/use-cases/revoke-device';
 import { createRestoreDeletedArticle } from '../../application/use-cases/restore-deleted-article';
 import { createRestoreRemovedItem } from '../../application/use-cases/restore-removed-item';
 import { createSetCurrentList } from '../../application/use-cases/set-current-list';
@@ -45,6 +61,7 @@ import type {
   ArticleUsage,
   DeletedArticle,
 } from '../../domain/article';
+import type { PairingCode } from '@mes-courses/sync-core';
 import type { CatalogView } from '../../domain/catalog-view';
 import type {
   Category,
@@ -146,6 +163,17 @@ export type UseCases = {
   synchronize: () => Promise<SyncResult>;
   releaseHeldChanges: (undoId: string) => Promise<void>;
   getSyncInfo: () => Promise<SyncInfo>;
+  createPairingCode: () => Promise<Result<PairingCode, SyncFailure>>;
+  listDevices: () => Promise<Result<DeviceInfo[], SyncFailure>>;
+  renameDevice: (
+    id: string,
+    name: string,
+  ) => Promise<Result<void, NameError | SyncFailure | DeviceNotFound>>;
+  revokeDevice: (
+    id: string,
+  ) => Promise<Result<void, SyncFailure | DeviceNotFound>>;
+  disconnect: () => Promise<Result<void, never>>;
+  changeServerUrl: (url: string) => Promise<Result<void, ChangeServerUrlError>>;
 };
 
 /** The name of one use case. */
@@ -187,4 +215,10 @@ export const createUseCases = (ports: {
   synchronize: createSynchronize(ports),
   releaseHeldChanges: createReleaseHeldChanges(ports),
   getSyncInfo: createGetSyncInfo(ports),
+  createPairingCode: createCreatePairingCode(ports),
+  listDevices: createListDevices(ports),
+  renameDevice: createRenameDevice(ports),
+  revokeDevice: createRevokeDevice(ports),
+  disconnect: createDisconnect(ports),
+  changeServerUrl: createChangeServerUrl(ports),
 });
