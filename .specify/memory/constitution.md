@@ -1,3 +1,13 @@
+<!--
+Sync Impact Report
+Version change: 2.4.0 -> 2.5.0 (MINOR: materially expanded guidance on task grouping and commits)
+Modified principles: none renamed; Principle I unchanged
+Modified sections: Development Workflow (task grouping, increments), Quality Gates (merge gate
+  on test-first evidence)
+Added/removed sections: none
+Deferred TODOs: none
+-->
+
 # Mes Courses Constitution
 
 ## Core Principles
@@ -240,8 +250,9 @@ Before pushing a branch:
 Before merging a pull request:
 
 - Every gate above passes in continuous integration (CI).
-- The commit history or PR description shows the test-first progression for each behavior
-  (failing test, then implementation, then refactoring).
+- The PR description or the task list shows the test-first progression for each behavior. The
+  failing test is written and seen failing before the implementation, but both land in the same
+  commit, because the fast suite runs after every commit.
 
 Continuous integration is blocking for every pull request:
 
@@ -281,8 +292,10 @@ Continuous integration is blocking for every pull request:
 ## Development Workflow
 
 - Features go through Spec Kit: `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` →
-  `/speckit-implement`. Generated task lists MUST order each test task before the
-  implementation task it drives.
+  `/speckit-implement`. Generated task lists MUST group each test and the implementation it
+  drives into a single task, with the test written first inside that task. A task list MUST NOT leave a failing test as a task of its own
+  to be committed alone: the fast suite runs after every commit (Quality Gates), so every commit
+  MUST leave it green.
 - A decision that outlives one feature (the stack, the repository layout, tooling) is recorded as
   an Architecture Decision Record in `docs/adr/`, in the pull request that makes it. A choice that
   matters only inside one feature stays in that feature's `research.md`. An ADR explains why; a
@@ -290,7 +303,8 @@ Continuous integration is blocking for every pull request:
 - Each feature spec states the feature's behavior while offline or with the server
   unreachable, how its data is synchronized with the server, and how concurrent changes are
   reconciled (Principle VII).
-- Work happens in small increments: one behavior per Red-Green-Refactor cycle, committed often.
+- Work happens in small increments: one behavior per Red-Green-Refactor cycle. A commit holds a
+  test together with the implementation that turns it green, never a red test alone.
 - Branching, commit message format (Conventional Commits), secret scanning and README rules
   follow the workspace `AGENTS.md`.
 - Code, comments, commits and documentation are written in English; only user-facing
@@ -310,4 +324,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 2.4.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-08
+**Version**: 2.5.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-10
