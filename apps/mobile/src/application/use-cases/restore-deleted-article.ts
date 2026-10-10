@@ -12,6 +12,8 @@ export const createRestoreDeletedArticle =
     unitOfWork.run(async (repos) => {
       await repos.articles.add(deleted.article);
       for (const item of deleted.items) {
+        // A pull may have removed the list during the offer.
+        if (!(await repos.lists.findById(item.listId))) continue;
         await repos.items.save({ ...item, articleId: deleted.article.id });
       }
       await repos.changes.discard(deleted.undoId);

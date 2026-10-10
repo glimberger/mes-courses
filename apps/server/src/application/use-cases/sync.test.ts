@@ -702,5 +702,30 @@ describe('sync', () => {
         'l-1:a-2',
       ]);
     });
+
+    it('sends the items of a surviving article again with it', async () => {
+      const { run } = await setup();
+      await run([
+        createCategory('ch-1', 'c-1', 'Crèmerie', NOW - 4000),
+        createArticle('ch-2', 'a-1', 'Lait', 'c-1', NOW - 4000),
+        createList('ch-3', 'l-1', 'Ma liste', NOW - 4000),
+        putItem('ch-4', 'l-1', 'a-1', NOW - 3900),
+      ]);
+      const before = (await state(run)).reduce(
+        (max, row) => Math.max(max, row.seq),
+        0,
+      );
+
+      const { rows } = await run(
+        [createArticle('ch-5', 'a-2', 'lait', 'c-1', NOW - 100)],
+        before,
+      );
+
+      expect(rows.map((row) => row.id).sort()).toEqual([
+        'a-1',
+        'a-2',
+        'l-1:a-1',
+      ]);
+    });
   });
 });

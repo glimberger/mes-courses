@@ -84,6 +84,29 @@ describe('restoreDeletedArticle', () => {
     ]);
   });
 
+  it('skips the lists a pull removed during the offer', async () => {
+    const deleted = await deleteLait();
+    const withoutBarbecue: UnitOfWork = {
+      run: (work) =>
+        unitOfWork.run((repos) =>
+          work({
+            ...repos,
+            lists: {
+              ...repos.lists,
+              findById: async (id) =>
+                id === barbecue ? null : repos.lists.findById(id),
+            },
+          }),
+        ),
+    };
+
+    await createRestoreDeletedArticle({ unitOfWork: withoutBarbecue })(deleted);
+
+    expect(await articles()).toHaveLength(1);
+    expect(await itemsOf(maListe)).toHaveLength(1);
+    expect(await itemsOf(barbecue)).toEqual([]);
+  });
+
   it('runs in one transaction: nothing is kept when restoring an item fails', async () => {
     const deleted = await deleteLait();
     const failing: UnitOfWork = {

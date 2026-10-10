@@ -131,6 +131,27 @@ const moveItems = async (
   }
 };
 
+/** Saves the live children of a surviving entity again at `seq`, so they travel with it. */
+const resendChildren = async (
+  repos: Repositories,
+  kind: 'category' | 'article' | 'list',
+  survivorId: string,
+  seq: number,
+) => {
+  if (kind === 'category') {
+    for (const article of await repos.articles.inCategory(survivorId)) {
+      if (article.deletedHlc === null)
+        await repos.articles.save({ ...article, seq });
+    }
+    return;
+  }
+  const items =
+    kind === 'article'
+      ? await repos.items.forArticle(survivorId)
+      : await repos.items.forList(survivorId);
+  for (const item of items) await repos.items.save({ ...item, seq });
+};
+
 /**
  * Saves the record. When it gives a live category, article or list the name of another live one,
  * the two are merged in this same transaction (research R8): the loser becomes a tombstone first,
@@ -163,7 +184,10 @@ const saveMerging = async (
   await repo.save(tombstoneMerged(loser, survivor.id, change.hlc, seq));
   // A survivor that already existed is saved again at this seq, so devices that skipped it
   // (a name clash with a row of theirs) receive it together with the loser's tombstone.
-  await repo.save(survivor === entity ? entity : { ...survivor, seq });
+  const kept = survivor === entity ? entity : { ...survivor, seq };
+  await repo.save(kept);
+  if (survivor !== entity)
+    await resendChildren(repos, change.kind, survivor.id, seq);
 
   switch (change.kind) {
     case 'category':

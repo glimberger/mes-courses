@@ -74,13 +74,18 @@ export const createSyncActions = ({
         ? offer.removed.articleId
         : offer.deleted.article.id;
     const listIds: string[] =
-      offer.kind === 'removedItem' ? [offer.removed.listId] : [];
+      offer.kind === 'removedItem'
+        ? [offer.removed.listId]
+        : offer.deleted.items.map(({ listId }) => listId);
+    const categoryId =
+      offer.kind === 'deletedArticle' ? offer.deleted.article.categoryId : null;
     const gone =
       deletedArticles.includes(articleId) ||
       merges.some(
         ({ kind, loserId }) =>
           (kind === 'article' && loserId === articleId) ||
-          (kind === 'list' && listIds.includes(loserId)),
+          (kind === 'list' && listIds.includes(loserId)) ||
+          (kind === 'category' && loserId === categoryId),
       );
     if (!gone) return;
     const { undoId } =

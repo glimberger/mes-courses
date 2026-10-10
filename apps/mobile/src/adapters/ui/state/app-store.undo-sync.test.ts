@@ -174,6 +174,33 @@ describe('the undo offer and synchronization', () => {
   });
 
   describe('when a pull deletes the article of the offer (US1-8, research R10a)', () => {
+    it.each(['category', 'list'] as const)(
+      'ends the offer of a deleted article when the pull merges away its %s',
+      async (kind) => {
+        const { store, synchronize, releaseHeldChanges } = await buildStore();
+        await store.getState().deleteArticle(lait);
+        const offer = store.getState().pendingUndo;
+        if (offer?.kind !== 'deletedArticle') throw new Error('no offer');
+        const loserId =
+          kind === 'category'
+            ? offer.deleted.article.categoryId
+            : (offer.deleted.items[0]?.listId as string);
+        synchronize.mockResolvedValueOnce({
+          outcome: { type: 'saved' },
+          effects: {
+            ...NO_EFFECTS,
+            merges: [{ kind, loserId, survivorId: 'other' }],
+          },
+          pulledRows: 2,
+        });
+
+        await store.getState().syncNow();
+
+        expect(store.getState().pendingUndo).toBeNull();
+        expect(releaseHeldChanges).toHaveBeenCalledTimes(1);
+      },
+    );
+
     it('ends the offer when the article is merged into another by the pull', async () => {
       const { store, synchronize, releaseHeldChanges } = await buildStore();
       await store.getState().deleteArticle(lait);
