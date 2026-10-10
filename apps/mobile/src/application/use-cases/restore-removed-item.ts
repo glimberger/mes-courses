@@ -21,6 +21,8 @@ export const createRestoreRemovedItem =
       if (onList) {
         return err({ type: 'AlreadyOnList', quantity: onList.quantity });
       }
-      await repos.items.save({ ...removed });
+      const { undoId, ...item } = removed;
+      await repos.items.save(item);
+      await repos.changes.discard(undoId);
       return ok(undefined);
     });

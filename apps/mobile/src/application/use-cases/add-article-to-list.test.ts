@@ -119,4 +119,42 @@ describe('addArticleToList', () => {
       await unitOfWork.run((repos) => repos.items.forList(maListe)),
     ).toEqual([]);
   });
+
+  describe('recorded changes (US1)', () => {
+    const pending = () => unitOfWork.run((repos) => repos.changes.pending(100));
+
+    it('records the whole list item, with its quantity', async () => {
+      await createAddArticleToList({ unitOfWork })(maListe, farine, {
+        amount: 1.5,
+        unit: 'kg',
+      });
+
+      expect(
+        (await pending()).map(({ kind, id, fields }) => ({ kind, id, fields })),
+      ).toEqual([
+        {
+          kind: 'listItem',
+          id: 'l-1:a-2',
+          fields: {
+            listId: 'l-1',
+            articleId: 'a-2',
+            present: true,
+            inCart: false,
+            quantity: { amount: 1.5, unit: 'kg' },
+          },
+        },
+      ]);
+    });
+
+    it('records nothing when the article is already on the list or unknown', async () => {
+      const addArticleToList = createAddArticleToList({ unitOfWork });
+      await addArticleToList(maListe, lait, null);
+      const before = await pending();
+
+      await addArticleToList(maListe, lait, null);
+      await addArticleToList(maListe, 'a-9' as ArticleId, null);
+
+      expect(await pending()).toEqual(before);
+    });
+  });
 });

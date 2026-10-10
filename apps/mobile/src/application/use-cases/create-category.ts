@@ -21,10 +21,15 @@ export const createCreateCategory =
       if (!unique.ok) return unique;
 
       const categoryId = ids.next() as CategoryId;
+      const position = await repos.categories.nextPosition();
       await repos.categories.add({
         id: categoryId,
         name: unique.value,
-        position: await repos.categories.nextPosition(),
+        position,
+      });
+      await repos.changes.record('category', categoryId, {
+        name: unique.value,
+        position,
       });
       return ok({ categoryId });
     });

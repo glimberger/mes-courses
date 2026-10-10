@@ -6,6 +6,7 @@ import {
   InMemoryUnitOfWork,
 } from '../../../application/testing/in-memory-repositories';
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
+import { FakeClock } from '../../../application/testing/fake-clock';
 import { SequentialIdGenerator } from '../../../application/testing/sequential-id-generator';
 import type { ArticleId } from '../../../domain/article';
 import type { CurrentListView } from '../../../domain/current-list-view';
@@ -37,6 +38,7 @@ const summary = (name: string): ListSummary => ({
 const offer: PendingUndo = {
   kind: 'removedItem',
   removed: {
+    undoId: 'undo-1',
     listId: 'list-1' as ListId,
     articleId: 'article-1' as ArticleId,
     inCart: false,
@@ -57,6 +59,7 @@ const buildStore = () => {
     credentials: new InMemoryCredentialStore(),
     unitOfWork,
     ids: new SequentialIdGenerator(),
+    clock: new FakeClock(),
   });
   const getLists = jest.fn<Promise<ListSummary[]>, []>();
   const getCurrentList = jest.fn<Promise<CurrentListView>, []>();

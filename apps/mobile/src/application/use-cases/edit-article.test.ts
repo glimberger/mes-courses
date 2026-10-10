@@ -344,4 +344,50 @@ describe('editArticle', () => {
       expect(await articles()).toEqual(before);
     });
   });
+
+  describe('recorded changes (US1)', () => {
+    const pending = () => unitOfWork.run((repos) => repos.changes.pending(100));
+
+    it('records only the name when only the name changed', async () => {
+      await editArticle(lait, { name: 'Lait entier', categoryId: cremerie });
+
+      expect(
+        (await pending()).map(({ kind, id, fields }) => ({ kind, id, fields })),
+      ).toEqual([
+        { kind: 'article', id: lait, fields: { name: 'Lait entier' } },
+      ]);
+    });
+
+    it('records only the category when only the category changed', async () => {
+      await editArticle(lait, { name: 'Lait', categoryId: fruits });
+
+      expect(
+        (await pending()).map(({ kind, id, fields }) => ({ kind, id, fields })),
+      ).toEqual([
+        { kind: 'article', id: lait, fields: { categoryId: fruits } },
+      ]);
+    });
+
+    it('records both fields when both changed, and nothing when none did', async () => {
+      await editArticle(lait, { name: 'Lait', categoryId: cremerie });
+      expect(await pending()).toEqual([]);
+
+      await editArticle(lait, { name: 'Pomme', categoryId: fruits });
+      expect(
+        (await pending()).map(({ kind, id, fields }) => ({ kind, id, fields })),
+      ).toEqual([
+        {
+          kind: 'article',
+          id: lait,
+          fields: { name: 'Pomme', categoryId: fruits },
+        },
+      ]);
+    });
+
+    it('records nothing on an error', async () => {
+      await editArticle(lait, { name: 'Beurre', categoryId: fruits });
+
+      expect(await pending()).toEqual([]);
+    });
+  });
 });

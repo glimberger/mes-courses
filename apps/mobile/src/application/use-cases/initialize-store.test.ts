@@ -131,4 +131,88 @@ describe('initializeStore', () => {
     ).toHaveLength(3);
     expect(await unitOfWork.run((repos) => repos.lists.count())).toBe(1);
   });
+
+  describe('recorded changes (US1)', () => {
+    const pending = () => unitOfWork.run((repos) => repos.changes.pending(100));
+
+    it('records the seeded categories and the first list, in the order they were created', async () => {
+      await createInitializeStore({ unitOfWork, ids })(seed);
+
+      expect(
+        (await pending()).map(({ kind, id, fields }) => ({ kind, id, fields })),
+      ).toEqual([
+        {
+          kind: 'category',
+          id: 'id-1',
+          fields: { name: 'Fruits et légumes', position: 0 },
+        },
+        {
+          kind: 'category',
+          id: 'id-2',
+          fields: { name: 'Crèmerie', position: 1 },
+        },
+        {
+          kind: 'category',
+          id: 'id-3',
+          fields: { name: 'Boulangerie', position: 2 },
+        },
+        { kind: 'list', id: 'id-4', fields: { name: 'Ma liste' } },
+      ]);
+    });
+
+    it('stamps the seeds with the minimum HLC, so another device always wins over them (R13)', async () => {
+      await createInitializeStore({ unitOfWork, ids })(seed);
+
+      const stamps = (await pending()).map(({ hlc }) => hlc.wallMs);
+      expect(stamps).toEqual([0, 0, 0, 0]);
+    });
+
+    it('records only the list when the categories were already there', async () => {
+      await unitOfWork.run((repos) =>
+        repos.categories.add({
+          id: 'c-1' as CategoryId,
+          name: 'Crèmerie',
+          position: 0,
+        }),
+      );
+
+      await createInitializeStore({ unitOfWork, ids })(seed);
+
+      expect((await pending()).map((change) => change.kind)).toEqual(['list']);
+    });
+  });
+
+  describe('held changes (R10)', () => {
+    const hold = () =>
+      unitOfWork.run((repos) =>
+        repos.changes.record(
+          'article',
+          'a-1',
+          { deleted: true },
+          { heldBy: 'undo-1' },
+        ),
+      );
+    const pending = () => unitOfWork.run((repos) => repos.changes.pending(100));
+
+    it('releases a deletion left held by a killed app, so it becomes final', async () => {
+      await hold();
+      expect(await pending()).toEqual([]);
+
+      await createInitializeStore({ unitOfWork, ids })(seed);
+
+      expect((await pending()).map((change) => change.id)).toContain('a-1');
+    });
+
+    it('releases it at every start, also on a store that already has a list', async () => {
+      await unitOfWork.run(async (repos) => {
+        await repos.lists.add({ id: 'l-1' as ListId, name: 'Barbecue' });
+        await repos.appState.setCurrentListId('l-1' as ListId);
+      });
+      await hold();
+
+      await createInitializeStore({ unitOfWork, ids })(seed);
+
+      expect((await pending()).map((change) => change.id)).toEqual(['a-1']);
+    });
+  });
 });

@@ -12,17 +12,26 @@ export type TestServer = {
   close(): Promise<void>;
 };
 
+/**
+ * The HTTP app over a real SQLite store in memory, not listening: for tests that call it through
+ * `inject`. The caller closes `db`.
+ */
+export const buildTestApp = ({ clock }: { clock?: Clock } = {}) => {
+  const db = openDatabase(':memory:');
+  const store = new SqliteStore(db);
+  const deps = appDeps({
+    store,
+    errorReporter: { report: () => undefined },
+    ...(clock ? { clock } : {}),
+  });
+  return { app: buildApp(deps), deps, store, db };
+};
+
 /** A real server on a random local port over an in-memory database, for adapter tests. */
 export const startTestServer = async ({
   clock,
 }: { clock?: Clock } = {}): Promise<TestServer> => {
-  const db = openDatabase(':memory:');
-  const deps = appDeps({
-    store: new SqliteStore(db),
-    errorReporter: { report: () => undefined },
-    ...(clock ? { clock } : {}),
-  });
-  const app = buildApp(deps);
+  const { app, deps, db } = buildTestApp(clock ? { clock } : {});
   await app.listen({ host: '127.0.0.1', port: 0 });
   const address = app.server.address();
   const port = typeof address === 'object' && address ? address.port : 0;

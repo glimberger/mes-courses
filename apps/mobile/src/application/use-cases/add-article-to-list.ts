@@ -24,5 +24,12 @@ export const createAddArticleToList =
       );
       if (!added.ok) return added;
       await repos.items.save(added.value);
+      await repos.changes.record('listItem', `${listId}:${articleId}`, {
+        listId,
+        articleId,
+        present: true,
+        inCart: false,
+        quantity: added.value.quantity,
+      });
       return ok(undefined);
     });

@@ -7,6 +7,7 @@ import {
   InMemoryRepositories,
   InMemoryUnitOfWork,
 } from '../testing/in-memory-repositories';
+import { SequentialIdGenerator } from '../testing/sequential-id-generator';
 import { createRemoveItemFromList } from './remove-item-from-list';
 
 const maListe = 'l-1' as ListId;
@@ -51,10 +52,10 @@ describe('removeItemFromList', () => {
   });
 
   it('US2-6 FR-010 removes the item, keeps the article in the catalog, and returns the item as it was', async () => {
-    const outcome = await createRemoveItemFromList({ unitOfWork })(
-      maListe,
-      beurre,
-    );
+    const outcome = await createRemoveItemFromList({
+      unitOfWork,
+      ids: new SequentialIdGenerator(),
+    })(maListe, beurre);
 
     expect(outcome).toEqual(
       ok({
@@ -62,6 +63,7 @@ describe('removeItemFromList', () => {
         articleId: beurre,
         inCart: true,
         quantity: { amount: 2, unit: 'kg' },
+        undoId: expect.any(String),
       }),
     );
     expect(
@@ -76,11 +78,58 @@ describe('removeItemFromList', () => {
   });
 
   it('returns ItemNotOnList for an article not on the list', async () => {
-    const outcome = await createRemoveItemFromList({ unitOfWork })(
-      maListe,
-      lait,
-    );
+    const outcome = await createRemoveItemFromList({
+      unitOfWork,
+      ids: new SequentialIdGenerator(),
+    })(maListe, lait);
 
     expect(outcome).toEqual(err({ type: 'ItemNotOnList' }));
+  });
+
+  describe('recorded changes (US1)', () => {
+    const entries = (limit = 100) =>
+      unitOfWork.run((repos) => repos.changes.pending(limit));
+
+    it('records listItem.present = false held by a new undoId returned in RemovedItem', async () => {
+      const outcome = await createRemoveItemFromList({
+        unitOfWork,
+        ids: new SequentialIdGenerator(),
+      })(maListe, beurre);
+      if (!outcome.ok) throw new Error('not removed');
+
+      expect(outcome.value.undoId).toEqual(expect.any(String));
+      expect(await entries()).toEqual([]);
+
+      await unitOfWork.run((repos) =>
+        repos.changes.release(outcome.value.undoId),
+      );
+      expect(
+        (await entries()).map(({ kind, id, fields }) => ({ kind, id, fields })),
+      ).toEqual([
+        { kind: 'listItem', id: 'l-1:a-1', fields: { present: false } },
+      ]);
+    });
+
+    it('gives each removal its own undoId', async () => {
+      const remove = createRemoveItemFromList({
+        unitOfWork,
+        ids: new SequentialIdGenerator(),
+      });
+      const first = await remove(maListe, beurre);
+      const second = await remove(barbecue, beurre);
+      if (!first.ok || !second.ok) throw new Error('not removed');
+
+      expect(first.value.undoId).not.toBe(second.value.undoId);
+    });
+
+    it('records nothing when the item is not on the list', async () => {
+      await createRemoveItemFromList({
+        unitOfWork,
+        ids: new SequentialIdGenerator(),
+      })(maListe, 'a-gone' as ArticleId);
+      await unitOfWork.run((repos) => repos.changes.releaseAll());
+
+      expect(await entries()).toEqual([]);
+    });
   });
 });

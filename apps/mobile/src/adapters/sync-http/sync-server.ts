@@ -3,6 +3,8 @@ import type {
   HealthInfo,
   Pairing,
   PairingCode,
+  SyncRequest,
+  SyncResponse,
 } from '@mes-courses/sync-core';
 import { err, ok, type Result } from '../../domain/result';
 import type {
@@ -41,6 +43,13 @@ const isHealthInfo = (body: unknown): body is HealthInfo =>
   typeof (body as HealthInfo).serverId === 'string' &&
   typeof (body as HealthInfo).apiVersion === 'number' &&
   typeof (body as HealthInfo).minAppVersion === 'string';
+
+const isSyncResponse = (body: unknown): body is SyncResponse =>
+  typeof body === 'object' &&
+  body !== null &&
+  Array.isArray((body as SyncResponse).acknowledged) &&
+  Array.isArray((body as SyncResponse).rows) &&
+  typeof (body as SyncResponse).seq === 'number';
 
 /** `Retry-After` in seconds; an HTTP-date or a missing header gives a 1 minute wait. */
 const minutesToWait = (header: string | null): number => {
@@ -168,8 +177,27 @@ export const createSyncServer = ({
       return err(syncFailure(answer));
     },
 
+    async sync(
+      conn: Connection,
+      request: SyncRequest,
+    ): Promise<Result<SyncResponse, SyncFailure>> {
+      const answer = await send(conn.url, '/v1/sync', {
+        method: 'POST',
+        body: request,
+        credential: conn.credential,
+      });
+      if (answer.kind === 'untrusted') return err({ type: 'UntrustedServer' });
+      if (answer.kind === 'unreachable') return err({ type: 'Offline' });
+      if (answer.status === 200) {
+        // A captive portal may answer 200 with something that is not a sync response.
+        return isSyncResponse(answer.body)
+          ? ok(answer.body)
+          : err({ type: 'ServerError' });
+      }
+      return err(syncFailure(answer));
+    },
+
     // The remaining methods follow in the stories that need them.
-    sync: notImplemented,
     listDevices: notImplemented,
     renameDevice: notImplemented,
     revokeDevice: notImplemented,

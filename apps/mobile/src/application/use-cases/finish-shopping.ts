@@ -10,6 +10,15 @@ export const createFinishShopping =
   ({ unitOfWork }: { unitOfWork: UnitOfWork }) =>
   (listId: ListId): Promise<Result<void, never>> =>
     unitOfWork.run(async (repos) => {
+      // Only what is ticked now: a tick made later, on any device, is kept (FR-013).
+      const ticked = (await repos.items.forList(listId)).filter(
+        (item) => item.inCart,
+      );
       await repos.items.takeAllOutOfCart(listId);
+      for (const item of ticked) {
+        await repos.changes.record('listItem', `${listId}:${item.articleId}`, {
+          inCart: false,
+        });
+      }
       return ok(undefined);
     });

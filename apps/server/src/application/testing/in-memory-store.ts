@@ -77,7 +77,14 @@ const repositories = (state: State): Repositories => ({
     nextSeq: async () => ++state.seq,
   },
   categories: entityRepository(state.categories),
-  articles: entityRepository(state.articles),
+  articles: {
+    ...entityRepository(state.articles),
+    inCategory: async (categoryId) =>
+      [...state.articles.values()]
+        .filter((article) => article.categoryId === categoryId)
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map((article) => structuredClone(article)),
+  },
   lists: entityRepository(state.lists),
   items: {
     get: async (listId, articleId) =>
@@ -88,6 +95,16 @@ const repositories = (state: State): Repositories => ({
         structuredClone(record),
       );
     },
+    forArticle: async (articleId) =>
+      [...state.items.values()]
+        .filter((row) => row.articleId === articleId)
+        .sort((a, b) => a.listId.localeCompare(b.listId))
+        .map((row) => structuredClone(row)),
+    forList: async (listId) =>
+      [...state.items.values()]
+        .filter((row) => row.listId === listId)
+        .sort((a, b) => a.articleId.localeCompare(b.articleId))
+        .map((row) => structuredClone(row)),
     changedSince: async (seq, limit) => changedSince(state.items, seq, limit),
   },
   appliedChanges: {

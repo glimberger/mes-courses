@@ -16,6 +16,10 @@ export const createChangeItemQuantity =
     unitOfWork.run(async (repos) => {
       const item = await repos.items.find(listId, articleId);
       if (!item) return err({ type: 'ItemNotOnList' });
-      await repos.items.save(changeQuantity(item, quantity));
+      const changed = changeQuantity(item, quantity);
+      await repos.items.save(changed);
+      await repos.changes.record('listItem', `${listId}:${articleId}`, {
+        quantity: changed.quantity,
+      });
       return ok(undefined);
     });

@@ -91,4 +91,18 @@ fileignoreconfig:
   # `itemKey(listId, articleId)` builds a Map key for a list item, which trips the pattern detector.
   - filename: apps/server/src/application/testing/in-memory-store.ts
     ignore_detectors: [filecontent]
+  # Pending-field keys (`kind:id:field`), list item keys (`listId:articleId`) and the words
+  # "credentials"/"pending ... key" in comments trip the pattern detector; none is a secret.
+  - filename: apps/mobile/src/application/use-cases/synchronize.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/mobile/src/application/use-cases/synchronize.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/mobile/src/adapters/sqlite/pulled-rows-applier.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/mobile/src/adapters/sqlite/pulled-rows-applier.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/mobile/test/app-stack.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/use-cases/apply-with-merge.ts
+    ignore_detectors: [filecontent]
 version: "1.0"

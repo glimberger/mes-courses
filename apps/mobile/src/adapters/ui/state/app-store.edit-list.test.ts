@@ -400,6 +400,7 @@ describe('editing the current list in the store', () => {
       expect(store.getState().pendingUndo).toEqual({
         kind: 'removedItem',
         removed: {
+          undoId: expect.any(String),
           listId: maListe,
           articleId: beurre.id,
           inCart: true,

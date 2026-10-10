@@ -10,16 +10,22 @@ export type PendingChange = Change & { seq: number };
 export interface ChangeRecorder {
   /**
    * Stamps the change with the next HLC from the `Clock` and appends it to the outbox. With
-   * `heldBy`, the entry is held back until released, discarded or acknowledged.
+   * `heldBy`, the entry is held back until released, discarded or acknowledged. With `seed`, the
+   * entry is stamped with the minimum HLC instead, so that anything another device wrote wins
+   * over it: the defaults a fresh install creates must not undo the edits of a paired device
+   * (research R13).
    */
   record(
     kind: EntityKind,
     id: string,
     fields: object,
-    options?: { heldBy?: string },
+    options?: { heldBy?: string; seed?: boolean },
   ): Promise<void>;
-  /** At most `limit` entries, held ones excluded, in `seq` order. */
-  pending(limit: number): Promise<PendingChange[]>;
+  /** At most `limit` entries, held ones excluded unless `includeHeld`, in `seq` order. */
+  pending(
+    limit: number,
+    options?: { includeHeld?: boolean },
+  ): Promise<PendingChange[]>;
   /** Removes the entries the server applied. */
   acknowledge(changeIds: string[]): Promise<void>;
   /** Held entries of this undo offer become pending. */

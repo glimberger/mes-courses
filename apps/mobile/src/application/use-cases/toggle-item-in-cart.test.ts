@@ -103,4 +103,23 @@ describe('toggleItemInCart', () => {
     expect(await stored(maListe, beurre)).toBeNull();
     expect((await stored(barbecue, beurre))?.inCart).toBe(false);
   });
+
+  describe('recorded changes (US1)', () => {
+    const pending = () => unitOfWork.run((repos) => repos.changes.pending(100));
+
+    it('records listItem.inCart with the new value, only on success', async () => {
+      const toggleItemInCart = createToggleItemInCart({ unitOfWork });
+
+      await toggleItemInCart(maListe, lait);
+      await toggleItemInCart(maListe, lait);
+      await toggleItemInCart(maListe, beurre);
+
+      expect(
+        (await pending()).map(({ kind, id, fields }) => ({ kind, id, fields })),
+      ).toEqual([
+        { kind: 'listItem', id: 'l-1:a-1', fields: { inCart: true } },
+        { kind: 'listItem', id: 'l-1:a-1', fields: { inCart: false } },
+      ]);
+    });
+  });
 });

@@ -88,4 +88,14 @@ describe('setCurrentList', () => {
       inCart: true,
     });
   });
+
+  describe('recorded changes (FR-015)', () => {
+    it('records nothing: the current list is per device', async () => {
+      await createSetCurrentList({ unitOfWork })(barbecue);
+
+      expect(
+        await unitOfWork.run((repos) => repos.changes.pending(100)),
+      ).toEqual([]);
+    });
+  });
 });

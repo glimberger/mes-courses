@@ -12,6 +12,7 @@ import { SystemClock } from '../adapters/clock/system-clock';
 import { SqliteUnitOfWork } from '../adapters/sqlite/unit-of-work';
 import { seed } from '../adapters/ui/seed';
 import { createAppStore, type AppStore } from '../adapters/ui/state/app-store';
+import { createSyncScheduler } from '../adapters/ui/state/sync-scheduler';
 import { createUseCases } from '../adapters/ui/use-cases';
 import { seedForMeasurement } from './measurement-seed';
 
@@ -102,6 +103,7 @@ export const composeApp = async (
     const useCases = createUseCases({
       unitOfWork: new SqliteUnitOfWork(db, { clock, ids }),
       ids,
+      clock,
       syncServer: createSyncServer({
         appVersion: Constants.expoConfig?.version ?? '0.0.0',
       }),
@@ -115,9 +117,21 @@ export const composeApp = async (
     await seedForMeasurement(useCases, process.env.EXPO_PUBLIC_SEED_ITEMS);
     const reporting = mutable(errorReporter);
     const stopSmokeTest = startSentrySmokeTest(errorReporter);
+    // The store and the scheduler need each other: a write wakes the scheduler, a cycle runs
+    // through the store.
+    const scheduler = createSyncScheduler({
+      runCycle: () => store.getState().syncNow(),
+    });
+    const store = createAppStore({
+      useCases,
+      errorReporter: reporting.reporter,
+      onLocalWrite: scheduler.notifyWrite,
+    });
+    scheduler.start();
     return {
-      store: createAppStore({ useCases, errorReporter: reporting.reporter }),
+      store,
       close: () => {
+        scheduler.stop();
         stopSmokeTest();
         reporting.mute();
         return db.closeAsync();

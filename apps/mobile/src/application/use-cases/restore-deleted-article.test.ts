@@ -6,6 +6,7 @@ import {
   InMemoryRepositories,
   InMemoryUnitOfWork,
 } from '../testing/in-memory-repositories';
+import { SequentialIdGenerator } from '../testing/sequential-id-generator';
 import { createDeleteArticle } from './delete-article';
 import { createRestoreDeletedArticle } from './restore-deleted-article';
 
@@ -22,7 +23,10 @@ describe('restoreDeletedArticle', () => {
 
   /** Deletes "Lait" and returns what the deletion offered to undo. */
   const deleteLait = async () => {
-    const deleted = await createDeleteArticle({ unitOfWork })(lait);
+    const deleted = await createDeleteArticle({
+      unitOfWork,
+      ids: new SequentialIdGenerator(),
+    })(lait);
     if (!deleted.ok) throw new Error('not deleted');
     return deleted.value;
   };
@@ -80,6 +84,29 @@ describe('restoreDeletedArticle', () => {
     ]);
   });
 
+  it('skips the lists a pull removed during the offer', async () => {
+    const deleted = await deleteLait();
+    const withoutBarbecue: UnitOfWork = {
+      run: (work) =>
+        unitOfWork.run((repos) =>
+          work({
+            ...repos,
+            lists: {
+              ...repos.lists,
+              findById: async (id) =>
+                id === barbecue ? null : repos.lists.findById(id),
+            },
+          }),
+        ),
+    };
+
+    await createRestoreDeletedArticle({ unitOfWork: withoutBarbecue })(deleted);
+
+    expect(await articles()).toHaveLength(1);
+    expect(await itemsOf(maListe)).toHaveLength(1);
+    expect(await itemsOf(barbecue)).toEqual([]);
+  });
+
   it('runs in one transaction: nothing is kept when restoring an item fails', async () => {
     const deleted = await deleteLait();
     const failing: UnitOfWork = {
@@ -112,5 +139,18 @@ describe('restoreDeletedArticle', () => {
     await expect(
       createRestoreDeletedArticle({ unitOfWork: failing })(deleted),
     ).rejects.toThrow('disk failed');
+  });
+
+  describe('recorded changes (US1)', () => {
+    it('discards the held deletion and records nothing', async () => {
+      const deleted = await deleteLait();
+
+      await createRestoreDeletedArticle({ unitOfWork })(deleted);
+      await unitOfWork.run((repos) => repos.changes.release(deleted.undoId));
+
+      expect(
+        await unitOfWork.run((repos) => repos.changes.pending(100)),
+      ).toEqual([]);
+    });
   });
 });

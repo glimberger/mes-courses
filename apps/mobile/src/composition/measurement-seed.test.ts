@@ -5,6 +5,7 @@ import {
   InMemoryRepositories,
   InMemoryUnitOfWork,
 } from '../application/testing/in-memory-repositories';
+import { FakeClock } from '../application/testing/fake-clock';
 import { SequentialIdGenerator } from '../application/testing/sequential-id-generator';
 import { filterCatalog } from '../domain/catalog-view';
 import { normalizedName } from '../domain/name';
@@ -21,6 +22,7 @@ const freshStore = async () => {
     credentials: new InMemoryCredentialStore(),
     unitOfWork,
     ids: new SequentialIdGenerator(),
+    clock: new FakeClock(),
   });
   await useCases.initializeStore(seed);
   return { unitOfWork, useCases };

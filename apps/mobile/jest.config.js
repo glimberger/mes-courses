@@ -22,6 +22,7 @@ module.exports = {
         '<rootDir>/src/adapters/sqlite/',
         '<rootDir>/src/composition/',
         '<rootDir>/src/traceability.test.ts',
+        '<rootDir>/test/',
       ],
     },
     {
@@ -37,6 +38,7 @@ module.exports = {
         '<rootDir>/build-config/**/*.test.ts',
         '<rootDir>/src/adapters/sqlite/**/*.test.ts',
         '<rootDir>/src/composition/**/*.test.ts',
+        '<rootDir>/test/**/*.test.ts',
         '<rootDir>/src/traceability.test.ts',
       ],
     },

@@ -3,6 +3,7 @@ import { decodeHlc, encodeHlc, type Hlc } from '@mes-courses/sync-core';
 import type {
   AppliedChangeRecord,
   ArticleRecord,
+  ArticleRepository,
   CategoryRecord,
   DeviceRecord,
   EntityRecord,
@@ -187,6 +188,29 @@ const metaRow = (db: SqlDatabase) => {
   return row;
 };
 
+const articleFromRow = (row: ArticleRow): ArticleRecord => ({
+  ...stamped(row),
+  categoryId: row.category_id,
+  categoryHlc: decodeHlc(row.category_hlc),
+});
+
+const articleRepository = (db: SqlDatabase): ArticleRepository => ({
+  ...entityRepository<ArticleRecord, ArticleRow>(
+    db,
+    'article',
+    ['category_id', 'category_hlc'],
+    (record) => [record.categoryId, encodeHlc(record.categoryHlc)],
+    articleFromRow,
+  ),
+  inCategory: async (categoryId) =>
+    db
+      .all<ArticleRow>(
+        'SELECT * FROM article WHERE category_id = ? ORDER BY id',
+        [categoryId],
+      )
+      .map(articleFromRow),
+});
+
 const repositories = (db: SqlDatabase): Repositories => ({
   meta: {
     serverId: async () => metaRow(db).server_id,
@@ -207,17 +231,7 @@ const repositories = (db: SqlDatabase): Repositories => ({
       positionHlc: decodeHlc(row.position_hlc),
     }),
   ),
-  articles: entityRepository<ArticleRecord, ArticleRow>(
-    db,
-    'article',
-    ['category_id', 'category_hlc'],
-    (record) => [record.categoryId, encodeHlc(record.categoryHlc)],
-    (row) => ({
-      ...stamped(row),
-      categoryId: row.category_id,
-      categoryHlc: decodeHlc(row.category_hlc),
-    }),
-  ),
+  articles: articleRepository(db),
   lists: entityRepository<ListRecord, StampedRow>(
     db,
     'shopping_list',
@@ -253,6 +267,20 @@ const repositories = (db: SqlDatabase): Repositories => ({
         ],
       );
     },
+    forArticle: async (articleId) =>
+      db
+        .all<ItemRow>(
+          'SELECT * FROM list_item WHERE article_id = ? ORDER BY list_id',
+          [articleId],
+        )
+        .map(itemFromRow),
+    forList: async (listId) =>
+      db
+        .all<ItemRow>(
+          'SELECT * FROM list_item WHERE list_id = ? ORDER BY article_id',
+          [listId],
+        )
+        .map(itemFromRow),
     changedSince: async (seq, limit) =>
       db
         .all<ItemRow>(

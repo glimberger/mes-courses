@@ -101,6 +101,7 @@ describe('deleting an article in the store', () => {
     expect(store.getState().pendingUndo).toEqual({
       kind: 'deletedArticle',
       deleted: {
+        undoId: expect.any(String),
         article: { ...lait, categoryId: cremerie },
         items: expect.arrayContaining([
           { listId: maListe, inCart: true, quantity: { amount: 2, unit: 'L' } },

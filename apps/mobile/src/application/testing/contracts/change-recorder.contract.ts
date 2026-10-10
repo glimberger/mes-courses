@@ -1,4 +1,4 @@
-import { compareHlc, type Hlc } from '@mes-courses/sync-core';
+import { compareHlc, minHlc, type Hlc } from '@mes-courses/sync-core';
 import type { UnitOfWork } from '../../ports/unit-of-work';
 import type { FakeClock } from '../fake-clock';
 
@@ -23,6 +23,30 @@ export const changeRecorderContract = (create: () => Promise<Created>) => {
     const pending = (limit = 500) =>
       unitOfWork.run((repos) => repos.changes.pending(limit));
     const count = () => unitOfWork.run((repos) => repos.changes.count());
+
+    it('stamps a seed with the minimum HLC and leaves the clock alone', async () => {
+      await unitOfWork.run(async ({ changes }) => {
+        await changes.record(
+          'list',
+          'l-1',
+          { name: 'Ma liste' },
+          { seed: true },
+        );
+        await changes.record('list', 'l-2', { name: 'Fête' });
+      });
+
+      const [seed, real] = await pending();
+      expect(seed?.hlc.wallMs).toBe(0);
+      // Another device's snapshot value (a UUID as device id) wins a tie against a seed.
+      expect(
+        compareHlc(
+          seed?.hlc as Hlc,
+          minHlc('0f3c9d2e-1b7a-4c55-8e0a-6d2f4b9a1c33'),
+        ),
+      ).toBeLessThan(0);
+      expect(real?.hlc.wallMs).toBe(1_000);
+      expect(real?.hlc.counter).toBe(0);
+    });
 
     it('records the kind, the id and the fields, with a unique change id', async () => {
       await unitOfWork.run(async ({ changes }) => {

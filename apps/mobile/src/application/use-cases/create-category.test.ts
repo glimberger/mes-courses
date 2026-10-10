@@ -79,4 +79,28 @@ describe('createCategory', () => {
     expect(outcome).toEqual(err({ type: 'NameTooLong' }));
     expect(await categories()).toHaveLength(2);
   });
+
+  describe('recorded changes (US1)', () => {
+    const pending = () => unitOfWork.run((repos) => repos.changes.pending(100));
+
+    it('records the name and the position', async () => {
+      await createCategory('Surgelés');
+
+      expect(
+        (await pending()).map(({ kind, id, fields }) => ({ kind, id, fields })),
+      ).toEqual([
+        {
+          kind: 'category',
+          id: 'id-1',
+          fields: { name: 'Surgelés', position: 5 },
+        },
+      ]);
+    });
+
+    it('records nothing when the name is already used', async () => {
+      await createCategory('boissons');
+
+      expect(await pending()).toEqual([]);
+    });
+  });
 });

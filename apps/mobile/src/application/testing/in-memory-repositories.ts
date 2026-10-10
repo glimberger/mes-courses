@@ -1,4 +1,9 @@
-import { nextHlc, type Change, type EntityKind } from '@mes-courses/sync-core';
+import {
+  minHlc,
+  nextHlc,
+  type Change,
+  type EntityKind,
+} from '@mes-courses/sync-core';
 import type { Article } from '../../domain/article';
 import type { Category } from '../../domain/category';
 import type { ListItem } from '../../domain/list-item';
@@ -16,10 +21,12 @@ import type { Clock } from '../ports/clock';
 import type { IdGenerator } from '../ports/id-generator';
 import {
   LOCAL_DEVICE_ID,
+  SEED_DEVICE_ID,
   initialSyncState,
   type SyncState,
   type SyncStateRepository,
 } from '../ports/sync-state';
+import type { PulledRowsApplier } from '../ports/pulled-rows';
 import type { Repositories, UnitOfWork } from '../ports/unit-of-work';
 import { FakeClock } from './fake-clock';
 import { SequentialIdGenerator } from './sequential-id-generator';
@@ -257,14 +264,11 @@ export class InMemoryRepositories implements Repositories {
   readonly changes: ChangeRecorder = {
     record: async (kind, id, fields, options) => {
       const { syncState } = this.state;
-      const hlc = nextHlc(
-        {
-          ...syncState.maxHlc,
-          deviceId: syncState.deviceId ?? LOCAL_DEVICE_ID,
-        },
-        this.clock.nowMs(),
-      );
-      syncState.maxHlc = hlc;
+      const deviceId = syncState.deviceId ?? LOCAL_DEVICE_ID;
+      const hlc = options?.seed
+        ? minHlc(SEED_DEVICE_ID)
+        : nextHlc({ ...syncState.maxHlc, deviceId }, this.clock.nowMs());
+      if (!options?.seed) syncState.maxHlc = hlc;
       const seq = this.state.nextSeq;
       this.state.nextSeq += 1;
       const change = {
@@ -277,9 +281,9 @@ export class InMemoryRepositories implements Repositories {
       } as PendingChange & Change;
       this.state.outbox.push({ change, heldBy: options?.heldBy ?? null });
     },
-    pending: async (limit) =>
+    pending: async (limit, options) =>
       this.state.outbox
-        .filter((entry) => entry.heldBy === null)
+        .filter((entry) => options?.includeHeld || entry.heldBy === null)
         .slice(0, limit)
         .map((entry) => copyEntry(entry).change),
     acknowledge: async (changeIds) => {
@@ -310,6 +314,17 @@ export class InMemoryRepositories implements Repositories {
     save: async (state) => {
       this.state.syncState = copySyncState(state);
     },
+  };
+
+  /**
+   * Applies nothing and reports no effect: tests of the sync use cases spy on it or replace it,
+   * and the SQLite applier has its own tests.
+   */
+  pulledRows: PulledRowsApplier = {
+    apply: async () => ({
+      deferred: 0,
+      effects: { deletedArticles: [], removedItems: [], merges: [] },
+    }),
   };
 
   /** A copy of everything stored, to give back to `restore`. */
@@ -370,6 +385,7 @@ export class InMemoryUnitOfWork implements UnitOfWork {
         appState: guarded(repos.appState, isOpen),
         changes: guarded(repos.changes, isOpen),
         syncState: guarded(repos.syncState, isOpen),
+        pulledRows: guarded(repos.pulledRows, isOpen),
       });
     } catch (error) {
       repos.restore(before);

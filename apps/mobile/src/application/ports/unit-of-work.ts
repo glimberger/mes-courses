@@ -6,6 +6,7 @@ import type {
   ShoppingListRepository,
 } from './repositories';
 import type { ChangeRecorder } from './change-recorder';
+import type { PulledRowsApplier } from './pulled-rows';
 import type { SyncStateRepository } from './sync-state';
 
 export interface Repositories {
@@ -16,6 +17,7 @@ export interface Repositories {
   appState: AppStateRepository;
   changes: ChangeRecorder;
   syncState: SyncStateRepository;
+  pulledRows: PulledRowsApplier;
 }
 
 export interface UnitOfWork {

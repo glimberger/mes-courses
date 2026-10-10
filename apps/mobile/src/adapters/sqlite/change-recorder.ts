@@ -1,6 +1,7 @@
 import {
   decodeHlc,
   encodeHlc,
+  minHlc,
   nextHlc,
   type Change,
   type EntityKind,
@@ -8,7 +9,10 @@ import {
 import type { ChangeRecorder } from '../../application/ports/change-recorder';
 import type { Clock } from '../../application/ports/clock';
 import type { IdGenerator } from '../../application/ports/id-generator';
-import { LOCAL_DEVICE_ID } from '../../application/ports/sync-state';
+import {
+  LOCAL_DEVICE_ID,
+  SEED_DEVICE_ID,
+} from '../../application/ports/sync-state';
 import { findAll, findFirst, write } from './queries';
 import type { SqlDatabase } from './sql-database';
 import { sqliteSyncStateRepository } from './sync-state-repository';
@@ -45,10 +49,10 @@ export const sqliteChangeRecorder = (
   return {
     record: async (kind, id, fields, options) => {
       const state = await syncState.get();
-      const hlc = nextHlc(
-        { ...state.maxHlc, deviceId: state.deviceId ?? LOCAL_DEVICE_ID },
-        clock.nowMs(),
-      );
+      const deviceId = state.deviceId ?? LOCAL_DEVICE_ID;
+      const hlc = options?.seed
+        ? minHlc(SEED_DEVICE_ID)
+        : nextHlc({ ...state.maxHlc, deviceId }, clock.nowMs());
       await write(
         db,
         `INSERT INTO pending_change (change_id, hlc, kind, entity_id, fields, held_by)
@@ -62,13 +66,13 @@ export const sqliteChangeRecorder = (
           options?.heldBy ?? null,
         ],
       );
-      await syncState.save({ ...state, maxHlc: hlc });
+      if (!options?.seed) await syncState.save({ ...state, maxHlc: hlc });
     },
-    pending: (limit) =>
+    pending: (limit, options) =>
       findAll(
         db,
         `SELECT seq, change_id, hlc, kind, entity_id, fields FROM pending_change
-         WHERE held_by IS NULL ORDER BY seq LIMIT ?`,
+         ${options?.includeHeld ? '' : 'WHERE held_by IS NULL'} ORDER BY seq LIMIT ?`,
         [limit],
         toPending,
       ),

@@ -53,8 +53,12 @@ export type EditListActions = {
   removeItem: (
     articleId: ArticleId,
   ) => Promise<Result<void, ItemNotOnList | WriteFailed>>;
-  /** Ends the offer at once, then puts the item back in the write queue (R8). */
-  undo: () => Promise<void>;
+  /**
+   * Ends the offer at once, then puts the item back in the write queue (R8). With the `undoId` of
+   * an offer a pull already ended, a tap racing its snackbar restores nothing and shows the notice
+   * "Cet article a été supprimé sur un autre appareil." (research R10a).
+   */
+  undo: (undoId?: string) => Promise<void>;
   /** Ends the offer: the removal is final (FR-010). */
   dismissUndo: () => void;
 };
@@ -83,7 +87,18 @@ class NoCurrentList extends Error {
 }
 
 export const createEditListActions = (
-  { get, set, useCases, runWrite, region, reloadOnRefresh, report }: StoreKit,
+  {
+    get,
+    set,
+    useCases,
+    runWrite,
+    region,
+    reloadOnRefresh,
+    report,
+    endUndo,
+    releaseOffer,
+    endedRemotely,
+  }: StoreKit,
   { loadCurrentList }: Pick<CurrentListActions, 'loadCurrentList'>,
 ): EditListActions => {
   /** The list the current list region shows, loaded first when it shows none. */
@@ -209,9 +224,20 @@ export const createEditListActions = (
     return outcome.ok ? ok(undefined) : outcome;
   };
 
-  const undo = async () => {
+  const articleDeletedElsewhere = () =>
+    set({ notice: { type: 'articleDeletedElsewhere' } });
+
+  const undo = async (undoId?: string) => {
+    // A tap racing the snackbar a pull already removed (research R10a).
+    if (undoId !== undefined && endedRemotely.has(undoId)) {
+      articleDeletedElsewhere();
+      return;
+    }
     const offer = get().pendingUndo;
     if (offer === null) return;
+    const { undoId: offered } =
+      offer.kind === 'removedItem' ? offer.removed : offer.deleted;
+    if (undoId !== undefined && undoId !== offered) return;
     set({ pendingUndo: null });
     switch (offer.kind) {
       case 'deletedArticle':
@@ -219,11 +245,19 @@ export const createEditListActions = (
           useCases.restoreDeletedArticle(offer.deleted),
         );
         return;
-      case 'removedItem':
-        await runWrite('restoreRemovedItem', () =>
-          useCases.restoreRemovedItem(offer.removed),
+      case 'removedItem': {
+        const outcome = await runWrite(
+          'restoreRemovedItem',
+          () => useCases.restoreRemovedItem(offer.removed),
+          { expected: ['ArticleNotFound'] },
         );
+        if (!outcome.ok && outcome.error.type === 'ArticleNotFound') {
+          // Another device deleted the article first: nothing to restore, the removal is final.
+          releaseOffer(offer);
+          articleDeletedElsewhere();
+        }
         return;
+      }
       default:
         offer satisfies never;
     }
@@ -238,6 +272,6 @@ export const createEditListActions = (
     changeItemQuantity,
     removeItem,
     undo,
-    dismissUndo: () => set({ pendingUndo: null }),
+    dismissUndo: endUndo,
   };
 };

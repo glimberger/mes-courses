@@ -1,6 +1,9 @@
 import type { ServerStore } from '../../ports/store';
 import { appliedChangeRepositoryContract } from './applied-change-repository.contract';
-import { articleRepositoryContract } from './article-repository.contract';
+import {
+  articleInCategoryContract,
+  articleRepositoryContract,
+} from './article-repository.contract';
 import { categoryRepositoryContract } from './category-repository.contract';
 import { deviceRepositoryContract } from './device-repository.contract';
 import { listItemRepositoryContract } from './list-item-repository.contract';
@@ -16,6 +19,7 @@ export const storeContracts = (createStore: () => Promise<ServerStore>) => {
   metaRepositoryContract(createStore);
   categoryRepositoryContract(createStore);
   articleRepositoryContract(createStore);
+  articleInCategoryContract(createStore);
   listRepositoryContract(createStore);
   listItemRepositoryContract(createStore);
   appliedChangeRepositoryContract(createStore);

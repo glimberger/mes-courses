@@ -116,5 +116,32 @@ export const listItemRepositoryContract = (
         ]);
       });
     });
+
+    it('lists the items of an article or of a list, by list then article', async () => {
+      await store.run(async (repos) => {
+        await prepare(repos);
+        await repos.lists.save(list('l-2', 'Barbecue'));
+        await repos.items.save(item('l-2', 'a-1'));
+        await repos.items.save(item('l-1', 'a-2'));
+        await repos.items.save(item('l-1', 'a-1'));
+      });
+
+      await store.run(async ({ items }) => {
+        expect(
+          (await items.forArticle('a-1')).map((i) => [i.listId, i.articleId]),
+        ).toEqual([
+          ['l-1', 'a-1'],
+          ['l-2', 'a-1'],
+        ]);
+        expect(
+          (await items.forList('l-1')).map((i) => [i.listId, i.articleId]),
+        ).toEqual([
+          ['l-1', 'a-1'],
+          ['l-1', 'a-2'],
+        ]);
+        expect(await items.forArticle('a-9')).toEqual([]);
+        expect(await items.forList('l-9')).toEqual([]);
+      });
+    });
   });
 };
