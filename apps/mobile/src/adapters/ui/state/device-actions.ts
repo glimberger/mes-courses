@@ -33,7 +33,9 @@ export type DeviceActions = {
 
 type Helpers = {
   /** Reads the address, the last sync and the connection again into the slice. */
-  loadSyncInfo: () => Promise<boolean>;
+  loadSyncInfo: (keepConnection?: boolean) => Promise<boolean>;
+  /** Resolves once the running sync cycle, if any, is over: it saves the sync state last. */
+  waitForCycle: () => Promise<void>;
   setSync: (partial: Partial<SyncSlice>) => void;
   /** Forgets the failures of the sync cycles, as a new connection starts afresh. */
   resetFailures: () => void;
@@ -43,7 +45,7 @@ const SCREEN = 'Settings';
 
 export const createDeviceActions = (
   { set, useCases, report, onLocalWrite }: StoreKit,
-  { loadSyncInfo, setSync, resetFailures }: Helpers,
+  { loadSyncInfo, waitForCycle, setSync, resetFailures }: Helpers,
 ): DeviceActions => {
   /**
    * Runs a use case. A throw is reported and answered as a server error, since the request may
@@ -89,6 +91,8 @@ export const createDeviceActions = (
     revokeDevice: (id) => call('revokeDevice', () => useCases.revokeDevice(id)),
 
     disconnect: async () => {
+      // A cycle saving its state after the disconnection would restore the old server fields.
+      await waitForCycle();
       try {
         await useCases.disconnect();
       } catch (error) {
@@ -103,6 +107,8 @@ export const createDeviceActions = (
     },
 
     changeServerUrl: async (url) => {
+      // A cycle saving its state after the change would revert the new address.
+      await waitForCycle();
       let outcome: Awaited<ReturnType<typeof useCases.changeServerUrl>>;
       try {
         outcome = await useCases.changeServerUrl(url);
@@ -123,7 +129,8 @@ export const createDeviceActions = (
         return err(outcome.error);
       }
       resetFailures();
-      await loadSyncInfo();
+      // The address does not change the connection: a revoked or outdated app stays so.
+      await loadSyncInfo(true);
       // The first cycle at the new address starts soon, not after the current delay.
       onLocalWrite();
       return ok(undefined);

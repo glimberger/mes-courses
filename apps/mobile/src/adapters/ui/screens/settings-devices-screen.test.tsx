@@ -93,6 +93,23 @@ describe('Settings, devices (003 US4)', () => {
       expect(await screen.findByText('iPhone de Marc')).toBeOnTheScreen();
     });
 
+    it('revoked: says the list is unavailable, with no "Réessayer"', async () => {
+      await openSettings({
+        syncServer: {
+          listDevices: async () => err({ type: 'DeviceNotAuthorized' }),
+        },
+      });
+
+      expect(
+        await screen.findByText(
+          'Liste des appareils indisponible pour le moment.',
+        ),
+      ).toBeOnTheScreen();
+      expect(
+        screen.queryByText('Impossible de charger les appareils.'),
+      ).not.toBeOnTheScreen();
+    });
+
     it('offline: says so, with no error and nothing reported', async () => {
       const { errorReporter } = await openSettings();
 

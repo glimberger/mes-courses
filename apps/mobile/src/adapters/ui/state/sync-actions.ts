@@ -277,6 +277,9 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
 
   const devices = createDeviceActions(kit, {
     loadSyncInfo,
+    waitForCycle: async () => {
+      await inFlight;
+    },
     setSync,
     resetFailures: () => {
       failureStreak = 0;

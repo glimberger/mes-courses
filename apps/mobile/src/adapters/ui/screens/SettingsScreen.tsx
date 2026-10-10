@@ -29,6 +29,8 @@ export type DevicesState =
   | { type: 'loading' }
   | { type: 'error' }
   | { type: 'offline' }
+  // Revoked or outdated: the connection state says why, and retrying cannot help.
+  | { type: 'unavailable' }
   | { type: 'success'; devices: DeviceInfo[] };
 
 type Dialog =
@@ -56,6 +58,12 @@ export const SettingsScreen = () => {
   const [reload, setReload] = useState(0);
 
   const isConnected = connection !== 'notConnected' && serverUrl !== null;
+  // Leaving the server drops its list, so a new pairing never shows the previous one.
+  const [wasConnected, setWasConnected] = useState(isConnected);
+  if (wasConnected !== isConnected) {
+    setWasConnected(isConnected);
+    if (!isConnected) setDevices({ type: 'loading' });
+  }
   useEffect(() => {
     if (!isConnected) return;
     // Dropped when the screen goes or a newer load starts: only the latest is shown.
@@ -65,8 +73,14 @@ export const SettingsScreen = () => {
       if (outcome.ok) {
         setDevices({ type: 'success', devices: outcome.value });
       } else {
+        const { type } = outcome.error;
         setDevices({
-          type: outcome.error.type === 'Offline' ? 'offline' : 'error',
+          type:
+            type === 'Offline'
+              ? 'offline'
+              : type === 'DeviceNotAuthorized' || type === 'UpdateRequired'
+                ? 'unavailable'
+                : 'error',
         });
       }
     });
@@ -252,6 +266,12 @@ const DevicesSection = ({
       return (
         <Text variant="bodyMedium" style={styles.offline}>
           Liste des appareils indisponible hors connexion.
+        </Text>
+      );
+    case 'unavailable':
+      return (
+        <Text variant="bodyMedium" style={styles.offline}>
+          Liste des appareils indisponible pour le moment.
         </Text>
       );
     case 'success':
