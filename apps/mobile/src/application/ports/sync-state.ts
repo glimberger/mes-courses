@@ -26,6 +26,12 @@ export interface SyncStateRepository {
  */
 export const LOCAL_DEVICE_ID = 'local';
 
+/**
+ * The device id of a seed's stamp. It sorts before any device id the server issues (UUIDs start
+ * with a digit or a letter), so on a tie another device's snapshot value still wins (research R13).
+ */
+export const SEED_DEVICE_ID = '!';
+
 /** What `get` returns before any save. */
 export const initialSyncState = (): SyncState => ({
   serverUrl: null,

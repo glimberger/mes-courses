@@ -11,8 +11,9 @@ those of 001: `Result` for expected failures, throws for unexpected ones, and ev
 
 ```ts
 interface ChangeRecorder {                     // part of Repositories, so it shares the transaction
-  record(kind: EntityKind, id: string, fields: object, options?: { heldBy?: string }): Promise<void>;
-  // stamps the change with clock.nextHlc() and appends it to pending_change
+  record(kind: EntityKind, id: string, fields: object, options?: { heldBy?: string; seed?: boolean }): Promise<void>;
+  // stamps the change with clock.nextHlc() and appends it to pending_change; with `seed`, with the
+  // minimum HLC of a device id that sorts before any server-issued one (R13), and the clock is left alone
   pending(limit: number): Promise<PendingChange[]>;      // held entries excluded, in seq order
   acknowledge(changeIds: string[]): Promise<void>;
   release(heldBy: string): Promise<void>;                // held → pending
@@ -80,7 +81,7 @@ Every command records its changes with `changes.record` in its existing transact
 
 | Use case | Recorded changes |
 |---|---|
-| `initializeStore` (001) | Seeded categories (`name`, `position`) and the first list (`name`). At every start it also calls `changes.releaseAll()`. |
+| `initializeStore` (001) | Seeded categories (`name`, `position`) and the first list (`name`), recorded with `seed: true` (minimum HLC). At every start it also calls `changes.releaseAll()`. |
 | `toggleItemInCart` | `listItem.inCart` |
 | `finishShopping` | `listItem.inCart = false` for each item ticked at that moment (FR-013) |
 | `addArticleToList` | `listItem { listId, articleId, present: true, inCart: false, quantity }` |

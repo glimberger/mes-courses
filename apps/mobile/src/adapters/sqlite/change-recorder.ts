@@ -9,7 +9,10 @@ import {
 import type { ChangeRecorder } from '../../application/ports/change-recorder';
 import type { Clock } from '../../application/ports/clock';
 import type { IdGenerator } from '../../application/ports/id-generator';
-import { LOCAL_DEVICE_ID } from '../../application/ports/sync-state';
+import {
+  LOCAL_DEVICE_ID,
+  SEED_DEVICE_ID,
+} from '../../application/ports/sync-state';
 import { findAll, findFirst, write } from './queries';
 import type { SqlDatabase } from './sql-database';
 import { sqliteSyncStateRepository } from './sync-state-repository';
@@ -48,7 +51,7 @@ export const sqliteChangeRecorder = (
       const state = await syncState.get();
       const deviceId = state.deviceId ?? LOCAL_DEVICE_ID;
       const hlc = options?.seed
-        ? minHlc(deviceId)
+        ? minHlc(SEED_DEVICE_ID)
         : nextHlc({ ...state.maxHlc, deviceId }, clock.nowMs());
       await write(
         db,

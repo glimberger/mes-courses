@@ -1,4 +1,4 @@
-import { compareHlc, type Hlc } from '@mes-courses/sync-core';
+import { compareHlc, minHlc, type Hlc } from '@mes-courses/sync-core';
 import type { UnitOfWork } from '../../ports/unit-of-work';
 import type { FakeClock } from '../fake-clock';
 
@@ -37,6 +37,13 @@ export const changeRecorderContract = (create: () => Promise<Created>) => {
 
       const [seed, real] = await pending();
       expect(seed?.hlc.wallMs).toBe(0);
+      // Another device's snapshot value (a UUID as device id) wins a tie against a seed.
+      expect(
+        compareHlc(
+          seed?.hlc as Hlc,
+          minHlc('0f3c9d2e-1b7a-4c55-8e0a-6d2f4b9a1c33'),
+        ),
+      ).toBeLessThan(0);
       expect(real?.hlc.wallMs).toBe(1_000);
       expect(real?.hlc.counter).toBe(0);
     });

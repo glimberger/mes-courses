@@ -21,6 +21,7 @@ import type { Clock } from '../ports/clock';
 import type { IdGenerator } from '../ports/id-generator';
 import {
   LOCAL_DEVICE_ID,
+  SEED_DEVICE_ID,
   initialSyncState,
   type SyncState,
   type SyncStateRepository,
@@ -265,7 +266,7 @@ export class InMemoryRepositories implements Repositories {
       const { syncState } = this.state;
       const deviceId = syncState.deviceId ?? LOCAL_DEVICE_ID;
       const hlc = options?.seed
-        ? minHlc(deviceId)
+        ? minHlc(SEED_DEVICE_ID)
         : nextHlc({ ...syncState.maxHlc, deviceId }, this.clock.nowMs());
       if (!options?.seed) syncState.maxHlc = hlc;
       const seq = this.state.nextSeq;
