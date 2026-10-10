@@ -161,7 +161,9 @@ const saveMerging = async (
 
   const { survivor, loser } = mergeOrder(entity, other);
   await repo.save(tombstoneMerged(loser, survivor.id, change.hlc, seq));
-  if (survivor === entity) await repo.save(entity);
+  // A survivor that already existed is saved again at this seq, so devices that skipped it
+  // (a name clash with a row of theirs) receive it together with the loser's tombstone.
+  await repo.save(survivor === entity ? entity : { ...survivor, seq });
 
   switch (change.kind) {
     case 'category':

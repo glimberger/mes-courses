@@ -234,6 +234,20 @@ describe('sync', () => {
     expect(second.seq).toBe(MAX_ROWS_PER_RESPONSE + 1);
   });
 
+  it('sends the surviving row again when a later push is merged into it', async () => {
+    const { run } = await setup();
+    await run([createList('ch-1', 'l-a', 'Courses', NOW - 2000)]);
+    const first = await run([], 0);
+
+    const second = await run(
+      [createList('ch-2', 'l-b', 'courses', NOW - 1000)],
+      first.seq,
+    );
+
+    expect(second.rows.map((row) => row.id).sort()).toEqual(['l-a', 'l-b']);
+    expect(rowOf(second.rows, 'list', 'l-b')?.mergedInto).toBe('l-a');
+  });
+
   it('sends a seq holding more rows than a response whole', async () => {
     const { run, store } = await setup();
     await store.run(async ({ lists, meta }) => {
@@ -682,6 +696,7 @@ describe('sync', () => {
         new Set([before + 1]),
       );
       expect(rows.map((row) => row.id).sort()).toEqual([
+        'a-1',
         'a-2',
         'l-1:a-1',
         'l-1:a-2',
