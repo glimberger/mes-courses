@@ -9,6 +9,7 @@ import { ListSummaryRow } from '../components/ListSummaryRow';
 import { SCREEN_FAB_CLEARANCE, ScreenFab } from '../components/ScreenFab';
 import { BackAction } from '../components/BackAction';
 import { ScreenStateView } from '../components/ScreenStateView';
+import { SyncStatusBar } from '../components/SyncStatusBar';
 import { useAppStore } from '../state/use-app-store';
 import { CreateListDialog } from './CreateListDialog';
 
@@ -88,6 +89,7 @@ export const ListsScreen = () => {
         )}
         <Appbar.Content title="Mes listes" />
       </Appbar.Header>
+      <SyncStatusBar />
       <ScreenStateView
         state={lists}
         errorMessage="Impossible de charger vos listes."

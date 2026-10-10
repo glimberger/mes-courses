@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
 
 import { fixture } from '../testing/fixtures';
+import { pullingSyncServer } from '../testing/pulling-sync-server';
 import { CurrentListScreen } from './CurrentListScreen';
 
 const meta = {
@@ -39,6 +40,17 @@ export const AllInCart: Story = {
         ...fixture,
         items: fixture.items.map((item) => ({ ...item, inCart: true })),
       },
+    },
+  },
+};
+
+/** The sync status bar under the Appbar of a data screen (FR-020). */
+export const WithSyncStatus: Story = {
+  parameters: {
+    scenario: {
+      seed: fixture,
+      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      syncServer: pullingSyncServer().syncServer,
     },
   },
 };

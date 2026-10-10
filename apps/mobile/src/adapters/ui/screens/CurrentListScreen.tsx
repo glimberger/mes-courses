@@ -11,7 +11,10 @@ import { AppbarIconAction } from '../components/AppbarIconAction';
 import { ListItemRow } from '../components/ListItemRow';
 import { SCREEN_FAB_CLEARANCE, ScreenFab } from '../components/ScreenFab';
 import { ScreenStateView } from '../components/ScreenStateView';
+import { SyncStatusBar } from '../components/SyncStatusBar';
 import type { RootStackParamList } from '../routes';
+import type { AppState } from '../state/app-store';
+import { useAppStoreApi } from '../state/app-store-provider';
 import { shownList } from '../state/current-list-actions';
 import { useAppStore } from '../state/use-app-store';
 import { FinishShoppingDialog } from './FinishShoppingDialog';
@@ -85,6 +88,11 @@ const neighbourOf = (
   return rows[at + 1] ?? rows[at - 1] ?? null;
 };
 
+const articleIdsOf = (view: CurrentListView | null): ArticleId[] =>
+  view?.sections.flatMap((section) =>
+    section.items.map((item) => item.articleId),
+  ) ?? [];
+
 /**
  * The current list (User Story 1): its items by category, ticked with a tap, the remaining count,
  * and "Terminer les courses" once an item is in the cart.
@@ -107,6 +115,11 @@ export const CurrentListScreen = () => {
   // The view as last drawn, read by `remove` and `editQuantity`, which stay the same as the view
   // changes.
   const viewRef = useRef<CurrentListView | null>(null);
+  // The rows of the lists the store held lately, and the row the user last activated, for the
+  // focus move when a pull removes that row (US3-7).
+  const rowHistory = useRef<ArticleId[][]>([]);
+  const activated = useRef<ArticleId | null>(null);
+  const store = useAppStoreApi();
 
   useEffect(() => {
     void loadCurrentList();
@@ -120,12 +133,14 @@ export const CurrentListScreen = () => {
 
   /** Focus on the row of the item, looked up once the screen has settled (FR-037). */
   const focusOnRow = useCallback(
-    (articleId: ArticleId) =>
+    (articleId: ArticleId) => {
+      activated.current = articleId;
       focusOn({
         get current() {
           return rowRefs.get(articleId) ?? null;
         },
-      }),
+      });
+    },
     [rowRefs],
   );
 
@@ -135,6 +150,7 @@ export const CurrentListScreen = () => {
       .find((shown) => shown.articleId === articleId);
     if (!item) return;
     editing.current = articleId;
+    activated.current = articleId;
     setRequest({
       mode: 'edit',
       article: { id: item.articleId, name: item.name },
@@ -149,6 +165,7 @@ export const CurrentListScreen = () => {
 
   const remove = useCallback(
     async (articleId: ArticleId) => {
+      activated.current = articleId;
       const shown = viewRef.current;
       const neighbour = shown && neighbourOf(shown, articleId);
       const outcome = await removeItem(articleId);
@@ -162,13 +179,63 @@ export const CurrentListScreen = () => {
   // Every callback is stable, so the rows are not drawn again for them.
   const handlers = useMemo<RowHandlers>(
     () => ({
-      toggleItem,
+      toggleItem: (articleId) => {
+        activated.current = articleId;
+        return toggleItem(articleId);
+      },
       editQuantity,
       remove: (articleId) => void remove(articleId),
       rowRefs,
     }),
     [toggleItem, editQuantity, remove, rowRefs],
   );
+
+  // A pull removed the row the user last activated: focus moves as after a local removal, and
+  // nothing is announced for the rows the pull changed (US3-7, research R14).
+  useEffect(() => {
+    const rowsOf = (state: AppState) =>
+      articleIdsOf(
+        state.currentList.status === 'success' ? state.currentList.data : null,
+      );
+    rowHistory.current = [rowsOf(store.getState())];
+    // A screen covered by another one does not move the focus, and forgets its activated row.
+    const forget = navigation.addListener('blur', () => {
+      activated.current = null;
+    });
+    const unsubscribe = store.subscribe((state, previous) => {
+      // Recorded as the store changes, not as the screen draws: a pull publishes its effects
+      // right after the refresh, before any render.
+      if (state.currentList !== previous.currentList) {
+        rowHistory.current = [...rowHistory.current, rowsOf(state)].slice(-5);
+      }
+      if (state.sync.remote === previous.sync.remote) return;
+      const articleId = activated.current;
+      if (articleId === null || !navigation.isFocused()) return;
+      const { effects } = state.sync.remote;
+      const listId = shownList(state.currentList)?.id;
+      const removed =
+        effects.deletedArticles.includes(articleId) ||
+        effects.removedItems.some(
+          (item) => item.listId === listId && item.articleId === articleId,
+        );
+      if (!removed) return;
+      activated.current = null;
+      const now = rowsOf(state);
+      const before = [...rowHistory.current]
+        .reverse()
+        .find((rows) => rows.includes(articleId));
+      const at = before?.indexOf(articleId) ?? -1;
+      const neighbour = [before?.[at + 1], before?.[at - 1]].find(
+        (id): id is ArticleId => id !== undefined && now.includes(id),
+      );
+      if (neighbour === undefined) focusOn(emptyMessageRef);
+      else focusOnRow(neighbour);
+    });
+    return () => {
+      forget();
+      unsubscribe();
+    };
+  }, [store, navigation, focusOnRow]);
 
   const cancelFinish = () => {
     setFinishing(false);
@@ -222,6 +289,7 @@ export const CurrentListScreen = () => {
           onPress={() => navigation.navigate('Settings')}
         />
       </Appbar.Header>
+      <SyncStatusBar />
       <ScreenStateView
         state={currentList}
         errorMessage="Impossible de charger la liste."

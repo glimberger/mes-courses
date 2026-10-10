@@ -15,6 +15,7 @@ import { BackAction } from '../components/BackAction';
 import { Button } from '../components/Button';
 import { ScreenStateView } from '../components/ScreenStateView';
 import { SearchField } from '../components/SearchField';
+import { SyncStatusBar } from '../components/SyncStatusBar';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
@@ -185,6 +186,7 @@ export const AddArticlesScreen = () => {
           onPress={newArticle}
         />
       </Appbar.Header>
+      <SyncStatusBar />
       <SearchField
         placeholder="Rechercher un article"
         value={query}

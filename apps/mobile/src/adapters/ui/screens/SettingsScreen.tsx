@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BackAction } from '../components/BackAction';
 import { Button } from '../components/Button';
 import { formatLastSync } from '../components/format-last-sync';
+import { SyncStatusBar } from '../components/SyncStatusBar';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
@@ -20,17 +21,24 @@ const withoutScheme = (url: string) => url.replace(/^https?:\/\//, '');
 export const SettingsScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { connection, serverUrl, lastSyncAt } = useAppStore(
+  const { connection, serverUrl, lastSyncAt, status } = useAppStore(
     (state) => state.sync,
   );
+  const syncNow = useAppStore((state) => state.syncNow);
   return (
     <SettingsView
       onBack={navigation.canGoBack() ? () => navigation.goBack() : null}
       onConnect={() => navigation.navigate('ConnectServer')}
+      onSyncNow={() => void syncNow()}
       server={
         connection === 'notConnected' || serverUrl === null
           ? null
-          : { url: serverUrl, lastSyncAt }
+          : {
+              url: serverUrl,
+              lastSyncAt,
+              // A revoked or outdated app cannot sync, and a cycle already runs.
+              canSyncNow: connection === 'connected' && status !== 'sending',
+            }
       }
     />
   );
@@ -39,14 +47,21 @@ export const SettingsScreen = () => {
 export type SettingsViewProps = {
   onBack: (() => void) | null;
   onConnect: () => void;
+  /** "Synchroniser maintenant": runs a cycle at once (US3-5). */
+  onSyncNow: () => void;
   /** The server this device is connected to, or null when it never was. */
-  server: { url: string; lastSyncAt: string | null } | null;
+  server: {
+    url: string;
+    lastSyncAt: string | null;
+    canSyncNow: boolean;
+  } | null;
 };
 
 /** The content of Settings, its data given as props so a story can show each state. */
 export const SettingsView = ({
   onBack,
   onConnect,
+  onSyncNow,
   server,
 }: SettingsViewProps) => (
   <View style={styles.screen}>
@@ -54,6 +69,7 @@ export const SettingsView = ({
       {onBack && <BackAction onPress={onBack} />}
       <Appbar.Content title="Réglages" />
     </Appbar.Header>
+    <SyncStatusBar />
     <ScrollView contentContainerStyle={styles.content}>
       {server === null ? (
         <>
@@ -77,6 +93,13 @@ export const SettingsView = ({
               </Text>
             )}
           />
+          <Button
+            mode="outlined"
+            disabled={!server.canSyncNow}
+            onPress={onSyncNow}
+          >
+            Synchroniser maintenant
+          </Button>
         </>
       )}
     </ScrollView>
