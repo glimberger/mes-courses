@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import type { ArticleId } from '../../../domain/article';
 import type { ListId } from '../../../domain/shopping-list';
 import { useAppStoreApi } from './app-store-provider';
+import { followRedirects } from './store-kit';
 
 /** What a form edits: an article (EditArticle) or an item of a list (QuantityDialog). */
 export type RemovalTarget = { articleId: ArticleId; listId?: ListId };
@@ -31,14 +32,18 @@ export const useRemoteRemoval = (
         const { effects } = state.sync.remote;
         const { target: now, onRemoved: callback } = latest.current;
         // The form may hold an id merged away since: the deletion names its survivor.
-        const articleId = state.sync.redirects[now.articleId] ?? now.articleId;
-        if (effects.deletedArticles.includes(articleId)) {
+        const followed = followRedirects(state.sync.redirects, now.articleId);
+        if (
+          effects.deletedArticles.includes(now.articleId) ||
+          effects.deletedArticles.includes(followed)
+        ) {
           callback('articleDeleted');
         } else if (
           now.listId !== undefined &&
           effects.removedItems.some(
             (item) =>
-              item.listId === now.listId && item.articleId === articleId,
+              item.listId === now.listId &&
+              (item.articleId === now.articleId || item.articleId === followed),
           )
         ) {
           callback('itemRemoved');

@@ -106,7 +106,9 @@ const LoadedEditArticle = ({
   useEffect(
     () =>
       navigation.addListener('focus', () => {
-        if (removed.current) leave();
+        if (!removed.current) return;
+        removed.current = false;
+        leave();
       }),
     // `leave` only reads `navigation`.
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -184,9 +184,13 @@ export const createSyncActions = ({
     }
     applyOutcome(result);
     endOfferOfDeleted(result.effects);
-    if (result.pulledRows > 0) await get().refresh();
-    // After the refresh, so a form that closes lands on screens already showing the pull.
-    publishEffects(result.effects);
+    try {
+      if (result.pulledRows > 0) await get().refresh();
+    } finally {
+      // After the refresh, so a form that closes lands on screens already showing the pull; and
+      // even when it fails, so the merges and removals of this cycle are not lost.
+      publishEffects(result.effects);
+    }
     // `disconnectedByServer` and `updateRequired` come from the cycle, which knows more.
     await loadSyncInfo(
       result.outcome.type === 'disconnectedByServer' ||
@@ -244,15 +248,9 @@ export const createSyncActions = ({
   };
 
   const noticeRemoteRemoval: SyncActions['noticeRemoteRemoval'] = (reason) => {
-    // Never hides another notice, such as a failed save the user has not read yet.
-    const current = get().notice;
-    if (
-      current !== null &&
-      current.type !== 'articleDeletedElsewhere' &&
-      current.type !== 'itemRemovedElsewhere'
-    ) {
-      return;
-    }
+    // The form is closing: the user must be told why. Only the storage-full notice, shown once
+    // per streak, is kept.
+    if (get().notice?.type === 'storageFull') return;
     set({
       notice: {
         type:

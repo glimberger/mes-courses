@@ -147,3 +147,18 @@ export interface StoreKit {
     reload: () => Promise<void>,
   ) => void;
 }
+
+/** The survivor of the merges in `redirects`, following chains; `id` itself when not merged. */
+export const followRedirects = <T extends string>(
+  redirects: Record<string, string>,
+  id: T,
+): T => {
+  let current: string = id;
+  // A merge never loops (the survivor is older), but a guard keeps a bad map harmless.
+  for (let hops = 0; hops <= Object.keys(redirects).length; hops += 1) {
+    const next = redirects[current];
+    if (next === undefined) break;
+    current = next;
+  }
+  return current as T;
+};

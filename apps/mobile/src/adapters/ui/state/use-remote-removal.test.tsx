@@ -132,4 +132,38 @@ describe('useRemoteRemoval', () => {
 
     expect(store.getState().sync.remote).toBe(before);
   });
+
+  it('follows a chain of merges to the survivor', async () => {
+    const { wrapper, cycle } = await setup();
+    const onRemoved = jest.fn();
+    renderHook(() => useRemoteRemoval({ articleId: lait }, onRemoved), {
+      wrapper,
+    });
+
+    await cycle({
+      merges: [
+        { kind: 'article', loserId: lait, survivorId: pommes },
+        { kind: 'article', loserId: pommes, survivorId: 'article-poires' },
+      ],
+    });
+    await cycle({ deletedArticles: ['article-poires' as ArticleId] });
+
+    expect(onRemoved).toHaveBeenCalledWith('articleDeleted');
+  });
+
+  it('sees an item removed under the original id in a cycle that also merges it', async () => {
+    const { wrapper, cycle } = await setup();
+    const onRemoved = jest.fn();
+    renderHook(
+      () => useRemoteRemoval({ listId: maListe, articleId: lait }, onRemoved),
+      { wrapper },
+    );
+
+    await cycle({
+      merges: [{ kind: 'article', loserId: lait, survivorId: pommes }],
+      removedItems: [{ listId: maListe, articleId: lait }],
+    });
+
+    expect(onRemoved).toHaveBeenCalledWith('itemRemoved');
+  });
 });
