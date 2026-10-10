@@ -107,4 +107,29 @@ describe('useRemoteRemoval', () => {
 
     expect(onRemoved).not.toHaveBeenCalled();
   });
+
+  it('follows a merge: deleting the survivor closes a form on the merged-away id', async () => {
+    const { wrapper, cycle } = await setup();
+    const onRemoved = jest.fn();
+    renderHook(() => useRemoteRemoval({ articleId: lait }, onRemoved), {
+      wrapper,
+    });
+
+    await cycle({
+      merges: [{ kind: 'article', loserId: lait, survivorId: pommes }],
+    });
+    expect(onRemoved).not.toHaveBeenCalled();
+    await cycle({ deletedArticles: [pommes] });
+
+    expect(onRemoved).toHaveBeenCalledWith('articleDeleted');
+  });
+
+  it('leaves the sync slice untouched by a cycle that changes nothing', async () => {
+    const { store, cycle } = await setup();
+    const before = store.getState().sync.remote;
+
+    await cycle({});
+
+    expect(store.getState().sync.remote).toBe(before);
+  });
 });

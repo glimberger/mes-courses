@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -93,10 +93,25 @@ const LoadedEditArticle = ({
   const editArticle = useAppStore((state) => state.editArticle);
   const noticeRemoteRemoval = useAppStore((state) => state.noticeRemoteRemoval);
   // A pull that deletes the article closes the form (FR-020a).
+  const removed = useRef(false);
+  const leave = () => {
+    if (navigation.canGoBack()) navigation.goBack();
+  };
   useRemoteRemoval({ articleId }, (reason) => {
     noticeRemoteRemoval(reason);
-    if (navigation.isFocused() && navigation.canGoBack()) navigation.goBack();
+    // A modal on top (the category picker) has the focus: leave once it is back.
+    if (navigation.isFocused()) leave();
+    else removed.current = true;
   });
+  useEffect(
+    () =>
+      navigation.addListener('focus', () => {
+        if (removed.current) leave();
+      }),
+    // `leave` only reads `navigation`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [navigation],
+  );
   const [name, setName] = useState(initial.name);
   const [categoryId, setCategoryId] = useState<CategoryId>(initial.categoryId);
   const [nameError, setNameError] = useState<string | null>(null);

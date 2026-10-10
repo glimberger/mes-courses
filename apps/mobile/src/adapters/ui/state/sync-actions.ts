@@ -99,6 +99,14 @@ export const createSyncActions = ({
 
   /** Remembers the merges and tells the open forms what the pull removed (research R10a). */
   const publishEffects = (effects: SyncResult['effects']) => {
+    // An idle cycle changes nothing: leave the slice alone so no subscriber wakes.
+    if (
+      effects.deletedArticles.length === 0 &&
+      effects.removedItems.length === 0 &&
+      effects.merges.length === 0
+    ) {
+      return;
+    }
     const { redirects, remote } = get().sync;
     setSync({
       redirects: {
@@ -176,8 +184,9 @@ export const createSyncActions = ({
     }
     applyOutcome(result);
     endOfferOfDeleted(result.effects);
-    publishEffects(result.effects);
     if (result.pulledRows > 0) await get().refresh();
+    // After the refresh, so a form that closes lands on screens already showing the pull.
+    publishEffects(result.effects);
     // `disconnectedByServer` and `updateRequired` come from the cycle, which knows more.
     await loadSyncInfo(
       result.outcome.type === 'disconnectedByServer' ||
@@ -234,7 +243,16 @@ export const createSyncActions = ({
     return ok(undefined);
   };
 
-  const noticeRemoteRemoval: SyncActions['noticeRemoteRemoval'] = (reason) =>
+  const noticeRemoteRemoval: SyncActions['noticeRemoteRemoval'] = (reason) => {
+    // Never hides another notice, such as a failed save the user has not read yet.
+    const current = get().notice;
+    if (
+      current !== null &&
+      current.type !== 'articleDeletedElsewhere' &&
+      current.type !== 'itemRemovedElsewhere'
+    ) {
+      return;
+    }
     set({
       notice: {
         type:
@@ -243,6 +261,7 @@ export const createSyncActions = ({
             : 'itemRemovedElsewhere',
       },
     });
+  };
 
   return { syncNow, connectToServer, noticeRemoteRemoval };
 };

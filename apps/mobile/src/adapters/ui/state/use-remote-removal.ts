@@ -30,13 +30,15 @@ export const useRemoteRemoval = (
         if (state.sync.remote === previous.sync.remote) return;
         const { effects } = state.sync.remote;
         const { target: now, onRemoved: callback } = latest.current;
-        if (effects.deletedArticles.includes(now.articleId)) {
+        // The form may hold an id merged away since: the deletion names its survivor.
+        const articleId = state.sync.redirects[now.articleId] ?? now.articleId;
+        if (effects.deletedArticles.includes(articleId)) {
           callback('articleDeleted');
         } else if (
           now.listId !== undefined &&
           effects.removedItems.some(
             (item) =>
-              item.listId === now.listId && item.articleId === now.articleId,
+              item.listId === now.listId && item.articleId === articleId,
           )
         ) {
           callback('itemRemoved');
