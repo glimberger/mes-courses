@@ -1,6 +1,7 @@
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
+import { err } from '../../../domain/result';
 import { Navigation } from '../navigation';
 import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
@@ -24,6 +25,54 @@ const openSettings = async (scenario: StoryScenario = {}) => {
 };
 
 describe('Settings', () => {
+  it('003 FR-020 renders the sync status bar under the Appbar', async () => {
+    await openSettings({
+      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+    });
+
+    expect(await screen.findByTestId('sync-status-bar')).toBeOnTheScreen();
+  });
+
+  it('003 US3-5 "Synchroniser maintenant" starts a cycle at once', async () => {
+    const sync = jest.fn(async () => err({ type: 'Offline' as const }));
+    await openSettings({
+      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      syncServer: { sync },
+    });
+    sync.mockClear();
+
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Synchroniser maintenant' }),
+    );
+
+    await waitFor(() => expect(sync).toHaveBeenCalledTimes(1));
+  });
+
+  it('003 US3-5 a device that never connected has no sync status or button', async () => {
+    await openSettings();
+
+    expect(screen.queryByTestId('sync-status-bar')).not.toBeOnTheScreen();
+    expect(
+      screen.queryByRole('button', { name: 'Synchroniser maintenant' }),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('003 US3-1 tapping the bar on another screen opens Settings', async () => {
+    await renderApp({
+      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+    });
+
+    fireEvent.press(
+      await screen
+        .findByTestId('sync-status-bar')
+        .then(() => screen.getByLabelText(/synchronis/i, { exact: false })),
+    );
+
+    expect(
+      await screen.findByRole('header', { name: 'Réglages' }),
+    ).toBeOnTheScreen();
+  });
+
   it('US4-1 adds an Appbar action "Réglages" to CurrentList', async () => {
     await renderApp();
 

@@ -113,6 +113,27 @@ export const createAppStoreWith = <Actions extends object>(
       releaseOffer(offer);
     };
 
+    /** A saved write has a change in the outbox: shown as waiting, unless a cycle says more. */
+    const noteLocalWrite = async () => {
+      if (get().sync.connection === 'notConnected') return;
+      try {
+        const { pendingCount } = await useCases.getSyncInfo();
+        const { sync } = get();
+        update({
+          sync: {
+            ...sync,
+            pendingCount,
+            status:
+              sync.status === 'saved' && pendingCount > 0
+                ? 'waiting'
+                : sync.status,
+          },
+        });
+      } catch (error) {
+        errorReporter.report(error, { operation: 'getSyncInfo' });
+      }
+    };
+
     const fail = (
       operation: string,
       error: unknown,
@@ -144,6 +165,7 @@ export const createAppStoreWith = <Actions extends object>(
           : fail(operation, new UnexpectedResult(type));
       }
       onLocalWrite?.();
+      await noteLocalWrite();
       // The offer a write replaces or ends is final: its held changes are released.
       const previous = get().pendingUndo;
       if (previous !== null) releaseOffer(previous);

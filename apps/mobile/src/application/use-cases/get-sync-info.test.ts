@@ -27,6 +27,7 @@ describe('getSyncInfo', () => {
     expect(await getSyncInfo()).toEqual({
       serverUrl: null,
       lastSyncAt: null,
+      pendingCount: 0,
       connection: 'notConnected',
     });
   });
@@ -38,6 +39,7 @@ describe('getSyncInfo', () => {
     expect(await getSyncInfo()).toEqual({
       serverUrl: 'https://courses.example.fr',
       lastSyncAt: '2026-10-01T10:00:00.000Z',
+      pendingCount: 0,
       connection: 'connected',
     });
   });
@@ -48,6 +50,7 @@ describe('getSyncInfo', () => {
     expect(await getSyncInfo()).toEqual({
       serverUrl: 'https://courses.example.fr',
       lastSyncAt: null,
+      pendingCount: 0,
       connection: 'disconnectedByServer',
     });
   });

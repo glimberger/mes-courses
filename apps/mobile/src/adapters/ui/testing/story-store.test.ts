@@ -186,6 +186,7 @@ describe('createStoryStore', () => {
 
       expect(await useCases.getSyncInfo()).toEqual({
         ...connected,
+        pendingCount: 0,
         connection: 'connected',
       });
       expect(store.getState().sync).toMatchObject({

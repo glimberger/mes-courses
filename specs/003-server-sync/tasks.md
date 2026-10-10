@@ -418,7 +418,7 @@ the server failing (failed, then "Réessayer").
 
 ### Tests for User Story 3 ⚠️ (write first, confirm they fail)
 
-- [ ] T084 [P] [US3] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.sync-status.test.ts`, following the transitions of [data-model.md](data-model.md#sync-status-ui-store-syncstatus-us3):
+- [X] T084 [P] [US3] Write failing store tests in `apps/mobile/src/adapters/ui/state/app-store.sync-status.test.ts`, following the transitions of [data-model.md](data-model.md#sync-status-ui-store-syncstatus-us3):
   - a local write → `waiting` with `pendingCount`;
   - a cycle → `sending`, then `saved` when the outbox is empty;
   - `Offline` → `waiting`, never reported (FR-022);
@@ -427,7 +427,7 @@ the server failing (failed, then "Réessayer").
   - a success resets the streak;
   - `syncNow()` starts a cycle at once (US3-5);
   - `retry()` from `failed` starts a cycle.
-- [ ] T085 [P] [US3] Write failing component tests in `apps/mobile/src/adapters/ui/components/sync-status-bar.test.tsx`, with the texts of [contracts/ui-screens.md](contracts/ui-screens.md#syncstatusbar-new-shared-component-fr-020):
+- [X] T085 [P] [US3] Write failing component tests in `apps/mobile/src/adapters/ui/components/sync-status-bar.test.tsx`, with the texts of [contracts/ui-screens.md](contracts/ui-screens.md#syncstatusbar-new-shared-component-fr-020):
   - "Synchronisé" (US3-1);
   - "En attente de synchronisation (3)", with the accessibility label "3 modifications", and no error color (US3-2);
   - "Synchronisation…" (US3-3);
@@ -438,16 +438,16 @@ the server failing (failed, then "Réessayer").
   - `DisconnectedByServer` also for a connection with a server address and no credential (FR-018b);
   - ≥ 48 dp with a button;
   - tapping it opens Settings.
-- [ ] T086 [US3] Write failing screen tests: CurrentList, AddArticles, Lists, EditArticle and Settings each render `SyncStatusBar` under their Appbar. Settings' server section shows "Synchroniser maintenant" (US3-5). Put them in the existing `*-screen.test.tsx` files.
-- [ ] T087 [US3] Write a failing test in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx` for focus after a pull (US3-7, [research.md](research.md) R14): with a screen reader on (mocked `AccessibilityInfo`), activate the row "Pain", then run a cycle that removes "Pain": `setAccessibilityFocus` targets the next row, or the previous one when "Pain" was last, or the `EmptyState` when the list becomes empty, and `announceForAccessibility` is not called; a cycle that removes a row the user did not activate moves no focus.
+- [X] T086 [US3] Write failing screen tests: CurrentList, AddArticles, Lists, EditArticle and Settings each render `SyncStatusBar` under their Appbar. Settings' server section shows "Synchroniser maintenant" (US3-5). Put them in the existing `*-screen.test.tsx` files.
+- [X] T087 [US3] Write a failing test in `apps/mobile/src/adapters/ui/screens/current-list-screen.test.tsx` for focus after a pull (US3-7, [research.md](research.md) R14): with a screen reader on (mocked `AccessibilityInfo`), activate the row "Pain", then run a cycle that removes "Pain": `setAccessibilityFocus` targets the next row, or the previous one when "Pain" was last, or the `EmptyState` when the list becomes empty, and `announceForAccessibility` is not called; a cycle that removes a row the user did not activate moves no focus.
 
 ### Implementation for User Story 3
 
-- [ ] T088 [US3] Implement the status transitions, the failure streak, `syncNow()` and `retry()` in `apps/mobile/src/adapters/ui/state/app-store.ts` and `apps/mobile/src/adapters/ui/state/sync-scheduler.ts` to turn T084 green.
-- [ ] T089 [P] [US3] Implement `apps/mobile/src/adapters/ui/components/SyncStatusBar.tsx` (Paper only, theme tokens, announcing only failure and recovery) to turn T085 green.
-- [ ] T090 [US3] Render `SyncStatusBar` in `CurrentListScreen.tsx`, `AddArticlesScreen.tsx`, `ListsScreen.tsx`, `EditArticleScreen.tsx` and `SettingsScreen.tsx`, and add "Synchroniser maintenant" to Settings, to turn T086 green.
-- [ ] T091 [US3] Track the last activated row in `apps/mobile/src/adapters/ui/screens/CurrentListScreen.tsx` (activation and 001's own focus moves), and move focus as after a local removal when a cycle's effects remove it, to turn T087 green.
-- [ ] T092 [US3] Add `Components/SyncStatusBar/Saved`, `.../Waiting`, `.../Sending`, `.../Failed`, `.../DisconnectedByServer`, `.../UpdateRequired` and `Screens/CurrentList/WithSyncStatus` to `required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/components/SyncStatusBar.stories.tsx`, each status reached through a scenario: a `prepare` that syncs once against a reachable fake (Saved), a change made with the fake unreachable (Waiting), `pending: ['synchronize']` (Sending), three failing syncs (Failed), a revoked device (DisconnectedByServer), plus a second `DisconnectedByServer` check in the story test from a scenario with a server address and no stored device credential (FR-018b), a server asking for an update (UpdateRequired); and add `WithSyncStatus` to `CurrentListScreen.stories.tsx`. Turn the test green, then check in Storybook that `Waiting` uses no error color, in light and dark mode (003 US3-2).
+- [X] T088 [US3] Implement the status transitions, the failure streak, `syncNow()` and `retry()` in `apps/mobile/src/adapters/ui/state/app-store.ts` and `apps/mobile/src/adapters/ui/state/sync-scheduler.ts` to turn T084 green.
+- [X] T089 [P] [US3] Implement `apps/mobile/src/adapters/ui/components/SyncStatusBar.tsx` (Paper only, theme tokens, announcing only failure and recovery) to turn T085 green.
+- [X] T090 [US3] Render `SyncStatusBar` in `CurrentListScreen.tsx`, `AddArticlesScreen.tsx`, `ListsScreen.tsx`, `EditArticleScreen.tsx` and `SettingsScreen.tsx`, and add "Synchroniser maintenant" to Settings, to turn T086 green.
+- [X] T091 [US3] Track the last activated row in `apps/mobile/src/adapters/ui/screens/CurrentListScreen.tsx` (activation and 001's own focus moves), and move focus as after a local removal when a cycle's effects remove it, to turn T087 green.
+- [X] T092 [US3] Add `Components/SyncStatusBar/Saved`, `.../Waiting`, `.../Sending`, `.../Failed`, `.../DisconnectedByServer`, `.../UpdateRequired` and `Screens/CurrentList/WithSyncStatus` to `required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/components/SyncStatusBar.stories.tsx`, each status reached through a scenario: a `prepare` that syncs once against a reachable fake (Saved), a change made with the fake unreachable (Waiting), `pending: ['synchronize']` (Sending), three failing syncs (Failed), a revoked device (DisconnectedByServer), plus a second `DisconnectedByServer` check in the story test from a scenario with a server address and no stored device credential (FR-018b), a server asking for an update (UpdateRequired); and add `WithSyncStatus` to `CurrentListScreen.stories.tsx`. Turn the test green, then check in Storybook that `Waiting` uses no error color, in light and dark mode (003 US3-2).
 
 **Checkpoint**: the user always sees whether changes are on the server.
 

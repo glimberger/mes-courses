@@ -80,6 +80,15 @@ const liveRegionsAbove = (node: ReactTestInstance) => {
 };
 
 describe('CurrentList', () => {
+  it('003 FR-020 renders the sync status bar under the Appbar', async () => {
+    await renderScreen({
+      seed: fixture,
+      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+    });
+
+    expect(await screen.findByTestId('sync-status-bar')).toBeOnTheScreen();
+  });
+
   it('US1-1 shows the list name in the Appbar and the items under their category headings, with their quantities', async () => {
     await renderScreen();
     await row('Lait, 2 L, pas dans le caddie');
@@ -474,6 +483,102 @@ describe('CurrentList, editing the list (User Story 2)', () => {
       await waitFor(() =>
         expect(focusTargets).toEqual(['Votre liste est vide']),
       );
+    });
+  });
+
+  describe('003 US3-7 screen reader focus after a pull removes the activated row', () => {
+    const lait = 'article-lait' as ArticleId;
+
+    beforeEach(() => {
+      jest
+        .spyOn(AccessibilityInfo, 'isScreenReaderEnabled')
+        .mockResolvedValue(true);
+    });
+
+    /** What a cycle does: the rows go, the regions reload, then the effects are published. */
+    const pullRemoving = async (
+      rendered: Awaited<ReturnType<typeof renderEditable>>,
+      ...articleIds: ArticleId[]
+    ) => {
+      const { store, unitOfWork } = rendered;
+      await unitOfWork.run(async (repos) => {
+        for (const articleId of articleIds) {
+          await repos.items.remove('list-ma-liste' as ListId, articleId);
+        }
+      });
+      await act(async () => {
+        await store.getState().refresh();
+        const { sync } = store.getState();
+        store.setState({
+          sync: {
+            ...sync,
+            remote: {
+              cycle: sync.remote.cycle + 1,
+              effects: {
+                deletedArticles: [],
+                removedItems: articleIds.map((articleId) => ({
+                  listId: 'list-ma-liste' as ListId,
+                  articleId,
+                })),
+                merges: [],
+              },
+            },
+          },
+        });
+      });
+    };
+
+    it('goes to a remaining neighbour (a ticked row sits last)', async () => {
+      const rendered = await renderEditable();
+      fireEvent.press(await row('Lait, 2 L, pas dans le caddie'));
+      focusTargets.length = 0;
+
+      await pullRemoving(rendered, lait);
+
+      await waitFor(() =>
+        expect(focusTargets).toEqual(['Farine, 1,5 kg, pas dans le caddie']),
+      );
+      expect(announce).not.toHaveBeenCalled();
+    });
+
+    it('goes to the previous row when it was the last one', async () => {
+      const rendered = await renderEditable();
+      fireEvent.press(await row('Farine, 1,5 kg, pas dans le caddie'));
+      focusTargets.length = 0;
+
+      await pullRemoving(rendered, 'article-farine' as ArticleId);
+
+      await waitFor(() =>
+        expect(focusTargets).toEqual(['Beurre, 2 kg, dans le caddie']),
+      );
+    });
+
+    it('goes to the EmptyState when the list becomes empty', async () => {
+      const rendered = await renderEditable({
+        ...withBeurre,
+        items: withBeurre.items.slice(-1),
+      });
+      fireEvent.press(await row('Beurre, 2 kg, dans le caddie'));
+      focusTargets.length = 0;
+
+      await pullRemoving(rendered, beurre);
+
+      await waitFor(() =>
+        expect(focusTargets).toEqual(['Votre liste est vide']),
+      );
+    });
+
+    it('moves no focus when the removed row was not activated', async () => {
+      const rendered = await renderEditable();
+      fireEvent.press(await row('Lait, 2 L, pas dans le caddie'));
+      focusTargets.length = 0;
+
+      await pullRemoving(rendered, beurre);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      });
+
+      expect(focusTargets).toEqual([]);
     });
   });
 

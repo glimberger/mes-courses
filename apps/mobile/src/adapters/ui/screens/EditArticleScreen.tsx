@@ -22,6 +22,7 @@ import { BackAction } from '../components/BackAction';
 import { Button } from '../components/Button';
 import { CategoryPicker } from '../components/CategoryPicker';
 import { nameErrorText, NameField } from '../components/NameField';
+import { SyncStatusBar } from '../components/SyncStatusBar';
 import type { RootStackParamList } from '../routes';
 import { useAppStoreApi } from '../state/app-store-provider';
 import { useAppStore } from '../state/use-app-store';
@@ -201,6 +202,7 @@ export const EditArticleForm = ({
         {onBack && <BackAction onPress={onBack} />}
         <Appbar.Content title="Modifier l'article" />
       </Appbar.Header>
+      <SyncStatusBar />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.form}

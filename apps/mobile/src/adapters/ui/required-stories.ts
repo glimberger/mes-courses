@@ -72,4 +72,11 @@ export const requiredStories: readonly string[] = [
   'Screens/ConnectServer/InvalidCode',
   'Screens/ConnectServer/UntrustedServer',
   'Screens/ConnectServer/TooManyAttempts',
+  'Components/SyncStatusBar/Saved',
+  'Components/SyncStatusBar/Waiting',
+  'Components/SyncStatusBar/Sending',
+  'Components/SyncStatusBar/Failed',
+  'Components/SyncStatusBar/DisconnectedByServer',
+  'Components/SyncStatusBar/UpdateRequired',
+  'Screens/CurrentList/WithSyncStatus',
 ];

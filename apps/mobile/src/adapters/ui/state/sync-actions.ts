@@ -12,6 +12,8 @@ export type SyncActions = {
    * the pull removed (R10a). `failed` is true when the cycle ended in `waiting` or `failed`.
    */
   syncNow: () => Promise<{ failed: boolean }>;
+  /** "Réessayer" on a failed status: runs a cycle at once (US3-4). */
+  retry: () => Promise<{ failed: boolean }>;
   /** Tells the user a pull removed what a form was editing; the form then closes itself. */
   noticeRemoteRemoval: (reason: 'articleDeleted' | 'itemRemoved') => void;
   /** Pairs this device with a server (US4-4). */
@@ -54,6 +56,7 @@ export const createSyncActions = ({
       setSync({
         serverUrl: info.serverUrl,
         lastSyncAt: info.lastSyncAt,
+        pendingCount: info.pendingCount,
         ...(!keepConnection && { connection: info.connection }),
       });
     } catch (error) {
@@ -196,6 +199,9 @@ export const createSyncActions = ({
       result.outcome.type === 'disconnectedByServer' ||
         result.outcome.type === 'updateRequired',
     );
+    // A write made during the cycle is still waiting, though the cycle itself succeeded.
+    const { status, pendingCount } = get().sync;
+    if (status === 'saved' && pendingCount > 0) setSync({ status: 'waiting' });
     return {
       // A revoked or outdated app backs off like a failing one, instead of asking every 5 s. An
       // unpaired one has nothing to send and shows no status, so it keeps the base delay.
@@ -261,5 +267,5 @@ export const createSyncActions = ({
     });
   };
 
-  return { syncNow, connectToServer, noticeRemoteRemoval };
+  return { syncNow, retry: syncNow, connectToServer, noticeRemoteRemoval };
 };

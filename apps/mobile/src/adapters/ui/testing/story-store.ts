@@ -51,7 +51,12 @@ export type StoryScenario = {
    * Starts connected to this server: the fake `CredentialStore` holds a credential and the sync
    * state holds the address and the last sync. Absent, the device was never connected.
    */
-  connected?: { serverUrl: string; lastSyncAt: string | null };
+  connected?: {
+    serverUrl: string;
+    lastSyncAt: string | null;
+    /** The address is kept but the credential is gone, as after a system restore (FR-018b). */
+    withoutCredential?: boolean;
+  };
   /** What the fake `SyncServer` answers, method by method; the others stay unreachable. */
   syncServer?: Partial<SyncServer>;
   /**
@@ -132,7 +137,7 @@ export const buildStoryStore = async (scenario: StoryScenario) => {
   const real = createUseCases({
     syncServer: Object.assign(new OfflineSyncServer(), scenario.syncServer),
     credentials: new InMemoryCredentialStore(
-      connected ? 'story-credential' : null,
+      connected && !connected.withoutCredential ? 'story-credential' : null,
     ),
     unitOfWork,
     ids: new SequentialIdGenerator(),

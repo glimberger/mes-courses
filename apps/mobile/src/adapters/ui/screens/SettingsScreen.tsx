@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BackAction } from '../components/BackAction';
 import { Button } from '../components/Button';
 import { formatLastSync } from '../components/format-last-sync';
+import { SyncStatusBar } from '../components/SyncStatusBar';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
@@ -23,10 +24,12 @@ export const SettingsScreen = () => {
   const { connection, serverUrl, lastSyncAt } = useAppStore(
     (state) => state.sync,
   );
+  const syncNow = useAppStore((state) => state.syncNow);
   return (
     <SettingsView
       onBack={navigation.canGoBack() ? () => navigation.goBack() : null}
       onConnect={() => navigation.navigate('ConnectServer')}
+      onSyncNow={() => void syncNow()}
       server={
         connection === 'notConnected' || serverUrl === null
           ? null
@@ -39,6 +42,8 @@ export const SettingsScreen = () => {
 export type SettingsViewProps = {
   onBack: (() => void) | null;
   onConnect: () => void;
+  /** "Synchroniser maintenant": runs a cycle at once (US3-5). */
+  onSyncNow: () => void;
   /** The server this device is connected to, or null when it never was. */
   server: { url: string; lastSyncAt: string | null } | null;
 };
@@ -47,6 +52,7 @@ export type SettingsViewProps = {
 export const SettingsView = ({
   onBack,
   onConnect,
+  onSyncNow,
   server,
 }: SettingsViewProps) => (
   <View style={styles.screen}>
@@ -54,6 +60,7 @@ export const SettingsView = ({
       {onBack && <BackAction onPress={onBack} />}
       <Appbar.Content title="Réglages" />
     </Appbar.Header>
+    <SyncStatusBar />
     <ScrollView contentContainerStyle={styles.content}>
       {server === null ? (
         <>
@@ -77,6 +84,9 @@ export const SettingsView = ({
               </Text>
             )}
           />
+          <Button mode="outlined" onPress={onSyncNow}>
+            Synchroniser maintenant
+          </Button>
         </>
       )}
     </ScrollView>

@@ -53,6 +53,14 @@ const save = () =>
   fireEvent.press(screen.getByRole('button', { name: 'Enregistrer' }));
 
 describe('EditArticle', () => {
+  it('003 FR-020 renders the sync status bar under the Appbar', async () => {
+    await openEditLait({
+      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+    });
+
+    expect(await screen.findByTestId('sync-status-bar')).toBeOnTheScreen();
+  });
+
   it('shows "Modifier l\'article" with a back action, the "Nom" field prefilled and "Enregistrer"', async () => {
     await openEditLait();
 

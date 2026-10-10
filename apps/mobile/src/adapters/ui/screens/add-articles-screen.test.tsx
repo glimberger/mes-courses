@@ -78,6 +78,14 @@ const shownInOrder = (texts: string[]) =>
     .map((node) => node.props.children as string);
 
 describe('AddArticles', () => {
+  it('003 FR-020 renders the sync status bar under the Appbar', async () => {
+    await renderScreen({
+      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+    });
+
+    expect(await screen.findByTestId('sync-status-bar')).toBeOnTheScreen();
+  });
+
   it('shows "Ajouter des articles" in the Appbar and the search field "Rechercher un article"', async () => {
     await renderScreen();
 

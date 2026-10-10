@@ -5,6 +5,8 @@ import type { UnitOfWork } from '../ports/unit-of-work';
 export type SyncInfo = {
   serverUrl: string | null;
   lastSyncAt: string | null;
+  /** The changes waiting to be sent, held ones excluded. */
+  pendingCount: number;
   connection: 'notConnected' | 'connected' | 'disconnectedByServer';
 };
 
@@ -21,16 +23,25 @@ export const createGetSyncInfo =
     credentials: CredentialStore;
   }) =>
   async (): Promise<SyncInfo> => {
-    const { serverUrl, lastSyncAt } = await unitOfWork.run((repos) =>
-      repos.syncState.get(),
+    const { serverUrl, lastSyncAt, pendingCount } = await unitOfWork.run(
+      async (repos) => ({
+        ...(await repos.syncState.get()),
+        pendingCount: await repos.changes.count(),
+      }),
     );
     if (serverUrl === null) {
-      return { serverUrl, lastSyncAt, connection: 'notConnected' };
+      return {
+        serverUrl,
+        lastSyncAt,
+        pendingCount,
+        connection: 'notConnected',
+      };
     }
     const credential = await credentials.read();
     return {
       serverUrl,
       lastSyncAt,
+      pendingCount,
       connection: credential === null ? 'disconnectedByServer' : 'connected',
     };
   };
