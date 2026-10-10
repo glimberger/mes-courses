@@ -278,7 +278,8 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
   const devices = createDeviceActions(kit, {
     loadSyncInfo,
     waitForCycle: async () => {
-      await inFlight;
+      // A failed cycle is not ours to report here: only its end matters.
+      await inFlight?.catch(() => undefined);
     },
     setSync,
     resetFailures: () => {
