@@ -43,7 +43,11 @@ const withDevices = (extra: StoryScenario['syncServer'] = {}) => ({
 });
 
 const openRowMenu = async (name: string) => {
-  fireEvent.press(await screen.findByLabelText(`Actions de ${name}`));
+  const button = await screen.findByLabelText(`Actions de ${name}`);
+  // Paper's `Menu` runs a 250 ms hide animation when it mounts closed, and its end hides the
+  // items even if the menu was opened meanwhile: wait past it.
+  await act(() => new Promise<void>((resolve) => setTimeout(resolve, 300)));
+  fireEvent.press(button);
 };
 
 describe('Settings, devices (003 US4)', () => {

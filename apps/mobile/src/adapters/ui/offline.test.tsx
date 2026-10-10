@@ -1,12 +1,15 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../application/testing/recording-error-reporter';
+import type { SyncServer } from '../../application/ports/sync-server';
 import type { ArticleId } from '../../domain/article';
+import { err } from '../../domain/result';
 import type { ListId } from '../../domain/shopping-list';
 import { Navigation } from './navigation';
 import { fixture } from './testing/fixtures';
 import { renderWithStore } from './testing/render-with-store';
-import type { Fixture } from './testing/story-store';
+import type { Fixture, StoryScenario } from './testing/story-store';
+import type { AppStore } from './state/app-store';
 
 const realFetch = global.fetch;
 const offlineFetch = jest.fn(() => {
@@ -93,12 +96,67 @@ const addFromCatalog = async (name: string) => {
   await screen.findByText(`« ${name} » ajouté`);
 };
 
-describe('the app with no network', () => {
-  it('FR-027 SC-006 completes each of the 12 actions of the spec, in order, with nothing reported', async () => {
+type Network = {
+  scenario: () => StoryScenario;
+  /** Checks what the sync did once every action is done. */
+  expectSync: (store: AppStore) => Promise<void>;
+};
+
+/** Every authenticated request answers `Offline`, as with no network (003 FR-003). */
+const offlineServer = () => {
+  const offline = async () => err({ type: 'Offline' as const });
+  return {
+    sync: jest.fn(offline),
+    createPairingCode: jest.fn(offline),
+    listDevices: jest.fn(offline),
+    renameDevice: jest.fn(offline),
+    revokeDevice: jest.fn(offline),
+  } satisfies Partial<SyncServer>;
+};
+
+let server = offlineServer();
+
+const networks: [string, Network][] = [
+  [
+    'never connected to a server',
+    {
+      scenario: () => ({}),
+      expectSync: async (store) => {
+        expect(store.getState().sync.connection).toBe('notConnected');
+      },
+    },
+  ],
+  [
+    'connected to a server it cannot reach (003)',
+    {
+      scenario: () => {
+        server = offlineServer();
+        return {
+          connected: {
+            serverUrl: 'https://courses.example.fr',
+            lastSyncAt: null,
+          },
+          syncServer: server,
+        };
+      },
+      expectSync: async (store) => {
+        expect(server.sync).toHaveBeenCalled();
+        await waitFor(() =>
+          expect(store.getState().sync.status).toBe('waiting'),
+        );
+        expect(store.getState().sync.connection).toBe('connected');
+        expect(store.getState().sync.pendingCount).toBeGreaterThan(0);
+      },
+    },
+  ],
+];
+
+describe.each(networks)('the app with no network, %s', (_network, network) => {
+  it('FR-027 SC-006 003 FR-003 SC-004 completes each of the 12 actions of the spec, in order, with nothing reported', async () => {
     const navigationReporter = new RecordingErrorReporter();
-    const { errorReporter, unitOfWork } = await renderWithStore(
+    const { errorReporter, unitOfWork, store } = await renderWithStore(
       <Navigation errorReporter={navigationReporter} />,
-      { seed, asScreen: false },
+      { seed, asScreen: false, ...network.scenario() },
     );
 
     // 1. Open the application on the current list.
@@ -214,13 +272,14 @@ describe('the app with no network', () => {
     await waitFor(() => expect(errorReporter.reports).toEqual([]));
     expect(navigationReporter.reports).toEqual([]);
     expect(offlineFetch).not.toHaveBeenCalled();
+    await network.expectSync(store);
   });
 
-  it('002 FR-010 SC-004 renames, recategorizes and deletes an article, then undoes it, with nothing reported', async () => {
+  it('002 FR-010 SC-004 003 FR-003 renames, recategorizes and deletes an article, then undoes it, with nothing reported', async () => {
     const navigationReporter = new RecordingErrorReporter();
-    const { errorReporter, unitOfWork } = await renderWithStore(
+    const { errorReporter, unitOfWork, store } = await renderWithStore(
       <Navigation errorReporter={navigationReporter} />,
-      { seed, asScreen: false },
+      { seed, asScreen: false, ...network.scenario() },
     );
     const storedBeurre = () =>
       unitOfWork.run((repos) =>
@@ -266,5 +325,6 @@ describe('the app with no network', () => {
     await waitFor(() => expect(errorReporter.reports).toEqual([]));
     expect(navigationReporter.reports).toEqual([]);
     expect(offlineFetch).not.toHaveBeenCalled();
+    await network.expectSync(store);
   });
 });

@@ -513,20 +513,20 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T105 [P] Add `deploy/Caddyfile` (`{$MES_COURSES_DOMAIN}` → `reverse_proxy 127.0.0.1:3000`, with automatic HTTPS), `deploy/mes-courses.service` (user `mes-courses`, `ExecStart=/opt/mes-courses/runtime/bin/node /opt/mes-courses/apps/server/dist/composition/main.js`, `EnvironmentFile=/etc/mes-courses.env`, `Restart=always`, `NODE_ENV=production`). Add `packages.<system>.node` (the dev shell's `nodejs_24`) to `flake.nix`, so the Pi can build its runtime with `nix build .#node` and `deploy/mes-courses.env.example` (variable names only, no values) ([research.md](research.md) R17).
-- [ ] T106 [P] Extend `apps/mobile/src/adapters/ui/state/error-context.test.ts` (001) and add `apps/server/src/adapters/error-reporting/report-context.test.ts`. Every report raised in the 003 tests carries only the allowed fields. Scan the serialized reports for the test URL, device names, codes, credentials and article names, and fail if any is found (FR-022, FR-022a).
-- [ ] T107 [P] Extend `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx` (001) to Settings, ConnectServer, the device dialogs, `PairingCodeDialog` and `SyncStatusBar`: French labels on every interactive element and ≥ 48 dp targets (FR-023).
-- [ ] T108 Extend 001's offline scenario `apps/mobile/src/adapters/ui/offline.test.tsx` with a connected device whose `SyncServer` always returns `Offline`. Every 001 and 002 action still succeeds, the status is `waiting`, and nothing is reported (FR-003, SC-004).
-- [ ] T109 Add a test in `tests/sync/performance.test.ts`:
+- [X] T105 [P] Add `deploy/Caddyfile` (`{$MES_COURSES_DOMAIN}` → `reverse_proxy 127.0.0.1:3000`, with automatic HTTPS), `deploy/mes-courses.service` (user `mes-courses`, `ExecStart=/opt/mes-courses/runtime/bin/node /opt/mes-courses/apps/server/dist/composition/main.js`, `EnvironmentFile=/etc/mes-courses.env`, `Restart=always`, `NODE_ENV=production`). Add `packages.<system>.node` (the dev shell's `nodejs_24`) to `flake.nix`, so the Pi can build its runtime with `nix build .#node` and `deploy/mes-courses.env.example` (variable names only, no values) ([research.md](research.md) R17).
+- [X] T106 [P] Extend `apps/mobile/src/adapters/ui/state/error-context.test.ts` (001) and add `apps/server/src/adapters/error-reporting/report-context.test.ts`. Every report raised in the 003 tests carries only the allowed fields. Scan the serialized reports for the test URL, device names, codes, credentials and article names, and fail if any is found (FR-022, FR-022a). The server test sits in `apps/server/src/composition/report-context.test.ts` instead: it drives the HTTP adapter over the SQLite one, and the architecture rules let only `composition/` import two server adapters.
+- [X] T107 [P] Extend `apps/mobile/src/adapters/ui/screens/accessibility.test.tsx` (001) to Settings, ConnectServer, the device dialogs, `PairingCodeDialog` and `SyncStatusBar`: French labels on every interactive element and ≥ 48 dp targets (FR-023).
+- [X] T108 Extend 001's offline scenario `apps/mobile/src/adapters/ui/offline.test.tsx` with a connected device whose `SyncServer` always returns `Offline`. Every 001 and 002 action still succeeds, the status is `waiting`, and nothing is reported (FR-003, SC-004).
+- [X] T109 Add a test in `tests/sync/performance.test.ts`:
   - a new device restores 500 articles, 5 lists and 300 items from `startTestServer()`, with the cycle loop finishing (asserted as at most 2 sync requests at the 5,000-row page size, SC-005);
   - a local tick's handler never awaits the scheduler (SC-004).
-- [ ] T110 Update `README.md`:
+- [X] T110 Update `README.md`:
   - the workspaces (`apps/server/`, `packages/sync-core/`, `tests/sync/`);
   - running the server in development (`yarn workspace @mes-courses/server dev`, `yarn workspace @mes-courses/server pairing-code`);
   - the Pi and Freebox setup, referring to [quickstart.md](quickstart.md) §3;
   - the environment variables `SENTRY_DSN`, `MES_COURSES_DB`, `MES_COURSES_DOMAIN` and `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL` (development only).
 - [ ] T111 Run [quickstart.md](quickstart.md) §1–§2 locally, review every 003 story in Storybook on Android and iOS (light, dark, 200% text), and run `yarn test:e2e:android` and `yarn test:e2e:ios` green. With the maintainer, who does the Freebox, DNS and Pi actions of §3, deploy to the Pi and check `curl https://<domain>/v1/health` from mobile data and from the home Wi-Fi. Then run the 17 scenarios of §4 and §5 (§4 step 17, the restored phone, once on a test phone) on a phone and a tablet. Record results, and anything not checked, in the pull request's test plan.
-- [ ] T112 Update `specs/001-shopping-lists/plan.md` and `specs/002-manage-articles/plan.md`: mark their Principle VII deviation in Complexity Tracking as closed by 003, now implemented.
+- [X] T112 Update `specs/001-shopping-lists/plan.md` and `specs/002-manage-articles/plan.md`: mark their Principle VII deviation in Complexity Tracking as closed by 003, now implemented.
 
 ---
 

@@ -15,6 +15,12 @@
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
     in
     {
+      # The Node the Pi runs the server with (research R17): the same one as the dev shell.
+      # `nix build .#node --out-link /opt/mes-courses/runtime`.
+      packages = forAllSystems (pkgs: {
+        node = pkgs.nodejs_24;
+      });
+
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShellNoCC {
           packages = [
