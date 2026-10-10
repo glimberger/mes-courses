@@ -27,11 +27,21 @@ export const createInitializeStore =
         for (const [position, name] of seed.categoryNames.entries()) {
           const id = ids.next() as CategoryId;
           await repos.categories.add({ id, name, position });
-          await repos.changes.record('category', id, { name, position });
+          await repos.changes.record(
+            'category',
+            id,
+            { name, position },
+            { seed: true },
+          );
         }
       }
       const listId = ids.next() as ListId;
       await repos.lists.add({ id: listId, name: seed.firstListName });
-      await repos.changes.record('list', listId, { name: seed.firstListName });
+      await repos.changes.record(
+        'list',
+        listId,
+        { name: seed.firstListName },
+        { seed: true },
+      );
       await repos.appState.setCurrentListId(listId);
     });

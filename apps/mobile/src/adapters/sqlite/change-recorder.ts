@@ -1,6 +1,7 @@
 import {
   decodeHlc,
   encodeHlc,
+  minHlc,
   nextHlc,
   type Change,
   type EntityKind,
@@ -45,10 +46,10 @@ export const sqliteChangeRecorder = (
   return {
     record: async (kind, id, fields, options) => {
       const state = await syncState.get();
-      const hlc = nextHlc(
-        { ...state.maxHlc, deviceId: state.deviceId ?? LOCAL_DEVICE_ID },
-        clock.nowMs(),
-      );
+      const deviceId = state.deviceId ?? LOCAL_DEVICE_ID;
+      const hlc = options?.seed
+        ? minHlc(deviceId)
+        : nextHlc({ ...state.maxHlc, deviceId }, clock.nowMs());
       await write(
         db,
         `INSERT INTO pending_change (change_id, hlc, kind, entity_id, fields, held_by)
@@ -62,7 +63,7 @@ export const sqliteChangeRecorder = (
           options?.heldBy ?? null,
         ],
       );
-      await syncState.save({ ...state, maxHlc: hlc });
+      if (!options?.seed) await syncState.save({ ...state, maxHlc: hlc });
     },
     pending: (limit, options) =>
       findAll(

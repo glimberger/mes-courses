@@ -1,4 +1,9 @@
-import { nextHlc, type Change, type EntityKind } from '@mes-courses/sync-core';
+import {
+  minHlc,
+  nextHlc,
+  type Change,
+  type EntityKind,
+} from '@mes-courses/sync-core';
 import type { Article } from '../../domain/article';
 import type { Category } from '../../domain/category';
 import type { ListItem } from '../../domain/list-item';
@@ -258,14 +263,11 @@ export class InMemoryRepositories implements Repositories {
   readonly changes: ChangeRecorder = {
     record: async (kind, id, fields, options) => {
       const { syncState } = this.state;
-      const hlc = nextHlc(
-        {
-          ...syncState.maxHlc,
-          deviceId: syncState.deviceId ?? LOCAL_DEVICE_ID,
-        },
-        this.clock.nowMs(),
-      );
-      syncState.maxHlc = hlc;
+      const deviceId = syncState.deviceId ?? LOCAL_DEVICE_ID;
+      const hlc = options?.seed
+        ? minHlc(deviceId)
+        : nextHlc({ ...syncState.maxHlc, deviceId }, this.clock.nowMs());
+      if (!options?.seed) syncState.maxHlc = hlc;
       const seq = this.state.nextSeq;
       this.state.nextSeq += 1;
       const change = {

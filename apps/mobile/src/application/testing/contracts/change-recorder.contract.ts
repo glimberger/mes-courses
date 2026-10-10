@@ -24,6 +24,23 @@ export const changeRecorderContract = (create: () => Promise<Created>) => {
       unitOfWork.run((repos) => repos.changes.pending(limit));
     const count = () => unitOfWork.run((repos) => repos.changes.count());
 
+    it('stamps a seed with the minimum HLC and leaves the clock alone', async () => {
+      await unitOfWork.run(async ({ changes }) => {
+        await changes.record(
+          'list',
+          'l-1',
+          { name: 'Ma liste' },
+          { seed: true },
+        );
+        await changes.record('list', 'l-2', { name: 'Fête' });
+      });
+
+      const [seed, real] = await pending();
+      expect(seed?.hlc.wallMs).toBe(0);
+      expect(real?.hlc.wallMs).toBe(1_000);
+      expect(real?.hlc.counter).toBe(0);
+    });
+
     it('records the kind, the id and the fields, with a unique change id', async () => {
       await unitOfWork.run(async ({ changes }) => {
         await changes.record('list', 'l-1', { name: 'Ma liste' });

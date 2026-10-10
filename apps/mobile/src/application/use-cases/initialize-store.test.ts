@@ -160,6 +160,13 @@ describe('initializeStore', () => {
       ]);
     });
 
+    it('stamps the seeds with the minimum HLC, so another device always wins over them (R13)', async () => {
+      await createInitializeStore({ unitOfWork, ids })(seed);
+
+      const stamps = (await pending()).map(({ hlc }) => hlc.wallMs);
+      expect(stamps).toEqual([0, 0, 0, 0]);
+    });
+
     it('records only the list when the categories were already there', async () => {
       await unitOfWork.run((repos) =>
         repos.categories.add({
