@@ -17,12 +17,27 @@ import type { ScreenState } from './screen-state';
 export type Notice =
   | { type: 'writeFailed' }
   | { type: 'storageFull' }
-  | { type: 'articleAdded'; name: string };
+  | { type: 'articleAdded'; name: string }
+  /** The device is paired with a server; the first sync starts (US4-4). */
+  | { type: 'deviceConnected' }
+  /** A pull deleted the article of an undo offer, or of a form (FR-008, FR-020a). */
+  | { type: 'articleDeletedElsewhere' };
 
 /** The one change that "Annuler" can still revert (FR-010). */
 export type PendingUndo =
   | { kind: 'removedItem'; removed: RemovedItem; name: string }
   | { kind: 'deletedArticle'; deleted: DeletedArticle };
+
+/** The state of the connection to the server and of the last cycles (research R14). */
+export type SyncSlice = {
+  connection:
+    'notConnected' | 'connected' | 'disconnectedByServer' | 'updateRequired';
+  status: 'saved' | 'waiting' | 'sending' | 'failed';
+  /** The changes waiting to be sent, held ones excluded. */
+  pendingCount: number;
+  lastSyncAt: string | null;
+  serverUrl: string | null;
+};
 
 /** What the current list region shows when the list has no item: its name (US1-10). */
 export type EmptyCurrentList = { list: CurrentListView['list'] };
@@ -41,6 +56,7 @@ export interface StoreCore {
   /** The categories of the category picker, ordered by position. */
   categories: ScreenState<{ id: CategoryId; name: string }[]>;
   pendingUndo: PendingUndo | null;
+  sync: SyncSlice;
   notice: Notice | null;
   /** Reloads every region already requested. Runs after each write that succeeds. */
   refresh: () => Promise<void>;
@@ -88,6 +104,17 @@ export interface StoreKit {
   ) => Promise<
     Result<T, Extract<E, { type: RefusedInputType | X }> | WriteFailed>
   >;
+  /**
+   * Ends the undo offer, if any: the change is final, so its held changes are released for the
+   * next sync (FR-008, research R10).
+   */
+  endUndo: () => void;
+  /** Releases the held changes of an offer that is no longer pending. */
+  releaseOffer: (offer: PendingUndo) => void;
+  /** Tells the sync scheduler a local change was saved. */
+  onLocalWrite: () => void;
+  /** The undo ids of the offers a pull ended (research R10a); an undo of one restores nothing. */
+  endedRemotely: Set<string>;
   /** Reports a failure the action handles itself, with the operation and screen only (Principle VIII). */
   report: (error: unknown, operation: string, screen?: string) => void;
   /**

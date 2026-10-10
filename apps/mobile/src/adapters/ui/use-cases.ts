@@ -1,3 +1,4 @@
+import type { Clock } from '../../application/ports/clock';
 import type { CredentialStore } from '../../application/ports/credential-store';
 import type { IdGenerator } from '../../application/ports/id-generator';
 import type { SyncServer } from '../../application/ports/sync-server';
@@ -18,15 +19,24 @@ import { createGetArticleUsage } from '../../application/use-cases/get-article-u
 import { createGetCatalog } from '../../application/use-cases/get-catalog';
 import { createGetCategories } from '../../application/use-cases/get-categories';
 import { createGetCurrentList } from '../../application/use-cases/get-current-list';
+import {
+  createGetSyncInfo,
+  type SyncInfo,
+} from '../../application/use-cases/get-sync-info';
 import { createGetLists } from '../../application/use-cases/get-lists';
 import {
   createInitializeStore,
   type Seed,
 } from '../../application/use-cases/initialize-store';
 import { createRemoveItemFromList } from '../../application/use-cases/remove-item-from-list';
+import { createReleaseHeldChanges } from '../../application/use-cases/release-held-changes';
 import { createRestoreDeletedArticle } from '../../application/use-cases/restore-deleted-article';
 import { createRestoreRemovedItem } from '../../application/use-cases/restore-removed-item';
 import { createSetCurrentList } from '../../application/use-cases/set-current-list';
+import {
+  createSynchronize,
+  type SyncResult,
+} from '../../application/use-cases/synchronize';
 import { createToggleItemInCart } from '../../application/use-cases/toggle-item-in-cart';
 import type {
   Article,
@@ -133,6 +143,9 @@ export type UseCases = {
     code: string,
     deviceName: string,
   ) => Promise<Result<void, ConnectError>>;
+  synchronize: () => Promise<SyncResult>;
+  releaseHeldChanges: (undoId: string) => Promise<void>;
+  getSyncInfo: () => Promise<SyncInfo>;
 };
 
 /** The name of one use case. */
@@ -145,6 +158,7 @@ export type UseCaseName = keyof UseCases;
 export const createUseCases = (ports: {
   unitOfWork: UnitOfWork;
   ids: IdGenerator;
+  clock: Clock;
   syncServer: SyncServer;
   credentials: CredentialStore;
   /** Accepts `http://` server addresses; development builds only. */
@@ -170,4 +184,7 @@ export const createUseCases = (ports: {
   setCurrentList: createSetCurrentList(ports),
   createCategory: createCreateCategory(ports),
   connectToServer: createConnectToServer(ports),
+  synchronize: createSynchronize(ports),
+  releaseHeldChanges: createReleaseHeldChanges(ports),
+  getSyncInfo: createGetSyncInfo(ports),
 });

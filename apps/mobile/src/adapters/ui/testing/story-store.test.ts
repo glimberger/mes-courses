@@ -1,4 +1,5 @@
 import { StorageFull } from '../../../application/ports/storage-full';
+import { err, ok } from '../../../domain/result';
 import type { ListId } from '../../../domain/shopping-list';
 import type * as AppStoreModule from '../state/app-store';
 import type * as StoryStoreModule from './story-store';
@@ -164,6 +165,109 @@ describe('createStoryStore', () => {
         // @ts-expect-error Data regions are not actions.
         expect(actions.currentList).toBeUndefined();
       },
+    });
+  });
+
+  describe('synchronization (003)', () => {
+    const connected = {
+      serverUrl: 'https://courses.example.fr',
+      lastSyncAt: '2026-10-01T10:00:00.000Z',
+    };
+
+    it('starts not connected by default', async () => {
+      const { store, useCases } = await buildStoryStore({});
+
+      expect((await useCases.getSyncInfo()).connection).toBe('notConnected');
+      expect(store.getState().sync.connection).toBe('notConnected');
+    });
+
+    it('starts connected: the credential, the address and the last sync are there', async () => {
+      const { store, useCases } = await buildStoryStore({ connected });
+
+      expect(await useCases.getSyncInfo()).toEqual({
+        ...connected,
+        connection: 'connected',
+      });
+      expect(store.getState().sync).toMatchObject({
+        ...connected,
+        connection: 'connected',
+      });
+    });
+
+    it('keeps the last sync while the server is unreachable, without a notice', async () => {
+      const { store, errorReporter } = await buildStoryStore({ connected });
+
+      expect(store.getState().sync.status).toBe('waiting');
+      expect(store.getState().sync.lastSyncAt).toBe(connected.lastSyncAt);
+      expect(store.getState().notice).toBeNull();
+      expect(errorReporter.reports).toEqual([]);
+    });
+
+    it('drives the server fake: a revoked device', async () => {
+      const { store } = await buildStoryStore({
+        connected,
+        syncServer: { sync: async () => err({ type: 'DeviceNotAuthorized' }) },
+      });
+
+      expect(store.getState().sync.connection).toBe('disconnectedByServer');
+    });
+
+    it('drives the server fake: an update required', async () => {
+      const { store } = await buildStoryStore({
+        connected,
+        syncServer: { sync: async () => err({ type: 'UpdateRequired' }) },
+      });
+
+      expect(store.getState().sync.connection).toBe('updateRequired');
+    });
+
+    it('drives the server fake: a reachable server pairs the device', async () => {
+      const { store } = await buildStoryStore({
+        syncServer: {
+          health: async () =>
+            ok({ serverId: 's1', apiVersion: 1, minAppVersion: '1.0.0' }),
+          claim: async () =>
+            ok({
+              serverId: 's1',
+              apiVersion: 1,
+              minAppVersion: '1.0.0',
+              deviceId: 'd1',
+              credential: 'secret',
+            }),
+        },
+      });
+
+      const outcome = await store
+        .getState()
+        .connectToServer('courses.example.fr', 'ABCD-EF23', 'Pixel');
+
+      expect(outcome.ok).toBe(true);
+      expect(store.getState().sync.connection).toBe('connected');
+      expect(store.getState().notice).toEqual({ type: 'deviceConnected' });
+    });
+
+    it('holds synchronize and connectToServer pending', async () => {
+      const { store } = await buildStoryStore({
+        pending: ['connectToServer', 'synchronize'],
+      });
+
+      expect(
+        await isPending(store.getState().connectToServer('a', 'b', 'c')),
+      ).toBe(true);
+      expect(await isPending(store.getState().syncNow())).toBe(true);
+    });
+
+    it('makes synchronize and connectToServer fail', async () => {
+      const { store, errorReporter } = await buildStoryStore({
+        failing: ['connectToServer', 'synchronize'],
+      });
+
+      const connect = await store.getState().connectToServer('a', 'b', 'c');
+      const cycle = await store.getState().syncNow();
+
+      expect(connect).toEqual(err({ type: 'WriteFailed' }));
+      expect(cycle).toEqual({ failed: true });
+      expect(errorReporter.reports).toHaveLength(2);
     });
   });
 });

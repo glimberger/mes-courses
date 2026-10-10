@@ -19,6 +19,8 @@ export type ArticleNotFound = { type: 'ArticleNotFound' };
  * with the same id (FR-009, SC-006).
  */
 export type DeletedArticle = {
+  /** Names the held change of this deletion, kept back until the offer ends. */
+  undoId: string;
   article: Article;
   items: { listId: ListId; inCart: boolean; quantity: Quantity | null }[];
 };

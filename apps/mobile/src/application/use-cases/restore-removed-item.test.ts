@@ -8,6 +8,7 @@ import {
   InMemoryRepositories,
   InMemoryUnitOfWork,
 } from '../testing/in-memory-repositories';
+import { SequentialIdGenerator } from '../testing/sequential-id-generator';
 import { createRemoveItemFromList } from './remove-item-from-list';
 import { createRestoreRemovedItem } from './restore-removed-item';
 
@@ -15,7 +16,7 @@ const maListe = 'l-1' as ListId;
 const cremerie = 'c-1' as CategoryId;
 const beurre = 'a-1' as ArticleId;
 
-const removedBeurre: RemovedItem = {
+const removedBeurre: Omit<RemovedItem, 'undoId'> = {
   listId: maListe,
   articleId: beurre,
   inCart: true,
@@ -47,10 +48,10 @@ describe('restoreRemovedItem', () => {
   });
 
   it('US2-16 puts the removed item back, ticked, with "2 kg"', async () => {
-    const removed = await createRemoveItemFromList({ unitOfWork })(
-      maListe,
-      beurre,
-    );
+    const removed = await createRemoveItemFromList({
+      unitOfWork,
+      ids: new SequentialIdGenerator(),
+    })(maListe, beurre);
     if (!removed.ok) throw new Error('not removed');
 
     const outcome = await createRestoreRemovedItem({ unitOfWork })(
@@ -66,9 +67,10 @@ describe('restoreRemovedItem', () => {
       repos.items.save({ ...removedBeurre, inCart: false, quantity: null }),
     );
 
-    const outcome = await createRestoreRemovedItem({ unitOfWork })(
-      removedBeurre,
-    );
+    const outcome = await createRestoreRemovedItem({ unitOfWork })({
+      ...removedBeurre,
+      undoId: 'undo-1',
+    });
 
     expect(outcome).toEqual(err({ type: 'AlreadyOnList', quantity: null }));
     expect(await stored()).toEqual({
@@ -81,6 +83,7 @@ describe('restoreRemovedItem', () => {
   it('returns ListNotFound when the list is gone', async () => {
     const outcome = await createRestoreRemovedItem({ unitOfWork })({
       ...removedBeurre,
+      undoId: 'undo-1',
       listId: 'l-gone' as ListId,
     });
 
@@ -92,9 +95,41 @@ describe('restoreRemovedItem', () => {
 
     const outcome = await createRestoreRemovedItem({ unitOfWork })({
       ...removedBeurre,
+      undoId: 'undo-1',
       articleId: 'a-gone' as ArticleId,
     });
 
     expect(outcome).toEqual(err({ type: 'ArticleNotFound' }));
+  });
+
+  describe('recorded changes (US1)', () => {
+    const pending = () => unitOfWork.run((repos) => repos.changes.pending(100));
+    const count = () => unitOfWork.run((repos) => repos.changes.count());
+
+    it('discards the held removal, so the server never sees it, and records nothing', async () => {
+      const removed = await createRemoveItemFromList({
+        unitOfWork,
+        ids: new SequentialIdGenerator(),
+      })(maListe, beurre);
+      if (!removed.ok) throw new Error('not removed');
+
+      await createRestoreRemovedItem({ unitOfWork })(removed.value);
+      await unitOfWork.run((repos) =>
+        repos.changes.release(removed.value.undoId),
+      );
+
+      expect(await pending()).toEqual([]);
+      expect(await count()).toBe(0);
+    });
+
+    it('leaves the held removal alone when nothing is restored', async () => {
+      await createRestoreRemovedItem({ unitOfWork })({
+        ...removedBeurre,
+        undoId: 'undo-9',
+        listId: 'l-gone' as ListId,
+      });
+
+      expect(await pending()).toEqual([]);
+    });
   });
 });

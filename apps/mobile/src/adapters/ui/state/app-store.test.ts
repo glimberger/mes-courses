@@ -5,6 +5,7 @@ import {
   InMemoryUnitOfWork,
 } from '../../../application/testing/in-memory-repositories';
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
+import { FakeClock } from '../../../application/testing/fake-clock';
 import { SequentialIdGenerator } from '../../../application/testing/sequential-id-generator';
 import { createUseCases, type UseCases } from '../use-cases';
 import { createAppStore } from './app-store';
@@ -16,6 +17,7 @@ const buildStore = () => {
     credentials: new InMemoryCredentialStore(),
     unitOfWork,
     ids: new SequentialIdGenerator(),
+    clock: new FakeClock(),
   });
   return createAppStore({
     useCases,

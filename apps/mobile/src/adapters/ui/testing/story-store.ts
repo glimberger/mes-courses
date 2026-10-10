@@ -1,10 +1,12 @@
 import { InMemoryCredentialStore } from '../../../application/testing/in-memory-credential-store';
 import { OfflineSyncServer } from '../../../application/testing/offline-sync-server';
+import type { SyncServer } from '../../../application/ports/sync-server';
 import { StorageFull } from '../../../application/ports/storage-full';
 import {
   InMemoryRepositories,
   InMemoryUnitOfWork,
 } from '../../../application/testing/in-memory-repositories';
+import { FakeClock } from '../../../application/testing/fake-clock';
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import { SequentialIdGenerator } from '../../../application/testing/sequential-id-generator';
 import type { Article } from '../../../domain/article';
@@ -45,6 +47,13 @@ export type StoryScenario = {
   failing?: UseCaseName[];
   /** Use cases that reject with the given failure instead of an `Error`; they fail too. */
   failingWith?: Partial<Record<UseCaseName, 'storageFull'>>;
+  /**
+   * Starts connected to this server: the fake `CredentialStore` holds a credential and the sync
+   * state holds the address and the last sync. Absent, the device was never connected.
+   */
+  connected?: { serverUrl: string; lastSyncAt: string | null };
+  /** What the fake `SyncServer` answers, method by method; the others stay unreachable. */
+  syncServer?: Partial<SyncServer>;
   /**
    * Runs once the store is built, through its actions only. It is awaited until it resolves or
    * calls a use case held `pending`, whichever comes first, so a loading state can be prepared.
@@ -107,11 +116,27 @@ const scenarioUseCase = <K extends UseCaseName>(
 export const buildStoryStore = async (scenario: StoryScenario) => {
   const unitOfWork = new InMemoryUnitOfWork(new InMemoryRepositories());
   if (scenario.seed) await storeFixture(unitOfWork, scenario.seed);
+  const { connected } = scenario;
+  if (connected) {
+    await unitOfWork.run(async (repos) => {
+      await repos.syncState.save({
+        ...(await repos.syncState.get()),
+        serverUrl: connected.serverUrl,
+        serverId: 'story-server',
+        deviceId: 'story-device',
+        lastSyncAt: connected.lastSyncAt,
+        snapshotDone: true,
+      });
+    });
+  }
   const real = createUseCases({
-    syncServer: new OfflineSyncServer(),
-    credentials: new InMemoryCredentialStore(),
+    syncServer: Object.assign(new OfflineSyncServer(), scenario.syncServer),
+    credentials: new InMemoryCredentialStore(
+      connected ? 'story-credential' : null,
+    ),
     unitOfWork,
     ids: new SequentialIdGenerator(),
+    clock: new FakeClock(),
   });
   // Settles when a use case held pending is called: `prepare` may be waiting on it for ever.
   let pendingCalled!: () => void;
@@ -126,6 +151,10 @@ export const buildStoryStore = async (scenario: StoryScenario) => {
   ) as UseCases;
   const errorReporter = new RecordingErrorReporter();
   const store = createAppStore({ useCases, errorReporter });
+  // A device that starts connected shows its connection at once, as after the first cycle.
+  if (connected) {
+    await Promise.race([store.getState().syncNow(), reachedPending]);
+  }
   if (scenario.prepare) {
     await Promise.race([scenario.prepare(storeActions(store)), reachedPending]);
   }

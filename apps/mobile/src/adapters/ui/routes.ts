@@ -9,6 +9,8 @@ export type RootStackParamList = {
   /** The name to start from, and the category to choose, if any (FR-008, FR-018). */
   CreateArticle: { name?: string; categoryId?: CategoryId } | undefined;
   EditArticle: { articleId: ArticleId };
+  Settings: undefined;
+  ConnectServer: undefined;
 };
 
 declare global {

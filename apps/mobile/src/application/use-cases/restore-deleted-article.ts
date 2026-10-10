@@ -14,5 +14,6 @@ export const createRestoreDeletedArticle =
       for (const item of deleted.items) {
         await repos.items.save({ ...item, articleId: deleted.article.id });
       }
+      await repos.changes.discard(deleted.undoId);
       return ok(undefined);
     });

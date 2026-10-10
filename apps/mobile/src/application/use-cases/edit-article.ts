@@ -41,5 +41,13 @@ export const createEditArticle =
         name: unique.value,
         categoryId,
       });
+      // Only what changed, so a concurrent edit of the other field elsewhere is kept.
+      const fields = {
+        ...(unique.value !== article.name && { name: unique.value }),
+        ...(categoryId !== article.categoryId && { categoryId }),
+      };
+      if (Object.keys(fields).length > 0) {
+        await repos.changes.record('article', articleId, fields);
+      }
       return ok(undefined);
     });

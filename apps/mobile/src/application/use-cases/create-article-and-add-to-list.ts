@@ -39,7 +39,19 @@ export const createCreateArticleAndAddToList =
         name: unique.value,
         categoryId,
       });
+      await repos.changes.record('article', articleId, {
+        name: unique.value,
+        categoryId,
+      });
       // A new article is on no list yet.
-      await repos.items.save(newItem({ listId, articleId }, quantity));
+      const item = newItem({ listId, articleId }, quantity);
+      await repos.items.save(item);
+      await repos.changes.record('listItem', `${listId}:${articleId}`, {
+        listId,
+        articleId,
+        present: true,
+        inCart: false,
+        quantity: item.quantity,
+      });
       return ok({ articleId });
     });

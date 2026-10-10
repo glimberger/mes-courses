@@ -21,7 +21,9 @@ import {
   type EditListActions,
 } from './edit-list-actions';
 import { createListsActions, type ListsActions } from './lists-actions';
+import { createSyncActions, type SyncActions } from './sync-actions';
 import type {
+  PendingUndo,
   RefusedInputType,
   StoreCore,
   StoreKit,
@@ -45,13 +47,16 @@ export type AppState = StoreCore &
   EditListActions &
   ListsActions &
   CategoriesActions &
-  ArticlesActions;
+  ArticlesActions &
+  SyncActions;
 
 export type AppStore = StoreApi<AppState>;
 
 export type AppStoreDeps = {
   useCases: UseCases;
   errorReporter: ErrorReporter;
+  /** Called after a local change was saved, so the sync scheduler can run a cycle soon. */
+  onLocalWrite?: () => void;
 };
 
 /**
@@ -75,7 +80,7 @@ const REFUSED_INPUT: Record<RefusedInputType, true> = {
  * `createAppStore`, and by the tests of the write rules with test-only actions.
  */
 export const createAppStoreWith = <Actions extends object>(
-  { useCases, errorReporter }: AppStoreDeps,
+  { useCases, errorReporter, onLocalWrite }: AppStoreDeps,
   extend: (kit: StoreKit) => Actions,
 ): StoreApi<StoreCore & Actions> =>
   createStore<StoreCore & Actions>()((set, get) => {
@@ -89,6 +94,22 @@ export const createAppStoreWith = <Actions extends object>(
       await Promise.all(
         regions.filter((r) => r.requested()).map((r) => r.load()),
       );
+    };
+
+    const endedRemotely = new Set<string>();
+    const releaseOffer = (offer: PendingUndo) => {
+      const { undoId } =
+        offer.kind === 'removedItem' ? offer.removed : offer.deleted;
+      // The release is a write of its own: a failure is reported, and the user is not told.
+      useCases.releaseHeldChanges(undoId).catch((error: unknown) => {
+        errorReporter.report(error, { operation: 'releaseHeldChanges' });
+      });
+    };
+    const endUndo = () => {
+      const offer = get().pendingUndo;
+      if (offer === null) return;
+      update({ pendingUndo: null });
+      releaseOffer(offer);
     };
 
     const fail = (
@@ -121,6 +142,10 @@ export const createAppStoreWith = <Actions extends object>(
           ? outcome
           : fail(operation, new UnexpectedResult(type));
       }
+      onLocalWrite?.();
+      // The offer a write replaces or ends is final: its held changes are released.
+      const previous = get().pendingUndo;
+      if (previous !== null) releaseOffer(previous);
       // A new offer also ends the notice: its snackbar would cover "Annuler".
       update(
         offer
@@ -134,6 +159,10 @@ export const createAppStoreWith = <Actions extends object>(
       get,
       set: update,
       useCases,
+      endUndo,
+      releaseOffer,
+      onLocalWrite: () => onLocalWrite?.(),
+      endedRemotely,
       runWrite: <T, E extends { type: string }, X extends E['type']>(
         operation: string,
         call: () => Promise<Result<T, E>>,
@@ -192,6 +221,13 @@ export const createAppStoreWith = <Actions extends object>(
       lists: { status: 'idle' },
       categories: { status: 'idle' },
       pendingUndo: null,
+      sync: {
+        connection: 'notConnected',
+        status: 'saved',
+        pendingCount: 0,
+        lastSyncAt: null,
+        serverUrl: null,
+      },
       notice: null,
       refresh,
       dismissNotice: () => update({ notice: null }),
@@ -209,5 +245,6 @@ export const createAppStore = (deps: AppStoreDeps): AppStore =>
       ...createListsActions(kit),
       ...createCategoriesActions(kit),
       ...createArticlesActions(kit),
+      ...createSyncActions(kit),
     };
   });

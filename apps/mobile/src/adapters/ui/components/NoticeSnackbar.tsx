@@ -15,6 +15,10 @@ const text = (notice: Notice): string => {
       return 'Espace de stockage insuffisant. Libérez de la place sur votre téléphone.';
     case 'articleAdded':
       return `« ${notice.name} » ajouté`;
+    case 'deviceConnected':
+      return 'Appareil connecté. Synchronisation en cours…';
+    case 'articleDeletedElsewhere':
+      return 'Cet article a été supprimé sur un autre appareil.';
   }
 };
 

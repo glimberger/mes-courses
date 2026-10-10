@@ -20,6 +20,7 @@ import {
   type SyncState,
   type SyncStateRepository,
 } from '../ports/sync-state';
+import type { PulledRowsApplier } from '../ports/pulled-rows';
 import type { Repositories, UnitOfWork } from '../ports/unit-of-work';
 import { FakeClock } from './fake-clock';
 import { SequentialIdGenerator } from './sequential-id-generator';
@@ -312,6 +313,17 @@ export class InMemoryRepositories implements Repositories {
     },
   };
 
+  /**
+   * Applies nothing and reports no effect: tests of the sync use cases spy on it or replace it,
+   * and the SQLite applier has its own tests.
+   */
+  pulledRows: PulledRowsApplier = {
+    apply: async () => ({
+      deferred: 0,
+      effects: { deletedArticles: [], removedItems: [], merges: [] },
+    }),
+  };
+
   /** A copy of everything stored, to give back to `restore`. */
   snapshot(): State {
     return copyState(this.state);
@@ -370,6 +382,7 @@ export class InMemoryUnitOfWork implements UnitOfWork {
         appState: guarded(repos.appState, isOpen),
         changes: guarded(repos.changes, isOpen),
         syncState: guarded(repos.syncState, isOpen),
+        pulledRows: guarded(repos.pulledRows, isOpen),
       });
     } catch (error) {
       repos.restore(before);

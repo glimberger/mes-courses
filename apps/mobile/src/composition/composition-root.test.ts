@@ -9,6 +9,7 @@ import { RecordingErrorReporter } from '../application/testing/recording-error-r
 import * as initializeStoreModule from '../application/use-cases/initialize-store';
 import { ConsoleErrorReporter } from '../adapters/error-reporting/console-error-reporter';
 import * as appStoreModule from '../adapters/ui/state/app-store';
+import * as syncSchedulerModule from '../adapters/ui/state/sync-scheduler';
 import { NodeSqlDatabase } from '../../test/sqlite/node-sql-database';
 import { composeApp, createErrorReporter } from './composition-root';
 
@@ -31,6 +32,10 @@ jest.mock('expo-constants', () => ({
   default: { expoConfig: { version: '1.0.0' } },
 }));
 jest.mock('expo-secure-store', () => ({}));
+// The scheduler reads React Native's `AppState`, which does not load in this Node environment.
+jest.mock('../adapters/ui/state/sync-scheduler', () => ({
+  createSyncScheduler: jest.fn(),
+}));
 jest.mock('expo-crypto', () => ({ randomUUID: () => crypto.randomUUID() }));
 jest.mock('@sentry/react-native', () => ({
   init: jest.fn(),
@@ -49,6 +54,11 @@ const opened = (start: number): NodeSqlDatabase => {
 };
 
 beforeEach(() => {
+  jest.mocked(syncSchedulerModule.createSyncScheduler).mockReturnValue({
+    start: jest.fn(),
+    stop: jest.fn(),
+    notifyWrite: jest.fn(),
+  });
   folder = mkdtempSync(join(tmpdir(), 'mes-courses-'));
   mockFile = join(folder, 'mes-courses.db');
   mockOpened.length = 0;
@@ -160,6 +170,30 @@ describe('composeApp', () => {
       { error: before, context: { operation: 'write' } },
     ]);
     expect(reporter.screens).toEqual(['Lists']);
+  });
+
+  it('US1 starts the sync scheduler on the store and stops it when the app is closed', async () => {
+    const start = jest.fn();
+    const stop = jest.fn();
+    const notifyWrite = jest.fn();
+    let runCycle: syncSchedulerModule.SyncSchedulerDeps['runCycle'] | undefined;
+    jest
+      .mocked(syncSchedulerModule.createSyncScheduler)
+      .mockImplementation((deps) => {
+        runCycle = deps.runCycle;
+        return { start, stop, notifyWrite };
+      });
+
+    const composed = await composeApp(new RecordingErrorReporter());
+
+    expect(start).toHaveBeenCalledTimes(1);
+    // A device that was never connected has nothing to sync: the cycle succeeds.
+    expect(await runCycle?.()).toEqual({ failed: false });
+    await composed.store.getState().createList('Barbecue');
+    expect(notifyWrite).toHaveBeenCalled();
+    expect(stop).not.toHaveBeenCalled();
+    await composed.close();
+    expect(stop).toHaveBeenCalledTimes(1);
   });
 
   it('closes the database it opened when the app is closed', async () => {

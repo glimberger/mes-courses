@@ -1,54 +1,19 @@
-import type { Hlc } from '@mes-courses/sync-core';
+import type {
+  ArticleRecord,
+  CategoryRecord,
+  ListItemRecord,
+  ListRecord,
+} from '../../domain/records';
 
 /** Every instant is an ISO 8601 string, which sorts like the time it names. */
 export type Instant = string;
 
-type Stamped = {
-  createdHlc: Hlc;
-  /** A tombstone: a deleted article, or an entity merged into another. */
-  deletedHlc: Hlc | null;
-  /** The survivor's id when the entity was merged by name (research R8). */
-  mergedInto: string | null;
-  /** The change counter value of the last change that touched the row. */
-  seq: number;
-};
-
-export type CategoryRecord = Stamped & {
-  id: string;
-  name: string;
-  nameHlc: Hlc;
-  normalizedName: string;
-  position: number;
-  positionHlc: Hlc;
-};
-
-export type ArticleRecord = Stamped & {
-  id: string;
-  name: string;
-  nameHlc: Hlc;
-  normalizedName: string;
-  categoryId: string;
-  categoryHlc: Hlc;
-};
-
-export type ListRecord = Stamped & {
-  id: string;
-  name: string;
-  nameHlc: Hlc;
-  normalizedName: string;
-};
-
-export type ListItemRecord = {
-  listId: string;
-  articleId: string;
-  present: boolean;
-  presentHlc: Hlc;
-  inCart: boolean;
-  inCartHlc: Hlc;
-  quantity: { amount: number; unit: string | null } | null;
-  quantityHlc: Hlc;
-  seq: number;
-};
+export type {
+  ArticleRecord,
+  CategoryRecord,
+  ListItemRecord,
+  ListRecord,
+} from '../../domain/records';
 
 export type DeviceRecord = {
   id: string;
@@ -101,12 +66,19 @@ export interface EntityRepository<T extends EntityRecord> {
 }
 
 export type CategoryRepository = EntityRepository<CategoryRecord>;
-export type ArticleRepository = EntityRepository<ArticleRecord>;
+export interface ArticleRepository extends EntityRepository<ArticleRecord> {
+  /** Every article of the category, tombstones included, by id. */
+  inCategory(categoryId: string): Promise<ArticleRecord[]>;
+}
 export type ListRepository = EntityRepository<ListRecord>;
 
 export interface ListItemRepository {
   get(listId: string, articleId: string): Promise<ListItemRecord | null>;
   save(record: ListItemRecord): Promise<void>;
+  /** Every row of the article, by list id. */
+  forArticle(articleId: string): Promise<ListItemRecord[]>;
+  /** Every row of the list, by article id. */
+  forList(listId: string): Promise<ListItemRecord[]>;
   /** As `EntityRepository.changedSince`: a page never splits the rows sharing one `seq`. */
   changedSince(seq: number, limit: number): Promise<ListItemRecord[]>;
 }

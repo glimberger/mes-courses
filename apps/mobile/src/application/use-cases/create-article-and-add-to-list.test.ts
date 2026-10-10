@@ -167,7 +167,9 @@ describe('createArticleAndAddToList', () => {
   });
 
   it('US2-7 FR-007 once an article is deleted for good, creating its name again succeeds as a new article', async () => {
-    await createDeleteArticle({ unitOfWork })(beurre.id);
+    await createDeleteArticle({ unitOfWork, ids: new SequentialIdGenerator() })(
+      beurre.id,
+    );
 
     const outcome = await createArticleAndAddToList(
       maListe,
@@ -181,5 +183,48 @@ describe('createArticleAndAddToList', () => {
     );
     expect(created).toHaveLength(1);
     expect(created[0]?.id).not.toBe(beurre.id);
+  });
+
+  describe('recorded changes (US1)', () => {
+    const pending = () => unitOfWork.run((repos) => repos.changes.pending(100));
+
+    it('records the article first, then the listItem', async () => {
+      await createArticleAndAddToList(
+        maListe,
+        { name: 'Yaourt', categoryId: cremerie },
+        { amount: 4, unit: null },
+      );
+
+      expect(
+        (await pending()).map(({ kind, id, fields }) => ({ kind, id, fields })),
+      ).toEqual([
+        {
+          kind: 'article',
+          id: 'id-1',
+          fields: { name: 'Yaourt', categoryId: cremerie },
+        },
+        {
+          kind: 'listItem',
+          id: 'l-1:id-1',
+          fields: {
+            listId: maListe,
+            articleId: 'id-1',
+            present: true,
+            inCart: false,
+            quantity: { amount: 4, unit: null },
+          },
+        },
+      ]);
+    });
+
+    it('records nothing when the name is already used', async () => {
+      await createArticleAndAddToList(
+        maListe,
+        { name: 'beurre', categoryId: cremerie },
+        null,
+      );
+
+      expect(await pending()).toEqual([]);
+    });
   });
 });

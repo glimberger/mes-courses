@@ -216,6 +216,11 @@ export const CurrentListScreen = () => {
           accessibilityLabel="Mes listes"
           onPress={() => navigation.navigate('Lists')}
         />
+        <AppbarIconAction
+          icon="cog"
+          accessibilityLabel="Réglages"
+          onPress={() => navigation.navigate('Settings')}
+        />
       </Appbar.Header>
       <ScreenStateView
         state={currentList}

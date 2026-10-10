@@ -12,7 +12,9 @@ import { AddArticlesScreen } from './screens/AddArticlesScreen';
 import { CreateArticleScreen } from './screens/CreateArticleScreen';
 import { CurrentListScreen } from './screens/CurrentListScreen';
 import { EditArticleScreen } from './screens/EditArticleScreen';
+import { ConnectServerScreen } from './screens/ConnectServerScreen';
 import { ListsScreen } from './screens/ListsScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
 import type { RootStackParamList } from './routes';
 import { useNavigationTheme } from './theme/navigation-theme';
 
@@ -59,6 +61,8 @@ export const Navigation = ({
           <Stack.Screen name="AddArticles" component={AddArticlesScreen} />
           <Stack.Screen name="CreateArticle" component={CreateArticleScreen} />
           <Stack.Screen name="EditArticle" component={EditArticleScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="ConnectServer" component={ConnectServerScreen} />
         </Stack.Navigator>
       </NavigationContainer>
       <UndoSnackbar />

@@ -7,6 +7,7 @@ import type { AppDeps } from './deps';
 import { sendError } from './errors';
 import { registerHealthRoutes } from './routes/health';
 import { registerPairingRoutes } from './routes/pairing';
+import { registerSyncRoutes } from './routes/sync';
 
 const BODY_LIMIT = 1024 * 1024;
 
@@ -81,6 +82,7 @@ export const buildApp = (deps: AppDeps): FastifyInstance => {
 
   registerHealthRoutes(app);
   registerPairingRoutes(app, deps);
+  registerSyncRoutes(app, deps);
 
   return app;
 };

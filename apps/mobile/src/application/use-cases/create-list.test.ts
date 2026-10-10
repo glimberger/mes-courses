@@ -73,4 +73,17 @@ describe('createList', () => {
     expect(outcome).toEqual(err({ type: 'NameTooLong' }));
     expect(await lists()).toHaveLength(1);
   });
+
+  describe('recorded changes (US1)', () => {
+    const pending = () => unitOfWork.run((repos) => repos.changes.pending(100));
+
+    it('records list.name, and nothing when the name is already used', async () => {
+      await createList('Barbecue');
+      await createList('barbecue');
+
+      expect(
+        (await pending()).map(({ kind, id, fields }) => ({ kind, id, fields })),
+      ).toEqual([{ kind: 'list', id: 'id-1', fields: { name: 'Barbecue' } }]);
+    });
+  });
 });

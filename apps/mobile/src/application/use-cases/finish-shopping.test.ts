@@ -93,4 +93,35 @@ describe('finishShopping', () => {
 
     expect(await itemsOf(barbecue)).toEqual([item(barbecue, lait, true)]);
   });
+
+  describe('recorded changes (US1, FR-013)', () => {
+    const pending = () => unitOfWork.run((repos) => repos.changes.pending(100));
+
+    it('records inCart = false for each item ticked at that moment, and only those', async () => {
+      await store([
+        item(maListe, lait, true),
+        item(maListe, pommes, false),
+        item(maListe, farine, true),
+        item(barbecue, lait, true),
+      ]);
+
+      await createFinishShopping({ unitOfWork })(maListe);
+
+      const changes = await pending();
+      expect(
+        changes.map(({ kind, id, fields }) => ({ kind, id, fields })),
+      ).toEqual([
+        { kind: 'listItem', id: 'l-1:a-1', fields: { inCart: false } },
+        { kind: 'listItem', id: 'l-1:a-3', fields: { inCart: false } },
+      ]);
+    });
+
+    it('records nothing when nothing is ticked', async () => {
+      await store([item(maListe, lait, false)]);
+
+      await createFinishShopping({ unitOfWork })(maListe);
+
+      expect(await pending()).toEqual([]);
+    });
+  });
 });

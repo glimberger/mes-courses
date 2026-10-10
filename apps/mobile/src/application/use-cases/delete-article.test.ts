@@ -7,6 +7,7 @@ import {
   InMemoryRepositories,
   InMemoryUnitOfWork,
 } from '../testing/in-memory-repositories';
+import { SequentialIdGenerator } from '../testing/sequential-id-generator';
 import { createDeleteArticle } from './delete-article';
 import { createGetCatalog } from './get-catalog';
 import { createGetCurrentList } from './get-current-list';
@@ -31,7 +32,10 @@ describe('deleteArticle', () => {
 
   beforeEach(async () => {
     unitOfWork = new InMemoryUnitOfWork(new InMemoryRepositories());
-    deleteArticle = createDeleteArticle({ unitOfWork });
+    deleteArticle = createDeleteArticle({
+      unitOfWork,
+      ids: new SequentialIdGenerator(),
+    });
     await unitOfWork.run(async (repos) => {
       await repos.categories.add({
         id: cremerie,
@@ -134,6 +138,7 @@ describe('deleteArticle', () => {
 
     expect(outcome).toEqual(
       ok({
+        undoId: expect.any(String),
         article: { id: lait, name: 'Lait', categoryId: cremerie },
         items: expect.arrayContaining([
           { listId: maListe, inCart: true, quantity: { amount: 2, unit: 'L' } },
@@ -147,6 +152,7 @@ describe('deleteArticle', () => {
   it('deletes an article on no list, with an empty snapshot of items', async () => {
     expect(await deleteArticle(eau)).toEqual(
       ok({
+        undoId: expect.any(String),
         article: { id: eau, name: 'Eau', categoryId: boissons },
         items: [],
       }),
@@ -184,11 +190,40 @@ describe('deleteArticle', () => {
     };
 
     await expect(
-      createDeleteArticle({ unitOfWork: failing })(lait),
+      createDeleteArticle({
+        unitOfWork: failing,
+        ids: new SequentialIdGenerator(),
+      })(lait),
     ).rejects.toThrow('disk failed');
 
     expect(await articles()).toHaveLength(3);
     expect(await itemsOf(maListe)).toHaveLength(2);
     expect(await itemsOf(barbecue)).toHaveLength(1);
+  });
+
+  describe('recorded changes (US1)', () => {
+    const entries = () => unitOfWork.run((repos) => repos.changes.pending(100));
+
+    it('records article.deleted = true held by a new undoId returned in DeletedArticle', async () => {
+      const outcome = await deleteArticle(lait);
+      if (!outcome.ok) throw new Error('not deleted');
+
+      expect(outcome.value.undoId).toEqual(expect.any(String));
+      expect(await entries()).toEqual([]);
+
+      await unitOfWork.run((repos) =>
+        repos.changes.release(outcome.value.undoId),
+      );
+      expect(
+        (await entries()).map(({ kind, id, fields }) => ({ kind, id, fields })),
+      ).toEqual([{ kind: 'article', id: lait, fields: { deleted: true } }]);
+    });
+
+    it('records nothing when the article is not found', async () => {
+      await deleteArticle('a-gone' as ArticleId);
+      await unitOfWork.run((repos) => repos.changes.releaseAll());
+
+      expect(await entries()).toEqual([]);
+    });
   });
 });

@@ -22,5 +22,6 @@ export const createCreateList =
 
       const listId = ids.next() as ListId;
       await repos.lists.add({ id: listId, name: unique.value });
+      await repos.changes.record('list', listId, { name: unique.value });
       return ok({ listId });
     });

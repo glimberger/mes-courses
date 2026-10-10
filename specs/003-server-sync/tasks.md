@@ -250,8 +250,8 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
 
 ### Tests for User Story 1 ⚠️ (write first, confirm they fail)
 
-- [ ] T038 [US1] Write the failing journey `tests/e2e/journeys/sync-unreachable.e2e.ts` ([contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-end-journeys)): on a fresh install no sync status bar is shown; "Réglages" shows "Synchronisez vos listes avec votre serveur pour les retrouver sur vos autres appareils."; in ConnectServer, enter `127.0.0.1:9` and the code "ABCD-EF23", tap "Connecter": "Impossible de joindre le serveur. Vérifiez l'adresse et votre connexion." appears; back on the current list, add and tick an item: it works at once (003 US4-1, US4-6, FR-002). Run `yarn test:e2e:android` and confirm it fails on the missing "Réglages" action.
-- [ ] T039 [P] [US1] Write failing server domain tests in `apps/server/src/domain/apply-change.test.ts` ([data-model.md](data-model.md#server-database-pi-sqlite)):
+- [X] T038 [US1] Write the failing journey `tests/e2e/journeys/sync-unreachable.e2e.ts` ([contracts/ui-screens.md](contracts/ui-screens.md#stories-and-end-to-end-journeys)): on a fresh install no sync status bar is shown; "Réglages" shows "Synchronisez vos listes avec votre serveur pour les retrouver sur vos autres appareils."; in ConnectServer, enter `127.0.0.1:9` and the code "ABCD-EF23", tap "Connecter": "Impossible de joindre le serveur. Vérifiez l'adresse et votre connexion." appears; back on the current list, add and tick an item: it works at once (003 US4-1, US4-6, FR-002). Run `yarn test:e2e:android` and confirm it fails on the missing "Réglages" action.
+- [X] T039 [P] [US1] Write failing server domain tests in `apps/server/src/domain/apply-change.test.ts` ([data-model.md](data-model.md#server-database-pi-sqlite)):
   - a create sets every field with its HLC and `createdHlc`;
   - an update writes a field only when `mergeField` keeps the incoming value;
   - changes to different fields are both kept (FR-009);
@@ -259,7 +259,7 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
   - `article.deleted` sets `deletedHlc`, and any later change to it is ignored (FR-011);
   - a change for an unknown entity is ignored;
   - every touched row gets the new `seq`.
-- [ ] T040 [P] [US1] Write failing use case tests in `apps/server/src/application/use-cases/sync.test.ts`, on fakes:
+- [X] T040 [P] [US1] Write failing use case tests in `apps/server/src/application/use-cases/sync.test.ts`, on fakes:
   - changes are applied in request order;
   - a replayed `changeId` is acknowledged and not applied again (FR-006);
   - a change with no effect is still acknowledged;
@@ -268,8 +268,8 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
   - more than 500 changes → `400`;
   - the device's `lastSyncAt` is set;
   - a failure midway applies nothing (one transaction).
-- [ ] T041 [P] [US1] Write failing HTTP tests for `POST /v1/sync` in `apps/server/src/adapters/http/sync-route.test.ts`, with `inject` and a real SQLite store: the schema rejects a bad body with nothing applied, `401` for a revoked device, and a round trip with a fake clock.
-- [ ] T042 [P] [US1] Write failing tests in `apps/mobile/src/adapters/sqlite/pulled-rows-applier.test.ts`, on a migrated `node:sqlite` database:
+- [X] T041 [P] [US1] Write failing HTTP tests for `POST /v1/sync` in `apps/server/src/adapters/http/sync-route.test.ts`, with `inject` and a real SQLite store: the schema rejects a bad body with nothing applied, `401` for a revoked device, and a round trip with a fake clock.
+- [X] T042 [P] [US1] Write failing tests in `apps/mobile/src/adapters/sqlite/pulled-rows-applier.test.ts`, on a migrated `node:sqlite` database:
   - pulled rows are upserted into `category`, `article`, `shopping_list` and `list_item`;
   - a `listItem` with `present = false` deletes the local row;
   - a deleted or merged article deletes the local article and its items;
@@ -277,7 +277,7 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
   - a row that would break `UNIQUE (normalized_name)` against a pending local create is deferred and counted, not failed (R8);
   - `app_state.current_list_id` is never sent and is left alone by every row except one: a list tombstone whose `mergedInto` is set and whose id is the current list moves `current_list_id` to the survivor, following the `mergedInto` chain, in the same transaction (FR-015, US2-10, [research.md](research.md) R8a);
   - `apply` returns `effects`: the articles it deleted, the items it removed (`present = false`) and the merges (`kind`, `loserId`, `survivorId`), and empty lists when the rows changed nothing of the kind ([data-model.md](data-model.md#remote-effects-returned-by-pulledrowsapplierapply-research-r10a));
-- [ ] T043 [P] [US1] Write failing use case tests in `apps/mobile/src/application/use-cases/synchronize.test.ts`, with fakes and a fake `SyncServer`:
+- [X] T043 [P] [US1] Write failing use case tests in `apps/mobile/src/application/use-cases/synchronize.test.ts`, with fakes and a fake `SyncServer`:
   - `notConnected` when there is no `serverUrl`;
   - `disconnectedByServer` when `serverUrl` is set but `CredentialStore.read()` gives `null` (a phone restored from a backup), with no request sent and every row and pending change kept; `getSyncInfo` reports the same connection, see T054a (FR-018b, [research.md](research.md) R12a);
   - the result carries the applier's `effects` next to the outcome, and empty effects when nothing was pulled;
@@ -288,8 +288,8 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
   - `DeviceNotAuthorized` or a different `serverId` → `disconnectedByServer`, keeping every row and pending change (FR-018a);
   - `UpdateRequired` → `updateRequired`;
   - `more: true` → pull again.
-- [ ] T044 [P] [US1] Write failing tests for `releaseHeldChanges(undoId)` in `apps/mobile/src/application/use-cases/release-held-changes.test.ts`, and extend `apps/mobile/src/application/use-cases/initialize-store.test.ts`: at every start it calls `changes.releaseAll()`, so a deletion left held by a killed app becomes final (R10).
-- [ ] T045 [P] [US1] Write failing store and scheduler tests in `apps/mobile/src/adapters/ui/state/sync-scheduler.test.ts`, with Jest fake timers and a mocked React Native `AppState`:
+- [X] T044 [P] [US1] Write failing tests for `releaseHeldChanges(undoId)` in `apps/mobile/src/application/use-cases/release-held-changes.test.ts`, and extend `apps/mobile/src/application/use-cases/initialize-store.test.ts`: at every start it calls `changes.releaseAll()`, so a deletion left held by a killed app becomes final (R10).
+- [X] T045 [P] [US1] Write failing store and scheduler tests in `apps/mobile/src/adapters/ui/state/sync-scheduler.test.ts`, with Jest fake timers and a mocked React Native `AppState`:
   - a cycle runs at start;
   - a cycle runs on coming back to the foreground;
   - a cycle runs 1 s after a write (debounced);
@@ -297,8 +297,8 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
   - never two cycles at once;
   - after failures the delay backs off 5 s → 10 s → … → 5 min, and resets on success;
   - after a cycle that pulled rows, the store runs `refresh()`.
-- [ ] T046 [US1] Write failing tests in `apps/mobile/src/adapters/ui/state/app-store.undo-sync.test.ts`: when an undo offer ends (5 s, the next successful write, dismissal, or a new undo replacing it), the store calls `releaseHeldChanges(undoId)`; "Annuler" calls the restore, which discards the held entries. When a cycle's `effects.deletedArticles` holds the article of the pending offer (a removed item of that article, or 002's deleted article), the store clears `pendingUndo`, calls `releaseHeldChanges(undoId)` and remembers that `undoId`; a later `undo(undoId)` restores nothing and sets the notice "Cet article a été supprimé sur un autre appareil.", and so does a restore that returns `ArticleNotFound` (FR-008, US1-8, [research.md](research.md) R10a).
-- [ ] T047 [US1] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/settings-screen.test.tsx` and `apps/mobile/src/adapters/ui/screens/connect-server-screen.test.tsx`, through `renderWithStore` and the texts of [contracts/ui-screens.md](contracts/ui-screens.md):
+- [X] T046 [US1] Write failing tests in `apps/mobile/src/adapters/ui/state/app-store.undo-sync.test.ts`: when an undo offer ends (5 s, the next successful write, dismissal, or a new undo replacing it), the store calls `releaseHeldChanges(undoId)`; "Annuler" calls the restore, which discards the held entries. When a cycle's `effects.deletedArticles` holds the article of the pending offer (a removed item of that article, or 002's deleted article), the store clears `pendingUndo`, calls `releaseHeldChanges(undoId)` and remembers that `undoId`; a later `undo(undoId)` restores nothing and sets the notice "Cet article a été supprimé sur un autre appareil.", and so does a restore that returns `ArticleNotFound` (FR-008, US1-8, [research.md](research.md) R10a).
+- [X] T047 [US1] Write failing screen tests in `apps/mobile/src/adapters/ui/screens/settings-screen.test.tsx` and `apps/mobile/src/adapters/ui/screens/connect-server-screen.test.tsx`, through `renderWithStore` and the texts of [contracts/ui-screens.md](contracts/ui-screens.md):
   - Appbar action "Réglages" on CurrentList;
   - not connected: "Synchronisez vos listes avec votre serveur pour les retrouver sur vos autres appareils." and "Connecter à un serveur";
   - ConnectServer fields "Adresse du serveur", "Code d'appairage" and "Nom de cet appareil", the latter prefilled with the device model and capped at 60 characters;
@@ -310,7 +310,7 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
     - `InvalidCode` → "Ce code n'est pas valide ou a expiré. Demandez un nouveau code." (US4-5);
     - `TooManyAttempts` → "Trop d'essais. Réessayez dans {n} minutes." (US4-12);
   - connected: the server address and "Dernière synchronisation : …" or "Jamais".
-- [ ] T048 [US1] Write a failing cross-stack scenario test in `tests/sync/single-device.test.ts`: one app stack on SQLite (`node:sqlite`) with the real `SyncServer` adapter, the real use cases and a fake clock, against `startTestServer()`. The stack comes from a `buildTestAppStack({ serverUrl, clock })` helper added to `apps/mobile/test/index.ts`, which wires the app's composition the same way as production, minus the UI.
+- [X] T048 [US1] Write a failing cross-stack scenario test in `tests/sync/single-device.test.ts`: one app stack on SQLite (`node:sqlite`) with the real `SyncServer` adapter, the real use cases and a fake clock, against `startTestServer()`. The stack comes from a `buildTestAppStack({ serverUrl, clock })` helper added to `apps/mobile/test/index.ts`, which wires the app's composition the same way as production, minus the UI.
   - 003 US1-1: a tick reaches the server after one cycle.
   - 003 US1-2 / US1-3: with the server closed, add, tick, rename and delete; nothing fails; restart the server and the changes arrive in order, none twice.
   - 003 US1-4: rebuild the app stack on the same database, as a killed app would; the outbox is still sent.
@@ -320,33 +320,33 @@ the server. Reinstall, connect, and check every list, item, tick and quantity is
 
 ### Implementation for User Story 1
 
-- [ ] T049 [US1] Implement `apps/server/src/domain/apply-change.ts` to turn T039 green.
-- [ ] T050 [US1] Implement `apps/server/src/application/use-cases/sync.ts` to turn T040 green.
-- [ ] T051 [US1] Implement `apps/server/src/adapters/http/routes/sync.ts` and its schema to turn T041 green.
-- [ ] T052 [US1] Implement `apps/mobile/src/adapters/sqlite/pulled-rows-applier.ts` to turn T042 green. Wrap every database call with `toStorageError` (001 R13), so no stored value reaches a report (001 FR-030).
-- [ ] T053 [US1] Add `sync` to `apps/mobile/src/adapters/sync-http/sync-server.ts`, extending `tests/sync/sync-server-adapter.test.ts` first with a round trip against `startTestServer()`.
-- [ ] T054 [US1] Implement `apps/mobile/src/application/use-cases/synchronize.ts` to turn T043 green.
-- [ ] T054a [US1] Test-first, implement `apps/mobile/src/application/use-cases/get-sync-info.ts` with its test, per [contracts/app-ports.md](contracts/app-ports.md): it returns `SyncInfo` (`serverUrl`, `lastSyncAt`, `connection`); `disconnectedByServer` when `serverUrl` is set and `CredentialStore.read()` gives `null` (FR-018b); `notConnected` when there is no `serverUrl`. Add it to `UseCases` and to the composition root.
-- [ ] T055 [US1] Implement `apps/mobile/src/application/use-cases/release-held-changes.ts` and call `changes.releaseAll()` in `initialize-store.ts`, to turn T044 green.
-- [ ] T056 [US1] Test-first, record the seeded categories (`name`, `position`) and the first list (`name`) with `changes.record` in `apps/mobile/src/application/use-cases/initialize-store.ts` ([contracts/app-ports.md](contracts/app-ports.md#changes-to-existing-use-cases-001-and-002)). Keep every existing test green.
-- [ ] T057 [P] [US1] Test-first, record `listItem.inCart` in `apps/mobile/src/application/use-cases/toggle-item-in-cart.ts`.
-- [ ] T058 [P] [US1] Test-first, record `listItem.inCart = false` for each item ticked at that moment, with one HLC, in `apps/mobile/src/application/use-cases/finish-shopping.ts` (FR-013).
-- [ ] T059 [P] [US1] Test-first, record `listItem { listId, articleId, present: true, inCart: false, quantity }` in `apps/mobile/src/application/use-cases/add-article-to-list.ts`.
-- [ ] T060 [P] [US1] Test-first, record `article { name, categoryId }` and then the `listItem` in `apps/mobile/src/application/use-cases/create-article-and-add-to-list.ts`. The article's change must come first.
-- [ ] T061 [P] [US1] Test-first, record `listItem.quantity` in `apps/mobile/src/application/use-cases/change-item-quantity.ts`.
-- [ ] T062 [P] [US1] Test-first, record `listItem.present = false` **held** by a new `undoId`, returned in `RemovedItem`, in `apps/mobile/src/application/use-cases/remove-item-from-list.ts`.
-- [ ] T063 [P] [US1] Test-first, call `changes.discard(removed.undoId)` and record nothing in `apps/mobile/src/application/use-cases/restore-removed-item.ts`.
-- [ ] T064 [P] [US1] Test-first, record `list.name` in `apps/mobile/src/application/use-cases/create-list.ts`, and assert `set-current-list.ts` records nothing (FR-015).
-- [ ] T065 [P] [US1] Test-first, record `category { name, position }` in `apps/mobile/src/application/use-cases/create-category.ts`.
-- [ ] T066 [P] [US1] Test-first, record only the changed fields (`article.name` and/or `article.categoryId`) in `apps/mobile/src/application/use-cases/edit-article.ts` (002).
-- [ ] T067 [P] [US1] Test-first, record `article.deleted = true` **held** by a new `undoId`, returned in `DeletedArticle`, in `apps/mobile/src/application/use-cases/delete-article.ts` (002).
-- [ ] T068 [P] [US1] Test-first, call `changes.discard(deleted.undoId)` in `apps/mobile/src/application/use-cases/restore-deleted-article.ts` (002).
-- [ ] T069 [US1] Add the `sync` slice (`connection`, `status`, `pendingCount`, `lastSyncAt`, per [research.md](research.md) R14) and the `connectToServer` action to `apps/mobile/src/adapters/ui/state/app-store.ts`. Implement `apps/mobile/src/adapters/ui/state/sync-scheduler.ts`. Release held changes when an undo offer ends, and end the offer on an article deleted elsewhere. Together these turn T045–T046 green. Start the scheduler from `apps/mobile/src/composition/composition-root.ts`.
-- [ ] T070 [US1] Extend `apps/mobile/src/adapters/ui/testing/story-store.ts` (001) test-first in `story-store.test.ts`: a scenario can start connected (the fake `CredentialStore` holds a credential) or not, and drives the in-memory `SyncServer` fake (reachable, unreachable, revoked, update required); `pending` and `failing` also apply to `synchronize` and `connectToServer`. Every existing story and test stays green.
-- [ ] T071 [US1] Implement `apps/mobile/src/adapters/ui/screens/SettingsScreen.tsx` (not-connected and server sections) and `apps/mobile/src/adapters/ui/screens/ConnectServerScreen.tsx`. Add the "Réglages" Appbar action (cog icon) to `CurrentListScreen.tsx`, and the routes to `apps/mobile/src/adapters/ui/navigation.tsx`. This turns T047 green.
-- [ ] T072 [US1] Add `Screens/Settings/NotConnected`, `Screens/Settings/Connected`, `Screens/ConnectServer/Default`, `.../ServerUnreachable`, `.../InvalidCode`, `.../UntrustedServer` and `.../TooManyAttempts` to `apps/mobile/src/adapters/ui/required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/screens/SettingsScreen.stories.tsx` (not connected; connected, with "Dernière synchronisation : …") and `ConnectServerScreen.stories.tsx` (the outcome stories render the screen's presentational form with each French message, 001's convention) to turn it green. Review them in Storybook on both platforms, light and dark.
-- [ ] T073 [US1] Make `tests/sync/single-device.test.ts` (T048) green, fixing only what it reveals, each fix with its own failing unit test first.
-- [ ] T074 [US1] Make `sync-unreachable.e2e.ts` (T038) green with `yarn test:e2e:android` and `yarn test:e2e:ios`, every journey of 001 and 002 still green. Any production fix starts with its own failing unit or screen test.
+- [X] T049 [US1] Implement `apps/server/src/domain/apply-change.ts` to turn T039 green.
+- [X] T050 [US1] Implement `apps/server/src/application/use-cases/sync.ts` to turn T040 green.
+- [X] T051 [US1] Implement `apps/server/src/adapters/http/routes/sync.ts` and its schema to turn T041 green.
+- [X] T052 [US1] Implement `apps/mobile/src/adapters/sqlite/pulled-rows-applier.ts` to turn T042 green. Wrap every database call with `toStorageError` (001 R13), so no stored value reaches a report (001 FR-030).
+- [X] T053 [US1] Add `sync` to `apps/mobile/src/adapters/sync-http/sync-server.ts`, extending `tests/sync/sync-server-adapter.test.ts` first with a round trip against `startTestServer()`.
+- [X] T054 [US1] Implement `apps/mobile/src/application/use-cases/synchronize.ts` to turn T043 green.
+- [X] T054a [US1] Test-first, implement `apps/mobile/src/application/use-cases/get-sync-info.ts` with its test, per [contracts/app-ports.md](contracts/app-ports.md): it returns `SyncInfo` (`serverUrl`, `lastSyncAt`, `connection`); `disconnectedByServer` when `serverUrl` is set and `CredentialStore.read()` gives `null` (FR-018b); `notConnected` when there is no `serverUrl`. Add it to `UseCases` and to the composition root.
+- [X] T055 [US1] Implement `apps/mobile/src/application/use-cases/release-held-changes.ts` and call `changes.releaseAll()` in `initialize-store.ts`, to turn T044 green.
+- [X] T056 [US1] Test-first, record the seeded categories (`name`, `position`) and the first list (`name`) with `changes.record` in `apps/mobile/src/application/use-cases/initialize-store.ts` ([contracts/app-ports.md](contracts/app-ports.md#changes-to-existing-use-cases-001-and-002)). Keep every existing test green.
+- [X] T057 [P] [US1] Test-first, record `listItem.inCart` in `apps/mobile/src/application/use-cases/toggle-item-in-cart.ts`.
+- [X] T058 [P] [US1] Test-first, record `listItem.inCart = false` for each item ticked at that moment, with one HLC, in `apps/mobile/src/application/use-cases/finish-shopping.ts` (FR-013).
+- [X] T059 [P] [US1] Test-first, record `listItem { listId, articleId, present: true, inCart: false, quantity }` in `apps/mobile/src/application/use-cases/add-article-to-list.ts`.
+- [X] T060 [P] [US1] Test-first, record `article { name, categoryId }` and then the `listItem` in `apps/mobile/src/application/use-cases/create-article-and-add-to-list.ts`. The article's change must come first.
+- [X] T061 [P] [US1] Test-first, record `listItem.quantity` in `apps/mobile/src/application/use-cases/change-item-quantity.ts`.
+- [X] T062 [P] [US1] Test-first, record `listItem.present = false` **held** by a new `undoId`, returned in `RemovedItem`, in `apps/mobile/src/application/use-cases/remove-item-from-list.ts`.
+- [X] T063 [P] [US1] Test-first, call `changes.discard(removed.undoId)` and record nothing in `apps/mobile/src/application/use-cases/restore-removed-item.ts`.
+- [X] T064 [P] [US1] Test-first, record `list.name` in `apps/mobile/src/application/use-cases/create-list.ts`, and assert `set-current-list.ts` records nothing (FR-015).
+- [X] T065 [P] [US1] Test-first, record `category { name, position }` in `apps/mobile/src/application/use-cases/create-category.ts`.
+- [X] T066 [P] [US1] Test-first, record only the changed fields (`article.name` and/or `article.categoryId`) in `apps/mobile/src/application/use-cases/edit-article.ts` (002).
+- [X] T067 [P] [US1] Test-first, record `article.deleted = true` **held** by a new `undoId`, returned in `DeletedArticle`, in `apps/mobile/src/application/use-cases/delete-article.ts` (002).
+- [X] T068 [P] [US1] Test-first, call `changes.discard(deleted.undoId)` in `apps/mobile/src/application/use-cases/restore-deleted-article.ts` (002).
+- [X] T069 [US1] Add the `sync` slice (`connection`, `status`, `pendingCount`, `lastSyncAt`, per [research.md](research.md) R14) and the `connectToServer` action to `apps/mobile/src/adapters/ui/state/app-store.ts`. Implement `apps/mobile/src/adapters/ui/state/sync-scheduler.ts`. Release held changes when an undo offer ends, and end the offer on an article deleted elsewhere. Together these turn T045–T046 green. Start the scheduler from `apps/mobile/src/composition/composition-root.ts`.
+- [X] T070 [US1] Extend `apps/mobile/src/adapters/ui/testing/story-store.ts` (001) test-first in `story-store.test.ts`: a scenario can start connected (the fake `CredentialStore` holds a credential) or not, and drives the in-memory `SyncServer` fake (reachable, unreachable, revoked, update required); `pending` and `failing` also apply to `synchronize` and `connectToServer`. Every existing story and test stays green.
+- [X] T071 [US1] Implement `apps/mobile/src/adapters/ui/screens/SettingsScreen.tsx` (not-connected and server sections) and `apps/mobile/src/adapters/ui/screens/ConnectServerScreen.tsx`. Add the "Réglages" Appbar action (cog icon) to `CurrentListScreen.tsx`, and the routes to `apps/mobile/src/adapters/ui/navigation.tsx`. This turns T047 green.
+- [X] T072 [US1] Add `Screens/Settings/NotConnected`, `Screens/Settings/Connected`, `Screens/ConnectServer/Default`, `.../ServerUnreachable`, `.../InvalidCode`, `.../UntrustedServer` and `.../TooManyAttempts` to `apps/mobile/src/adapters/ui/required-stories.ts` and see the story test fail. Then write `apps/mobile/src/adapters/ui/screens/SettingsScreen.stories.tsx` (not connected; connected, with "Dernière synchronisation : …") and `ConnectServerScreen.stories.tsx` (the outcome stories render the screen's presentational form with each French message, 001's convention) to turn it green. Review them in Storybook on both platforms, light and dark.
+- [X] T073 [US1] Make `tests/sync/single-device.test.ts` (T048) green, fixing only what it reveals, each fix with its own failing unit test first.
+- [X] T074 [US1] Make `sync-unreachable.e2e.ts` (T038) green with `yarn test:e2e:android` and `yarn test:e2e:ios`, every journey of 001 and 002 still green. Any production fix starts with its own failing unit or screen test.
 
 **Checkpoint**: one device syncs with the server and survives reinstalling. This is the first half of the MVP.
 
@@ -362,7 +362,7 @@ offline at the same time, and check they end identical after syncing, per US2's 
 
 ### Tests for User Story 2 ⚠️ (write first, confirm they fail)
 
-- [ ] T075 [P] [US2] Write failing server domain tests in `apps/server/src/domain/merge-by-name.test.ts` ([research.md](research.md) R8):
+- [X] T075 [P] [US2] Write failing server domain tests in `apps/server/src/domain/merge-by-name.test.ts` ([research.md](research.md) R8):
   - two categories, two articles or two lists with the same `normalizedName` → the survivor is the smaller `(createdHlc, id)`, and the other is tombstoned with `mergedInto`;
   - a merged article's list items move to the survivor, and are merged field by field when the survivor is already on that list;
   - a merged category's articles move;
@@ -395,7 +395,7 @@ offline at the same time, and check they end identical after syncing, per US2's 
 
 ### Implementation for User Story 2
 
-- [ ] T079 [US2] Implement `apps/server/src/domain/merge-by-name.ts` and call it from `apply-change.ts` on creates and renames, to turn T075 green.
+- [X] T079 [US2] Implement `apps/server/src/domain/merge-by-name.ts` and call it from `apply-change.ts` on creates and renames, to turn T075 green.
 - [ ] T080 [US2] Add the HLC clamp and the server HLC state to `apps/server/src/application/use-cases/sync.ts` to turn T076 green.
   - in `apps/mobile/src/adapters/ui/state/app-store.remote-effects.test.ts`: a cycle's `effects.merges` fill the slice's `redirects` (kept in memory only); a store write action called with a merged id calls the use case with the survivor's id, following chains;
   - in `apps/mobile/src/adapters/ui/state/use-remote-removal.test.tsx`: `useRemoteRemoval({ articleId })` calls its callback when a later cycle deletes that article, and `useRemoteRemoval({ listId, articleId })` when it removes that item; it ignores effects from cycles before it mounted;

@@ -62,4 +62,12 @@ export const requiredStories: readonly string[] = [
   'Dialogs/DeleteArticleDialog/NoList',
   'Dialogs/DeleteArticleDialog/OneList',
   'Dialogs/DeleteArticleDialog/SeveralLists',
+  // 003 Server sync
+  'Screens/Settings/NotConnected',
+  'Screens/Settings/Connected',
+  'Screens/ConnectServer/Default',
+  'Screens/ConnectServer/ServerUnreachable',
+  'Screens/ConnectServer/InvalidCode',
+  'Screens/ConnectServer/UntrustedServer',
+  'Screens/ConnectServer/TooManyAttempts',
 ];

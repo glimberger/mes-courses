@@ -379,4 +379,118 @@ describe('SyncServer HTTP adapter', () => {
       expect(result).toEqual({ ok: false, error: { type: 'UntrustedServer' } });
     });
   });
+  describe('sync', () => {
+    const request = {
+      lastSeq: 0,
+      hlc: { wallMs: Date.now(), counter: 0, deviceId: 'd-1' },
+      changes: [
+        {
+          changeId: 'ch-1',
+          hlc: { wallMs: Date.now(), counter: 0, deviceId: 'd-1' },
+          kind: 'list' as const,
+          id: 'l-1',
+          fields: { name: 'Ma liste' },
+        },
+      ],
+    };
+
+    const paired = async () => {
+      const plain = createSyncServer({ appVersion: APP_VERSION });
+      const pairing = await plain.claim(
+        server.url,
+        await server.createPairingCode(),
+        'A',
+      );
+      if (!pairing.ok) throw new Error('claim failed');
+      return {
+        url: server.url,
+        deviceId: pairing.value.deviceId,
+        credential: pairing.value.credential,
+      };
+    };
+
+    it('round-trips a change with the real server', async () => {
+      const conn = await paired();
+      const { requests, fetchFn } = recording();
+      const syncServer = createSyncServer({
+        appVersion: APP_VERSION,
+        fetch: fetchFn,
+      });
+
+      const result = await syncServer.sync(conn, request);
+
+      expect(result).toEqual({
+        ok: true,
+        value: expect.objectContaining({
+          acknowledged: ['ch-1'],
+          rows: [expect.objectContaining({ kind: 'list', id: 'l-1' })],
+          seq: 1,
+        }),
+      });
+      expect(requests[0]?.headers.get('Authorization')).toBe(
+        `Bearer ${conn.credential}`,
+      );
+      expect(requests[0]?.headers.get('X-App-Version')).toBe(APP_VERSION);
+    });
+
+    it.each([
+      [401, { type: 'DeviceNotAuthorized' }],
+      [426, { type: 'UpdateRequired' }],
+      [400, { type: 'ServerError' }],
+      [500, { type: 'ServerError' }],
+    ])('maps %i to %o', async (status, error) => {
+      const syncServer = createSyncServer({
+        appVersion: APP_VERSION,
+        fetch: async () => new Response('{}', { status }),
+      });
+
+      const result = await syncServer.sync(
+        { url: server.url, deviceId: 'd', credential: 'c' },
+        request,
+      );
+
+      expect(result).toEqual({ ok: false, error });
+    });
+
+    it('maps a refused connection to Offline', async () => {
+      const syncServer = createSyncServer({ appVersion: APP_VERSION });
+
+      const result = await syncServer.sync(
+        { url: 'http://127.0.0.1:9', deviceId: 'd', credential: 'c' },
+        request,
+      );
+
+      expect(result).toEqual({ ok: false, error: { type: 'Offline' } });
+    });
+
+    it('maps a TLS error to UntrustedServer', async () => {
+      const syncServer = createSyncServer({
+        appVersion: APP_VERSION,
+        fetch: async () => {
+          throw new TypeError('self-signed certificate');
+        },
+      });
+
+      const result = await syncServer.sync(
+        { url: server.url, deviceId: 'd', credential: 'c' },
+        request,
+      );
+
+      expect(result).toEqual({ ok: false, error: { type: 'UntrustedServer' } });
+    });
+
+    it('maps a 200 that is not a sync answer to ServerError', async () => {
+      const syncServer = createSyncServer({
+        appVersion: APP_VERSION,
+        fetch: async () => new Response('<html>portal</html>', { status: 200 }),
+      });
+
+      const result = await syncServer.sync(
+        { url: server.url, deviceId: 'd', credential: 'c' },
+        request,
+      );
+
+      expect(result).toEqual({ ok: false, error: { type: 'ServerError' } });
+    });
+  });
 });

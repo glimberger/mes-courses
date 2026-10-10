@@ -19,18 +19,19 @@ export const createInitializeStore =
   ({ unitOfWork, ids }: { unitOfWork: UnitOfWork; ids: IdGenerator }) =>
   (seed: Seed): Promise<void> =>
     unitOfWork.run(async (repos) => {
+      // A deletion left held by a killed app becomes final (research R10).
+      await repos.changes.releaseAll();
       if ((await repos.lists.count()) > 0) return;
 
       if ((await repos.categories.nextPosition()) === 0) {
         for (const [position, name] of seed.categoryNames.entries()) {
-          await repos.categories.add({
-            id: ids.next() as CategoryId,
-            name,
-            position,
-          });
+          const id = ids.next() as CategoryId;
+          await repos.categories.add({ id, name, position });
+          await repos.changes.record('category', id, { name, position });
         }
       }
       const listId = ids.next() as ListId;
       await repos.lists.add({ id: listId, name: seed.firstListName });
+      await repos.changes.record('list', listId, { name: seed.firstListName });
       await repos.appState.setCurrentListId(listId);
     });

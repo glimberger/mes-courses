@@ -16,5 +16,8 @@ export const createToggleItemInCart =
       if (!item) return err({ type: 'ItemNotOnList' });
       const toggled = toggle(item);
       await repos.items.save(toggled);
+      await repos.changes.record('listItem', `${listId}:${articleId}`, {
+        inCart: toggled.inCart,
+      });
       return ok({ inCart: toggled.inCart });
     });

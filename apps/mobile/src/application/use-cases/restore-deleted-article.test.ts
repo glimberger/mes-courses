@@ -6,6 +6,7 @@ import {
   InMemoryRepositories,
   InMemoryUnitOfWork,
 } from '../testing/in-memory-repositories';
+import { SequentialIdGenerator } from '../testing/sequential-id-generator';
 import { createDeleteArticle } from './delete-article';
 import { createRestoreDeletedArticle } from './restore-deleted-article';
 
@@ -22,7 +23,10 @@ describe('restoreDeletedArticle', () => {
 
   /** Deletes "Lait" and returns what the deletion offered to undo. */
   const deleteLait = async () => {
-    const deleted = await createDeleteArticle({ unitOfWork })(lait);
+    const deleted = await createDeleteArticle({
+      unitOfWork,
+      ids: new SequentialIdGenerator(),
+    })(lait);
     if (!deleted.ok) throw new Error('not deleted');
     return deleted.value;
   };
@@ -112,5 +116,18 @@ describe('restoreDeletedArticle', () => {
     await expect(
       createRestoreDeletedArticle({ unitOfWork: failing })(deleted),
     ).rejects.toThrow('disk failed');
+  });
+
+  describe('recorded changes (US1)', () => {
+    it('discards the held deletion and records nothing', async () => {
+      const deleted = await deleteLait();
+
+      await createRestoreDeletedArticle({ unitOfWork })(deleted);
+      await unitOfWork.run((repos) => repos.changes.release(deleted.undoId));
+
+      expect(
+        await unitOfWork.run((repos) => repos.changes.pending(100)),
+      ).toEqual([]);
+    });
   });
 });

@@ -13,6 +13,8 @@ export type ListItem = {
 
 /** A removed item as it was, so "Annuler" can put it back (FR-010). */
 export type RemovedItem = {
+  /** Names the held change of this removal, kept back until the offer ends. */
+  undoId: string;
   listId: ListId;
   articleId: ArticleId;
   inCart: boolean;

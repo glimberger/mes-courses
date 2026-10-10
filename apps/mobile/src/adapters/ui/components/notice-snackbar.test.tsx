@@ -39,6 +39,10 @@ describe('NoticeSnackbar', () => {
       'Espace de stockage insuffisant. Libérez de la place sur votre téléphone.',
     ],
     [{ type: 'articleAdded', name: 'Lait' }, '« Lait » ajouté'],
+    [
+      { type: 'deviceConnected' },
+      'Appareil connecté. Synchronisation en cours…',
+    ],
   ] as [Notice, string][])(
     'FR-038 shows the %o notice as "%s" and announces it as it appears',
     async (notice, text) => {
@@ -157,6 +161,7 @@ describe('NoticeSnackbar', () => {
         pendingUndo: {
           kind: 'removedItem',
           removed: {
+            undoId: 'undo-1',
             listId: 'list-1' as ListId,
             articleId: 'article-1' as ArticleId,
             inCart: false,

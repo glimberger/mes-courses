@@ -92,4 +92,32 @@ describe('changeItemQuantity', () => {
     expect(outcome).toEqual(err({ type: 'ItemNotOnList' }));
     expect(await stored(maListe, beurre)).toBeNull();
   });
+
+  describe('recorded changes (US1)', () => {
+    const pending = () => unitOfWork.run((repos) => repos.changes.pending(100));
+
+    it('records listItem.quantity, null when cleared', async () => {
+      const changeItemQuantity = createChangeItemQuantity({ unitOfWork });
+
+      await changeItemQuantity(maListe, lait, { amount: 3, unit: 'L' });
+      await changeItemQuantity(maListe, lait, null);
+
+      expect(
+        (await pending()).map(({ kind, id, fields }) => ({ kind, id, fields })),
+      ).toEqual([
+        {
+          kind: 'listItem',
+          id: 'l-1:a-1',
+          fields: { quantity: { amount: 3, unit: 'L' } },
+        },
+        { kind: 'listItem', id: 'l-1:a-1', fields: { quantity: null } },
+      ]);
+    });
+
+    it('records nothing when the item is not on the list', async () => {
+      await createChangeItemQuantity({ unitOfWork })(maListe, beurre, null);
+
+      expect(await pending()).toEqual([]);
+    });
+  });
 });

@@ -2617,6 +2617,7 @@ __metadata:
     expo-constants: "npm:~58.0.10"
     expo-crypto: "npm:~58.0.5"
     expo-detox-config-plugin: "npm:^13.0.0"
+    expo-device: "npm:~58.0.5"
     expo-font: "npm:~58.0.7"
     expo-secure-store: "npm:~58.0.2"
     expo-sqlite: "npm:~58.0.10"
@@ -7840,6 +7841,17 @@ __metadata:
     "@expo/config-plugins": ">=54.0.0"
     expo: ">=54.0.0"
   checksum: 10c0/bc94ddc7712e3c38137daea5507e26e93b097ada08516edf4b433de3d112573177ae66c6b8035db27232929e3b88688ad7bedb81f5941b25780507ccca8aab0c
+  languageName: node
+  linkType: hard
+
+"expo-device@npm:~58.0.5":
+  version: 58.0.5
+  resolution: "expo-device@npm:58.0.5"
+  dependencies:
+    ua-parser-js: "npm:^0.7.33"
+  peerDependencies:
+    expo: "*"
+  checksum: 10c0/387e9ea5624202e86f57232452f691509ff357069452a4ba59f9d54e153ec1510455f1118221b77c41b99165b45e2b669f0c75e9322702c12a1599341f2cf3a6
   languageName: node
   linkType: hard
 
@@ -14443,6 +14455,15 @@ __metadata:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: 10c0/2f25c74e65663c248fa1ade2b8459d9ce5372ff9dad07067310f132966ebec1d93f6c42f0baf77a6b6a7a91460463f708e6887013aaade22111037457c6b25df
+  languageName: node
+  linkType: hard
+
+"ua-parser-js@npm:^0.7.33":
+  version: 0.7.41
+  resolution: "ua-parser-js@npm:0.7.41"
+  bin:
+    ua-parser-js: script/cli.js
+  checksum: 10c0/b134bc0d8da10c76e07740a0ade61c193fd4c4d120ba2cb2530e26931f6b550dd60b6e801d8891f6d9c23dfebadf5590294739069edff94396f173cc8cc5767e
   languageName: node
   linkType: hard
 
