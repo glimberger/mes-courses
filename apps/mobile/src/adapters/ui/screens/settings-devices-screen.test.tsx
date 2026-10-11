@@ -6,6 +6,7 @@ import { Navigation } from '../navigation';
 import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
 import type { StoryScenario } from '../testing/story-store';
+import { waitForMenusToSettle } from '../testing/wait-for-menus';
 
 const connected = {
   serverUrl: 'https://courses.example.fr',
@@ -44,9 +45,7 @@ const withDevices = (extra: StoryScenario['syncServer'] = {}) => ({
 
 const openRowMenu = async (name: string) => {
   const button = await screen.findByLabelText(`Actions de ${name}`);
-  // Paper's `Menu` runs a 250 ms hide animation when it mounts closed, and its end hides the
-  // items even if the menu was opened meanwhile: wait past it.
-  await act(() => new Promise<void>((resolve) => setTimeout(resolve, 300)));
+  await waitForMenusToSettle();
   fireEvent.press(button);
 };
 

@@ -1,6 +1,6 @@
 import type { ReactTestInstance } from 'react-test-renderer';
 import { StyleSheet, TextInput } from 'react-native';
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import { err, ok } from '../../../domain/result';
@@ -8,6 +8,7 @@ import { Navigation } from '../navigation';
 import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
 import type { StoryScenario } from '../testing/story-store';
+import { waitForMenusToSettle } from '../testing/wait-for-menus';
 
 // Every screen and dialog, checked for FR-031, FR-032 and FR-034. Jest lays nothing out, so a
 // touch target is read from the sizes the styles set (research R2): a component must state its
@@ -79,19 +80,6 @@ const openDevices = async () => {
   await openSettings();
   await screen.findByText('iPhone de Marc', {}, slow);
 };
-
-/**
- * Opens the menu of a device row and, when given, chooses one of its actions. A row redrawn under
- * load can close its menu before the press lands, so the steps are tried again until `shown`
- * appears.
- */
-/**
- * Paper's `Menu` runs a 250 ms hide animation when it mounts closed, and its end hides the items
- * even if the menu was opened meanwhile, which a loaded CI machine makes likely. Waiting past it
- * first makes opening the menu reliable.
- */
-const waitForMenusToSettle = () =>
-  act(() => new Promise<void>((resolve) => setTimeout(resolve, 300)));
 
 /** Opens the menu of a device row and, when `shown` is another text, chooses `action`. */
 const chooseDeviceAction = async (action: string, shown: string) => {

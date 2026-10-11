@@ -200,14 +200,18 @@ describe('restoring and writing at size (003 SC-004, SC-005)', () => {
       list.id,
       created.value.articleId,
     );
-    const outcome = await Promise.race([
-      tick.then(() => 'ticked' as const),
-      cycle.then(() => 'cycle ended first' as const),
-    ]);
+    try {
+      const outcome = await Promise.race([
+        tick.then(() => 'ticked' as const),
+        cycle.then(() => 'cycle ended first' as const),
+      ]);
 
-    expect(outcome).toBe('ticked');
-    expect((await tick).ok).toBe(true);
-    releaseNetwork();
+      expect(outcome).toBe('ticked');
+      expect((await tick).ok).toBe(true);
+    } finally {
+      // Released even when an assertion fails, so `server.close()` is not left waiting on it.
+      releaseNetwork();
+    }
     await cycle;
   });
 });
