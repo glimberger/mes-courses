@@ -17,8 +17,10 @@ WorkingDirectory=/opt/mes-courses/apps/server
 Environment=NODE_ENV=production
 EnvironmentFile=/etc/mes-courses.env
 # Fails with a clear message in the journal when the server is not built, instead of looping.
+# --conditions=production makes @mes-courses/sync-core resolve to its compiled dist/ instead of
+# its TypeScript source (see its package.json "exports").
 ExecStartPre=/usr/bin/test -f /opt/mes-courses/apps/server/dist/composition/main.js
-ExecStart=/opt/mes-courses/runtime/bin/node /opt/mes-courses/apps/server/dist/composition/main.js
+ExecStart=/opt/mes-courses/runtime/bin/node --conditions=production /opt/mes-courses/apps/server/dist/composition/main.js
 Restart=always
 RestartSec=5
 

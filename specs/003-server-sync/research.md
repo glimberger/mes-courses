@@ -499,8 +499,11 @@ kept (R7) and the first pairing code (R11).
     service; `/opt/mes-courses/` belongs to the maintainer's account, which builds there, and
     the service only reads it;
   - a systemd unit `mes-courses.service` runs
-    `/opt/mes-courses/runtime/bin/node /opt/mes-courses/apps/server/dist/composition/main.js`
+    `/opt/mes-courses/runtime/bin/node --conditions=production /opt/mes-courses/apps/server/dist/composition/main.js`
     (the server's `start` script) with `Restart=always` and `NODE_ENV=production`;
+  - `sync-core` ships its TypeScript source to the app, Jest and tsx, and a compiled `dist/`
+    through the `production` export condition, which the service turns on with
+    `--conditions=production`: Node cannot load the extensionless imports of the source;
   - the Sentry DSN sits in `/etc/mes-courses.env`, readable only by that user;
   - deploying means `git pull`, then, inside the flake's dev shell (`nix develop --command …`,
     which brings Yarn through Corepack): `yarn workspaces focus @mes-courses/server` (installs

@@ -15,7 +15,8 @@ yarn lint
 yarn format:check
 yarn test                   # sync-core, server, app, tests/sync (adapter and two-device scenarios)
 yarn test:architecture  # app, server, sync-core and cross-workspace rules
-yarn build              # app (expo export) and server (tsc)
+yarn build              # app (expo export), server and sync-core (tsc)
+sh .github/scripts/server-smoke.sh  # the compiled server answers /v1/health
 ```
 
 Expected: everything is green. No test reaches the network beyond `127.0.0.1`, and none reaches
@@ -78,7 +79,9 @@ refuse `http://` (FR-019).
    `nix build .#node` builds (in practice, downloads from the cache) the flake's `node` package,
    the same `nodejs_24` as the dev shell, into `/nix/store/<hash>-nodejs-24…`, and
    `--out-link` makes `/opt/mes-courses/runtime` a symlink to it. `mes-courses.service` runs
-   `/opt/mes-courses/runtime/bin/node`. This gives:
+   `/opt/mes-courses/runtime/bin/node --conditions=production`: the flag makes
+   `@mes-courses/sync-core` resolve to its compiled `dist/` (built by the server's `build`)
+   instead of its TypeScript source, which only tsx, Jest and Metro can load. This gives:
    - the exact Node of `flake.lock`, the one tests and CI use, not Debian's or the
      maintainer's profile's;
    - a Node that stays: the symlink is a garbage-collection root, so `nix-collect-garbage`
@@ -99,7 +102,7 @@ Start with the phone holding data from 001 and 002 (several lists, ticked items)
 freshly installed, and the server empty.
 
 1. **First device on an empty server** (US4-2, US4-4, US1-6, FR-018):
-   - on the Pi, run `sudo -u mes-courses /opt/mes-courses/runtime/bin/node /opt/mes-courses/apps/server/dist/composition/pairing-code.js`
+   - on the Pi, run `sudo -u mes-courses /opt/mes-courses/runtime/bin/node --conditions=production /opt/mes-courses/apps/server/dist/composition/pairing-code.js`
      (as `mes-courses`: the database in `/var/lib/mes-courses/` is readable by that user only);
    - on the phone, open Réglages › Connecter à un serveur and enter the domain, the code and a
      name;
