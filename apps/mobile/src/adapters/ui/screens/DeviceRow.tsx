@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { IconButton, List, Menu, Text, useTheme } from 'react-native-paper';
+import { List, Menu, Text, useTheme } from 'react-native-paper';
 
 import type { DeviceInfo } from '../../../application/use-cases/list-devices';
+import { AppbarIconAction } from '../components/AppbarIconAction';
 import { formatLastSync } from '../components/format-last-sync';
 import { spacing } from '../theme/spacing';
 
@@ -41,8 +42,9 @@ export const DeviceRow = ({ device, onRename, onRevoke }: DeviceRowProps) => {
         <Menu
           visible={open}
           onDismiss={() => setOpen(false)}
+          overlayAccessibilityLabel="Fermer le menu"
           anchor={
-            <IconButton
+            <AppbarIconAction
               icon="dots-vertical"
               accessibilityLabel={`Actions de ${device.name}`}
               onPress={() => setOpen(true)}

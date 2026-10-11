@@ -1,0 +1,34 @@
+# systemd unit of the Mes courses server on the Pi (research R17).
+#
+# Copy to /etc/systemd/system/mes-courses.service, then `systemctl enable --now mes-courses`.
+# /opt/mes-courses/runtime is the Node built from the project's flake
+# (`nix build .#node --out-link /opt/mes-courses/runtime`), and /etc/mes-courses.env comes from
+# deploy/mes-courses.env.example (mode 600, owned by mes-courses).
+[Unit]
+Description=Mes courses sync server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mes-courses
+Group=mes-courses
+WorkingDirectory=/opt/mes-courses/apps/server
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/mes-courses.env
+# Fails with a clear message in the journal when the server is not built, instead of looping.
+ExecStartPre=/usr/bin/test -f /opt/mes-courses/apps/server/dist/composition/main.js
+ExecStart=/opt/mes-courses/runtime/bin/node /opt/mes-courses/apps/server/dist/composition/main.js
+Restart=always
+RestartSec=5
+
+# The database lives in /var/lib/mes-courses/ (the server's default MES_COURSES_DB).
+StateDirectory=mes-courses
+StateDirectoryMode=0700
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

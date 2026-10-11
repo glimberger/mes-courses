@@ -105,4 +105,7 @@ fileignoreconfig:
     ignore_detectors: [filecontent]
   - filename: apps/server/src/application/use-cases/apply-with-merge.ts
     ignore_detectors: [filecontent]
+  # The environment template for the Pi holds variable names only, no values.
+  - filename: deploy/mes-courses.env.example
+    ignore_detectors: [filename]
 version: "1.0"

@@ -465,7 +465,12 @@ stay out of `yarn test`. That workspace defines no `test` script, so the root
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| Principle VII and its workflow rule: no synchronization with the Pi server, no reconciliation rule in the spec (FR-027 excludes synchronization) | Constitution v2.0.0 was adopted after this spec; the spec defines a single-device app. A dedicated sync feature (next `/speckit-specify`) defines the server port, the queue of offline changes, reconciliation and the synchronization status for 001 and 002 together. | Adding sync here would invent reconciliation rules the spec does not state and need the server's technology and API, still undecided. Holding the first feature until sync is specified delays the foundations (stack, CI, local storage, screens) that sync builds on and does not change. |
+| **Closed by 003.** Principle VII and its workflow rule: no synchronization with the Pi server, no reconciliation rule in the spec (FR-027 excludes synchronization) | Constitution v2.0.0 was adopted after this spec; the spec defines a single-device app. A dedicated sync feature (next `/speckit-specify`) defines the server port, the queue of offline changes, reconciliation and the synchronization status for 001 and 002 together. | Adding sync here would invent reconciliation rules the spec does not state and need the server's technology and API, still undecided. Holding the first feature until sync is specified delays the foundations (stack, CI, local storage, screens) that sync builds on and does not change. |
+
+**Status: closed.** [003-server-sync](../003-server-sync/spec.md) is implemented (pull requests
+#74 to #85): the app synchronizes with the Pi server, the spec's reconciliation rules apply to the
+data of this feature, and every data screen shows the sync status. The row above is kept as the
+record of the deviation while it lasted.
 
 **Migration note** (constitution Governance): [003-server-sync](../003-server-sync/plan.md) closes
 this deviation. Once 003 is implemented, every command use case of this feature records its

@@ -1,0 +1,13 @@
+# Public entry of the Mes courses server on the Pi (research R4, R17).
+#
+# Copy to /etc/caddy/Caddyfile. Caddy reads `{$MES_COURSES_DOMAIN}` from its own environment:
+# either replace it with the domain (for example `courses.example.org`), or give the Debian
+# `caddy.service` that variable through a drop-in (`systemctl edit caddy`, then
+# `Environment=MES_COURSES_DOMAIN=courses.example.org`).
+#
+# Naming a domain turns on automatic HTTPS: Caddy gets a Let's Encrypt certificate (ports 80 and
+# 443 must reach the Pi) and redirects HTTP to HTTPS. The server listens on 127.0.0.1 only.
+{$MES_COURSES_DOMAIN} {
+	encode gzip
+	reverse_proxy 127.0.0.1:3000
+}

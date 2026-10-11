@@ -6,6 +6,7 @@ import { Navigation } from '../navigation';
 import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
 import type { StoryScenario } from '../testing/story-store';
+import { waitForMenusToSettle } from '../testing/wait-for-menus';
 
 const connected = {
   serverUrl: 'https://courses.example.fr',
@@ -43,7 +44,9 @@ const withDevices = (extra: StoryScenario['syncServer'] = {}) => ({
 });
 
 const openRowMenu = async (name: string) => {
-  fireEvent.press(await screen.findByLabelText(`Actions de ${name}`));
+  const button = await screen.findByLabelText(`Actions de ${name}`);
+  await waitForMenusToSettle();
+  fireEvent.press(button);
 };
 
 describe('Settings, devices (003 US4)', () => {

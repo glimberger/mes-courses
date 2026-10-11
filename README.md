@@ -10,9 +10,10 @@ in categories, by browsing or searching, or create them on the way, with an opti
 them all for next time. A removed item can be put back with "Annuler". The second feature,
 [002 manage articles](specs/002-manage-articles/spec.md), lets you rename an article, change its
 category or delete it from the catalog (it then leaves every list, and "Annuler" brings it back
-with its quantities). Everything works with no
-network: the data lives only on the device until server synchronization comes
-([003](specs/003-server-sync/spec.md)).
+with its quantities). The third, [003 server synchronization](specs/003-server-sync/spec.md),
+keeps the data on a home server (a Raspberry Pi behind the Internet box) and on every paired
+phone and tablet, which converge on their own. Everything still works with no network: each
+change is saved on the device first and reaches the server when it can.
 Its governing principles are in [`.specify/memory/constitution.md`](.specify/memory/constitution.md),
 its lasting technical decisions are in [`docs/adr/`](docs/adr/README.md),
 and its Material 3 color theme is in [`design/material-theme.json`](design/material-theme.json).
@@ -27,6 +28,10 @@ and drive them from the UI, a React Native Paper interface whose shared state is
 that lives in the UI adapter only; `composition/` is the one module that knows every adapter and
 wires them at startup. French text exists only in the UI adapter.
 
+The server (`apps/server/`, Fastify over `node:sqlite`) has the same layers, and the merge rules
+both sides apply live in `packages/sync-core/`, which depends on nothing. The server listens on
+`127.0.0.1` only; Caddy is its public HTTPS entry.
+
 ## Development workflow
 
 Features are specified and built with [Spec Kit](https://github.com/github/spec-kit) from Claude Code:
@@ -40,16 +45,19 @@ Features are specified and built with [Spec Kit](https://github.com/github/spec-
 
 This is a Yarn workspaces monorepo ([research R20](specs/001-shopping-lists/research.md)).
 
-| Path                        | What it holds                                                                  |
-| --------------------------- | ------------------------------------------------------------------------------ |
-| `apps/mobile/`              | The Expo app (`@mes-courses/mobile`), with its Jest, Storybook and Metro setup |
-| `tests/e2e/`                | The Detox end-to-end journeys (`@mes-courses/e2e-tests`), test-only            |
-| `apps/server/`, `packages/` | Added by later features (the server and the shared packages)                   |
-| `specs/`, `.specify/`       | Feature specifications and the Spec Kit configuration                          |
-| `docs/adr/`                 | The [architecture decision records](docs/adr/README.md)                        |
-| `design/`                   | The Material 3 theme export                                                    |
-| `flake.nix`, `flake.lock`   | The Nix dev shell                                                              |
-| `.github/`                  | The CI workflow and its helper script                                          |
+| Path                      | What it holds                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| `apps/mobile/`            | The Expo app (`@mes-courses/mobile`), with its Jest, Storybook and Metro setup |
+| `tests/e2e/`              | The Detox end-to-end journeys (`@mes-courses/e2e-tests`), test-only            |
+| `apps/server/`            | The sync server (`@mes-courses/server`)                                        |
+| `packages/sync-core/`     | The protocol types and merge rules shared by the app and the server            |
+| `tests/sync/`             | The tests that run the app and the server together (`@mes-courses/sync-tests`) |
+| `deploy/`                 | The Pi files: systemd unit, Caddyfile, environment template                    |
+| `specs/`, `.specify/`     | Feature specifications and the Spec Kit configuration                          |
+| `docs/adr/`               | The [architecture decision records](docs/adr/README.md)                        |
+| `design/`                 | The Material 3 theme export                                                    |
+| `flake.nix`, `flake.lock` | The Nix dev shell                                                              |
+| `.github/`                | The CI workflow and its helper script                                          |
 
 ## Prerequisites
 
@@ -156,6 +164,42 @@ the long names wrap without being cut. `yarn start` brings the app back.
 
 `EXPO_PUBLIC_SENTRY_DSN` is optional: it sends error reports to Sentry. Without it, errors go to
 the console only.
+
+## Sync server
+
+### In development
+
+From the repository root:
+
+```sh
+yarn workspace @mes-courses/server dev           # http://127.0.0.1:3000, database in apps/server/.data/
+yarn workspace @mes-courses/server pairing-code:dev  # a pairing code for that database, valid 10 minutes
+```
+
+`pairing-code` (without `:dev`) prints a code for the database at `MES_COURSES_DB`, or the Pi's
+default path. In the app, Réglages › Connecter à un serveur takes the address and the code. A
+development build accepts `http://127.0.0.1:3000` (or the machine's LAN address) only when built
+with `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL=1`; release builds refuse `http://`.
+
+### On the Pi
+
+The Freebox, DNS and Pi setup is in [003 quickstart §3](specs/003-server-sync/quickstart.md#3-set-up-the-pi-behind-the-freebox-once).
+In short: Nix and Caddy on the Pi, the repository in `/opt/mes-courses`, the server built inside
+the flake's dev shell, Node from `nix build .#node --out-link /opt/mes-courses/runtime`, then
+`deploy/mes-courses.service` and `deploy/Caddyfile` installed and started. Deploying an update is
+`git pull`, the same build, and `systemctl restart mes-courses`; migrations run at startup.
+
+### Environment variables
+
+| Variable                              | Where                 | What it does                                                                          |
+| ------------------------------------- | --------------------- | ------------------------------------------------------------------------------------- |
+| `SENTRY_DSN`                          | server                | Sends server errors to Sentry (EU region). Unset: they go to the journal only         |
+| `MES_COURSES_DB`                      | server                | The SQLite database path. Default: `/var/lib/mes-courses/mes-courses.db`              |
+| `MES_COURSES_DOMAIN`                  | Caddy                 | The public domain Caddy serves and gets a certificate for                             |
+| `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL` | app, development only | `1` lets a development build pair with an `http://` server; ignored by release builds |
+
+On the Pi, the server's variables go in `/etc/mes-courses.env` (from
+`deploy/mes-courses.env.example`, mode 600, owned by `mes-courses`).
 
 ## EAS builds and error tracking
 

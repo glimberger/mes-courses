@@ -1,12 +1,15 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../application/testing/recording-error-reporter';
+import type { SyncServer } from '../../application/ports/sync-server';
 import type { ArticleId } from '../../domain/article';
+import { err } from '../../domain/result';
 import type { ListId } from '../../domain/shopping-list';
 import { Navigation } from './navigation';
 import { fixture } from './testing/fixtures';
 import { renderWithStore } from './testing/render-with-store';
-import type { Fixture } from './testing/story-store';
+import type { Fixture, StoryScenario } from './testing/story-store';
+import type { AppStore } from './state/app-store';
 
 const realFetch = global.fetch;
 const offlineFetch = jest.fn(() => {
@@ -93,178 +96,240 @@ const addFromCatalog = async (name: string) => {
   await screen.findByText(`« ${name} » ajouté`);
 };
 
-describe('the app with no network', () => {
-  it('FR-027 SC-006 completes each of the 12 actions of the spec, in order, with nothing reported', async () => {
-    const navigationReporter = new RecordingErrorReporter();
-    const { errorReporter, unitOfWork } = await renderWithStore(
-      <Navigation errorReporter={navigationReporter} />,
-      { seed, asScreen: false },
-    );
+type Network = {
+  scenario: () => StoryScenario;
+  /** Checks what the sync did once every action is done. */
+  expectSync: (store: AppStore) => Promise<void>;
+};
 
-    // 1. Open the application on the current list.
-    expect(await row('Lait, 2 L, pas dans le caddie')).toBeOnTheScreen();
-    expect(screen.getByText('Ma liste')).toBeOnTheScreen();
+/** Every authenticated request answers `Offline`, as with no network (003 FR-003). */
+const offlineServer = () => {
+  const offline = async () => err({ type: 'Offline' as const });
+  return {
+    sync: jest.fn(offline),
+    createPairingCode: jest.fn(offline),
+    listDevices: jest.fn(offline),
+    renameDevice: jest.fn(offline),
+    revokeDevice: jest.fn(offline),
+  } satisfies Partial<SyncServer>;
+};
 
-    // 2. Tick and untick an item.
-    fireEvent.press(await row('Lait, 2 L, pas dans le caddie'));
-    fireEvent.press(await row('Pommes, dans le caddie'));
-    expect(await row('Lait, 2 L, dans le caddie')).toBeChecked();
-    expect(await row('Pommes, pas dans le caddie')).not.toBeChecked();
-
-    // 3. Finish shopping.
-    await press('Terminer les courses');
-    await pressLast('Terminer');
-    expect(await row('Lait, 2 L, pas dans le caddie')).not.toBeChecked();
-
-    // 4. Add an existing article, by browsing categories and by searching.
-    await press('Ajouter');
-    await addFromCatalog('Beurre');
-    fireEvent.changeText(
-      screen.getByPlaceholderText('Rechercher un article'),
-      'pâ',
-    );
-    await addFromCatalog('Pâte');
-
-    // 5. Create an article and add it to the current list.
-    await press('Nouvel article');
-    type('Nom', 'Lentilles');
-    fireEvent.press(
-      await screen.findByRole('radio', { name: 'Épicerie salée' }),
-    );
-    type('Quantité', '400');
-    type('Unité', 'g');
-    await press('Créer et ajouter');
-    await screen.findByText('« Lentilles » ajouté');
-    await press('Retour');
-    expect(await row('Lentilles, 400 g, pas dans le caddie')).toBeOnTheScreen();
-    // "Pâte" comes last, past the rows Jest draws: it is checked in storage.
-    expect(
-      await unitOfWork.run((repos) =>
-        repos.items.find(maListe, 'article-pate' as ArticleId),
-      ),
-    ).toMatchObject({ inCart: false, quantity: null });
-
-    // 6. Set, change and clear the quantity of an item.
-    await runAction('Beurre, pas dans le caddie', 'editQuantity');
-    type('Quantité', '2');
-    type('Unité', 'kg');
-    await pressLast('Enregistrer');
-    await runAction('Beurre, 2 kg, pas dans le caddie', 'editQuantity');
-    type('Quantité', '3');
-    await pressLast('Enregistrer');
-    await runAction('Beurre, 3 kg, pas dans le caddie', 'editQuantity');
-    await pressLast('Effacer la quantité');
-    expect(await row('Beurre, pas dans le caddie')).toBeOnTheScreen();
-
-    // 7. Remove an item from the current list.
-    await runAction('Farine, 1,5 kg, pas dans le caddie', 'remove');
-    await screen.findByText('« Farine » retiré de la liste');
-    expect(
-      screen.queryByRole('checkbox', {
-        name: 'Farine, 1,5 kg, pas dans le caddie',
-      }),
-    ).not.toBeOnTheScreen();
-
-    // 8. Undo a removal.
-    await press('Annuler');
-    expect(await row('Farine, 1,5 kg, pas dans le caddie')).toBeOnTheScreen();
-
-    // 9. See all lists.
-    await press('Mes listes');
-    expect(
-      await screen.findByRole('button', {
-        name: 'Ma liste, 6 articles, liste actuelle',
-      }),
-    ).toBeOnTheScreen();
-    expect(
-      screen.getByRole('button', { name: 'Barbecue, 0 articles' }),
-    ).toBeOnTheScreen();
-
-    // 10. Create a list.
-    await press('Nouvelle liste');
-    type('Nom', 'Pique-nique');
-    await pressLast('Créer');
-
-    // 11. Choose the current list.
-    await press('Pique-nique, 0 articles');
-    expect(await screen.findByText('Votre liste est vide')).toBeOnTheScreen();
-    expect(screen.getByText('Pique-nique')).toBeOnTheScreen();
-
-    // 12. Create a category.
-    await press('Ajouter des articles');
-    await press('Nouvel article');
-    await press('Nouvelle catégorie');
-    type('Nom', 'Bébé');
-    await pressLast('Créer');
-    expect(await screen.findByRole('radio', { name: 'Bébé' })).toBeChecked();
-
-    const stored = await unitOfWork.run(async (repos) => ({
-      categories: (await repos.categories.all()).map(
-        (category) => category.name,
-      ),
-      lists: (await repos.lists.all()).map((list) => list.name),
-      current: await repos.appState.currentListId(),
-    }));
-    expect(stored.categories).toContain('Bébé');
-    expect(stored.lists).toContain('Pique-nique');
-    expect(stored.current).not.toBe(maListe);
-    for (const text of errorTexts) {
-      expect(screen.queryByText(text)).not.toBeOnTheScreen();
-    }
-    await waitFor(() => expect(errorReporter.reports).toEqual([]));
-    expect(navigationReporter.reports).toEqual([]);
-    expect(offlineFetch).not.toHaveBeenCalled();
-  });
-
-  it('002 FR-010 SC-004 renames, recategorizes and deletes an article, then undoes it, with nothing reported', async () => {
-    const navigationReporter = new RecordingErrorReporter();
-    const { errorReporter, unitOfWork } = await renderWithStore(
-      <Navigation errorReporter={navigationReporter} />,
-      { seed, asScreen: false },
-    );
-    const storedBeurre = () =>
-      unitOfWork.run((repos) =>
-        repos.articles.findById('article-beurre' as ArticleId),
-      );
-    const chooseFromMenu = async (name: string, action: string) => {
-      fireEvent.press(
-        await screen.findByRole('button', {
-          name: `Plus d'actions pour « ${name} »`,
+const networks: [string, () => Network][] = [
+  [
+    'never connected to a server',
+    () => ({
+      scenario: () => ({}),
+      expectSync: async (store) => {
+        expect(store.getState().sync.connection).toBe('notConnected');
+      },
+    }),
+  ],
+  [
+    'connected to a server it cannot reach (003)',
+    () => {
+      const server = offlineServer();
+      return {
+        scenario: () => ({
+          connected: {
+            serverUrl: 'https://courses.example.fr',
+            lastSyncAt: null,
+          },
+          syncServer: server,
         }),
+        expectSync: async (store) => {
+          expect(server.sync).toHaveBeenCalled();
+          await waitFor(() =>
+            expect(store.getState().sync.status).toBe('waiting'),
+          );
+          expect(store.getState().sync.connection).toBe('connected');
+          expect(store.getState().sync.pendingCount).toBeGreaterThan(0);
+        },
+      };
+    },
+  ],
+];
+
+describe.each(networks)(
+  'the app with no network, %s',
+  (_network, makeNetwork) => {
+    it('FR-027 SC-006 003 FR-003 SC-004 completes each of the 12 actions of the spec, in order, with nothing reported', async () => {
+      const network = makeNetwork();
+      const navigationReporter = new RecordingErrorReporter();
+      const { errorReporter, unitOfWork, store } = await renderWithStore(
+        <Navigation errorReporter={navigationReporter} />,
+        { seed, asScreen: false, ...network.scenario() },
       );
-      fireEvent.press(screen.getByText(action));
-    };
-    await press('Ajouter');
 
-    // Rename.
-    await chooseFromMenu('Beurre', 'Modifier');
-    await screen.findByText("Modifier l'article");
-    fireEvent.changeText(screen.getByLabelText('Nom'), 'Beurre doux');
-    // Change the category.
-    fireEvent.press(await screen.findByRole('radio', { name: 'Boissons' }));
-    await press('Enregistrer');
-    await screen.findByText('Ajouter des articles');
-    expect(await screen.findByText('Beurre doux')).toBeOnTheScreen();
-    const renamed = await storedBeurre();
-    expect(renamed?.name).toBe('Beurre doux');
-    const boissons = seed.categories.find((c) => c.name === 'Boissons');
-    expect(renamed?.categoryId).toBe(boissons?.id);
+      // 1. Open the application on the current list.
+      expect(await row('Lait, 2 L, pas dans le caddie')).toBeOnTheScreen();
+      expect(screen.getByText('Ma liste')).toBeOnTheScreen();
 
-    // Delete, then undo.
-    await chooseFromMenu('Beurre doux', 'Supprimer');
-    await screen.findByText('Supprimer « Beurre doux » ?');
-    await pressLast('Supprimer');
-    await screen.findByText('« Beurre doux » supprimé');
-    expect(await storedBeurre()).toBeNull();
-    await pressLast('Annuler');
-    expect(await screen.findByText('Beurre doux')).toBeOnTheScreen();
-    expect((await storedBeurre())?.name).toBe('Beurre doux');
+      // 2. Tick and untick an item.
+      fireEvent.press(await row('Lait, 2 L, pas dans le caddie'));
+      fireEvent.press(await row('Pommes, dans le caddie'));
+      expect(await row('Lait, 2 L, dans le caddie')).toBeChecked();
+      expect(await row('Pommes, pas dans le caddie')).not.toBeChecked();
 
-    for (const text of errorTexts) {
-      expect(screen.queryByText(text)).not.toBeOnTheScreen();
-    }
-    await waitFor(() => expect(errorReporter.reports).toEqual([]));
-    expect(navigationReporter.reports).toEqual([]);
-    expect(offlineFetch).not.toHaveBeenCalled();
-  });
-});
+      // 3. Finish shopping.
+      await press('Terminer les courses');
+      await pressLast('Terminer');
+      expect(await row('Lait, 2 L, pas dans le caddie')).not.toBeChecked();
+
+      // 4. Add an existing article, by browsing categories and by searching.
+      await press('Ajouter');
+      await addFromCatalog('Beurre');
+      fireEvent.changeText(
+        screen.getByPlaceholderText('Rechercher un article'),
+        'pâ',
+      );
+      await addFromCatalog('Pâte');
+
+      // 5. Create an article and add it to the current list.
+      await press('Nouvel article');
+      type('Nom', 'Lentilles');
+      fireEvent.press(
+        await screen.findByRole('radio', { name: 'Épicerie salée' }),
+      );
+      type('Quantité', '400');
+      type('Unité', 'g');
+      await press('Créer et ajouter');
+      await screen.findByText('« Lentilles » ajouté');
+      await press('Retour');
+      expect(
+        await row('Lentilles, 400 g, pas dans le caddie'),
+      ).toBeOnTheScreen();
+      // "Pâte" comes last, past the rows Jest draws: it is checked in storage.
+      expect(
+        await unitOfWork.run((repos) =>
+          repos.items.find(maListe, 'article-pate' as ArticleId),
+        ),
+      ).toMatchObject({ inCart: false, quantity: null });
+
+      // 6. Set, change and clear the quantity of an item.
+      await runAction('Beurre, pas dans le caddie', 'editQuantity');
+      type('Quantité', '2');
+      type('Unité', 'kg');
+      await pressLast('Enregistrer');
+      await runAction('Beurre, 2 kg, pas dans le caddie', 'editQuantity');
+      type('Quantité', '3');
+      await pressLast('Enregistrer');
+      await runAction('Beurre, 3 kg, pas dans le caddie', 'editQuantity');
+      await pressLast('Effacer la quantité');
+      expect(await row('Beurre, pas dans le caddie')).toBeOnTheScreen();
+
+      // 7. Remove an item from the current list.
+      await runAction('Farine, 1,5 kg, pas dans le caddie', 'remove');
+      await screen.findByText('« Farine » retiré de la liste');
+      expect(
+        screen.queryByRole('checkbox', {
+          name: 'Farine, 1,5 kg, pas dans le caddie',
+        }),
+      ).not.toBeOnTheScreen();
+
+      // 8. Undo a removal.
+      await press('Annuler');
+      expect(await row('Farine, 1,5 kg, pas dans le caddie')).toBeOnTheScreen();
+
+      // 9. See all lists.
+      await press('Mes listes');
+      expect(
+        await screen.findByRole('button', {
+          name: 'Ma liste, 6 articles, liste actuelle',
+        }),
+      ).toBeOnTheScreen();
+      expect(
+        screen.getByRole('button', { name: 'Barbecue, 0 articles' }),
+      ).toBeOnTheScreen();
+
+      // 10. Create a list.
+      await press('Nouvelle liste');
+      type('Nom', 'Pique-nique');
+      await pressLast('Créer');
+
+      // 11. Choose the current list.
+      await press('Pique-nique, 0 articles');
+      expect(await screen.findByText('Votre liste est vide')).toBeOnTheScreen();
+      expect(screen.getByText('Pique-nique')).toBeOnTheScreen();
+
+      // 12. Create a category.
+      await press('Ajouter des articles');
+      await press('Nouvel article');
+      await press('Nouvelle catégorie');
+      type('Nom', 'Bébé');
+      await pressLast('Créer');
+      expect(await screen.findByRole('radio', { name: 'Bébé' })).toBeChecked();
+
+      const stored = await unitOfWork.run(async (repos) => ({
+        categories: (await repos.categories.all()).map(
+          (category) => category.name,
+        ),
+        lists: (await repos.lists.all()).map((list) => list.name),
+        current: await repos.appState.currentListId(),
+      }));
+      expect(stored.categories).toContain('Bébé');
+      expect(stored.lists).toContain('Pique-nique');
+      expect(stored.current).not.toBe(maListe);
+      for (const text of errorTexts) {
+        expect(screen.queryByText(text)).not.toBeOnTheScreen();
+      }
+      await waitFor(() => expect(errorReporter.reports).toEqual([]));
+      expect(navigationReporter.reports).toEqual([]);
+      expect(offlineFetch).not.toHaveBeenCalled();
+      await network.expectSync(store);
+    });
+
+    it('002 FR-010 SC-004 003 FR-003 renames, recategorizes and deletes an article, then undoes it, with nothing reported', async () => {
+      const network = makeNetwork();
+      const navigationReporter = new RecordingErrorReporter();
+      const { errorReporter, unitOfWork, store } = await renderWithStore(
+        <Navigation errorReporter={navigationReporter} />,
+        { seed, asScreen: false, ...network.scenario() },
+      );
+      const storedBeurre = () =>
+        unitOfWork.run((repos) =>
+          repos.articles.findById('article-beurre' as ArticleId),
+        );
+      const chooseFromMenu = async (name: string, action: string) => {
+        fireEvent.press(
+          await screen.findByRole('button', {
+            name: `Plus d'actions pour « ${name} »`,
+          }),
+        );
+        fireEvent.press(screen.getByText(action));
+      };
+      await press('Ajouter');
+
+      // Rename.
+      await chooseFromMenu('Beurre', 'Modifier');
+      await screen.findByText("Modifier l'article");
+      fireEvent.changeText(screen.getByLabelText('Nom'), 'Beurre doux');
+      // Change the category.
+      fireEvent.press(await screen.findByRole('radio', { name: 'Boissons' }));
+      await press('Enregistrer');
+      await screen.findByText('Ajouter des articles');
+      expect(await screen.findByText('Beurre doux')).toBeOnTheScreen();
+      const renamed = await storedBeurre();
+      expect(renamed?.name).toBe('Beurre doux');
+      const boissons = seed.categories.find((c) => c.name === 'Boissons');
+      expect(renamed?.categoryId).toBe(boissons?.id);
+
+      // Delete, then undo.
+      await chooseFromMenu('Beurre doux', 'Supprimer');
+      await screen.findByText('Supprimer « Beurre doux » ?');
+      await pressLast('Supprimer');
+      await screen.findByText('« Beurre doux » supprimé');
+      expect(await storedBeurre()).toBeNull();
+      await pressLast('Annuler');
+      expect(await screen.findByText('Beurre doux')).toBeOnTheScreen();
+      expect((await storedBeurre())?.name).toBe('Beurre doux');
+
+      for (const text of errorTexts) {
+        expect(screen.queryByText(text)).not.toBeOnTheScreen();
+      }
+      await waitFor(() => expect(errorReporter.reports).toEqual([]));
+      expect(navigationReporter.reports).toEqual([]);
+      expect(offlineFetch).not.toHaveBeenCalled();
+      await network.expectSync(store);
+    });
+  },
+);

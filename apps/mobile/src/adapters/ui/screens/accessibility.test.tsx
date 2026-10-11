@@ -3,9 +3,12 @@ import { StyleSheet, TextInput } from 'react-native';
 import { fireEvent, screen } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
+import { err, ok } from '../../../domain/result';
 import { Navigation } from '../navigation';
 import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
+import type { StoryScenario } from '../testing/story-store';
+import { waitForMenusToSettle } from '../testing/wait-for-menus';
 
 // Every screen and dialog, checked for FR-031, FR-032 and FR-034. Jest lays nothing out, so a
 // touch target is read from the sizes the styles set (research R2): a component must state its
@@ -32,14 +35,60 @@ const header = (name: string) =>
     .then((found) => found.length > 0);
 
 /** The app on the fixture, opened on CurrentList. */
-const openApp = async () => {
+const openApp = async (scenario: StoryScenario = {}) => {
   await renderWithStore(
     <Navigation errorReporter={new RecordingErrorReporter()} />,
-    { seed: fixture, asScreen: false },
+    { seed: fixture, asScreen: false, ...scenario },
   );
   await screen.findByRole('checkbox', {
     name: 'Lait, 2 L, pas dans le caddie',
   });
+};
+
+/** A device paired with a server that lists two devices (003). */
+const connected: StoryScenario = {
+  connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+  syncServer: {
+    listDevices: async () =>
+      ok([
+        {
+          id: 'story-device',
+          name: 'Pixel de Léa',
+          createdAt: '2026-09-01T10:00:00.000Z',
+          lastSyncAt: null,
+        },
+        {
+          id: 'device-2',
+          name: 'iPhone de Marc',
+          createdAt: '2026-09-02T10:00:00.000Z',
+          lastSyncAt: '2026-09-30T08:00:00.000Z',
+        },
+      ]),
+    createPairingCode: async () =>
+      ok({ code: 'ABCD-EF23', expiresAt: '2026-10-06T12:05:00.000Z' }),
+  },
+};
+
+const openSettings = async (scenario: StoryScenario = connected) => {
+  await openApp(scenario);
+  await press('Réglages');
+  await header('Réglages');
+};
+
+/** Settings of a connected device, its devices listed. */
+const openDevices = async () => {
+  await openSettings();
+  await screen.findByText('iPhone de Marc', {}, slow);
+};
+
+/** Opens the menu of a device row and, when `shown` is another text, chooses `action`. */
+const chooseDeviceAction = async (action: string, shown: string) => {
+  await openDevices();
+  await waitForMenusToSettle();
+  fireEvent.press(screen.getByLabelText('Actions de iPhone de Marc'));
+  if (action !== shown)
+    fireEvent.press(await screen.findByText(action, {}, slow));
+  await screen.findByText(shown, {}, slow);
 };
 
 /** Each screen and dialog, opened through the app as a user opens it. */
@@ -140,6 +189,65 @@ const views: Record<string, () => Promise<void>> = {
     await press('Supprimer');
     await screen.findByText('« Lait » supprimé', {}, slow);
     await screen.findByRole('button', { name: 'Annuler' });
+  },
+  '003 SyncStatusBar': async () => {
+    await openApp(connected);
+    await screen.findByTestId('sync-status-bar');
+  },
+  '003 SyncStatusBar, disconnected by the server': async () => {
+    await openApp({
+      ...connected,
+      syncServer: {
+        ...connected.syncServer,
+        sync: async () => err({ type: 'DeviceNotAuthorized' }),
+      },
+    });
+    await screen.findByRole('button', { name: 'Se reconnecter' }, slow);
+  },
+  '003 SyncStatusBar, failed': async () => {
+    await openApp({
+      ...connected,
+      syncServer: {
+        ...connected.syncServer,
+        sync: async () => err({ type: 'ServerError' }),
+      },
+      // The status turns `failed` on the third failure in a row.
+      prepare: async ({ syncNow }) => {
+        await syncNow();
+        await syncNow();
+      },
+    });
+    await screen.findByRole('button', { name: 'Réessayer' }, slow);
+  },
+  '003 Settings, never connected': async () => {
+    await openSettings({});
+    await screen.findByRole('button', { name: 'Connecter à un serveur' });
+  },
+  '003 Settings, connected': openDevices,
+  '003 ConnectServer': async () => {
+    await openSettings({});
+    await press('Connecter à un serveur');
+    await header('Connecter à un serveur');
+  },
+  '003 device row menu': () => chooseDeviceAction('Renommer', 'Renommer'),
+  '003 RenameDeviceDialog': () =>
+    chooseDeviceAction('Renommer', "Renommer l'appareil"),
+  '003 RevokeDeviceDialog': () =>
+    chooseDeviceAction('Révoquer', 'Révoquer « iPhone de Marc » ?'),
+  '003 PairingCodeDialog': async () => {
+    await openDevices();
+    await press('Ajouter un appareil');
+    await screen.findByText('ABCD-EF23', {}, slow);
+  },
+  '003 DisconnectDialog': async () => {
+    await openDevices();
+    await press('Déconnecter cet appareil');
+    await screen.findByText('Déconnecter cet appareil ?', {}, slow);
+  },
+  '003 ChangeServerUrlDialog': async () => {
+    await openDevices();
+    await press("Modifier l'adresse");
+    await screen.findByText("Modifier l'adresse du serveur", {}, slow);
   },
   CreateCategoryDialog: async () => {
     await openApp();
