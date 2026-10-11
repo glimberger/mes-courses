@@ -64,21 +64,30 @@ export const createCurrentListActions = ({
   // Per item of a list, its taps not saved yet. A view read from storage is shown with the items
   // whose count is odd flipped, so a reload never undoes a tick still waiting in the queue. A
   // queued tap holds its entry: once a save of the item fails the entry is dropped, and the taps
-  // still queued with it are not saved. An entry goes once its count is back to 0.
-  const unsaved = new Map<string, { count: number }>();
+  // still queued with it are not saved. An entry goes once its count is back to 0. An entry stays
+  // under the id tapped: the merges pulled since are followed when the overlay is applied.
+  const unsaved = new Map<
+    string,
+    { count: number; listId: ListId; articleId: ArticleId }
+  >();
   const itemRef = (listId: ListId, articleId: ArticleId) =>
     JSON.stringify([listId, articleId]);
 
+  // The items of `listId` whose taps waiting are odd, by the id they have now: a pulled merge may
+  // have replaced the article tapped with its survivor, which then takes the taps (FR-012).
+  const flippedItems = (listId: ListId) => {
+    const taps = new Map<ArticleId, number>();
+    for (const entry of unsaved.values()) {
+      if (entry.listId !== listId) continue;
+      const id = follow(entry.articleId);
+      taps.set(id, (taps.get(id) ?? 0) + entry.count);
+    }
+    return (articleId: ArticleId) => (taps.get(articleId) ?? 0) % 2 === 1;
+  };
+
   const withUnsaved = (view: CurrentListView): CurrentListView =>
     // Usually no tap is waiting: the view is already sorted and counted.
-    unsaved.size === 0
-      ? view
-      : flipItems(
-          view,
-          (articleId) =>
-            (unsaved.get(itemRef(view.list.id, articleId))?.count ?? 0) % 2 ===
-            1,
-        );
+    unsaved.size === 0 ? view : flipItems(view, flippedItems(view.list.id));
 
   const loadCurrentList = region('currentList', 'getCurrentList', async () => {
     const view = await useCases.getCurrentList();
@@ -93,7 +102,7 @@ export const createCurrentListActions = ({
     set({
       currentList: {
         status: 'success',
-        data: flipItems(shown.data, (id) => id === articleId),
+        data: flipItems(shown.data, (id) => id === follow(articleId)),
       },
     });
   };
@@ -102,7 +111,7 @@ export const createCurrentListActions = ({
     const listId = shownList(get().currentList)?.id ?? null;
     if (listId === null) return;
     const ref = itemRef(listId, articleId);
-    const taps = unsaved.get(ref) ?? { count: 0 };
+    const taps = unsaved.get(ref) ?? { count: 0, listId, articleId };
     taps.count += 1;
     unsaved.set(ref, taps);
     showToggled(articleId);

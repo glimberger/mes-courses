@@ -6,6 +6,7 @@ import { SqliteStore } from '../adapters/sqlite/sqlite-store';
 import type { ErrorReporter } from '../application/ports/error-reporter';
 import { databasePath, LISTEN_HOST, listenPort } from './config';
 import { installCrashHandlers, type ProcessLike } from './crash-handlers';
+import { serverRelease } from './release';
 import { installShutdownHandlers } from './shutdown';
 import { appDeps } from './wiring';
 
@@ -25,7 +26,7 @@ export const main = async (
   const errorReporter: ErrorReporter = env.SENTRY_DSN
     ? createSentryErrorReporter({
         dsn: env.SENTRY_DSN,
-        release: env.npm_package_version ?? 'unknown',
+        release: serverRelease(),
         environment: env.MES_COURSES_ENV ?? 'production',
       })
     : new ConsoleErrorReporter();
