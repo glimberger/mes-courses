@@ -32,11 +32,11 @@ cache=$state_dir/stop-ok
 [ "$(cat "$cache" 2>/dev/null)" = "$fingerprint" ] && exit 0
 
 for check in typecheck test test:architecture; do
-  if ! out=$(yarn "$check" 2>&1); then
+  if ! output=$(yarn "$check" 2>&1); then
     {
       printf 'Blocked by .claude/hooks: `yarn %s` fails on the current changes.\n' "$check"
       printf 'Fix it before ending the turn, or tell the user what is still failing and why.\n\n'
-      printf '%s\n' "$out" | tail -n 80
+      printf '%s\n' "$output" | tail -n 80
     } >&2
     exit 2
   fi
