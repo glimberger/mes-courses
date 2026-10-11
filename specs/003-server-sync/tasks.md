@@ -531,12 +531,13 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
   - done: Storybook review on an Android device (Pixel 6a, Android 13);
   - done: `yarn test:e2e:android`, 9 journeys and 19 tests green, `sync-unreachable` included;
   - done: `yarn test:e2e:ios` green;
-  - not yet: Storybook review on iOS, the scenarios of §4 and §5.
+  - not yet: the scenarios of §4 and §5.
 
   Progress (2026-10-11, commit d036e39, PR #89):
   - done: quickstart §3 on the Pi (Debian 13, aarch64) at `courses.glim-agent-pi.duckdns.org`
     (DuckDNS): service and Caddy active, Let's Encrypt certificate, `/v1/health` from mobile
     data and from the home Wi-Fi, HTTP redirected to HTTPS (308);
+  - done: Storybook review on iOS;
   - found and fixed while deploying: the compiled server could not load `sync-core` (TypeScript
     source only), now built and loaded through `--conditions=production`, with a CI smoke test;
     the quickstart lacked the `mes-courses` user and the Pi's pairing-code command.
