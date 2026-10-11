@@ -561,6 +561,8 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
        which systemd does not set (FR-022a);
   - remarks: with a DSN, server errors go to Sentry only, never to the journal; Sentry
     derives a geography from the home's IP unless the project prevents storing IP addresses;
+    app and server shared the `mes-courses` project, the server now has its own,
+    `mes-courses-server`;
     the quickstart named `MES_COURSES_FAIL_SYNC`, which does not exist (now Caddy and a
     read-only database).
 - [X] T112 Update `specs/001-shopping-lists/plan.md` and `specs/002-manage-articles/plan.md`: mark their Principle VII deviation in Complexity Tracking as closed by 003, now implemented.

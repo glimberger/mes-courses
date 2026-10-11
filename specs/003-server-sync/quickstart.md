@@ -196,7 +196,10 @@ unreachable: `systemctl stop caddy` on the Pi, then `systemctl start caddy`.
   (`chmod 400 /var/lib/mes-courses/mes-courses.db`), start the service and make a change on a
   device. The failed writes appear in Sentry with the server release and environment, and no
   body, header, name or credential. Then `chmod 600` the database and restart the service.
-- In the Sentry projects, turn on *Settings › Security & Privacy › Prevent Storing of IP
-  Addresses*: Sentry otherwise derives the user's geography from the sender's address, the
-  home's public IP for the server.
+- The server reports to its own Sentry project, `mes-courses-server` (platform Node.js, EU
+  region like `mes-courses`, the app's): its DSN goes in `/etc/mes-courses.env`. Server and app
+  issues, alerts and quotas stay apart.
+- In both projects, turn on *Settings › Security & Privacy › Prevent Storing of IP Addresses*:
+  Sentry otherwise derives the user's geography from the sender's address, the home's public
+  IP for the server.
 - Offline and unreachable-server periods create no event.
