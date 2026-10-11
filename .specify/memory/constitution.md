@@ -293,9 +293,9 @@ Continuous integration is blocking for every pull request:
 
 - Features go through Spec Kit: `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` →
   `/speckit-implement`. Generated task lists MUST group each test and the implementation it
-  drives into a single task, with the test written first inside that task. A task list MUST NOT leave a failing test as a task of its own
-  to be committed alone: the fast suite runs after every commit (Quality Gates), so every commit
-  MUST leave it green.
+  drives into a single task, with the test written first inside that task. A task list MUST NOT
+  leave a failing test as a task of its own to be committed alone: the fast suite runs after
+  every commit (Quality Gates), so every commit MUST leave it green.
 - A decision that outlives one feature (the stack, the repository layout, tooling) is recorded as
   an Architecture Decision Record in `docs/adr/`, in the pull request that makes it. A choice that
   matters only inside one feature stays in that feature's `research.md`. An ADR explains why; a
