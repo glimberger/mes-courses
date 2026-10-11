@@ -1,6 +1,6 @@
 import type { ReactTestInstance } from 'react-test-renderer';
 import { StyleSheet } from 'react-native';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { Quantity } from '../../../domain/quantity';
 import { LONG_ARTICLE_NAME } from '../testing/fixtures';
@@ -188,5 +188,51 @@ describe('ListItemRow', () => {
     fireEvent.press(screen.getByRole('checkbox'));
 
     expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  describe('when a sync changes the tick', () => {
+    const synced = (inCart: boolean) => (
+      <ThemeProvider>
+        <ListItemRow
+          name="Lait"
+          quantity={{ amount: 2, unit: 'L' }}
+          inCart={inCart}
+          onToggle={jest.fn()}
+        />
+      </ThemeProvider>
+    );
+    const struck = { textDecorationLine: 'line-through' } as const;
+
+    it('FR-035 FR-036 strikes the name and the quantity through, as a tap does', async () => {
+      jest.useFakeTimers();
+      try {
+        const { rerender } = render(synced(false));
+        rerender(synced(true));
+        await act(async () => {
+          jest.runAllTimers();
+        });
+
+        expect(screen.getByText('Lait')).toHaveStyle(struck);
+        expect(screen.getByText('2 L')).toHaveStyle(struck);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('FR-035 shows the name and the quantity as not struck through again when unticked', async () => {
+      jest.useFakeTimers();
+      try {
+        const { rerender } = render(synced(true));
+        rerender(synced(false));
+        await act(async () => {
+          jest.runAllTimers();
+        });
+
+        expect(screen.getByText('Lait')).not.toHaveStyle(struck);
+        expect(screen.getByText('2 L')).not.toHaveStyle(struck);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 });

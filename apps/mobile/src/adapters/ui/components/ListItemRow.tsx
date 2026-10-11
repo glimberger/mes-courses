@@ -98,11 +98,20 @@ export const ListItemRow = memo(function ListItemRow({
           >
             <Checkbox.Android status={inCart ? 'checked' : 'unchecked'} />
           </View>
-          <Text variant="bodyLarge" style={[styles.name, ...textStyle]}>
+          {/* Remounted per tick state: Android kept a stale text style. */}
+          <Text
+            key={`name-${inCart}`}
+            variant="bodyLarge"
+            style={[styles.name, ...textStyle]}
+          >
             {name}
           </Text>
           {quantity !== null && (
-            <Text variant="bodyMedium" style={textStyle}>
+            <Text
+              key={`quantity-${inCart}`}
+              variant="bodyMedium"
+              style={textStyle}
+            >
               {formatQuantity(quantity)}
             </Text>
           )}
