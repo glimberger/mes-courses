@@ -21,6 +21,8 @@ describe('sync scheduler', () => {
   let release: (() => void) | undefined;
   let hold: boolean;
   let scheduler: SyncScheduler;
+  let networkListener: ((connected: boolean) => void) | undefined;
+  let networkRemoved: jest.Mock;
 
   const runCycle = async () => {
     cycles += 1;
@@ -63,7 +65,15 @@ describe('sync scheduler', () => {
       handler = listener;
       return { remove: removed };
     }) as typeof AppState.addEventListener);
-    scheduler = createSyncScheduler({ runCycle });
+    networkListener = undefined;
+    networkRemoved = jest.fn();
+    scheduler = createSyncScheduler({
+      runCycle,
+      onNetworkChange: (listener) => {
+        networkListener = listener;
+        return { remove: networkRemoved };
+      },
+    });
   });
 
   afterEach(() => {
@@ -229,6 +239,73 @@ describe('sync scheduler', () => {
 
     expect(cycles).toBe(1);
     expect(removed).toHaveBeenCalledTimes(1);
+  });
+
+  describe('network', () => {
+    it('runs a cycle as soon as the network comes back, without waiting for the back-off', async () => {
+      outcomes = [{ failed: true }, { failed: true }, { failed: true }];
+      scheduler.start();
+      await advance(0);
+      await advance(10 * SECOND);
+      await advance(20 * SECOND);
+      expect(cycles).toBe(3);
+
+      networkListener?.(true);
+      await advance(0);
+
+      expect(cycles).toBe(4);
+    });
+
+    it('starts again from the base delay after the network came back', async () => {
+      outcomes = [{ failed: true }, { failed: true }, { failed: true }];
+      scheduler.start();
+      await advance(0);
+      await advance(10 * SECOND);
+      await advance(20 * SECOND);
+
+      networkListener?.(true);
+      await advance(0);
+      expect(cycles).toBe(4);
+
+      await advance(5 * SECOND);
+      expect(cycles).toBe(5);
+    });
+
+    it('does nothing when the network is lost', async () => {
+      scheduler.start();
+      await advance(0);
+
+      networkListener?.(false);
+      await advance(0);
+
+      expect(cycles).toBe(1);
+    });
+
+    it('does not run a cycle in the background, nor a second one during a cycle', async () => {
+      hold = true;
+      scheduler.start();
+      await advance(0);
+      networkListener?.(true);
+      await advance(0);
+      expect(maxActive).toBe(1);
+      hold = false;
+      release?.();
+      await advance(0);
+      await changeAppState('background');
+      const before = cycles;
+
+      networkListener?.(true);
+      await advance(0);
+
+      expect(cycles).toBe(before);
+    });
+
+    it('stops listening on stop', async () => {
+      scheduler.start();
+      scheduler.stop();
+
+      expect(networkRemoved).toHaveBeenCalledTimes(1);
+    });
   });
 });
 

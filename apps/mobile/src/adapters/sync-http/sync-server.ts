@@ -34,6 +34,12 @@ export type SyncServerOptions = {
 const TLS_ERROR =
   /\b(?:ssl|tls)\b|certificate|trust anchor|\bcert_|self[- ]signed|handshake/i;
 
+/**
+ * What a reverse proxy answers when the server behind it is down or not answering: the same as
+ * no answer at all (FR-003).
+ */
+const PROXY_UNREACHABLE = new Set([502, 503, 504]);
+
 type Answer =
   | { kind: 'response'; status: number; headers: Headers; body: unknown }
   | { kind: 'untrusted' }
@@ -99,6 +105,8 @@ export const createSyncServer = ({
         ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
         signal: controller.signal,
       });
+      if (PROXY_UNREACHABLE.has(response.status))
+        return { kind: 'unreachable' };
       return {
         kind: 'response',
         status: response.status,

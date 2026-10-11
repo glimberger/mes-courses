@@ -32,6 +32,7 @@ jest.mock('expo-constants', () => ({
   default: { expoConfig: { version: '1.0.0' } },
 }));
 jest.mock('expo-secure-store', () => ({}));
+jest.mock('expo-network', () => ({ addNetworkStateListener: jest.fn() }));
 // The scheduler reads React Native's `AppState`, which does not load in this Node environment.
 jest.mock('../adapters/ui/state/sync-scheduler', () => ({
   createSyncScheduler: jest.fn(),

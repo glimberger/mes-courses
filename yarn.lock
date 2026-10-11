@@ -2619,6 +2619,7 @@ __metadata:
     expo-detox-config-plugin: "npm:^13.0.0"
     expo-device: "npm:~58.0.5"
     expo-font: "npm:~58.0.7"
+    expo-network: "npm:~58.0.3"
     expo-secure-store: "npm:~58.0.2"
     expo-sqlite: "npm:~58.0.10"
     expo-status-bar: "npm:~58.0.3"
@@ -7931,6 +7932,16 @@ __metadata:
   version: 0.15.0
   resolution: "expo-modules-macros@npm:0.15.0"
   checksum: 10c0/e3425fafd6c36ef652f97685080a61f0090c96258b9f9059a8008addfa7dfd97647521f4074585145d121957c8363ef3e56e8668bbef17c0e2946a95f236c99f
+  languageName: node
+  linkType: hard
+
+"expo-network@npm:~58.0.3":
+  version: 58.0.3
+  resolution: "expo-network@npm:58.0.3"
+  peerDependencies:
+    expo: "*"
+    react: "*"
+  checksum: 10c0/be8ca23c0d9e35ef4b9ac1dd45ede3d34a8325fa2cfec23b298420ce4495caaf36d87e975387f3be9b6a4d7315a593741b360d3a23572f1cca57e6af8b171fbc
   languageName: node
   linkType: hard
 
