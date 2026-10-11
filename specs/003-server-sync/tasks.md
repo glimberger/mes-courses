@@ -531,7 +531,7 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
   - done: Storybook review on an Android device (Pixel 6a, Android 13);
   - done: `yarn test:e2e:android`, 9 journeys and 19 tests green, `sync-unreachable` included;
   - done: `yarn test:e2e:ios` green;
-  - not yet: the scenarios of §4 and §5.
+  - not yet: the scenarios of §4 and §5 (see below).
 
   Progress (2026-10-11, commit d036e39, PR #89):
   - done: quickstart §3 on the Pi (Debian 13, aarch64) at `courses.glim-agent-pi.duckdns.org`
@@ -541,6 +541,28 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
   - found and fixed while deploying: the compiled server could not load `sync-core` (TypeScript
     source only), now built and loaded through `--conditions=production`, with a CI smoke test;
     the quickstart lacked the `mes-courses` user and the Pi's pairing-code command.
+
+  Progress (2026-10-11, commit e61170e), quickstart §4 and §5 on the phone (Pixel 9a, local
+  `yarn android` debug build) and an iPhone 17 simulator (iOS 27, Detox release build) as the
+  second device, against the Pi:
+  - done: §4 steps 1 to 16 (step 1 synced in 20 s; step 15 with TalkBack and 200% text);
+  - done: §5 on the server: release, environment and no content in the events, but see bug 5;
+  - not yet: §4 step 17 (restored phone, before the first release) and §5 on the app (a local
+    build has no Sentry DSN; needs an EAS build);
+  - bugs found, to fix:
+    1. Android: a row ticked on the other device shows its checkbox ticked, but its text is
+       neither struck through nor dimmed until the list re-renders (iOS is right);
+    2. after airplane mode, the next sync can wait up to 5 minutes (the failure back-off), with
+       no network listener to sync when the network comes back;
+    3. with the server stopped behind Caddy, the 502 counts as a server error: "Échec de la
+       synchronisation" and a Sentry event after three cycles, against FR-003 (treat 502, 503
+       and 504 as unreachable);
+    4. server events carry `release: unknown`: the release comes from `npm_package_version`,
+       which systemd does not set (FR-022a);
+  - remarks: with a DSN, server errors go to Sentry only, never to the journal; Sentry
+    derives a geography from the home's IP unless the project prevents storing IP addresses;
+    the quickstart named `MES_COURSES_FAIL_SYNC`, which does not exist (now Caddy and a
+    read-only database).
 - [X] T112 Update `specs/001-shopping-lists/plan.md` and `specs/002-manage-articles/plan.md`: mark their Principle VII deviation in Complexity Tracking as closed by 003, now implemented.
 
 ---
