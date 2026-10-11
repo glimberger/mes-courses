@@ -560,7 +560,8 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
     4. server events carry `release: unknown`: the release comes from `npm_package_version`,
        which systemd does not set (FR-022a);
   - remarks: with a DSN, server errors go to Sentry only, never to the journal; Sentry
-    derives a geography from the home's IP unless the project prevents storing IP addresses;
+    derives a geography from the home's IP unless the organization prevents storing IP
+    addresses (now set);
     app and server shared the `mes-courses` project, the server now has its own,
     `mes-courses-server`;
     the quickstart named `MES_COURSES_FAIL_SYNC`, which does not exist (now Caddy and a
