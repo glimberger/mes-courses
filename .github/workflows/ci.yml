@@ -68,3 +68,4 @@ jobs:
           restore-prefixes-first-match: nix-${{ runner.os }}-
       - run: nix develop --command yarn install --immutable
       - run: nix develop --command yarn build
+      - run: nix develop --command sh .github/scripts/server-smoke.sh

@@ -177,15 +177,19 @@ yarn workspace @mes-courses/server pairing-code:dev  # a pairing code for that d
 ```
 
 `pairing-code` (without `:dev`) prints a code for the database at `MES_COURSES_DB`, or the Pi's
-default path. In the app, Réglages › Connecter à un serveur takes the address and the code. A
+default path. On the Pi, run the built script as the service's user, since only it can read the
+database:
+`sudo -u mes-courses /opt/mes-courses/runtime/bin/node --conditions=production /opt/mes-courses/apps/server/dist/composition/pairing-code.js`. In the app, Réglages › Connecter à un serveur takes the address and the code. A
 development build accepts `http://127.0.0.1:3000` (or the machine's LAN address) only when built
 with `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL=1`; release builds refuse `http://`.
 
 ### On the Pi
 
 The Freebox, DNS and Pi setup is in [003 quickstart §3](specs/003-server-sync/quickstart.md#3-set-up-the-pi-behind-the-freebox-once).
-In short: Nix and Caddy on the Pi, the repository in `/opt/mes-courses`, the server built inside
-the flake's dev shell, Node from `nix build .#node --out-link /opt/mes-courses/runtime`, then
+In short: Nix and Caddy on the Pi, a `mes-courses` system user, the repository in
+`/opt/mes-courses`, the server built inside the flake's dev shell, Node from
+`nix build .#node --out-link /opt/mes-courses/runtime` (a fixed path for systemd, pinned by
+`flake.lock` and kept by Nix's garbage collector), then
 `deploy/mes-courses.service` and `deploy/Caddyfile` installed and started. Deploying an update is
 `git pull`, the same build, and `systemctl restart mes-courses`; migrations run at startup.
 

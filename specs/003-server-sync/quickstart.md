@@ -15,7 +15,8 @@ yarn lint
 yarn format:check
 yarn test                   # sync-core, server, app, tests/sync (adapter and two-device scenarios)
 yarn test:architecture  # app, server, sync-core and cross-workspace rules
-yarn build              # app (expo export) and server (tsc)
+yarn build              # app (expo export), server and sync-core (tsc)
+sh .github/scripts/server-smoke.sh  # the compiled server answers /v1/health
 ```
 
 Expected: everything is green. No test reaches the network beyond `127.0.0.1`, and none reaches
@@ -30,7 +31,7 @@ with the journeys of 001 and 002.
 
 ```sh
 yarn workspace @mes-courses/server dev          # http://127.0.0.1:3000, database in apps/server/.data/
-yarn workspace @mes-courses/server pairing-code # prints a code valid 10 minutes
+yarn workspace @mes-courses/server pairing-code:dev # prints a code valid 10 minutes
 ```
 
 A development build of the app accepts `http://127.0.0.1:3000` (or the LAN address of the
@@ -54,15 +55,41 @@ refuse `http://` (FR-019).
    address. Check with `dig +short courses.<your domain>`.
 5. **Software**: on the Pi, install Nix (multi-user, with flakes enabled) and Caddy (its Debian
    repository). Node and Yarn come from the project's flake ([research.md](research.md) R17).
-6. **Deploy**:
-   - clone the repository into `/opt/mes-courses`;
+   Create the system user the server runs as, with no shell and no home:
+   `useradd --system --no-create-home --shell /usr/sbin/nologin mes-courses`. If the server is
+   ever compromised, it holds only that user's rights over its own database, and nothing of the
+   maintainer's account.
+6. **Deploy** (as the maintainer's account, `sudo` where files go to `/etc`):
+   - create `/opt/mes-courses`, owned by the maintainer's account (the service only reads it),
+     and clone the repository there. A private repository needs a read-only deploy key for the
+     Pi (`gh repo deploy-key add`);
    - run `nix develop --command sh -c 'yarn workspaces focus @mes-courses/server && yarn workspace @mes-courses/server build'`;
-   - run `nix build .#node --out-link /opt/mes-courses/runtime` (the Node the service runs);
+   - run `nix build .#node --out-link /opt/mes-courses/runtime` (see *Node on the Pi* below);
    - copy `deploy/mes-courses.service` to `/etc/systemd/system/` and `deploy/Caddyfile` to
-     `/etc/caddy/Caddyfile`, with the domain filled in;
+     `/etc/caddy/Caddyfile`, with the domain filled in
+     (`sed 's/{\$MES_COURSES_DOMAIN}/courses.<your domain>/' deploy/Caddyfile`);
    - create `/etc/mes-courses.env` from `deploy/mes-courses.env.example` (Sentry DSN), mode
-     600, owned by `mes-courses`;
-   - run `systemctl enable --now mes-courses caddy`.
+     600, owned by `mes-courses`
+     (`install -m 600 -o mes-courses -g mes-courses deploy/mes-courses.env.example /etc/mes-courses.env`);
+   - run `systemctl daemon-reload`, `systemctl enable --now mes-courses` and
+     `systemctl restart caddy`.
+
+   **Node on the Pi.** `nix develop` puts Node on the `PATH` only for the command it runs, and
+   systemd starts an executable directly, so the service needs a Node at a fixed path.
+   `nix build .#node` builds (in practice, downloads from the cache) the flake's `node` package,
+   the same `nodejs_24` as the dev shell, into `/nix/store/<hash>-nodejs-24…`, and
+   `--out-link` makes `/opt/mes-courses/runtime` a symlink to it. `mes-courses.service` runs
+   `/opt/mes-courses/runtime/bin/node --conditions=production`: the flag makes
+   `@mes-courses/sync-core` resolve to its compiled `dist/` (built by the server's `build`)
+   instead of its TypeScript source, which only tsx, Jest and Metro can load. This gives:
+   - the exact Node of `flake.lock`, the one tests and CI use, not Debian's or the
+     maintainer's profile's;
+   - a Node that stays: the symlink is a garbage-collection root, so `nix-collect-garbage`
+     keeps it;
+   - simple upgrades: when the flake moves to another Node, rerun the same command and restart
+     the service; the unit file does not change;
+   - a Node `mes-courses` can run: the Nix store is world-readable, whereas a Node in a home
+     directory would be hidden by `ProtectHome=true`.
 7. **Checks**:
    - `curl https://courses.<your domain>/v1/health` from **mobile data** returns
      `{ serverId, apiVersion: 1, minAppVersion }` with a valid certificate (no `-k`);
@@ -75,7 +102,8 @@ Start with the phone holding data from 001 and 002 (several lists, ticked items)
 freshly installed, and the server empty.
 
 1. **First device on an empty server** (US4-2, US4-4, US1-6, FR-018):
-   - on the Pi, in `/opt/mes-courses`, run `nix develop --command yarn workspace @mes-courses/server pairing-code`;
+   - on the Pi, run `sudo -u mes-courses /opt/mes-courses/runtime/bin/node --conditions=production /opt/mes-courses/apps/server/dist/composition/pairing-code.js`
+     (as `mes-courses`: the database in `/var/lib/mes-courses/` is readable by that user only);
    - on the phone, open Réglages › Connecter à un serveur and enter the domain, the code and a
      name;
    - the status bar goes "Synchronisation…" then "Synchronisé";
