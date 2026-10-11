@@ -526,6 +526,12 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
   - the Pi and Freebox setup, referring to [quickstart.md](quickstart.md) §3;
   - the environment variables `SENTRY_DSN`, `MES_COURSES_DB`, `MES_COURSES_DOMAIN` and `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL` (development only).
 - [ ] T111 Run [quickstart.md](quickstart.md) §1–§2 locally, review every 003 story in Storybook on Android and iOS (light, dark, 200% text), and run `yarn test:e2e:android` and `yarn test:e2e:ios` green. With the maintainer, who does the Freebox, DNS and Pi actions of §3, deploy to the Pi and check `curl https://<domain>/v1/health` from mobile data and from the home Wi-Fi. Then run the 17 scenarios of §4 and §5 (§4 step 17, the restored phone, once on a test phone) on a phone and a tablet. Record results, and anything not checked, in the pull request's test plan.
+  Progress (2026-10-11, commit 22b6003):
+  - done: quickstart §1 (typecheck, lint, format, tests, architecture, build) and §2 (dev server, pairing code, `/v1/health`, 401 without a credential);
+  - done: Storybook review on an Android device (Pixel 6a, Android 13);
+  - done: `yarn test:e2e:android`, 9 journeys and 19 tests green, `sync-unreachable` included;
+  - done: `yarn test:e2e:ios` green;
+  - not yet: Storybook review on iOS, the Pi deployment and `curl` checks of §3, the scenarios of §4 and §5.
 - [X] T112 Update `specs/001-shopping-lists/plan.md` and `specs/002-manage-articles/plan.md`: mark their Principle VII deviation in Complexity Tracking as closed by 003, now implemented.
 
 ---
