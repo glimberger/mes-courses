@@ -107,6 +107,9 @@ check_bash() {
     if grep -Eq -- '[[:space:]](--force|-[a-zA-Z]*f[a-zA-Z]*)([[:space:]]|=|$)|[[:space:]]\+[^[:space:]]+' <<<"$push"; then
       block "force push is not allowed. Use --force-with-lease on your own feature branch."
     fi
+    if grep -Eq -- '[[:space:]]--(all|mirror)([[:space:]]|$)' <<<"$push"; then
+      block "git push --all and --mirror would push $default as well: name the branch to push."
+    fi
     if [ "$branch" = "$default" ] || grep -Eq "([[:space:]]|:|refs/heads/)$default([[:space:]]|\$)" <<<"$push"; then
       block "never push to $default (or from it): open a pull request from a feature branch."
     fi
@@ -119,13 +122,13 @@ check_bash() {
   fi
   # A redirection or tee into a guardrail file (or inside a .git directory), or a file-changing
   # command that names one. For cp only the destination, the last argument, counts.
-  bash_protected="$PROTECTED_REGEX|(^|[[:space:]/])\.git/"
-  mutators=$(grep -Eo -- "(sed[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*-i|perl[[:space:]]+-[a-zA-Z]*i|\b(mv|rm|truncate)[[:space:]]|${git}(checkout|restore|rm|mv)[[:space:]])[^|;&]*" <<<"$cmd" || true)
+  bash_protected="$PROTECTED_REGEX|(^|[[:space:]/>])\.git/|(^|[[:space:]/])\.claude([[:space:]]|\$)"
+  mutators=$(grep -Eo -- "(sed[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*-i|perl[[:space:]]+-[a-zA-Z]*i|\b(mv|rm|truncate|chmod|chown|ln|install|touch)[[:space:]]|${git}(checkout|restore|rm|mv)[[:space:]])[^|;&]*" <<<"$cmd" || true)
   cp_targets=$(grep -Eo -- '\bcp[[:space:]][^|;&]*' <<<"$cmd" | awk '{print $NF}' || true)
   if grep -Eq 'lefthook[[:space:]]+uninstall' <<<"$cmd"; then
     block "lefthook uninstall removes the Git hooks: they must always run."
   fi
-  if grep -Eiq "(>|\btee([[:space:]]+-a)?)[[:space:]]*[^[:space:]]*($bash_protected)" <<<"$cmd" ||
+  if grep -Eiq "(>|\btee([[:space:]]+-a)?)[[:space:]]*[^[:space:]]*($bash_protected|\.git/)" <<<"$cmd" ||
     grep -Eiq "$bash_protected" <<<"$mutators" ||
     grep -Eiq "$bash_protected" <<<"$cp_targets"; then
     block "this command looks like it changes a guardrail file. Only the user edits those: propose the change instead."

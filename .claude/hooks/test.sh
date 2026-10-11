@@ -48,6 +48,8 @@ edit 0 'edit outside the repository' ../elsewhere.txt
 edit 2 'edit settings.json' .claude/settings.json
 edit 2 'edit a hook' .claude/hooks/stop.sh
 edit 2 'edit lefthook.yml' lefthook.yml
+edit 2 'edit lefthook-local.yml' lefthook-local.yml
+edit 2 'edit .lefthook.yml' .lefthook.yml
 edit 2 'edit a workflow' .github/workflows/ci.yml
 edit 2 'edit the scope file' specs/003-sync/agent-scope.txt
 edit 2 'edit settings.local.json' .claude/settings.local.json
@@ -143,6 +145,14 @@ rm -rf "$repo/node_modules" "$repo/apps/server/lib"
 echo '# Bash and .git'
 bash_cmd 2 'rm a Git hook' 'rm .git/hooks/pre-commit'
 bash_cmd 2 'write into .git/claude-guardrails' 'echo x > .git/claude-guardrails/stop-ok'
+bash_cmd 2 'rm -rf the hooks folder' 'rm -rf .claude/hooks'
+bash_cmd 2 'rm -rf .claude' 'rm -rf .claude'
+bash_cmd 2 'mv the workflows folder' 'mv .github/workflows /tmp/x'
+bash_cmd 2 'chmod a hook' 'chmod -x .claude/hooks/pre-tool-use.sh'
+bash_cmd 2 'redirect with no space into .git' "echo 'exit 0' >.git/hooks/pre-commit"
+bash_cmd 2 'push --all' 'git push --all origin'
+bash_cmd 2 'push --mirror' 'git push --mirror origin'
+bash_cmd 0 'yarn install' 'yarn install && git status'
 bash_cmd 2 'lefthook uninstall' 'yarn lefthook uninstall'
 bash_cmd 0 'cp a guardrail file elsewhere' 'cp .github/workflows/ci.yml /tmp/ci.yml'
 bash_cmd 2 'cp over a guardrail file' 'cp /tmp/ci.yml .github/workflows/ci.yml'
