@@ -331,7 +331,7 @@ describe('SyncServer HTTP adapter', () => {
       [401, { type: 'DeviceNotAuthorized' }],
       [426, { type: 'UpdateRequired' }],
       [500, { type: 'ServerError' }],
-      [503, { type: 'ServerError' }],
+      [503, { type: 'Offline' }],
     ])('maps %i to %o', async (status, error) => {
       const syncServer = createSyncServer({
         appVersion: APP_VERSION,
@@ -465,6 +465,37 @@ describe('SyncServer HTTP adapter', () => {
       );
 
       expect(result).toEqual({ ok: false, error: { type: 'UntrustedServer' } });
+    });
+
+    it.each([502, 503, 504])(
+      'maps a %i from the proxy to Offline, not ServerError (FR-003)',
+      async (status) => {
+        const syncServer = createSyncServer({
+          appVersion: APP_VERSION,
+          fetch: async () => new Response('', { status }),
+        });
+
+        const result = await syncServer.sync(
+          { url: server.url, deviceId: 'd', credential: 'c' },
+          request,
+        );
+
+        expect(result).toEqual({ ok: false, error: { type: 'Offline' } });
+      },
+    );
+
+    it('still maps a 500 to ServerError', async () => {
+      const syncServer = createSyncServer({
+        appVersion: APP_VERSION,
+        fetch: async () => new Response('', { status: 500 }),
+      });
+
+      const result = await syncServer.sync(
+        { url: server.url, deviceId: 'd', credential: 'c' },
+        request,
+      );
+
+      expect(result).toEqual({ ok: false, error: { type: 'ServerError' } });
     });
 
     it('maps a 200 that is not a sync answer to ServerError', async () => {
