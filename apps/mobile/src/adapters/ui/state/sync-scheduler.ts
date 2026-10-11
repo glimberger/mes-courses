@@ -3,6 +3,10 @@ import { AppState, type AppStateStatus } from 'react-native';
 export type SyncSchedulerDeps = {
   /** Runs one cycle; `failed` makes the next delay grow (research R9, R14). */
   runCycle: () => Promise<{ failed: boolean }>;
+  /** Calls `listener(true)` when the device gets a connection back (FR-004); optional. */
+  onNetworkChange?: (listener: (connected: boolean) => void) => {
+    remove: () => void;
+  };
 };
 
 export type SyncScheduler = {
@@ -23,6 +27,7 @@ const delayAfter = (failures: number): number =>
 
 export const createSyncScheduler = ({
   runCycle,
+  onNetworkChange,
 }: SyncSchedulerDeps): SyncScheduler => {
   let started = false;
   let background = false;
@@ -32,6 +37,7 @@ export const createSyncScheduler = ({
   let cycleTimer: ReturnType<typeof setTimeout> | undefined;
   let writeTimer: ReturnType<typeof setTimeout> | undefined;
   let subscription: { remove: () => void } | undefined;
+  let networkSubscription: { remove: () => void } | undefined;
 
   const clearTimers = () => {
     clearTimeout(cycleTimer);
@@ -92,12 +98,20 @@ export const createSyncScheduler = ({
     }
   };
 
+  /** The connection is back: the failures so far say nothing about it, so the back-off restarts. */
+  const onNetwork = (connected: boolean) => {
+    if (!connected) return;
+    failures = 0;
+    request();
+  };
+
   return {
     start: () => {
       if (started) return;
       started = true;
       background = AppState.currentState === 'background';
       subscription = AppState.addEventListener('change', onAppStateChange);
+      networkSubscription = onNetworkChange?.(onNetwork);
       request();
     },
     stop: () => {
@@ -106,6 +120,8 @@ export const createSyncScheduler = ({
       clearTimers();
       subscription?.remove();
       subscription = undefined;
+      networkSubscription?.remove();
+      networkSubscription = undefined;
     },
     notifyWrite: () => {
       if (!started || background) return;

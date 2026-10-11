@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { addNetworkStateListener } from 'expo-network';
 
 import type { ErrorReporter } from '../application/ports/error-reporter';
 import { ConsoleErrorReporter } from '../adapters/error-reporting/console-error-reporter';
@@ -121,6 +122,10 @@ export const composeApp = async (
     // through the store.
     const scheduler = createSyncScheduler({
       runCycle: () => store.getState().syncNow(),
+      onNetworkChange: (listener) =>
+        addNetworkStateListener(({ isConnected }) =>
+          listener(isConnected === true),
+        ),
     });
     const store = createAppStore({
       useCases,
