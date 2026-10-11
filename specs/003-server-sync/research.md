@@ -312,7 +312,7 @@ kept (R7) and the first pairing code (R11).
 - **Decision**:
   - **Pairing code**: 8 characters from an unambiguous alphabet (no 0/O, 1/I/L), shown as
     `XXXX-XXXX`, single use, valid 10 minutes. The server stores only its SHA-256 hash.
-  - **First code**: the maintainer runs `yarn workspace @mes-courses/server pairing-code` in a shell on the Pi.
+  - **First code**: the maintainer runs the built `pairing-code.js` as `mes-courses` in a shell on the Pi (quickstart §4 step 1).
     This command talks to the database directly and works even while no device exists.
   - **Next codes**: an authorized device calls `POST /v1/pairing-codes` ("Ajouter un
     appareil").
@@ -495,7 +495,9 @@ kept (R7) and the first pairing code (R11).
     so the Pi runs the exact Node of `flake.lock`, like developers and CI. The flake exposes
     `packages.aarch64-linux.node` (the same `nodejs_24` as the dev shell); deploying builds it
     into `/opt/mes-courses/runtime`, a symlink that is also a Nix garbage-collection root;
-  - a system user `mes-courses` owns `/var/lib/mes-courses/` and `/opt/mes-courses/`;
+  - a system user `mes-courses` (no shell, no home) owns `/var/lib/mes-courses/` and runs the
+    service; `/opt/mes-courses/` belongs to the maintainer's account, which builds there, and
+    the service only reads it;
   - a systemd unit `mes-courses.service` runs
     `/opt/mes-courses/runtime/bin/node /opt/mes-courses/apps/server/dist/composition/main.js`
     (the server's `start` script) with `Restart=always` and `NODE_ENV=production`;
