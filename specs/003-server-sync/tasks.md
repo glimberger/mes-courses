@@ -550,14 +550,14 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
   - not yet: §4 step 17 (restored phone, before the first release) and §5 on the app (a local
     build has no Sentry DSN; needs an EAS build);
   - bugs found, to fix:
-    1. Android: a row ticked on the other device shows its checkbox ticked, but its text is
+    1. [#95](https://github.com/glimberger/mes-courses/issues/95) Android: a row ticked on the other device shows its checkbox ticked, but its text is
        neither struck through nor dimmed until the list re-renders (iOS is right);
-    2. after airplane mode, the next sync can wait up to 5 minutes (the failure back-off), with
+    2. [#94](https://github.com/glimberger/mes-courses/issues/94) after airplane mode, the next sync can wait up to 5 minutes (the failure back-off), with
        no network listener to sync when the network comes back;
-    3. with the server stopped behind Caddy, the 502 counts as a server error: "Échec de la
+    3. [#92](https://github.com/glimberger/mes-courses/issues/92) with the server stopped behind Caddy, the 502 counts as a server error: "Échec de la
        synchronisation" and a Sentry event after three cycles, against FR-003 (treat 502, 503
        and 504 as unreachable);
-    4. server events carry `release: unknown`: the release comes from `npm_package_version`,
+    4. [#93](https://github.com/glimberger/mes-courses/issues/93) server events carry `release: unknown`: the release comes from `npm_package_version`,
        which systemd does not set (FR-022a);
   - remarks: with a DSN, server errors go to Sentry only, never to the journal; Sentry
     derives a geography from the home's IP unless the organization prevents storing IP
