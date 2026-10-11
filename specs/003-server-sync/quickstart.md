@@ -101,6 +101,14 @@ refuse `http://` (FR-019).
 Start with the phone holding data from 001 and 002 (several lists, ticked items), the tablet
 freshly installed, and the server empty.
 
+Without a tablet, an iOS simulator is the second device: install the Detox release build with
+`xcrun simctl install <device> apps/mobile/ios/build/Build/Products/Release-iphonesimulator/Mescourses.app`
+(built by `yarn test:e2e:ios`). Xcode 27 shows simulators in
+`/Applications/Xcode.app/Contents/Applications/DeviceHub.app`, not `Simulator.app`.
+
+To put both devices offline at once (the simulator shares the Mac's network), make the server
+unreachable: `systemctl stop caddy` on the Pi, then `systemctl start caddy`.
+
 1. **First device on an empty server** (US4-2, US4-4, US1-6, FR-018):
    - on the Pi, run `sudo -u mes-courses /opt/mes-courses/runtime/bin/node --conditions=production /opt/mes-courses/apps/server/dist/composition/pairing-code.js`
      (as `mes-courses`: the database in `/var/lib/mes-courses/` is readable by that user only);
@@ -110,7 +118,10 @@ freshly installed, and the server empty.
    - query the server database: every list, item and tick is there. Time it: under 1 minute
      (SC-006).
 2. **Wrong codes** (US4-5, US4-12): on the tablet, enter a wrong code: "Ce code n'est pas
-   valide…". Reuse the phone's code: same message. Enter 5 more wrong codes: "Trop d'essais…".
+   valide…". Reuse the phone's code: same message. Enter 3 more wrong codes: same message; the
+   next attempt, the sixth, shows "Trop d'essais…" (at most 5 failures in 10 minutes, for the
+   whole server). Wait 10 minutes after the first failure before step 3, or the right code is
+   refused too.
 3. **Second device** (US4-3, US1-5, FR-017, SC-005, SC-007): on the phone, "Ajouter un
    appareil" shows a code; enter it on the tablet. All data appears in under 30 seconds, with no
    duplicated category and no second "Ma liste".
@@ -124,11 +135,15 @@ freshly installed, and the server empty.
    (tick vs untick, rename vs quantity, same new article, delete vs tick, remove vs quantity,
    finish vs a later tick, two new categories). Reconnect both: they show identical data
    matching the expected result of each scenario.
+   Run them in rounds, one sync between rounds, since several touch "Lait". "Terminer les
+   courses" only shows when an item is ticked: tick some items, but not "Œufs", before the
+   finish scenario.
 7. **Undo never sent** (US1-7, FR-008): delete an article and tap "Annuler" while online; the
    server never shows it deleted (check its database).
 8. **Killed app** (US1-4, FR-005): offline, make changes, kill the app, go online and reopen:
    the changes reach the tablet.
-9. **Per-device current list** (US2-9, FR-015): choose "Barbecue" on the tablet; the phone
+9. **Per-device current list** (US2-9, FR-015): choose "Pique-nique" on the tablet (not
+   "Barbecue", which step 16 creates offline on both devices); the phone
    keeps "Ma liste".
 10. **Revoke** (US4-8 to US4-10, SC-008, SC-009):
     - from the tablet, Réglages › Appareils › phone › "Révoquer";
@@ -139,21 +154,26 @@ freshly installed, and the server empty.
     locally, and the server data is untouched.
 12. **Server down** (FR-003, edge cases): run `systemctl stop mes-courses`. Both apps work, and
     the bar shows "En attente…" with no error. Start it again: sync resumes.
-13. **Failure status** (US3-4): stop Caddy only (`systemctl stop caddy`) to get connection
-    refusals, and check the bar stays "En attente…". Then make the server return 500s with
-    `MES_COURSES_FAIL_SYNC=1` (development builds only) to see "Échec de la synchronisation",
-    "Réessayer" and one Sentry event.
+13. **Failure status** (US3-4):
+    - stop Caddy only (`systemctl stop caddy`) to get connection refusals, and check the bar
+      stays "En attente…" for at least a minute;
+    - make `/v1/sync` answer 500: back up `/etc/caddy/Caddyfile`, add `respond /v1/sync 500`
+      after `encode gzip`, run `systemctl reload caddy`; after three failed cycles the bar shows
+      "Échec de la synchronisation" and "Réessayer", and the app reports one Sentry event (a
+      build with `EXPO_PUBLIC_SENTRY_DSN`, from EAS: a local `yarn android` build has none);
+    - restore the Caddyfile, reload Caddy and tap "Réessayer": "Synchronisé".
 14. **Reset server** (FR-018a):
     - stop the server, move its database away, start it again (new `serverId`);
     - both devices show "Cet appareil n'est plus connecté au serveur.";
     - reconnect the phone with a code from the Pi: the server is repopulated;
     - reconnect the tablet: its data merges, with no duplicates.
 15. **Accessibility** (FR-023, US3-6, US3-7): with TalkBack/VoiceOver, let the app sync for
-    a minute: nothing is read out. Stop Caddy and make the server fail
-    (`MES_COURSES_FAIL_SYNC=1`): "Échec de la synchronisation" is read once; restore it:
-    "Synchronisé" is read once. Activate the row "Pain", then remove "Pain" on the tablet:
-    focus moves to the next row and nothing is read for the change. Settings and ConnectServer
-    can be used with the screen reader alone and at 200% text.
+    a minute: nothing is read out. Make `/v1/sync` answer 500 as in step 13: "Échec de la
+    synchronisation" is read once; restore it: "Synchronisé" is read once. Activate the row
+    "Pain" (double tap: a row only moved to is left to the screen reader), then remove "Pain"
+    on the tablet: focus moves to the next row, which the screen reader reads as it gets focus,
+    and nothing is read for the change. Settings and ConnectServer can be used with the screen
+    reader alone and at 200% text.
 16. **Changes from the other device on open screens** (FR-020a, FR-008, US2-10):
     - open the quantity dialog of "Lait" on the phone and type "3"; change "Lait" to "2 L" on
       the tablet; after the next sync the phone still shows "3"; save: both devices end with
@@ -172,7 +192,17 @@ freshly installed, and the server empty.
 
 ## 5. Error tracking (FR-022, FR-022a)
 
-- Force a server exception in development (`MES_COURSES_FAIL_SYNC=1` on a build with
-  `SENTRY_DSN`): the event appears in Sentry with the server release and environment, and no
-  body, header, name or credential.
+- Force a server exception: on the Pi, stop the service, make the database read-only
+  (`chmod 400 /var/lib/mes-courses/mes-courses.db`), start the service and make a change on a
+  device. The failed writes appear in Sentry with the server release and environment, and no
+  body, header, name or credential. Then `chmod 600` the database and restart the service, and
+  check `/v1/health` shows the `serverId` again: a database left read-only answers `{}`. Run
+  any command with a `*` under `/var/lib/mes-courses/` through `sudo sh -c '…'`: the directory
+  is readable by `mes-courses` only, so the maintainer's shell cannot expand the pattern.
+- The server reports to its own Sentry project, `mes-courses-server` (platform Node.js, EU
+  region like `mes-courses`, the app's): its DSN goes in `/etc/mes-courses.env`. Server and app
+  issues, alerts and quotas stay apart.
+- In the Sentry organization's *Settings › Security & Privacy*, turn on *Prevent Storing of
+  IP Addresses* (it covers both projects): Sentry otherwise derives the user's geography from
+  the sender's address, the home's public IP for the server.
 - Offline and unreachable-server periods create no event.

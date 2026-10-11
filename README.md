@@ -195,12 +195,12 @@ In short: Nix and Caddy on the Pi, a `mes-courses` system user, the repository i
 
 ### Environment variables
 
-| Variable                              | Where                 | What it does                                                                          |
-| ------------------------------------- | --------------------- | ------------------------------------------------------------------------------------- |
-| `SENTRY_DSN`                          | server                | Sends server errors to Sentry (EU region). Unset: they go to the journal only         |
-| `MES_COURSES_DB`                      | server                | The SQLite database path. Default: `/var/lib/mes-courses/mes-courses.db`              |
-| `MES_COURSES_DOMAIN`                  | Caddy                 | The public domain Caddy serves and gets a certificate for                             |
-| `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL` | app, development only | `1` lets a development build pair with an `http://` server; ignored by release builds |
+| Variable                              | Where                 | What it does                                                                                                   |
+| ------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `SENTRY_DSN`                          | server                | Sends server errors to the Sentry project `mes-courses-server` (EU region). Unset: they go to the journal only |
+| `MES_COURSES_DB`                      | server                | The SQLite database path. Default: `/var/lib/mes-courses/mes-courses.db`                                       |
+| `MES_COURSES_DOMAIN`                  | Caddy                 | The public domain Caddy serves and gets a certificate for                                                      |
+| `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL` | app, development only | `1` lets a development build pair with an `http://` server; ignored by release builds                          |
 
 On the Pi, the server's variables go in `/etc/mes-courses.env` (from
 `deploy/mes-courses.env.example`, mode 600, owned by `mes-courses`).
