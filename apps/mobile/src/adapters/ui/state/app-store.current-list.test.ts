@@ -354,6 +354,27 @@ describe('the current list in the store', () => {
       ]);
     });
 
+    it('FR-012 R9 shows a tap still queued on the survivor when a pull merges the tapped article away', async () => {
+      const { store, unitOfWork } = await buildHeldStore();
+
+      void store.getState().toggleItem(lait);
+      await settle();
+      // A pull merged Lait into Beurre: Lait is gone from the stored list, and Beurre follows it.
+      await unitOfWork.run((repos) => repos.items.remove(maListe, lait));
+      store.setState((state) => ({
+        sync: { ...state.sync, redirects: { [lait]: beurre } },
+      }));
+      await store.getState().loadCurrentList();
+
+      expect(shownInCart(store, beurre)).toBe(true);
+      expect(view(store).hasItemsInCart).toBe(true);
+
+      // A second tap, on the merged-away id, lands on the survivor and cancels the first.
+      void store.getState().toggleItem(lait);
+      await settle();
+      expect(shownInCart(store, beurre)).toBe(false);
+    });
+
     it('R9 on a failed save, drops the queued toggles of that item, shows its stored state, and reports it', async () => {
       const { store, held, stored, errorReporter, calls } =
         await buildHeldStore();
