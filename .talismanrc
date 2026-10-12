@@ -56,6 +56,32 @@ fileignoreconfig:
     ignore_detectors: [filecontent]
   - filename: .specify/scripts/bash/common.sh
     ignore_detectors: [filecontent]
+  # Feature 004 is about passwords, keys and sessions: its prose trips the pattern detector, and it
+  # holds no secret.
+  - filename: docs/adr/0005-accounts-and-authentication.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/checklists/requirements.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/checklists/security.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/contracts/app-ports.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/contracts/auth-api.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/contracts/ui-screens.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/data-model.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/plan.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/quickstart.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/research.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/spec.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/tasks.md
+    ignore_detectors: [filecontent]
   - filename: .claude/skills/speckit-analyze/SKILL.md
     ignore_detectors: [filecontent]
   - filename: .claude/skills/speckit-checklist/SKILL.md
