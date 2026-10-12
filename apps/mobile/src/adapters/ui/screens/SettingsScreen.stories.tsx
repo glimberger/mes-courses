@@ -13,8 +13,8 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-/** A device that never was connected: the explanation and "Connecter à un serveur" (US4-1). */
-export const NotConnected: Story = {
+/** A device that never was connected: the explanation and "Se connecter" (US4-1). */
+export const NotSignedIn: Story = {
   parameters: { scenario: { seed: fixture } },
 };
 

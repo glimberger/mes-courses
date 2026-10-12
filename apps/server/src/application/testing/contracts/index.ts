@@ -13,8 +13,6 @@ import { isolationContract } from './isolation.contract';
 import { listItemRepositoryContract } from './list-item-repository.contract';
 import { listRepositoryContract } from './list-repository.contract';
 import { metaRepositoryContract } from './meta-repository.contract';
-import { pairingCodeRepositoryContract } from './pairing-code-repository.contract';
-import { pairingFailureRepositoryContract } from './pairing-failure-repository.contract';
 import { scopedTo } from './scoped-store';
 import { serverStoreContract } from './server-store.contract';
 
@@ -34,8 +32,6 @@ export const storeContracts = (createStore: () => Promise<ServerStore>) => {
   listItemRepositoryContract(inDefaultAccount);
   appliedChangeRepositoryContract(inDefaultAccount);
   deviceRepositoryContract(inDefaultAccount);
-  pairingCodeRepositoryContract(inDefaultAccount);
-  pairingFailureRepositoryContract(inDefaultAccount);
 
   accountRepositoryContract(createStore);
   endedCredentialRepositoryContract(createStore);

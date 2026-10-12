@@ -401,7 +401,7 @@ const guarded = <R extends object>(repository: R, isOpen: () => boolean): R =>
 export class InMemoryUnitOfWork implements UnitOfWork {
   private queue: Promise<unknown> = Promise.resolve();
 
-  constructor(private readonly repositories: InMemoryRepositories) {}
+  constructor(readonly repositories: InMemoryRepositories) {}
 
   run<T>(work: (repos: Repositories) => Promise<T>): Promise<T> {
     const result = this.queue.then(() => this.runNow(work));

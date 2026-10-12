@@ -10,7 +10,14 @@ export type RootStackParamList = {
   CreateArticle: { name?: string; categoryId?: CategoryId } | undefined;
   EditArticle: { articleId: ArticleId };
   Settings: undefined;
-  ConnectServer: undefined;
+  SignIn: undefined;
+  /** What was typed on SignIn, kept in memory only; the temporary password is never stored. */
+  ChoosePassword: {
+    url: string;
+    email: string;
+    temporaryPassword: string;
+    deviceName: string;
+  };
   Accounts: undefined;
 };
 

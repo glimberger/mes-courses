@@ -8,7 +8,6 @@ import type {
   DeviceRecord,
   ListItemRecord,
   ListRecord,
-  PairingCodeRecord,
 } from '../../ports/store';
 
 /** Record builders for the contract suites, so each test states only what it is about. */
@@ -116,17 +115,6 @@ export const device = (
   createdAt: '2026-10-01T10:00:00.000Z',
   lastSyncAt: null,
   revokedAt: null,
-  ...overrides,
-});
-
-export const pairingCode = (
-  codeHash: string,
-  overrides: Partial<PairingCodeRecord> = {},
-): PairingCodeRecord => ({
-  codeHash,
-  createdBy: null,
-  expiresAt: '2026-10-01T10:10:00.000Z',
-  usedAt: null,
   ...overrides,
 });
 

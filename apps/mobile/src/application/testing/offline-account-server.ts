@@ -3,6 +3,10 @@ import type { AccountServer } from '../ports/account-server';
 
 /** An account server nobody can reach, for tests and stories that do not use the account. */
 export class OfflineAccountServer implements AccountServer {
+  signIn: AccountServer['signIn'] = async () =>
+    err({ type: 'ServerUnreachable' });
+  choosePassword: AccountServer['choosePassword'] = async () =>
+    err({ type: 'ServerUnreachable' });
   getAccount: AccountServer['getAccount'] = async () =>
     err({ type: 'Offline' });
 }

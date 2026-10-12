@@ -64,8 +64,6 @@ const connected: StoryScenario = {
           lastSyncAt: '2026-09-30T08:00:00.000Z',
         },
       ]),
-    createPairingCode: async () =>
-      ok({ code: 'ABCD-EF23', expiresAt: '2026-10-06T12:05:00.000Z' }),
   },
 };
 
@@ -221,24 +219,19 @@ const views: Record<string, () => Promise<void>> = {
   },
   '003 Settings, never connected': async () => {
     await openSettings({});
-    await screen.findByRole('button', { name: 'Connecter à un serveur' });
+    await screen.findByRole('button', { name: 'Se connecter' });
   },
   '003 Settings, connected': openDevices,
-  '003 ConnectServer': async () => {
+  '004 SignIn': async () => {
     await openSettings({});
-    await press('Connecter à un serveur');
-    await header('Connecter à un serveur');
+    await press('Se connecter');
+    await header('Se connecter');
   },
   '003 device row menu': () => chooseDeviceAction('Renommer', 'Renommer'),
   '003 RenameDeviceDialog': () =>
     chooseDeviceAction('Renommer', "Renommer l'appareil"),
   '003 RevokeDeviceDialog': () =>
     chooseDeviceAction('Révoquer', 'Révoquer « iPhone de Marc » ?'),
-  '003 PairingCodeDialog': async () => {
-    await openDevices();
-    await press('Ajouter un appareil');
-    await screen.findByText('ABCD-EF23', {}, slow);
-  },
   '003 DisconnectDialog': async () => {
     await openDevices();
     await press('Déconnecter cet appareil');

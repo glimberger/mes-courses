@@ -31,15 +31,6 @@ export type DeviceRecord = {
   revokedAt: Instant | null;
 };
 
-export type PairingCodeRecord = {
-  /** SHA-256 of the normalized 8-character code. */
-  codeHash: string;
-  /** `null` when the code was created on the Pi itself. */
-  createdBy: string | null;
-  expiresAt: Instant;
-  usedAt: Instant | null;
-};
-
 export type AppliedChangeRecord = {
   changeId: string;
   deviceId: string;
@@ -104,22 +95,6 @@ export interface DeviceRepository {
   update(record: DeviceRecord): Promise<void>;
 }
 
-export interface PairingCodeRepository {
-  add(record: PairingCodeRecord): Promise<void>;
-  findByHash(codeHash: string): Promise<PairingCodeRecord | null>;
-  markUsed(codeHash: string, at: Instant): Promise<void>;
-}
-
-export interface PairingFailureRepository {
-  add(at: Instant): Promise<void>;
-  /** Failures recorded at or after `since`. */
-  countSince(since: Instant): Promise<number>;
-  /** The earliest failure recorded at or after `since`, if any. */
-  earliestSince(since: Instant): Promise<Instant | null>;
-  /** Forgets the failures recorded before `before`, which no rate-limit window reads any more. */
-  pruneBefore(before: Instant): Promise<void>;
-}
-
 /** Not about one account's data: the same for every account. */
 export type DirectoryRepositories = {
   meta: MetaRepository;
@@ -127,8 +102,6 @@ export type DirectoryRepositories = {
   devices: DeviceRepository;
   endedCredentials: EndedCredentialRepository;
   authAttempts: AuthAttemptRepository;
-  pairingCodes: PairingCodeRepository;
-  pairingFailures: PairingFailureRepository;
 };
 
 /** One account's data. Every statement is bound to the account given to `runForAccount`. */

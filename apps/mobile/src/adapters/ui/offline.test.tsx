@@ -107,7 +107,6 @@ const offlineServer = () => {
   const offline = async () => err({ type: 'Offline' as const });
   return {
     sync: jest.fn(offline),
-    createPairingCode: jest.fn(offline),
     listDevices: jest.fn(offline),
     renameDevice: jest.fn(offline),
     revokeDevice: jest.fn(offline),
@@ -333,3 +332,29 @@ describe.each(networks)(
     });
   },
 );
+
+describe('a signed-in device reopened with no network (004 US2-6, FR-007)', () => {
+  it('goes straight to its lists, asks for no sign-in, and keeps working', async () => {
+    const offline = async () => err({ type: 'Offline' as const });
+    const { errorReporter } = await renderWithStore(
+      <Navigation errorReporter={new RecordingErrorReporter()} />,
+      {
+        seed,
+        asScreen: false,
+        connected: {
+          serverUrl: 'https://courses.example.fr',
+          lastSyncAt: null,
+        },
+        syncServer: { sync: offline, listDevices: offline },
+        accountServer: { getAccount: offline },
+      },
+    );
+
+    expect(await screen.findByText('Ma liste')).toBeOnTheScreen();
+    expect(
+      screen.queryByRole('button', { name: 'Se connecter' }),
+    ).not.toBeOnTheScreen();
+    expect(screen.queryByRole('header', { name: 'Se connecter' })).toBeNull();
+    await waitFor(() => expect(errorReporter.reports).toEqual([]));
+  });
+});

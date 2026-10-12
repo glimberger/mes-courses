@@ -232,52 +232,12 @@ describe('Settings, devices (003 US4)', () => {
       fireEvent.press(screen.getByRole('button', { name: 'Déconnecter' }));
 
       expect(
-        await screen.findByRole('button', { name: 'Connecter à un serveur' }),
+        await screen.findByRole('button', { name: 'Se connecter' }),
       ).toBeOnTheScreen();
       expect(revokeDevice).toHaveBeenCalledWith(
         expect.objectContaining({ deviceId: 'story-device' }),
         'story-device',
       );
-    });
-  });
-
-  describe('"Ajouter un appareil"', () => {
-    it('US4-3 shows the code and when it expires', async () => {
-      const expiresAt = new Date(2026, 9, 6, 14, 5).toISOString();
-      await openSettings(
-        withDevices({
-          createPairingCode: async () => ok({ code: 'ABCD-EF23', expiresAt }),
-        }),
-      );
-      fireEvent.press(
-        await screen.findByRole('button', { name: 'Ajouter un appareil' }),
-      );
-
-      // The title shows with the button behind the dialog.
-      expect(await screen.findAllByText('Ajouter un appareil')).toHaveLength(2);
-      expect(await screen.findByText('ABCD-EF23')).toBeOnTheScreen();
-      expect(screen.getByText("Valable jusqu'à 14:05.")).toBeOnTheScreen();
-      expect(
-        screen.getByText(
-          'Sur le nouvel appareil, ouvrez Réglages › Connecter à un serveur et saisissez :',
-        ),
-      ).toBeOnTheScreen();
-      fireEvent.press(screen.getByRole('button', { name: 'Fermer' }));
-      await waitFor(() => expect(screen.queryByText('ABCD-EF23')).toBeNull());
-    });
-
-    it('US4-3 offline: needs the server, with nothing reported', async () => {
-      const { errorReporter } = await openSettings();
-      fireEvent.press(
-        await screen.findByRole('button', { name: 'Ajouter un appareil' }),
-      );
-
-      expect(
-        await screen.findByText(
-          'Connexion au serveur nécessaire pour ajouter un appareil.',
-        ),
-      ).toBeOnTheScreen();
-      expect(errorReporter.reports).toEqual([]);
     });
   });
 
@@ -357,7 +317,7 @@ describe('Settings, devices (003 US4)', () => {
     );
   });
 
-  it('US4-10 after a revocation the bar offers "Se reconnecter", which opens ConnectServer', async () => {
+  it('US4-10 after a revocation the bar offers "Se reconnecter", which opens SignIn', async () => {
     const sync = jest.fn(async () =>
       err({ type: 'DeviceNotAuthorized' as const }),
     );
@@ -369,6 +329,8 @@ describe('Settings, devices (003 US4)', () => {
     ).toBeOnTheScreen();
     fireEvent.press(screen.getByRole('button', { name: 'Se reconnecter' }));
 
-    expect(await screen.findByText('Connecter à un serveur')).toBeOnTheScreen();
+    expect(
+      await screen.findByRole('header', { name: 'Se connecter' }),
+    ).toBeOnTheScreen();
   });
 });

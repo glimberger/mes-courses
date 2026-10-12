@@ -1,9 +1,8 @@
 import type { Change, Hlc, SyncResponse } from '@mes-courses/sync-core';
 
 import type { Clock } from '../../application/ports/clock';
-import { createPairingCode } from '../../application/use-cases/create-pairing-code';
 import type { Repositories } from '../../application/ports/store';
-import { buildTestApp } from '../../testing/start-test-server';
+import { addTestDevice, buildTestApp } from '../../testing/start-test-server';
 
 const START = Date.parse('2026-10-01T10:00:00.000Z');
 
@@ -35,21 +34,13 @@ const createList = (changeId: string, id: string, name: string): Change => ({
 const harness = async () => {
   const clock = new FakeClock();
   const { app, deps, store: directory, db } = buildTestApp({ clock });
-  // A fresh database holds the setup account, which the interim pairing joins.
+  // A fresh database holds the setup account, which the test devices join.
   const [setup] = await directory.run(({ accounts }) => accounts.all());
   const store = {
     run: <T>(work: (repos: Repositories) => Promise<T>) =>
       directory.runForAccount(setup?.id ?? '', work),
   };
-  const pair = async () => {
-    const { code } = await createPairingCode(deps, null);
-    const claim = await app.inject({
-      method: 'POST',
-      url: '/v1/pairing/claim',
-      payload: { code, deviceName: 'Phone' },
-    });
-    return claim.json() as { deviceId: string; credential: string };
-  };
+  const pair = () => addTestDevice(deps, setup?.id ?? '', 'Phone');
   const post = (credential: string, payload: unknown) =>
     app.inject({
       method: 'POST',
@@ -186,7 +177,7 @@ describe('POST /v1/sync', () => {
       expect.objectContaining({
         serverId: expect.any(String),
         apiVersion: 1,
-        minAppVersion: '1.0.0',
+        minAppVersion: '1.1.0',
       }),
     );
     expect(pulled.statusCode).toBe(200);

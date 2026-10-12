@@ -11,7 +11,6 @@ import type {
   EntityRepository,
   ListItemRecord,
   ListRecord,
-  PairingCodeRecord,
   DirectoryRepositories,
   Repositories,
   ServerStore,
@@ -174,20 +173,6 @@ const deviceFromRow = (row: DeviceRow): DeviceRecord => ({
   createdAt: row.created_at,
   lastSyncAt: row.last_sync_at,
   revokedAt: row.revoked_at,
-});
-
-type PairingCodeRow = {
-  code_hash: string;
-  created_by: string | null;
-  expires_at: string;
-  used_at: string | null;
-};
-
-const pairingCodeFromRow = (row: PairingCodeRow): PairingCodeRecord => ({
-  codeHash: row.code_hash,
-  createdBy: row.created_by,
-  expiresAt: row.expires_at,
-  usedAt: row.used_at,
 });
 
 /** The single meta row; a missing one means a damaged database, not a fresh server. */
@@ -503,45 +488,6 @@ const directoryRepositories = (db: SqlDatabase): DirectoryRepositories => ({
     deleteForKey: async (keyHash) => {
       db.run('DELETE FROM auth_attempt WHERE key_hash = ?', [keyHash]);
     },
-  },
-  pairingCodes: {
-    add: async (record) => {
-      db.run(
-        'INSERT INTO pairing_code (code_hash, created_by, expires_at, used_at) VALUES (?, ?, ?, ?)',
-        [record.codeHash, record.createdBy, record.expiresAt, record.usedAt],
-      );
-    },
-    findByHash: async (codeHash) => {
-      const row = db.get<PairingCodeRow>(
-        'SELECT * FROM pairing_code WHERE code_hash = ?',
-        [codeHash],
-      );
-      return row ? pairingCodeFromRow(row) : null;
-    },
-    markUsed: async (codeHash, at) => {
-      db.run('UPDATE pairing_code SET used_at = ? WHERE code_hash = ?', [
-        at,
-        codeHash,
-      ]);
-    },
-  },
-  pairingFailures: {
-    add: async (at) => {
-      db.run('INSERT INTO pairing_failure (at) VALUES (?)', [at]);
-    },
-    countSince: async (since) =>
-      db.get<{ n: number }>(
-        'SELECT COUNT(*) AS n FROM pairing_failure WHERE at >= ?',
-        [since],
-      )?.n ?? 0,
-    pruneBefore: async (before) => {
-      db.run('DELETE FROM pairing_failure WHERE at < ?', [before]);
-    },
-    earliestSince: async (since) =>
-      db.get<{ at: string | null }>(
-        'SELECT MIN(at) AS at FROM pairing_failure WHERE at >= ?',
-        [since],
-      )?.at ?? null,
   },
 });
 

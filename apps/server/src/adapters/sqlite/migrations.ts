@@ -120,7 +120,6 @@ const migration2: Migration = (db, env) => {
     'list_item',
     'applied_change',
     'device',
-    'pairing_code',
   ]) {
     db.exec(`CREATE TEMP TABLE old_${table} AS SELECT * FROM ${table}`);
   }
@@ -229,13 +228,6 @@ const migration2: Migration = (db, env) => {
     );
     CREATE INDEX device_account ON device(account_id);
 
-    CREATE TABLE pairing_code (
-      code_hash  TEXT PRIMARY KEY,
-      created_by TEXT REFERENCES device(id),
-      expires_at TEXT NOT NULL,
-      used_at    TEXT
-    );
-
     CREATE TABLE ended_credential (
       credential_hash TEXT PRIMARY KEY,
       reason          TEXT NOT NULL CHECK (reason IN ('accountDeleted')),
@@ -316,10 +308,8 @@ const migration2: Migration = (db, env) => {
     'last_sync_at',
     'revoked_at',
   ]);
-  db.exec(`
-    INSERT INTO pairing_code (code_hash, created_by, expires_at, used_at)
-    SELECT code_hash, created_by, expires_at, used_at FROM old_pairing_code;
-  `);
+  // Pairing is gone (feature 004): its tables are dropped, their rows were short-lived.
+  db.exec('DROP TABLE pairing_failure');
 
   for (const table of [
     'category',
@@ -328,7 +318,6 @@ const migration2: Migration = (db, env) => {
     'list_item',
     'applied_change',
     'device',
-    'pairing_code',
   ]) {
     db.exec(`DROP TABLE temp.old_${table}`);
   }

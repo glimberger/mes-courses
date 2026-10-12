@@ -2,7 +2,7 @@ import type { Clock } from '../ports/clock';
 import { account } from '../testing/contracts/entities';
 import { InMemoryStore } from '../testing/in-memory-store';
 import type { DeviceRecord } from '../ports/store';
-import { InvalidDeviceNameError } from './claim-pairing-code';
+import { InvalidDeviceNameError } from './invalid-device-name';
 import { listDevices } from './list-devices';
 import { NotFoundError } from './not-found';
 import { renameDevice } from './rename-device';

@@ -17,7 +17,6 @@ import { spacing } from '../theme/spacing';
 import { ChangeServerUrlDialog } from './ChangeServerUrlDialog';
 import { DeviceRow } from './DeviceRow';
 import { DisconnectDialog } from './DisconnectDialog';
-import { PairingCodeDialog } from './PairingCodeDialog';
 import { RenameDeviceDialog } from './RenameDeviceDialog';
 import { RevokeDeviceDialog } from './RevokeDeviceDialog';
 
@@ -45,7 +44,6 @@ export type AccountState =
 type Dialog =
   | { type: 'rename'; device: DeviceInfo }
   | { type: 'revoke'; device: DeviceInfo }
-  | { type: 'pairingCode' }
   | { type: 'changeUrl' }
   | { type: 'disconnect' };
 
@@ -149,7 +147,7 @@ export const SettingsScreen = () => {
     <>
       <SettingsView
         onBack={navigation.canGoBack() ? () => navigation.goBack() : null}
-        onConnect={() => navigation.navigate('ConnectServer')}
+        onConnect={() => navigation.navigate('SignIn')}
         onSyncNow={() => void syncNow()}
         server={
           !isConnected
@@ -168,7 +166,6 @@ export const SettingsScreen = () => {
         onRenameDevice={(device) => setDialog({ type: 'rename', device })}
         onRevokeDevice={(device) => setDialog({ type: 'revoke', device })}
         onChangeUrl={() => setDialog({ type: 'changeUrl' })}
-        onAddDevice={() => setDialog({ type: 'pairingCode' })}
         onDisconnect={() => setDialog({ type: 'disconnect' })}
       />
       {dialog?.type === 'rename' && (
@@ -176,9 +173,6 @@ export const SettingsScreen = () => {
       )}
       {dialog?.type === 'revoke' && (
         <RevokeDeviceDialog device={dialog.device} onClose={closeDialog} />
-      )}
-      {dialog?.type === 'pairingCode' && (
-        <PairingCodeDialog onClose={closeDialog} />
       )}
       {dialog?.type === 'changeUrl' && serverUrl !== null && (
         <ChangeServerUrlDialog currentUrl={serverUrl} onClose={closeDialog} />
@@ -209,7 +203,6 @@ export type SettingsViewProps = {
   onRenameDevice: (device: DeviceInfo) => void;
   onRevokeDevice: (device: DeviceInfo) => void;
   onChangeUrl: () => void;
-  onAddDevice: () => void;
   onDisconnect: () => void;
 };
 
@@ -226,7 +219,6 @@ export const SettingsView = ({
   onRenameDevice,
   onRevokeDevice,
   onChangeUrl,
-  onAddDevice,
   onDisconnect,
 }: SettingsViewProps) => (
   <View style={styles.screen}>
@@ -239,11 +231,10 @@ export const SettingsView = ({
       {server === null ? (
         <>
           <Text variant="bodyLarge">
-            Synchronisez vos listes avec votre serveur pour les retrouver sur
-            vos autres appareils.
+            Connectez-vous pour retrouver vos listes sur vos autres appareils.
           </Text>
           <Button mode="contained" onPress={onConnect}>
-            Connecter à un serveur
+            Se connecter
           </Button>
         </>
       ) : (
@@ -285,9 +276,6 @@ export const SettingsView = ({
           />
 
           <List.Subheader accessibilityRole="header">Actions</List.Subheader>
-          <Button mode="outlined" onPress={onAddDevice}>
-            Ajouter un appareil
-          </Button>
           <Button mode="outlined" onPress={onDisconnect}>
             Déconnecter cet appareil
           </Button>

@@ -1,14 +1,26 @@
 import { buildApp } from '../adapters/http/app';
 import { openDatabase } from '../adapters/sqlite/open-database';
 import { SqliteStore } from '../adapters/sqlite/sqlite-store';
-import { createPairingCode } from '../application/use-cases/create-pairing-code';
 import type { Clock } from '../application/ports/clock';
+import type {
+  ErrorContext,
+  ErrorReporter,
+} from '../application/ports/error-reporter';
 import type { MailMessage } from '../application/ports/mailer';
+import { normalizeTemporaryPassword } from '@mes-courses/sync-core';
+import { signIn } from '../application/use-cases/sign-in';
+import { temporaryExpiresAt } from '../domain/account';
 import type { AppDeps } from '../adapters/http/app';
 import type { AccountRole } from '@mes-courses/sync-core';
-import { createFakeMailer } from '../application/testing/fake-mailer';
+import {
+  createFakeMailer,
+  type FakeMailer,
+} from '../application/testing/fake-mailer';
 import { createFakePasswordHasher } from '../application/testing/fake-password-hasher';
 import { appDeps } from '../composition/wiring';
+
+/** The password of an account made by `createAccount`. */
+export const TEST_PASSWORD = 'a long enough password';
 
 export type TestAccount = { accountId: string; deviceCredential: string };
 
@@ -28,7 +40,7 @@ const createTestAccount = async (
       id: accountId,
       email: email ?? `${accountId}@example.org`,
       role,
-      passwordHash: await deps.hasher.hash('a long enough password'),
+      passwordHash: await deps.hasher.hash(TEST_PASSWORD),
       temporaryPasswordHash: null,
       temporaryExpiresAt: null,
       suspendedAt: null,
@@ -47,6 +59,88 @@ const createTestAccount = async (
   return { accountId, deviceCredential };
 };
 
+/** Adds a device to an account straight in the store; returns its id and its Bearer credential. */
+export const addTestDevice = async (
+  deps: AppDeps,
+  accountId: string,
+  name = 'Phone',
+): Promise<{ deviceId: string; credential: string }> => {
+  const deviceId = deps.ids.next();
+  const credential = deps.crypto.generateCredential();
+  await deps.store.run(({ devices }) =>
+    devices.add({
+      id: deviceId,
+      accountId,
+      name,
+      credentialHash: deps.crypto.sha256Hex(credential),
+      createdAt: new Date(deps.clock.nowMs()).toISOString(),
+      lastSyncAt: null,
+      revokedAt: null,
+    }),
+  );
+  return { deviceId, credential };
+};
+
+/** What the test helpers hand back for an account that was invited. */
+export type InvitedAccount = {
+  accountId: string;
+  email: string;
+  temporaryPassword: string;
+};
+
+/** An error report the server made; the tests check what it holds and what it does not. */
+export type RecordedReport = { error: unknown; context: ErrorContext };
+
+/**
+ * Creates an invited account with a known temporary password straight in the store (no mail), as
+ * `inviteAccount` would have left it.
+ */
+const inviteTestAccount = async (
+  deps: AppDeps,
+  email: string,
+): Promise<InvitedAccount> => {
+  const accountId = deps.ids.next();
+  const temporaryPassword = deps.crypto.generateTemporaryPassword();
+  const nowMs = deps.clock.nowMs();
+  await deps.store.run(async ({ accounts }) => {
+    await accounts.add({
+      id: accountId,
+      email,
+      role: 'user',
+      passwordHash: null,
+      temporaryPasswordHash: await deps.hasher.hash(
+        normalizeTemporaryPassword(temporaryPassword),
+      ),
+      temporaryExpiresAt: temporaryExpiresAt(nowMs),
+      suspendedAt: null,
+      createdAt: new Date(nowMs).toISOString(),
+    });
+  });
+  return { accountId, email, temporaryPassword };
+};
+
+/** Signs in through the use case, as a device of the test; throws if the server refuses. */
+const signInTestDevice = async (
+  deps: AppDeps,
+  email: string,
+  password: string,
+  deviceName = 'Test phone',
+): Promise<TestAccount> => {
+  const outcome = await signIn(deps, {
+    email,
+    password,
+    deviceName,
+    clientAddress: '127.0.0.1',
+  });
+  if (outcome.kind !== 'signedIn') {
+    throw new Error(`Sign-in refused: ${outcome.kind}`);
+  }
+  return {
+    accountId: outcome.account.id,
+    deviceCredential: outcome.credential,
+  };
+};
+
 export type TestServer = {
   url: string;
   /** An active account with a device, created directly in the store. */
@@ -56,8 +150,18 @@ export type TestServer = {
   }): Promise<TestAccount>;
   /** The emails the server sent, in order. */
   mails(): MailMessage[];
-  /** A fresh code, as the Pi command would create one. */
-  createPairingCode(): Promise<string>;
+  /** What the server reported as errors, in order. */
+  reports(): RecordedReport[];
+  /** An invited account with a known temporary password; no email is sent. */
+  invite(email: string): Promise<InvitedAccount>;
+  /** Suspends an account straight in the store (the administrator routes come with US5). */
+  suspend(accountId: string): Promise<void>;
+  /** Signs a device in with the current password; throws if refused. */
+  signIn(
+    email: string,
+    password: string,
+    deviceName?: string,
+  ): Promise<TestAccount>;
   /**
    * Answers at a second address over the same database, as a server whose domain name changed:
    * same identity, new URL. Closing the server leaves it open; close it apart.
@@ -70,13 +174,19 @@ export type TestServer = {
  * The HTTP app over a real SQLite store in memory, not listening: for tests that call it through
  * `inject`. The caller closes `db`.
  */
-export const buildTestApp = ({ clock }: { clock?: Clock } = {}) => {
+export const buildTestApp = ({
+  clock,
+  mailer = createFakeMailer(),
+}: { clock?: Clock; mailer?: FakeMailer } = {}) => {
   const db = openDatabase(':memory:');
   const store = new SqliteStore(db);
-  const mailer = createFakeMailer();
+  const reports: RecordedReport[] = [];
+  const errorReporter: ErrorReporter = {
+    report: (error, context) => void reports.push({ error, context }),
+  };
   const deps = appDeps({
     store,
-    errorReporter: { report: () => undefined },
+    errorReporter,
     mailer,
     publicUrl: 'https://courses.test',
     hasher: createFakePasswordHasher(),
@@ -88,6 +198,19 @@ export const buildTestApp = ({ clock }: { clock?: Clock } = {}) => {
     store,
     db,
     mailer,
+    reports,
+    invite: (email: string) => inviteTestAccount(deps, email),
+    suspend: (accountId: string) =>
+      store.run(async ({ accounts }) => {
+        const record = await accounts.get(accountId);
+        if (record === null) throw new Error('No such account');
+        await accounts.update({
+          ...record,
+          suspendedAt: new Date(deps.clock.nowMs()).toISOString(),
+        });
+      }),
+    signIn: (email: string, password: string, deviceName?: string) =>
+      signInTestDevice(deps, email, password, deviceName),
     createAccount: (options?: { role?: AccountRole; email?: string }) =>
       createTestAccount(deps, options),
   };
@@ -96,15 +219,28 @@ export const buildTestApp = ({ clock }: { clock?: Clock } = {}) => {
 /** A real server on a random local port over an in-memory database, for adapter tests. */
 export const startTestServer = async ({
   clock,
+  mailer,
   port: wantedPort = 0,
 }: {
   clock?: Clock;
+  mailer?: FakeMailer;
   /** To come back at the address of a server just closed, with a database of its own. */
   port?: number;
 } = {}): Promise<TestServer> => {
-  const { app, deps, db, mailer, createAccount } = buildTestApp(
-    clock ? { clock } : {},
-  );
+  const {
+    app,
+    deps,
+    db,
+    mailer: usedMailer,
+    reports,
+    invite,
+    suspend,
+    signIn: signInDevice,
+    createAccount,
+  } = buildTestApp({
+    ...(clock ? { clock } : {}),
+    ...(mailer ? { mailer } : {}),
+  });
   const listen = async (instance: typeof app, port: number) => {
     await instance.listen({ host: '127.0.0.1', port });
     const address = instance.server.address();
@@ -114,8 +250,11 @@ export const startTestServer = async ({
   return {
     url,
     createAccount,
-    mails: () => [...mailer.sent],
-    createPairingCode: async () => (await createPairingCode(deps, null)).code,
+    mails: () => [...usedMailer.sent],
+    reports: () => [...reports],
+    invite,
+    suspend,
+    signIn: signInDevice,
     listenAlso: async () => {
       const other = buildApp(deps);
       return { url: await listen(other, 0), close: () => other.close() };

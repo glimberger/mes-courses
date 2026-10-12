@@ -14,7 +14,7 @@ import {
 import { installCrashHandlers, type ProcessLike } from './crash-handlers';
 import { serverRelease } from './release';
 import { installShutdownHandlers } from './shutdown';
-import { appDeps, createMailer } from './wiring';
+import { appDeps, createMailer, pruneAuthAttempts } from './wiring';
 
 type Env = Record<string, string | undefined>;
 
@@ -45,9 +45,11 @@ export const main = async (
     );
   }
   const db = openDatabase(databasePath(env));
+  const store = new SqliteStore(db);
+  await pruneAuthAttempts(store);
   const app = buildApp(
     appDeps({
-      store: new SqliteStore(db),
+      store,
       errorReporter,
       mailer: createMailer(mail),
       publicUrl: publicUrl(env),

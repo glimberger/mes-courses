@@ -4,7 +4,7 @@ import {
 } from '@mes-courses/mobile/testing';
 import { startTestServer, type TestServer } from '@mes-courses/server/testing';
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 
 describe('AdminServer and AccountServer HTTP adapters', () => {
   let server: TestServer;

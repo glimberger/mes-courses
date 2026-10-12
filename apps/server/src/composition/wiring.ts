@@ -16,6 +16,7 @@ import type { ErrorReporter } from '../application/ports/error-reporter';
 import type { Mailer } from '../application/ports/mailer';
 import type { PasswordHasher } from '../application/ports/password-hasher';
 import type { ServerStore } from '../application/ports/store';
+import { ATTEMPT_RETENTION_MS } from '../domain/attempts';
 import { MIN_APP_VERSION, type MailConfig } from './config';
 
 /** The mailer the environment asks for (research R8). */
@@ -55,3 +56,14 @@ export const appDeps = ({
   publicUrl,
   minAppVersion: MIN_APP_VERSION,
 });
+
+/** Forgets the sign-in and reset attempts no limit reads any more (also done on every auth request). */
+export const pruneAuthAttempts = (
+  store: ServerStore,
+  clock: Clock = systemClock,
+): Promise<void> =>
+  store.run(({ authAttempts }) =>
+    authAttempts.pruneBefore(
+      new Date(clock.nowMs() - ATTEMPT_RETENTION_MS).toISOString(),
+    ),
+  );

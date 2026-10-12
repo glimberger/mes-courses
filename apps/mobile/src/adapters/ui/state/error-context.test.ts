@@ -226,25 +226,17 @@ const syncCases: Record<string, SyncCase> = {
     },
     run: (state) => state.syncNow(),
   },
-  '003 connectToServer, throwing': {
-    failing: 'connectToServer',
+  '004 signIn, throwing': {
+    failing: 'signIn',
     notConnected: true,
     run: (state) =>
-      state.connectToServer(url, 'K7PQ-M3XZ', 'Tablette de Camille'),
+      state.signIn(url, 'camille@example.org', 'secret', 'Tablette de Camille'),
   },
-  '003 connectToServer, an untrusted certificate': {
+  '004 signIn, an untrusted certificate': {
     notConnected: true,
     syncServer: { health: untrusted },
     run: (state) =>
-      state.connectToServer(url, 'K7PQ-M3XZ', 'Tablette de Camille'),
-  },
-  '003 createPairingCode, throwing': {
-    failing: 'createPairingCode',
-    run: (state) => state.createPairingCode(),
-  },
-  '003 createPairingCode, a server error': {
-    syncServer: { createPairingCode: serverError },
-    run: (state) => state.createPairingCode(),
+      state.signIn(url, 'camille@example.org', 'secret', 'Tablette de Camille'),
   },
   '003 listDevices, throwing': {
     failing: 'listDevices',

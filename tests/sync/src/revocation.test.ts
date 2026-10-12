@@ -1,3 +1,4 @@
+import { signInDevice } from './testing/onboard';
 import {
   FakeClock,
   buildTestAppStack,
@@ -19,27 +20,17 @@ describe('device management against a real server (003 US4)', () => {
   };
 
   const pairWithPiCode = async (stack: TestAppStack, name: string) => {
-    const connected = await stack.useCases.connectToServer(
-      server.url,
-      await server.createPairingCode(),
-      name,
-    );
+    const connected = await signInDevice(server, stack, name);
     expect(connected.ok).toBe(true);
   };
 
-  /** A creates a code in the app and B claims it (US4-3, US4-4). */
+  /** A second device signs in with the account's password (US4-3 no longer needs a code). */
   const pairWithDeviceCode = async (
-    from: TestAppStack,
+    _from: TestAppStack,
     stack: TestAppStack,
     name: string,
   ) => {
-    const code = await from.useCases.createPairingCode();
-    if (!code.ok) throw new Error('no code');
-    const connected = await stack.useCases.connectToServer(
-      server.url,
-      code.value.code,
-      name,
-    );
+    const connected = await signInDevice(server, stack, name);
     expect(connected.ok).toBe(true);
   };
 
@@ -153,16 +144,16 @@ describe('device management against a real server (003 US4)', () => {
     expect(await itemNames(a)).toEqual(['Pain']);
   });
 
-  it('003 US4-12 the sixth wrong code is answered TooManyAttempts', async () => {
+  it('004 FR-006 the sixth wrong password is answered TooManyAttempts', async () => {
     const stack = await newDevice();
     const attempt = () =>
-      stack.useCases.connectToServer(server.url, 'WRONG-CODE', 'Pixel');
+      stack.useCases.signIn(server.url, 'marie@example.org', 'wrong', 'Pixel');
 
     const results = [];
     for (let i = 0; i < 6; i += 1) results.push(await attempt());
 
     expect(results.slice(0, 5)).toEqual(
-      Array(5).fill({ ok: false, error: { type: 'InvalidCode' } }),
+      Array(5).fill({ ok: false, error: { type: 'InvalidCredentials' } }),
     );
     expect(results[5]).toEqual({
       ok: false,

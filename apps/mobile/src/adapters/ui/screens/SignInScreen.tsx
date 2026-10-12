@@ -15,6 +15,7 @@ import * as Device from 'expo-device';
 import { useAnnouncement } from '../accessibility/announce';
 import { BackAction } from '../components/BackAction';
 import { Button } from '../components/Button';
+import { PasswordField } from '../components/PasswordField';
 import type { RootStackParamList } from '../routes';
 import type { AppState } from '../state/app-store';
 import { useAppStore } from '../state/use-app-store';
@@ -23,105 +24,141 @@ import { spacing } from '../theme/spacing';
 /** A device name has at most 60 characters (FR-019c). */
 const MAX_DEVICE_NAME = 60;
 
-type ConnectFailure = Extract<
-  Awaited<ReturnType<AppState['connectToServer']>>,
+type SignInFailure = Extract<
+  Awaited<ReturnType<AppState['signIn']>>,
   { ok: false }
 >['error'];
 
-/** The French text of each way the connection can be refused (contracts/ui-screens.md). */
-export const connectErrorText = (error: ConnectFailure): string | null => {
+/** The French text of each way a sign-in can be refused (contracts/ui-screens.md). */
+export const signInErrorText = (error: SignInFailure): string | null => {
   switch (error.type) {
     case 'InvalidUrl':
       return 'Saisissez une adresse comme courses.example.fr.';
-    case 'ServerUnreachable':
-      return "Impossible de joindre le serveur. Vérifiez l'adresse et votre connexion.";
-    case 'UntrustedServer':
-      return "La connexion au serveur n'est pas sécurisée. Vérifiez l'adresse ou le certificat du serveur.";
-    case 'InvalidCode':
-      return "Ce code n'est pas valide ou a expiré. Demandez un nouveau code.";
+    case 'InvalidEmail':
+      return 'Saisissez une adresse e-mail valide.';
+    case 'InvalidCredentials':
+      // Never says which of the two is wrong (US2-4).
+      return 'Adresse e-mail ou mot de passe incorrect.';
+    case 'TemporaryPasswordExpired':
+      return 'Ce mot de passe temporaire a expiré. Choisissez « Mot de passe oublié ? » pour en recevoir un nouveau.';
+    case 'AccountSuspended':
+      return "Ce compte est suspendu. Contactez l'administrateur du serveur.";
     case 'TooManyAttempts':
       return `Trop d'essais. Réessayez dans ${error.minutesToWait} ${
         error.minutesToWait === 1 ? 'minute' : 'minutes'
       }.`;
+    case 'ServerUnreachable':
+      return "Impossible de joindre le serveur. Vérifiez l'adresse et votre connexion.";
+    case 'UntrustedServer':
+      return "La connexion au serveur n'est pas sécurisée. Vérifiez l'adresse ou le certificat du serveur.";
+    case 'UpdateRequired':
+      return "Mettez à jour l'application pour synchroniser.";
     case 'WriteFailed':
       // The snackbar says so.
       return null;
   }
 };
 
-/** Pairs this device with a server (US4-4): address, pairing code and device name. */
-export const ConnectServerScreen = () => {
+const capped = (text: string) =>
+  Array.from(text).slice(0, MAX_DEVICE_NAME).join('');
+
+/** The address as people say it: without the scheme. */
+const withoutScheme = (url: string) => url.replace(/^https?:\/\//, '');
+
+/** Signs this device in (US2-1): server address, email, password and device name. */
+export const SignInScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const connectToServer = useAppStore((state) => state.connectToServer);
-  const [address, setAddress] = useState('');
-  const [code, setCode] = useState('');
+  const signIn = useAppStore((state) => state.signIn);
+  const lastServerUrl = useAppStore((state) => state.sync.serverUrl);
+  const [address, setAddress] = useState(
+    lastServerUrl === null ? '' : withoutScheme(lastServerUrl),
+  );
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [deviceName, setDeviceName] = useState(capped(Device.modelName ?? ''));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const connect = async () => {
+  const submit = async () => {
     setSaving(true);
     setError(null);
-    const outcome = await connectToServer(address, code, deviceName.trim());
+    const name = deviceName.trim();
+    const outcome = await signIn(address, email, password, name);
     setSaving(false);
-    if (outcome.ok) {
-      navigation.goBack();
+    if (!outcome.ok) {
+      // The form stays as typed.
+      setError(signInErrorText(outcome.error));
       return;
     }
-    // The form stays as typed.
-    setError(connectErrorText(outcome.error));
+    if (outcome.value.type === 'passwordChangeRequired') {
+      navigation.navigate('ChoosePassword', {
+        url: address,
+        email,
+        temporaryPassword: password,
+        deviceName: name,
+      });
+      return;
+    }
+    navigation.goBack();
   };
 
   return (
-    <ConnectServerForm
+    <SignInForm
       onBack={navigation.canGoBack() ? () => navigation.goBack() : null}
       address={address}
       onChangeAddress={setAddress}
-      code={code}
-      onChangeCode={setCode}
+      email={email}
+      onChangeEmail={setEmail}
+      password={password}
+      onChangePassword={setPassword}
       deviceName={deviceName}
       onChangeDeviceName={(text) => setDeviceName(capped(text))}
       error={error}
       saving={saving}
-      onSubmit={() => void connect()}
+      onSubmit={() => void submit()}
+      // The ForgotPasswordDialog opens from here once US4 provides it (T054).
+      onForgotPassword={() => undefined}
     />
   );
 };
 
-const capped = (text: string) =>
-  Array.from(text).slice(0, MAX_DEVICE_NAME).join('');
-
-export type ConnectServerFormProps = {
+export type SignInFormProps = {
   onBack: (() => void) | null;
   address: string;
   onChangeAddress: (text: string) => void;
-  code: string;
-  onChangeCode: (text: string) => void;
+  email: string;
+  onChangeEmail: (text: string) => void;
+  password: string;
+  onChangePassword: (text: string) => void;
   deviceName: string;
   onChangeDeviceName: (text: string) => void;
   /** The French message of the last refusal, announced as it appears (FR-038). */
   error: string | null;
   saving: boolean;
   onSubmit: () => void;
+  onForgotPassword: () => void;
 };
 
 /**
- * The form of ConnectServer, its values, error and callbacks given as props, so a story can show
- * each outcome.
+ * The form of SignIn, its values, error and callbacks given as props, so a story can show each
+ * outcome.
  */
-export const ConnectServerForm = ({
+export const SignInForm = ({
   onBack,
   address,
   onChangeAddress,
-  code,
-  onChangeCode,
+  email,
+  onChangeEmail,
+  password,
+  onChangePassword,
   deviceName,
   onChangeDeviceName,
   error,
   saving,
   onSubmit,
-}: ConnectServerFormProps) => {
+  onForgotPassword,
+}: SignInFormProps) => {
   const insets = useSafeAreaInsets();
   useAnnouncement(error);
   return (
@@ -131,7 +168,7 @@ export const ConnectServerForm = ({
     >
       <Appbar.Header>
         {onBack && <BackAction onPress={onBack} />}
-        <Appbar.Content title="Connecter à un serveur" />
+        <Appbar.Content title="Se connecter" />
       </Appbar.Header>
       <ScrollView
         keyboardShouldPersistTaps="handled"
@@ -151,13 +188,20 @@ export const ConnectServerForm = ({
         />
         <TextInput
           mode="outlined"
-          label="Code d'appairage"
-          accessibilityLabel="Code d'appairage"
-          placeholder="ABCD-EF23"
-          value={code}
-          onChangeText={onChangeCode}
-          autoCapitalize="characters"
+          label="Adresse e-mail"
+          accessibilityLabel="Adresse e-mail"
+          value={email}
+          onChangeText={onChangeEmail}
+          autoCapitalize="none"
           autoCorrect={false}
+          autoComplete="email"
+          keyboardType="email-address"
+          disabled={saving}
+        />
+        <PasswordField
+          label="Mot de passe"
+          value={password}
+          onChangeText={onChangePassword}
           disabled={saving}
         />
         <TextInput
@@ -178,7 +222,10 @@ export const ConnectServerForm = ({
           onPress={onSubmit}
           style={styles.submit}
         >
-          Connecter
+          Se connecter
+        </Button>
+        <Button mode="text" disabled={saving} onPress={onForgotPassword}>
+          Mot de passe oublié ?
         </Button>
       </View>
     </KeyboardAvoidingView>

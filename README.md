@@ -173,13 +173,16 @@ From the repository root:
 
 ```sh
 yarn workspace @mes-courses/server dev           # http://127.0.0.1:3000, database in apps/server/.data/
-yarn workspace @mes-courses/server pairing-code:dev  # a pairing code for that database, valid 10 minutes
+yarn workspace @mes-courses/server create-admin:dev you@example.org  # asks for the password twice
 ```
 
-`pairing-code` (without `:dev`) prints a code for the database at `MES_COURSES_DB`, or the Pi's
-default path. On the Pi, run the built script as the service's user, since only it can read the
-database:
-`sudo -u mes-courses /opt/mes-courses/runtime/bin/node --conditions=production /opt/mes-courses/apps/server/dist/composition/pairing-code.js`. In the app, Réglages › Connecter à un serveur takes the address and the code. A
+`create-admin` (without `:dev`) completes the first account, the one that owns the data already on
+the server, with an address and a password. On the Pi, run the built script as the service's user,
+since only it can read the database:
+`sudo -u mes-courses /opt/mes-courses/runtime/bin/node --conditions=production /opt/mes-courses/apps/server/dist/composition/create-admin.js you@example.org`.
+`set-password` resets any account's password the same way. Everyone else is invited from the app
+(Réglages › Gérer les comptes) and signs in with the address and the temporary password they
+receive by email (`MES_COURSES_SMTP_URL`, `MES_COURSES_MAIL_FROM`, `MES_COURSES_PUBLIC_URL`). A
 development build accepts `http://127.0.0.1:3000` (or the machine's LAN address) only when built
 with `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL=1`; release builds refuse `http://`.
 

@@ -116,11 +116,11 @@ describe('Settings', () => {
 
       expect(
         screen.getByText(
-          'Synchronisez vos listes avec votre serveur pour les retrouver sur vos autres appareils.',
+          'Connectez-vous pour retrouver vos listes sur vos autres appareils.',
         ),
       ).toBeOnTheScreen();
       expect(
-        screen.getByRole('button', { name: 'Connecter à un serveur' }),
+        screen.getByRole('button', { name: 'Se connecter' }),
       ).toBeOnTheScreen();
     });
 
@@ -134,15 +134,13 @@ describe('Settings', () => {
       ).toBeNull();
     });
 
-    it('opens ConnectServer from "Connecter à un serveur"', async () => {
+    it('opens SignIn from "Connecter à un serveur"', async () => {
       await openSettings();
 
-      fireEvent.press(
-        screen.getByRole('button', { name: 'Connecter à un serveur' }),
-      );
+      fireEvent.press(screen.getByRole('button', { name: 'Se connecter' }));
 
       expect(
-        await screen.findByRole('header', { name: 'Connecter à un serveur' }),
+        await screen.findByRole('header', { name: 'Se connecter' }),
       ).toBeOnTheScreen();
     });
   });
@@ -159,7 +157,7 @@ describe('Settings', () => {
       expect(await screen.findByText('courses.example.fr')).toBeOnTheScreen();
       expect(
         screen.queryByText(
-          'Synchronisez vos listes avec votre serveur pour les retrouver sur vos autres appareils.',
+          'Connectez-vous pour retrouver vos listes sur vos autres appareils.',
         ),
       ).toBeNull();
     });

@@ -19,8 +19,10 @@ export type Notice =
   | { type: 'writeFailed' }
   | { type: 'storageFull' }
   | { type: 'articleAdded'; name: string }
-  /** The device is paired with a server; the first sync starts (US4-4). */
-  | { type: 'deviceConnected' }
+  /** The device is signed in; the first sync starts (US2-1). */
+  | { type: 'signedIn' }
+  /** The person chose their password and the device is signed in (US2-2). */
+  | { type: 'passwordChosen' }
   /** The administrator invited an address (US1-1). Kept in memory, never reported. */
   | { type: 'invitationSent'; email: string }
   /** A pull deleted the article of an undo offer, or of a form (FR-008, FR-020a). */

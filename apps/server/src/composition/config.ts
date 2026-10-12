@@ -1,5 +1,5 @@
 /** Apps older than this are refused with 426 (research R12). */
-export const MIN_APP_VERSION = '1.0.0';
+export const MIN_APP_VERSION = '1.1.0';
 
 export const DEFAULT_DATABASE_PATH = '/var/lib/mes-courses/mes-courses.db';
 export const LISTEN_HOST = '127.0.0.1';

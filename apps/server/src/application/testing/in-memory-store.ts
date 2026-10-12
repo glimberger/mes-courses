@@ -9,7 +9,6 @@ import type {
   EntityRepository,
   ListItemRecord,
   ListRecord,
-  PairingCodeRecord,
   DirectoryRepositories,
   Repositories,
   ServerStore,
@@ -32,8 +31,6 @@ type State = {
   devices: Map<string, DeviceRecord>;
   endedCredentials: Map<string, 'accountDeleted'>;
   authAttempts: Array<{ kind: AttemptKind; keyHash: string; at: string }>;
-  pairingCodes: Map<string, PairingCodeRecord>;
-  pairingFailures: string[];
 };
 
 const emptyData = (): AccountData => ({
@@ -232,36 +229,6 @@ const directory = (state: State): DirectoryRepositories => ({
       );
     },
   },
-  pairingCodes: {
-    add: async (record) => {
-      if (state.pairingCodes.has(record.codeHash)) {
-        throw new Error('Pairing code already exists');
-      }
-      state.pairingCodes.set(record.codeHash, { ...record });
-    },
-    findByHash: async (codeHash) => {
-      const found = state.pairingCodes.get(codeHash);
-      return found ? { ...found } : null;
-    },
-    markUsed: async (codeHash, at) => {
-      const found = state.pairingCodes.get(codeHash);
-      if (found) state.pairingCodes.set(codeHash, { ...found, usedAt: at });
-    },
-  },
-  pairingFailures: {
-    add: async (at) => {
-      state.pairingFailures.push(at);
-    },
-    pruneBefore: async (before) => {
-      state.pairingFailures = state.pairingFailures.filter(
-        (at) => at >= before,
-      );
-    },
-    countSince: async (since) =>
-      state.pairingFailures.filter((at) => at >= since).length,
-    earliestSince: async (since) =>
-      state.pairingFailures.filter((at) => at >= since).sort()[0] ?? null,
-  },
 });
 
 /** The data repositories of one account: they only ever see its maps. */
@@ -344,8 +311,6 @@ export class InMemoryStore implements ServerStore {
       devices: new Map(),
       endedCredentials: new Map(),
       authAttempts: [],
-      pairingCodes: new Map(),
-      pairingFailures: [],
     };
   }
 

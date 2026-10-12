@@ -108,7 +108,7 @@ export const SyncStatusBar = () => {
           onPress={() =>
             action.target === 'retry'
               ? void retry()
-              : navigation.navigate('ConnectServer')
+              : navigation.navigate('SignIn')
           }
         >
           {action.label}

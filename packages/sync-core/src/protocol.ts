@@ -102,8 +102,6 @@ export type DeviceSummary = {
   lastSyncAt: string | null;
 };
 
-export type PairingCode = { code: string; expiresAt: string };
-
 export const ERROR_CODES = {
   BadRequest: 400,
   DeviceNotAuthorized: 401,
@@ -111,8 +109,6 @@ export const ERROR_CODES = {
   UpdateRequired: 426,
   TooManyAttempts: 429,
   ServerError: 500,
-  /** Unknown, expired or used pairing code (claim route only). */
-  InvalidCode: 400,
   InvalidCredentials: 401,
   TemporaryPasswordExpired: 401,
   AccountDeleted: 401,

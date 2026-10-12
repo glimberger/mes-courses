@@ -80,15 +80,17 @@ describe('restoring and writing at size (003 SC-004, SC-005)', () => {
 
   /** Pushes the user's data straight to the API, as a device paired before would have. */
   const seedServer = async () => {
-    const claim = await fetch(`${server.url}/v1/pairing/claim`, {
+    await server.createAccount({ email: 'seeder@example.org' });
+    const signIn = await fetch(`${server.url}/v1/auth/sign-in`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        code: await server.createPairingCode(),
+        email: 'seeder@example.org',
+        password: 'a long enough password',
         deviceName: 'Seeder',
       }),
     });
-    const { deviceId, credential } = (await claim.json()) as {
+    const { deviceId, credential } = (await signIn.json()) as {
       deviceId: string;
       credential: string;
     };
@@ -111,9 +113,10 @@ describe('restoring and writing at size (003 SC-004, SC-005)', () => {
   };
 
   const pair = async (stack: TestAppStack) => {
-    const connected = await stack.useCases.connectToServer(
+    const connected = await stack.useCases.signIn(
       server.url,
-      await server.createPairingCode(),
+      'seeder@example.org',
+      'a long enough password',
       'Nouvelle tablette',
     );
     expect(connected.ok).toBe(true);

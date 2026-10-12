@@ -1,3 +1,4 @@
+import { signInDevice } from './testing/onboard';
 import {
   FakeClock,
   buildTestAppStack,
@@ -35,12 +36,7 @@ describe('two devices and one server (003 US2)', () => {
   const tick = () => clock.advance(1_000);
 
   const pair = async (device: Device) => {
-    const code = await server.createPairingCode();
-    const connected = await device.stack.useCases.connectToServer(
-      server.url,
-      code,
-      device.name,
-    );
+    const connected = await signInDevice(server, device.stack, device.name);
     expect(connected.ok).toBe(true);
   };
 

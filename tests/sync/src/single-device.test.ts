@@ -1,3 +1,4 @@
+import { signInDevice } from './testing/onboard';
 import type { Change } from '@mes-courses/sync-core';
 import {
   FakeClock,
@@ -43,12 +44,7 @@ describe('one device and its server (003 US1)', () => {
   const tick = () => clock.advance(1_000);
 
   const pair = async (stack: TestAppStack, deviceName = 'Pixel') => {
-    const code = await server.createPairingCode();
-    const connected = await stack.useCases.connectToServer(
-      server.url,
-      code,
-      deviceName,
-    );
+    const connected = await signInDevice(server, stack, deviceName);
     expect(connected.ok).toBe(true);
   };
 

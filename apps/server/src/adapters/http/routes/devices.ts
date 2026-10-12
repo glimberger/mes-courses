@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
-import { InvalidDeviceNameError } from '../../../application/use-cases/claim-pairing-code';
+import { InvalidDeviceNameError } from '../../../application/use-cases/invalid-device-name';
 import { listDevices } from '../../../application/use-cases/list-devices';
 import { NotFoundError } from '../../../application/use-cases/not-found';
 import { renameDevice } from '../../../application/use-cases/rename-device';

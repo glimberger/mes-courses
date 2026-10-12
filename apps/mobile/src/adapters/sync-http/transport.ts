@@ -114,3 +114,9 @@ export const transportFailure = (
   answer: Exclude<Answer, { kind: 'response' }>,
 ): Result<never, SyncFailure> =>
   err({ type: answer.kind === 'untrusted' ? 'UntrustedServer' : 'Offline' });
+
+/** `Retry-After` in seconds; an HTTP-date or a missing header gives a 1 minute wait. */
+export const minutesToWait = (header: string | null): number => {
+  const seconds = header === null ? NaN : Number(header);
+  return Number.isFinite(seconds) ? Math.max(1, Math.ceil(seconds / 60)) : 1;
+};

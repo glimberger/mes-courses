@@ -9,8 +9,6 @@
     "dev": "MES_COURSES_DB=.data/mes-courses.db tsx watch --clear-screen=false src/composition/main.ts",
     "build": "yarn workspace @mes-courses/sync-core build && tsc -p tsconfig.json",
     "start": "node --conditions=production dist/composition/main.js",
-    "pairing-code": "tsx src/composition/pairing-code.ts",
-    "pairing-code:dev": "MES_COURSES_DB=.data/mes-courses.db tsx src/composition/pairing-code.ts",
     "create-admin": "node dist/composition/create-admin.js",
     "create-admin:dev": "MES_COURSES_DB=.data/mes-courses.db tsx src/composition/create-admin.ts",
     "set-password": "node dist/composition/set-password.js",

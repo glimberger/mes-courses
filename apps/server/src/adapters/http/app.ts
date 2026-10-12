@@ -7,9 +7,9 @@ import type { AppDeps } from './deps';
 import { sendError } from './errors';
 import { registerAccountRoutes } from './routes/account';
 import { registerAdminRoutes } from './routes/admin';
+import { registerAuthRoutes } from './routes/auth';
 import { registerDeviceRoutes } from './routes/devices';
 import { registerHealthRoutes } from './routes/health';
-import { registerPairingRoutes } from './routes/pairing';
 import { registerSyncRoutes } from './routes/sync';
 
 const BODY_LIMIT = 1024 * 1024;
@@ -20,8 +20,18 @@ export const buildApp = (deps: AppDeps): FastifyInstance => {
   const app = Fastify({
     bodyLimit: BODY_LIMIT,
     logger: false,
-    // Reject a wrong type or an unknown property instead of coercing or stripping it.
-    ajv: { customOptions: { coerceTypes: false, removeAdditional: false } },
+    // Only Caddy, on this machine, may name the client address (`X-Forwarded-For`); from anyone
+    // else the header is ignored, so the sign-in limits cannot be dodged by forging it.
+    trustProxy: '127.0.0.1',
+    // Reject a wrong type or an unknown property instead of coercing or stripping it. String
+    // lengths count UTF-16 units, as the contract says of the password fields.
+    ajv: {
+      customOptions: {
+        coerceTypes: false,
+        removeAdditional: false,
+        unicode: false,
+      },
+    },
   });
 
   let serverId: string | undefined;
@@ -108,8 +118,8 @@ export const buildApp = (deps: AppDeps): FastifyInstance => {
   registerHealthRoutes(app);
   registerAccountRoutes(app);
   registerAdminRoutes(app, deps);
+  registerAuthRoutes(app, deps);
   registerDeviceRoutes(app, deps);
-  registerPairingRoutes(app, deps);
   registerSyncRoutes(app, deps);
 
   return app;

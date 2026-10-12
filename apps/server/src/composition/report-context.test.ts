@@ -8,7 +8,7 @@ import type {
   ErrorReporter,
 } from '../application/ports/error-reporter';
 import type { Repositories, ServerStore } from '../application/ports/store';
-import { createPairingCode } from '../application/use-cases/create-pairing-code';
+import { addTestDevice } from '../testing/start-test-server';
 import { appDeps } from './wiring';
 
 /**
@@ -53,8 +53,6 @@ class BreakableStore implements ServerStore {
               all: broken,
             }
           : failingRepository(),
-        pairingCodes: failingRepository(),
-        pairingFailures: failingRepository(),
       } as Repositories);
     });
   }
@@ -111,21 +109,16 @@ const harness = async () => {
   const reporter = new RecordingReporter();
   const deps = appDeps({ store, errorReporter: reporter });
   const app = buildApp(deps);
-  const claim = async (code: string, name: string) =>
+  const signIn = async (password: string, name: string) =>
     app.inject({
       method: 'POST',
-      url: '/v1/pairing/claim',
+      url: '/v1/auth/sign-in',
       headers: { host: HOST },
-      payload: { code, deviceName: name },
+      payload: { email: 'nobody@example.org', password, deviceName: name },
     });
-  const paired = (
-    await claim((await createPairingCode(deps, null)).code, deviceName)
-  ).json() as {
-    deviceId: string;
-    credential: string;
-  };
-  const spareCode = (await createPairingCode(deps, null)).code;
-  return { app, deps, db, store, reporter, claim, paired, spareCode };
+  const [setup] = await store.run(({ accounts }) => accounts.all());
+  const paired = await addTestDevice(deps, setup?.id ?? '', deviceName);
+  return { app, deps, db, store, reporter, signIn, paired };
 };
 
 type Harness = Awaited<ReturnType<typeof harness>>;
@@ -139,14 +132,18 @@ const requests: Record<string, (h: Harness) => Promise<unknown>> = {
       url: '/v1/health',
       headers: { host: HOST },
     }),
-  'POST /v1/pairing/claim': ({ claim, spareCode }) =>
-    claim(spareCode, deviceName),
-  'POST /v1/pairing-codes': ({ app, paired }) =>
+  'POST /v1/auth/sign-in': ({ signIn }) => signIn('wrong password', deviceName),
+  'POST /v1/auth/choose-password': ({ app }) =>
     app.inject({
       method: 'POST',
-      url: '/v1/pairing-codes',
-      headers: { host: HOST, authorization: `Bearer ${paired.credential}` },
-      payload: {},
+      url: '/v1/auth/choose-password',
+      headers: { host: HOST },
+      payload: {
+        email: 'nobody@example.org',
+        temporaryPassword: 'ABCD-EFGH-JKMN-PQRS',
+        newPassword: 'a brand new password',
+        deviceName,
+      },
     }),
   'GET /v1/devices': ({ app, paired }) =>
     app.inject({
@@ -200,8 +197,6 @@ describe('the context of every report the server makes', () => {
         newName,
         h.paired.credential,
         h.paired.deviceId,
-        h.spareCode,
-        h.spareCode.replace('-', ''),
         'Barbecue',
         'Houmous maison',
       ];

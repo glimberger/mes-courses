@@ -1,5 +1,5 @@
 import { cleanDeviceName } from '../../domain/device';
-import { InvalidDeviceNameError } from './claim-pairing-code';
+import { InvalidDeviceNameError } from './invalid-device-name';
 import type { DevicesDeps } from './list-devices';
 import { NotFoundError } from './not-found';
 

@@ -20,7 +20,7 @@ const STORYBOOK_CONFIG = '^apps/mobile/\\.rnstorybook/';
 const TESTING_FOLDERS = `${MOBILE_SRC}/(adapters/ui|application)/testing/|^apps/mobile/test/`;
 const STORYBOOK_IMPORTERS = `${STORIES}|${STORYBOOK_CONFIG}|^apps/mobile/metro\\.config\\.js$|^apps/mobile/src/adapters/ui/stories\\.test\\.tsx$`;
 const TESTING_FILES = `${STORIES}|${TESTING_FOLDERS}`;
-const TESTING_IMPORTERS = `\\.test\\.tsx?$|${STORIES}|${STORYBOOK_CONFIG}|${TESTING_FOLDERS}`;
+const TESTING_IMPORTERS = `\\.test\\.tsx?$|${STORIES}|${STORYBOOK_CONFIG}|${TESTING_FOLDERS}|^tests/sync/src/testing/`;
 
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {

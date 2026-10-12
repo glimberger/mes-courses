@@ -68,7 +68,6 @@ export const serverStoreContract = (
             'k-1',
             '2026-10-01T10:00:00.000Z',
           );
-          await repos.pairingFailures.add('2026-10-01T10:00:00.000Z');
           throw failure;
         }),
       ).rejects.toBe(failure);
@@ -90,9 +89,6 @@ export const serverStoreContract = (
             'k-1',
             '2000-01-01T00:00:00.000Z',
           ),
-        ).toBe(0);
-        expect(
-          await repos.pairingFailures.countSince('2000-01-01T00:00:00.000Z'),
         ).toBe(0);
       });
     });

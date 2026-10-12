@@ -1,5 +1,3 @@
-import type { PairingCode } from '@mes-courses/sync-core';
-
 import type {
   DeviceNotFound,
   SyncFailure,
@@ -14,8 +12,6 @@ import { UnexpectedResult } from './unexpected-result';
 
 /** The actions of the device management of Settings (US4-3, US4-8, US4-9, US4-11, FR-016). */
 export type DeviceActions = {
-  /** "Ajouter un appareil": a code for another device. */
-  createPairingCode: () => Promise<Result<PairingCode, SyncFailure>>;
   listDevices: () => Promise<Result<DeviceInfo[], SyncFailure>>;
   renameDevice: (
     id: string,
@@ -70,8 +66,6 @@ export const createDeviceActions = (
   };
 
   return {
-    createPairingCode: () =>
-      call('createPairingCode', () => useCases.createPairingCode()),
     listDevices: () => call('listDevices', () => useCases.listDevices()),
     renameDevice: (id, name) =>
       call('renameDevice', () => useCases.renameDevice(id, name)),

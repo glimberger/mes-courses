@@ -293,12 +293,12 @@ describe('server migration 2 (accounts)', () => {
       ).toEqual({ id: 'd-1', account_id: 'setup-account' });
     });
 
-    it('004 keeps the pairing tables until T046 drops them, with their rows', () => {
-      expect(
-        db.get<{ n: number }>('SELECT COUNT(*) AS n FROM pairing_code')?.n,
-      ).toBe(1);
-      expect(names(db, 'table')).toEqual(
-        expect.arrayContaining(['pairing_code', 'pairing_failure']),
+    it('004 drops the pairing tables', () => {
+      expect(names(db, 'table')).not.toEqual(
+        expect.arrayContaining(['pairing_code']),
+      );
+      expect(names(db, 'table')).not.toEqual(
+        expect.arrayContaining(['pairing_failure']),
       );
     });
   });
@@ -324,8 +324,6 @@ describe('server migration 2 (accounts)', () => {
         'ended_credential',
         'list_item',
         'meta',
-        'pairing_code',
-        'pairing_failure',
         'shopping_list',
       ]);
       expect(
@@ -342,7 +340,6 @@ describe('server migration 2 (accounts)', () => {
         'list_item_seq',
         'list_live_name',
         'list_seq',
-        'pairing_failure_at',
       ]);
     });
 

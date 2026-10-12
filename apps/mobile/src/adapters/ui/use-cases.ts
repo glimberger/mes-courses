@@ -5,6 +5,7 @@ import type {
 } from '../../application/ports/admin-server';
 import type { Clock } from '../../application/ports/clock';
 import type { CredentialStore } from '../../application/ports/credential-store';
+import type { LocalDataEraser } from '../../application/ports/local-data-eraser';
 import type { IdGenerator } from '../../application/ports/id-generator';
 import type {
   DeviceNotFound,
@@ -29,12 +30,16 @@ import {
 import { createChangeItemQuantity } from '../../application/use-cases/change-item-quantity';
 import { createCreateArticleAndAddToList } from '../../application/use-cases/create-article-and-add-to-list';
 import {
-  createConnectToServer,
-  type ConnectError,
-} from '../../application/use-cases/connect-to-server';
+  createSignIn,
+  type SignInError,
+  type SignInResult,
+} from '../../application/use-cases/sign-in';
+import {
+  createChooseInitialPassword,
+  type ChooseInitialPasswordError,
+} from '../../application/use-cases/choose-initial-password';
 import { createCreateCategory } from '../../application/use-cases/create-category';
 import { createCreateList } from '../../application/use-cases/create-list';
-import { createCreatePairingCode } from '../../application/use-cases/create-pairing-code';
 import { createDeleteArticle } from '../../application/use-cases/delete-article';
 import { createDisconnect } from '../../application/use-cases/disconnect';
 import { createEditArticle } from '../../application/use-cases/edit-article';
@@ -75,7 +80,7 @@ import type {
   ArticleUsage,
   DeletedArticle,
 } from '../../domain/article';
-import type { AccountSummary, PairingCode } from '@mes-courses/sync-core';
+import type { AccountSummary } from '@mes-courses/sync-core';
 import type { CatalogView } from '../../domain/catalog-view';
 import type {
   Category,
@@ -169,15 +174,23 @@ export type UseCases = {
   ) => Promise<
     Result<{ categoryId: CategoryId }, NameError | NameAlreadyUsed<Category>>
   >;
-  connectToServer: (
+  signIn: (
     url: string,
-    code: string,
+    email: string,
+    password: string,
     deviceName: string,
-  ) => Promise<Result<void, ConnectError>>;
+  ) => Promise<Result<SignInResult, SignInError>>;
+  chooseInitialPassword: (
+    url: string,
+    email: string,
+    temporaryPassword: string,
+    newPassword: string,
+    confirmation: string,
+    deviceName: string,
+  ) => Promise<Result<void, ChooseInitialPasswordError>>;
   synchronize: () => Promise<SyncResult>;
   releaseHeldChanges: (undoId: string) => Promise<void>;
   getSyncInfo: () => Promise<SyncInfo>;
-  createPairingCode: () => Promise<Result<PairingCode, SyncFailure>>;
   listDevices: () => Promise<Result<DeviceInfo[], SyncFailure>>;
   renameDevice: (
     id: string,
@@ -212,6 +225,7 @@ export const createUseCases = (ports: {
   accountServer: AccountServer;
   adminServer: AdminServer;
   credentials: CredentialStore;
+  localDataEraser: LocalDataEraser;
   /** Accepts `http://` server addresses; development builds only. */
   allowInsecure?: boolean;
 }): UseCases => ({
@@ -234,11 +248,11 @@ export const createUseCases = (ports: {
   createList: createCreateList(ports),
   setCurrentList: createSetCurrentList(ports),
   createCategory: createCreateCategory(ports),
-  connectToServer: createConnectToServer(ports),
+  signIn: createSignIn(ports),
+  chooseInitialPassword: createChooseInitialPassword(ports),
   synchronize: createSynchronize(ports),
   releaseHeldChanges: createReleaseHeldChanges(ports),
   getSyncInfo: createGetSyncInfo(ports),
-  createPairingCode: createCreatePairingCode(ports),
   listDevices: createListDevices(ports),
   renameDevice: createRenameDevice(ports),
   revokeDevice: createRevokeDevice(ports),

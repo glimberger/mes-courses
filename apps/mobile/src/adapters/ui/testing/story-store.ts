@@ -1,3 +1,5 @@
+import { seed } from '../seed';
+import { eraserOf } from '../../../application/testing/in-memory-local-data-eraser';
 import { InMemoryCredentialStore } from '../../../application/testing/in-memory-credential-store';
 import { OfflineSyncServer } from '../../../application/testing/offline-sync-server';
 import { OfflineAccountServer } from '../../../application/testing/offline-account-server';
@@ -142,6 +144,7 @@ export const buildStoryStore = async (scenario: StoryScenario) => {
       });
     });
   }
+  const ids = new SequentialIdGenerator();
   const real = createUseCases({
     syncServer: Object.assign(new OfflineSyncServer(), scenario.syncServer),
     accountServer: Object.assign(
@@ -153,8 +156,9 @@ export const buildStoryStore = async (scenario: StoryScenario) => {
       connected && !connected.withoutCredential ? 'story-credential' : null,
     ),
     unitOfWork,
-    ids: new SequentialIdGenerator(),
+    ids,
     clock: new FakeClock(),
+    localDataEraser: eraserOf(unitOfWork, ids, seed),
   });
   // Settles when a use case held pending is called: `prepare` may be waiting on it for ever.
   let pendingCalled!: () => void;

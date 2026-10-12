@@ -1,7 +1,12 @@
 import { StorageFull } from '../../../application/ports/storage-full';
-import type { ConnectError } from '../../../application/use-cases/connect-to-server';
+import type { ChooseInitialPasswordError } from '../../../application/use-cases/choose-initial-password';
+import type {
+  SignInError,
+  SignInResult,
+} from '../../../application/use-cases/sign-in';
 import type { SyncResult } from '../../../application/use-cases/synchronize';
-import { err, ok, type Result } from '../../../domain/result';
+import { err, type Result } from '../../../domain/result';
+import { reactToFailure } from './failure-reactions';
 import { createDeviceActions, type DeviceActions } from './device-actions';
 import type { StoreKit, SyncSlice, WriteFailed } from './store-kit';
 import { UnexpectedResult } from './unexpected-result';
@@ -17,13 +22,32 @@ export type SyncActions = DeviceActions & {
   retry: () => Promise<{ failed: boolean }>;
   /** Tells the user a pull removed what a form was editing; the form then closes itself. */
   noticeRemoteRemoval: (reason: 'articleDeleted' | 'itemRemoved') => void;
-  /** Pairs this device with a server (US4-4). */
-  connectToServer: (
+  /** Signs this device in (US2-1). */
+  signIn: (
     url: string,
-    code: string,
+    email: string,
+    password: string,
     deviceName: string,
   ) => Promise<
-    Result<void, Exclude<ConnectError, { type: 'StorageFailed' }> | WriteFailed>
+    Result<
+      SignInResult,
+      Exclude<SignInError, { type: 'StorageFailed' }> | WriteFailed
+    >
+  >;
+  /** Finishes the first sign-in with the password the person chose (US2-2). */
+  chooseInitialPassword: (
+    url: string,
+    email: string,
+    temporaryPassword: string,
+    newPassword: string,
+    confirmation: string,
+    deviceName: string,
+  ) => Promise<
+    Result<
+      void,
+      | Exclude<ChooseInitialPasswordError, { type: 'StorageFailed' }>
+      | WriteFailed
+    >
   >;
 };
 
@@ -227,38 +251,75 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
     return inFlight;
   };
 
-  const connectToServer: SyncActions['connectToServer'] = async (
-    url,
-    code,
-    deviceName,
-  ) => {
-    let outcome: Result<void, ConnectError>;
+  /**
+   * Reacts to what the sign-in use cases returned: a refused or outdated server changes the
+   * connection or is reported as its tag alone, never the address, the email or a password
+   * (Principle VIII, FR-020). Returns what the screen shows.
+   */
+  const settle = async <T, E extends { type: string }>(
+    operation: 'signIn' | 'choosePassword',
+    screen: 'SignIn' | 'ChoosePassword',
+    run: () => Promise<Result<T, E>>,
+  ): Promise<
+    Result<T, Exclude<E, { type: 'StorageFailed' }> | WriteFailed>
+  > => {
+    let outcome: Result<T, E>;
     try {
-      outcome = await useCases.connectToServer(url, code, deviceName);
+      outcome = await run();
     } catch (error) {
       set({ notice: { type: 'writeFailed' } });
-      report(error, 'connectToServer', 'ConnectServer');
+      report(error, operation, screen);
       return err({ type: 'WriteFailed' });
     }
-    if (!outcome.ok) {
-      const { type } = outcome.error;
-      if (type === 'UntrustedServer' || type === 'StorageFailed') {
-        // Only the tag is reported, never the address the user typed (FR-019, 001 FR-030).
-        report(new UnexpectedResult(type), 'connectToServer', 'ConnectServer');
-      }
-      if (outcome.error.type === 'StorageFailed') {
-        set({ notice: { type: 'writeFailed' } });
-        return err({ type: 'WriteFailed' });
-      }
-      return err(outcome.error);
+    if (outcome.ok) return outcome;
+    if (outcome.error.type === 'StorageFailed') {
+      report(new UnexpectedResult('StorageFailed'), operation, screen);
+      set({ notice: { type: 'writeFailed' } });
+      return err({ type: 'WriteFailed' });
     }
+    reactToFailure(kit, operation, screen, outcome.error);
+    return err(outcome.error as Exclude<E, { type: 'StorageFailed' }>);
+  };
+
+  /** The device is signed in: the first cycle starts soon, not after the current delay. */
+  const startSyncing = async (notice: 'signedIn' | 'passwordChosen') => {
     failureStreak = 0;
     failureReported = false;
     await loadSyncInfo();
-    set({ notice: { type: 'deviceConnected' } });
-    // The first cycle starts soon, not after the current delay.
+    set({ notice: { type: notice } });
     onLocalWrite();
-    return ok(undefined);
+  };
+
+  const signIn: SyncActions['signIn'] = async (url, email, password, name) => {
+    const outcome = await settle('signIn', 'SignIn', () =>
+      useCases.signIn(url, email, password, name),
+    );
+    if (outcome.ok && outcome.value.type === 'signedIn') {
+      await startSyncing('signedIn');
+    }
+    return outcome;
+  };
+
+  const chooseInitialPassword: SyncActions['chooseInitialPassword'] = async (
+    url,
+    email,
+    temporaryPassword,
+    newPassword,
+    confirmation,
+    name,
+  ) => {
+    const outcome = await settle('choosePassword', 'ChoosePassword', () =>
+      useCases.chooseInitialPassword(
+        url,
+        email,
+        temporaryPassword,
+        newPassword,
+        confirmation,
+        name,
+      ),
+    );
+    if (outcome.ok) await startSyncing('passwordChosen');
+    return outcome;
   };
 
   const noticeRemoteRemoval: SyncActions['noticeRemoteRemoval'] = (reason) => {
@@ -291,7 +352,8 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
   return {
     syncNow,
     retry: syncNow,
-    connectToServer,
+    signIn,
+    chooseInitialPassword,
     noticeRemoteRemoval,
     ...devices,
   };

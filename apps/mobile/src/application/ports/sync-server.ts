@@ -1,8 +1,6 @@
 import type {
   DeviceSummary,
   HealthInfo,
-  Pairing,
-  PairingCode,
   SyncRequest,
   SyncResponse,
 } from '@mes-courses/sync-core';
@@ -21,7 +19,6 @@ export type UpdateRequired = { type: 'UpdateRequired' };
 export type ServerError = { type: 'ServerError' };
 /** TLS verification failed (FR-019): never retried insecurely. */
 export type UntrustedServer = { type: 'UntrustedServer' };
-export type InvalidCode = { type: 'InvalidCode' };
 export type TooManyAttempts = {
   type: 'TooManyAttempts';
   minutesToWait: number;
@@ -40,23 +37,10 @@ export interface SyncServer {
   health(
     url: string,
   ): Promise<Result<HealthInfo, ServerUnreachable | UntrustedServer>>;
-  claim(
-    url: string,
-    code: string,
-    deviceName: string,
-  ): Promise<
-    Result<
-      Pairing,
-      InvalidCode | TooManyAttempts | ServerUnreachable | UntrustedServer
-    >
-  >;
   sync(
     conn: Connection,
     request: SyncRequest,
   ): Promise<Result<SyncResponse, SyncFailure>>;
-  createPairingCode(
-    conn: Connection,
-  ): Promise<Result<PairingCode, SyncFailure>>;
   listDevices(conn: Connection): Promise<Result<DeviceSummary[], SyncFailure>>;
   renameDevice(
     conn: Connection,

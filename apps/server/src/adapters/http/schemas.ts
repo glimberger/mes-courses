@@ -1,22 +1,6 @@
 import { MAX_CHANGES_PER_REQUEST } from '@mes-courses/sync-core';
 
-/** JSON schemas of the request bodies (contracts/sync-api.md). */
-export const claimBodySchema = {
-  type: 'object',
-  required: ['code', 'deviceName'],
-  additionalProperties: false,
-  properties: {
-    code: { type: 'string', minLength: 1, maxLength: 32 },
-    // The use case enforces 1–60 characters after trimming; this only bounds the payload.
-    deviceName: { type: 'string', maxLength: 200 },
-  },
-} as const;
-
-/** `POST /v1/pairing-codes` takes no input; a body, if sent, is ignored. */
-export const pairingCodesBodySchema = {
-  type: ['object', 'null'],
-} as const;
-
+/** JSON schemas of the request bodies (contracts/sync-api.md, auth-api.md). */
 /** `PATCH /v1/devices/:id`; the use case enforces 1–60 characters after trimming. */
 export const renameDeviceBodySchema = {
   type: 'object',
@@ -120,4 +104,33 @@ export const inviteBodySchema = {
   required: ['email'],
   additionalProperties: false,
   properties: { email: { type: 'string', maxLength: 512 } },
+} as const;
+
+/** Every password field is capped at 512 UTF-16 units (contracts/auth-api.md). */
+const passwordSchema = { type: 'string', maxLength: 512 } as const;
+const emailSchema = { type: 'string', maxLength: 512 } as const;
+// The use case enforces 1–60 characters after trimming; this only bounds the payload.
+const deviceNameSchema = { type: 'string', maxLength: 200 } as const;
+
+export const signInBodySchema = {
+  type: 'object',
+  required: ['email', 'password', 'deviceName'],
+  additionalProperties: false,
+  properties: {
+    email: emailSchema,
+    password: passwordSchema,
+    deviceName: deviceNameSchema,
+  },
+} as const;
+
+export const choosePasswordBodySchema = {
+  type: 'object',
+  required: ['email', 'temporaryPassword', 'newPassword', 'deviceName'],
+  additionalProperties: false,
+  properties: {
+    email: emailSchema,
+    temporaryPassword: passwordSchema,
+    newPassword: passwordSchema,
+    deviceName: deviceNameSchema,
+  },
 } as const;

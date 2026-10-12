@@ -15,8 +15,10 @@ const text = (notice: Notice): string => {
       return 'Espace de stockage insuffisant. Libérez de la place sur votre téléphone.';
     case 'articleAdded':
       return `« ${notice.name} » ajouté`;
-    case 'deviceConnected':
-      return 'Appareil connecté. Synchronisation en cours…';
+    case 'signedIn':
+      return 'Connecté. Synchronisation en cours…';
+    case 'passwordChosen':
+      return 'Mot de passe enregistré. Bienvenue !';
     case 'invitationSent':
       return `Invitation envoyée à ${notice.email}.`;
     case 'articleDeletedElsewhere':

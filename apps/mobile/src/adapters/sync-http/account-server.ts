@@ -1,11 +1,19 @@
-import type { AccountInfo } from '@mes-courses/sync-core';
+import type { AccountInfo, PasswordProblem } from '@mes-courses/sync-core';
 
-import type { AccountServer } from '../../application/ports/account-server';
-import { err, ok } from '../../domain/result';
+import type {
+  AccountPairing,
+  AccountServer,
+  ChoosePasswordServerError,
+  SignInServerError,
+} from '../../application/ports/account-server';
+import { err, ok, type Result } from '../../domain/result';
 import {
   createSend,
+  errorCode,
+  minutesToWait,
   syncFailure,
   transportFailure,
+  type Answer,
   type TransportOptions,
 } from './transport';
 
@@ -17,12 +25,135 @@ const isAccountInfo = (value: unknown): value is AccountInfo =>
   ((value as AccountInfo).role === 'user' ||
     (value as AccountInfo).role === 'administrator');
 
+const PASSWORD_PROBLEMS: readonly string[] = [
+  'TooShort',
+  'TooLong',
+  'SameAsTemporary',
+  'SameAsCurrent',
+] satisfies PasswordProblem[];
+
+const isAccountPairing = (
+  body: unknown,
+): body is AccountPairing & {
+  account: AccountInfo;
+} =>
+  typeof body === 'object' &&
+  body !== null &&
+  typeof (body as AccountPairing).deviceId === 'string' &&
+  typeof (body as AccountPairing).credential === 'string' &&
+  typeof (body as AccountPairing).serverId === 'string' &&
+  typeof (body as AccountPairing).apiVersion === 'number' &&
+  typeof (body as AccountPairing).minAppVersion === 'string' &&
+  typeof (body as AccountPairing).accountId === 'string' &&
+  isAccountInfo((body as { account?: unknown }).account);
+
+/**
+ * The failures the two unauthenticated auth routes share. Anything unexpected reads as an
+ * unreachable server, as 003's claim did: the user can only try again.
+ */
+const authFailure = (
+  answer: Answer,
+): Result<never, SignInServerError & ChoosePasswordServerError> | null => {
+  if (answer.kind === 'untrusted') return err({ type: 'UntrustedServer' });
+  if (answer.kind === 'unreachable') return err({ type: 'ServerUnreachable' });
+  switch (answer.status) {
+    case 401:
+      return errorCode(answer.body) === 'TemporaryPasswordExpired'
+        ? err({ type: 'TemporaryPasswordExpired' })
+        : err({ type: 'InvalidCredentials' });
+    case 403:
+      return err({ type: 'AccountSuspended' });
+    case 426:
+      return err({ type: 'UpdateRequired' });
+    case 429:
+      return err({
+        type: 'TooManyAttempts',
+        minutesToWait: minutesToWait(answer.headers.get('Retry-After')),
+      });
+    default:
+      return null;
+  }
+};
+
+const toPairing = (
+  body: AccountPairing & { account: AccountInfo },
+): { pairing: AccountPairing; account: AccountInfo } => ({
+  pairing: {
+    deviceId: body.deviceId,
+    credential: body.credential,
+    serverId: body.serverId,
+    apiVersion: body.apiVersion,
+    minAppVersion: body.minAppVersion,
+    accountId: body.accountId,
+  },
+  account: {
+    id: body.account.id,
+    email: body.account.email,
+    role: body.account.role,
+  },
+});
+
 /** The `AccountServer` over `fetch`. */
 export const createAccountServer = (
   options: TransportOptions,
 ): AccountServer => {
   const send = createSend(options);
   return {
+    async signIn(url, email, password, deviceName) {
+      const answer = await send(url, '/v1/auth/sign-in', {
+        method: 'POST',
+        body: { email, password, deviceName },
+      });
+      const failure = authFailure(answer);
+      if (failure !== null) return failure;
+      if (answer.kind !== 'response') return err({ type: 'ServerUnreachable' });
+      const body = answer.body as { outcome?: unknown } | null;
+      if (answer.status === 200 && body?.outcome === 'passwordChangeRequired') {
+        return ok({ type: 'passwordChangeRequired' });
+      }
+      if (
+        answer.status === 200 &&
+        body?.outcome === 'signedIn' &&
+        isAccountPairing(body)
+      ) {
+        return ok({ type: 'signedIn', ...toPairing(body) });
+      }
+      return err({ type: 'ServerUnreachable' });
+    },
+
+    async choosePassword(
+      url,
+      email,
+      temporaryPassword,
+      newPassword,
+      deviceName,
+    ) {
+      const answer = await send(url, '/v1/auth/choose-password', {
+        method: 'POST',
+        body: { email, temporaryPassword, newPassword, deviceName },
+      });
+      const failure = authFailure(answer);
+      if (failure !== null) return failure;
+      if (answer.kind !== 'response') return err({ type: 'ServerUnreachable' });
+      const body = answer.body;
+      if (answer.status === 200 && isAccountPairing(body)) {
+        return ok(toPairing(body).pairing);
+      }
+      const problem = (body as { problem?: unknown } | null)?.problem;
+      if (
+        answer.status === 400 &&
+        errorCode(body) === 'InvalidPassword' &&
+        typeof problem === 'string' &&
+        PASSWORD_PROBLEMS.includes(problem)
+      ) {
+        return err({
+          type: 'PasswordRejected',
+          problem: problem as PasswordProblem,
+        });
+      }
+      return err({ type: 'ServerUnreachable' });
+    },
+
     async getAccount(conn) {
       const answer = await send(conn.url, '/v1/account', {
         method: 'GET',

@@ -1,8 +1,6 @@
 import type {
   HealthInfo,
   DeviceSummary,
-  Pairing,
-  PairingCode,
   SyncRequest,
   SyncResponse,
 } from '@mes-courses/sync-core';
@@ -15,7 +13,6 @@ import type {
 } from '../../application/ports/sync-server';
 import {
   createSend,
-  errorCode,
   syncFailure,
   transportFailure,
   type Answer,
@@ -39,12 +36,6 @@ const isSyncResponse = (body: unknown): body is SyncResponse =>
   Array.isArray((body as SyncResponse).acknowledged) &&
   Array.isArray((body as SyncResponse).rows) &&
   typeof (body as SyncResponse).seq === 'number';
-
-/** `Retry-After` in seconds; an HTTP-date or a missing header gives a 1 minute wait. */
-const minutesToWait = (header: string | null): number => {
-  const seconds = header === null ? NaN : Number(header);
-  return Number.isFinite(seconds) ? Math.max(1, Math.ceil(seconds / 60)) : 1;
-};
 
 /** The `SyncServer` over `fetch` (see `transport.ts` for how failures are told apart). */
 export const createSyncServer = (options: SyncServerOptions): SyncServer => {
@@ -72,45 +63,6 @@ export const createSyncServer = (options: SyncServerOptions): SyncServer => {
       return isHealthInfo(answer.body)
         ? ok(answer.body)
         : err({ type: 'ServerUnreachable' });
-    },
-
-    async claim(url, code, deviceName) {
-      const answer = await send(url, '/v1/pairing/claim', {
-        method: 'POST',
-        body: { code, deviceName },
-      });
-      if (answer.kind === 'untrusted') return err({ type: 'UntrustedServer' });
-      if (answer.kind === 'unreachable') {
-        return err({ type: 'ServerUnreachable' });
-      }
-      if (answer.status === 200) return ok(answer.body as Pairing);
-      if (answer.status === 429) {
-        return err({
-          type: 'TooManyAttempts',
-          minutesToWait: minutesToWait(answer.headers.get('Retry-After')),
-        });
-      }
-      if (answer.status === 400 && errorCode(answer.body) === 'InvalidCode') {
-        return err({ type: 'InvalidCode' });
-      }
-      return err({ type: 'ServerUnreachable' });
-    },
-
-    async createPairingCode(
-      conn: Connection,
-    ): Promise<Result<PairingCode, SyncFailure>> {
-      const answer = await send(conn.url, '/v1/pairing-codes', {
-        method: 'POST',
-        credential: conn.credential,
-      });
-      if (answer.kind === 'untrusted') return err({ type: 'UntrustedServer' });
-      if (answer.kind === 'unreachable') return err({ type: 'Offline' });
-      if (answer.status === 200) {
-        // The body also carries the server's identity, which is not part of the code.
-        const { code, expiresAt } = answer.body as PairingCode;
-        return ok({ code, expiresAt });
-      }
-      return err(syncFailure(answer));
     },
 
     async sync(

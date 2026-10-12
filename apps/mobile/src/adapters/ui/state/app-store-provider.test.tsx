@@ -1,3 +1,5 @@
+import { eraserOf } from '../../../application/testing/in-memory-local-data-eraser';
+import { seed } from '../seed';
 import { InMemoryCredentialStore } from '../../../application/testing/in-memory-credential-store';
 import { OfflineSyncServer } from '../../../application/testing/offline-sync-server';
 import { OfflineAccountServer } from '../../../application/testing/offline-account-server';
@@ -17,19 +19,23 @@ import { createAppStore } from './app-store';
 import { AppStoreProvider } from './app-store-provider';
 import { useAppStore } from './use-app-store';
 
-const buildStore = () =>
-  createAppStore({
+const buildStore = () => {
+  const unitOfWork = new InMemoryUnitOfWork(new InMemoryRepositories());
+  const ids = new SequentialIdGenerator();
+  return createAppStore({
     useCases: createUseCases({
       syncServer: new OfflineSyncServer(),
       accountServer: new OfflineAccountServer(),
       adminServer: new OfflineAdminServer(),
       credentials: new InMemoryCredentialStore(),
-      unitOfWork: new InMemoryUnitOfWork(new InMemoryRepositories()),
-      ids: new SequentialIdGenerator(),
+      unitOfWork,
+      ids,
       clock: new FakeClock(),
+      localDataEraser: eraserOf(unitOfWork, ids, seed),
     }),
     errorReporter: new RecordingErrorReporter(),
   });
+};
 
 describe('useAppStore', () => {
   it('renders the slice it selects, and renders again when that slice changes', () => {
