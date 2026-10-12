@@ -2,6 +2,7 @@ import type {
   ErrorContext,
   ErrorReporter,
 } from '../../application/ports/error-reporter';
+import { scrubError } from './scrub-addresses';
 
 /**
  * Prints reports to the console. Used when no Sentry DSN is set (development, Jest, Detox), so
@@ -14,7 +15,7 @@ export class ConsoleErrorReporter implements ErrorReporter {
     console.error(
       'Error report',
       { operation: context.operation, screen: context.screen ?? this.screen },
-      error,
+      scrubError(error),
     );
   }
 

@@ -136,9 +136,12 @@ const pull = async (
   return { rows: atCut.filter((row) => row.seq === cutSeq), more: true };
 };
 
+/** Who is syncing: the device and the account it belongs to. */
+export type SyncCaller = { accountId: string; deviceId: string };
+
 export const sync = async (
   { store, clock }: SyncDeps,
-  deviceId: string,
+  { accountId, deviceId }: SyncCaller,
   request: SyncRequest,
 ): Promise<SyncResult> => {
   if (request.changes.length > MAX_CHANGES_PER_REQUEST) {
@@ -147,7 +150,7 @@ export const sync = async (
   const nowMs = clock.nowMs();
   const hlc = clampHlc(request.hlc, nowMs);
 
-  return store.run(async (repos) => {
+  return store.runForAccount(accountId, async (repos) => {
     const acknowledged: string[] = [];
     for (const incoming of request.changes) {
       if (!(await repos.appliedChanges.has(incoming.changeId))) {

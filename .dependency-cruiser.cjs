@@ -121,6 +121,33 @@ module.exports = {
       to: { path: 'node_modules/(@storybook/|storybook/)' },
     },
     {
+      name: 'mail-libraries-only-in-the-mail-adapter',
+      severity: 'error',
+      comment:
+        'nodemailer and smtp-server are imported only under apps/server/src/adapters/mail/ and its tests (004 plan).',
+      from: { pathNot: `${SERVER_SRC}/adapters/mail/` },
+      to: { path: '(^|node_modules/)(nodemailer|smtp-server)(/|$)' },
+    },
+    {
+      name: 'server-domain-application-never-import-the-mail-adapter',
+      severity: 'error',
+      comment:
+        'The server domain and application layers reach mail through the Mailer port, never through adapters/mail.',
+      from: { path: `${SERVER_SRC}/(domain|application)/` },
+      to: { path: `${SERVER_SRC}/adapters/mail/` },
+    },
+    {
+      name: 'password-code-only-in-the-crypto-adapter',
+      severity: 'error',
+      comment:
+        'node:crypto (password hashing, tokens) is imported by the crypto adapter only; the sqlite migrations keep their existing randomUUID use.',
+      from: {
+        path: `${SERVER_SRC}/`,
+        pathNot: `${SERVER_SRC}/adapters/(crypto|sqlite)/`,
+      },
+      to: { path: '^(node:)?crypto$', dependencyTypes: ['core'] },
+    },
+    {
       name: 'testing-helpers-never-imported-by-production-code',
       severity: 'error',
       comment:

@@ -7,6 +7,7 @@ import type {
 
 import type { ErrorReporter } from '../../application/ports/error-reporter';
 import { ConsoleErrorReporter } from './console-error-reporter';
+import { scrubAddresses, scrubError } from './scrub-addresses';
 
 /** The only environments a report may carry (FR-030, research R13). */
 const ENVIRONMENTS = ['production', 'preview'];
@@ -94,10 +95,13 @@ const filterEvent = (
       'debug_meta',
     ]),
     ...(values && { exception: { values } }),
+    // An address never belongs in a tag; this is the second line after not putting one there (R10).
     tags: {
-      operation,
-      ...(eventScreen !== undefined && { screen: eventScreen }),
-      ...(code !== undefined && { code }),
+      operation: scrubAddresses(String(operation)),
+      ...(eventScreen !== undefined && {
+        screen: scrubAddresses(String(eventScreen)),
+      }),
+      ...(code !== undefined && { code: scrubAddresses(code) }),
     },
     contexts: {
       ...(device && { device: pick(device, ['model']) }),
@@ -165,7 +169,7 @@ export const createSentryErrorReporter = ({
   return {
     report: (error, { operation, screen: reportScreen }) => {
       try {
-        Sentry.captureException(error, {
+        Sentry.captureException(scrubError(error), {
           tags: {
             operation,
             ...(reportScreen !== undefined && { screen: reportScreen }),

@@ -2650,8 +2650,12 @@ __metadata:
     "@sentry/node": "npm:^11.5.0"
     "@types/jest": "npm:^30"
     "@types/node": "npm:^24"
+    "@types/nodemailer": "npm:^8.0.2"
+    "@types/smtp-server": "npm:^3.5.13"
     fastify: "npm:5"
     jest: "npm:^30"
+    nodemailer: "npm:^10.1.0"
+    smtp-server: "npm:^3.19.21"
     ts-jest: "npm:^29"
     tsx: "npm:^4.23.15"
     typescript: "npm:~6.0.3"
@@ -4562,6 +4566,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/nodemailer@npm:*, @types/nodemailer@npm:^8.0.2":
+  version: 8.0.2
+  resolution: "@types/nodemailer@npm:8.0.2"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/1ad3f83ac130cf9af65ce9eb7985b08b27b4723316c2be621522effc31c63d7d2d76880815490499fbe8b1aff3da889d24b54b3db892526d1166b12702404ff0
+  languageName: node
+  linkType: hard
+
 "@types/react-reconciler@npm:~0.33.0":
   version: 0.33.1
   resolution: "@types/react-reconciler@npm:0.33.1"
@@ -4593,6 +4606,16 @@ __metadata:
   version: 1.20.6
   resolution: "@types/resolve@npm:1.20.6"
   checksum: 10c0/a9b0549d816ff2c353077365d865a33655a141d066d0f5a3ba6fd4b28bc2f4188a510079f7c1f715b3e7af505a27374adce2a5140a3ece2a059aab3d6e1a4244
+  languageName: node
+  linkType: hard
+
+"@types/smtp-server@npm:^3.5.13":
+  version: 3.5.13
+  resolution: "@types/smtp-server@npm:3.5.13"
+  dependencies:
+    "@types/node": "npm:*"
+    "@types/nodemailer": "npm:*"
+  checksum: 10c0/9fb74a327cf49e40cc4b939334e29bcb5a3d2ccebad2ea7fd730316691c0114dde1166eb208277a73b80a0aad2b19f295f4ba480a929332687c7c046c7ab4a8f
   languageName: node
   linkType: hard
 
@@ -8992,6 +9015,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ipv6-normalize@npm:1.0.1":
+  version: 1.0.1
+  resolution: "ipv6-normalize@npm:1.0.1"
+  checksum: 10c0/89156fbfc4f8828b29adf8009332ec77cd93a17a6e28066d602c3154b7bbc37df07f981ab2b6debb46f9a716867262ae4ea5399f3fa9bb0fc8019e6dc2a96023
+  languageName: node
+  linkType: hard
+
 "is-array-buffer@npm:^3.0.4, is-array-buffer@npm:^3.0.5":
   version: 3.0.5
   resolution: "is-array-buffer@npm:3.0.5"
@@ -11452,6 +11482,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nodemailer@npm:10.1.0, nodemailer@npm:^10.1.0":
+  version: 10.1.0
+  resolution: "nodemailer@npm:10.1.0"
+  checksum: 10c0/5715e92c8abc117df26ac97e1b55a571a5442afb995d38c1385d03dabfd0d538939f7db1246494af212e3e0351f23d8d17918b6bd85b8a76b56be1232162b8db
+  languageName: node
+  linkType: hard
+
 "nopt@npm:^10.0.0":
   version: 10.0.1
   resolution: "nopt@npm:10.0.1"
@@ -12395,6 +12432,13 @@ __metadata:
   version: 1.1.0
   resolution: "proxy-from-env@npm:1.1.0"
   checksum: 10c0/fe7dd8b1bdbbbea18d1459107729c3e4a2243ca870d26d34c2c1bcd3e4425b7bcc5112362df2d93cc7fb9746f6142b5e272fd1cc5c86ddf8580175186f6ad42b
+  languageName: node
+  linkType: hard
+
+"punycode.js@npm:2.3.1":
+  version: 2.3.1
+  resolution: "punycode.js@npm:2.3.1"
+  checksum: 10c0/1d12c1c0e06127fa5db56bd7fdf698daf9a78104456a6b67326877afc21feaa821257b171539caedd2f0524027fa38e67b13dd094159c8d70b6d26d2bea4dfdb
   languageName: node
   linkType: hard
 
@@ -13459,6 +13503,17 @@ __metadata:
   version: 1.6.9
   resolution: "slugify@npm:1.6.9"
   checksum: 10c0/8473c566ae00c5db26bfbf6182a4a9478ab3c912a9c926e1fdb410736a77228bfca4fdc5c755b46fafa7d2d9900de482fd7a9bd5e5c91128c4743c2c072d88da
+  languageName: node
+  linkType: hard
+
+"smtp-server@npm:^3.19.21":
+  version: 3.19.21
+  resolution: "smtp-server@npm:3.19.21"
+  dependencies:
+    ipv6-normalize: "npm:1.0.1"
+    nodemailer: "npm:10.1.0"
+    punycode.js: "npm:2.3.1"
+  checksum: 10c0/fa2e262f35492d73ac7796fa845d8706835f4aacd673aa1e3f0e81e3531e00bd7dd49ccf29a1c7ef7c551e92d83bc9791dbf14b46bfda6c15a43a969992479c1
   languageName: node
   linkType: hard
 

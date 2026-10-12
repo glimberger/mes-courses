@@ -1,11 +1,11 @@
-import type { ServerStore } from '../../ports/store';
+import type { ScopedStore } from './scoped-store';
 import { device, pairingCode } from './entities';
 
 export const pairingCodeRepositoryContract = (
-  createStore: () => Promise<ServerStore>,
+  createStore: () => Promise<ScopedStore>,
 ) => {
   describe('PairingCodeRepository contract', () => {
-    let store: ServerStore;
+    let store: ScopedStore;
 
     beforeEach(async () => {
       store = await createStore();

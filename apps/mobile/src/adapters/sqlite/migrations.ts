@@ -94,8 +94,17 @@ const migration2: Migration = (db) =>
     );
   `);
 
+// The account whose data the replica holds; NULL before any sign-in (004 data-model.md). Rows and
+// the outbox stay as they are: a device paired before accounts learns its account at its next sync.
+const migration3: Migration = (db) =>
+  db.execAsync(`ALTER TABLE sync_state ADD COLUMN account_id TEXT;`);
+
 /** Migration `n` is at index `n - 1`; `PRAGMA user_version` holds the last one applied. */
-export const MIGRATIONS: readonly Migration[] = [migration1, migration2];
+export const MIGRATIONS: readonly Migration[] = [
+  migration1,
+  migration2,
+  migration3,
+];
 
 /**
  * The migration `PRAGMA user_version` records, once checked: data written by a newer version is

@@ -2,8 +2,8 @@ import type {
   EntityRecord,
   EntityRepository,
   Repositories,
-  ServerStore,
 } from '../../ports/store';
+import type { ScopedStore } from './scoped-store';
 import { hlc } from './entities';
 
 /**
@@ -13,13 +13,13 @@ import { hlc } from './entities';
  */
 export const entityRepositoryContract = <T extends EntityRecord>(
   title: string,
-  createStore: () => Promise<ServerStore>,
+  createStore: () => Promise<ScopedStore>,
   select: (repos: Repositories) => EntityRepository<T>,
   make: (id: string, name: string, overrides?: Partial<T>) => T,
   prepare: (repos: Repositories) => Promise<void> = async () => undefined,
 ) => {
   describe(`${title} repository contract`, () => {
-    let store: ServerStore;
+    let store: ScopedStore;
 
     const inRun = <R>(work: (repo: EntityRepository<T>) => Promise<R>) =>
       store.run(async (repos) => {

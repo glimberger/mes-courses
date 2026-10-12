@@ -273,7 +273,7 @@ describe('migrate', () => {
       ).map((r) => ({ ...(r as object) }));
 
     it('003 creates pending_change and sync_state as in the data model', async () => {
-      await migrate(db);
+      await migrate(db, MIGRATIONS.slice(0, 2));
 
       expect(await columns(db, 'pending_change')).toEqual([
         { name: 'seq', type: 'INTEGER', notnull: 0, pk: 1 },
@@ -436,11 +436,11 @@ describe('migrate', () => {
         throw new Error('migration 3 failed');
       };
 
-      await migrate(db);
+      await migrate(db, MIGRATIONS.slice(0, 2));
       expect(await userVersion(db)).toBe(2);
 
       await expect(
-        migrate(db, [...MIGRATIONS, failingAfter]),
+        migrate(db, [...MIGRATIONS.slice(0, 2), failingAfter]),
       ).rejects.toThrow();
       expect(await userVersion(db)).toBe(2);
 
@@ -543,6 +543,74 @@ describe('migrate', () => {
           ['l-1'],
         ),
       ).rejects.toThrow('UNIQUE constraint failed');
+    });
+  });
+
+  describe('migration 3 (004 accounts)', () => {
+    const seedVersion2 = async () => {
+      await migrate(db, MIGRATIONS.slice(0, 2));
+      await db.execAsync(`
+        INSERT INTO category (id, name, normalized_name, position) VALUES ('c-1', 'Crèmerie', 'crèmerie', 0);
+        INSERT INTO shopping_list (id, name, normalized_name) VALUES ('l-1', 'Ma liste', 'ma liste');
+        INSERT INTO app_state (id, current_list_id) VALUES (1, 'l-1');
+        INSERT INTO pending_change (change_id, hlc, kind, entity_id, fields)
+          VALUES ('ch-1', '000000000001:0000:local', 'list', 'l-1', '{"name":"Ma liste"}');
+        INSERT INTO sync_state (id, server_url, server_id, device_id, last_seq, max_hlc, last_sync_at, snapshot_done)
+          VALUES (1, 'https://courses.example.org', 'server-1', 'device-1', 42, '000000000001:0000:local', '2026-10-10T08:00:00.000Z', 1);
+      `);
+    };
+
+    it('004 adds a nullable account_id to sync_state, after the existing columns', async () => {
+      await migrate(db);
+
+      expect((await columns(db, 'sync_state')).map((c) => c.name)).toEqual([
+        'id',
+        'server_url',
+        'server_id',
+        'device_id',
+        'last_seq',
+        'max_hlc',
+        'last_sync_at',
+        'snapshot_done',
+        'account_id',
+      ]);
+      expect(
+        (await columns(db, 'sync_state')).find((c) => c.name === 'account_id'),
+      ).toMatchObject({ type: 'TEXT', notnull: 0 });
+    });
+
+    it('004 US3-5 leaves every row, the outbox and the sync state as they were, with a null account', async () => {
+      await seedVersion2();
+      const before = {
+        categories: await db.getAllAsync('SELECT * FROM category', []),
+        pending: await db.getAllAsync('SELECT * FROM pending_change', []),
+      };
+
+      await migrate(db);
+
+      expect(await userVersion(db)).toBe(3);
+      expect(await db.getAllAsync('SELECT * FROM category', [])).toEqual(
+        before.categories,
+      );
+      expect(await db.getAllAsync('SELECT * FROM pending_change', [])).toEqual(
+        before.pending,
+      );
+      expect(
+        await db.getFirstAsync('SELECT * FROM sync_state', []),
+      ).toMatchObject({
+        server_url: 'https://courses.example.org',
+        device_id: 'device-1',
+        last_seq: 42,
+        snapshot_done: 1,
+        account_id: null,
+      });
+    });
+
+    it('004 does nothing when run again', async () => {
+      await migrate(db);
+      await migrate(db);
+
+      expect(await userVersion(db)).toBe(3);
     });
   });
 });

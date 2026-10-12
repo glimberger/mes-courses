@@ -4,7 +4,12 @@ import type { PairingCrypto } from '../ports/pairing-crypto';
 export const createFakePairingCrypto = (): PairingCrypto => {
   let codes = 0;
   let credentials = 0;
+  let temporaryPasswords = 0;
   return {
+    generateTemporaryPassword: () => {
+      const n = temporaryPasswords++;
+      return `TEMP-${String(n).padStart(4, '0')}-ABCD-WXYZ`.toUpperCase();
+    },
     generateCode: () => `ABCD-EF2${'ABCDEFGHJK'[codes++ % 10] ?? 'A'}`,
     normalizeCode: (input) => {
       const compact = input.toUpperCase().replace(/[\s-]/g, '');

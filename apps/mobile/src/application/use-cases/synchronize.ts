@@ -204,6 +204,8 @@ export const createSynchronize =
         }
         await repos.syncState.save({
           ...state,
+          // The first response that names the account teaches it to a device paired before 004.
+          accountId: state.accountId ?? response.accountId ?? null,
           lastSeq: response.seq,
           maxHlc: receiveHlc(
             { ...state.maxHlc, deviceId },

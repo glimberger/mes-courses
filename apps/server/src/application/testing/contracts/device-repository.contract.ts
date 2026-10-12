@@ -1,11 +1,11 @@
-import type { ServerStore } from '../../ports/store';
 import { device } from './entities';
+import { DEFAULT_ACCOUNT_ID, type ScopedStore } from './scoped-store';
 
 export const deviceRepositoryContract = (
-  createStore: () => Promise<ServerStore>,
+  createStore: () => Promise<ScopedStore>,
 ) => {
   describe('DeviceRepository contract', () => {
-    let store: ServerStore;
+    let store: ScopedStore;
 
     beforeEach(async () => {
       store = await createStore();
@@ -15,7 +15,7 @@ export const deviceRepositoryContract = (
       await store.run(async ({ devices }) => {
         expect(await devices.get('d-1')).toBeNull();
         expect(await devices.findByCredentialHash('h-1')).toBeNull();
-        expect(await devices.all()).toEqual([]);
+        expect(await devices.forAccount(DEFAULT_ACCOUNT_ID)).toEqual([]);
       });
     });
 
@@ -52,7 +52,7 @@ export const deviceRepositoryContract = (
 
       await store.run(async ({ devices }) => {
         expect(await devices.get('d-1')).toEqual(revoked);
-        expect(await devices.all()).toEqual([revoked]);
+        expect(await devices.forAccount(DEFAULT_ACCOUNT_ID)).toEqual([revoked]);
       });
     });
 
@@ -64,11 +64,9 @@ export const deviceRepositoryContract = (
         await devices.add(device('d-3', 'h-3'));
         await devices.add(device('d-1', 'h-1'));
 
-        expect((await devices.all()).map((d) => d.id)).toEqual([
-          'd-1',
-          'd-3',
-          'd-2',
-        ]);
+        expect(
+          (await devices.forAccount(DEFAULT_ACCOUNT_ID)).map((d) => d.id),
+        ).toEqual(['d-1', 'd-3', 'd-2']);
       });
     });
   });

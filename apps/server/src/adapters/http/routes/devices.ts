@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 import { InvalidDeviceNameError } from '../../../application/use-cases/claim-pairing-code';
 import { listDevices } from '../../../application/use-cases/list-devices';
@@ -13,14 +13,27 @@ export const registerDeviceRoutes = (
   app: FastifyInstance,
   deps: AppDeps,
 ): void => {
-  app.get('/v1/devices', async () => ({ devices: await listDevices(deps) }));
+  const accountOf = (request: FastifyRequest): string => {
+    const accountId = request.device?.accountId;
+    if (accountId === undefined) throw new Error('Unauthenticated request');
+    return accountId;
+  };
+
+  app.get('/v1/devices', async (request) => ({
+    devices: await listDevices(deps, accountOf(request)),
+  }));
 
   app.patch<{ Params: { id: string }; Body: { name: string } }>(
     '/v1/devices/:id',
     { schema: { body: renameDeviceBodySchema } },
     async (request, reply) => {
       try {
-        return await renameDevice(deps, request.params.id, request.body.name);
+        return await renameDevice(
+          deps,
+          accountOf(request),
+          request.params.id,
+          request.body.name,
+        );
       } catch (error) {
         if (error instanceof NotFoundError) return sendError(reply, 'NotFound');
         if (error instanceof InvalidDeviceNameError) {
@@ -35,7 +48,7 @@ export const registerDeviceRoutes = (
     '/v1/devices/:id',
     async (request, reply) => {
       try {
-        await revokeDevice(deps, request.params.id);
+        await revokeDevice(deps, accountOf(request), request.params.id);
         return await reply.status(204).send();
       } catch (error) {
         if (error instanceof NotFoundError) return sendError(reply, 'NotFound');

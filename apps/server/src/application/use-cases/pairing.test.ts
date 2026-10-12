@@ -1,3 +1,4 @@
+import { account } from '../testing/contracts/entities';
 import { InMemoryStore } from '../testing/in-memory-store';
 import type { Clock } from '../ports/clock';
 import { createFakePairingCrypto } from '../testing/fake-pairing-crypto';
@@ -15,8 +16,11 @@ class FakeClock implements Clock {
   }
 }
 
-const setup = () => {
+const setup = async () => {
   const store = new InMemoryStore();
+  await store.run(({ accounts }) =>
+    accounts.add(account('acc-1', 'marie@example.org')),
+  );
   const clock = new FakeClock();
   const crypto = createFakePairingCrypto();
   const deps = { store, clock, crypto, ids: { next: () => 'device-1' } };
@@ -25,7 +29,7 @@ const setup = () => {
 
 describe('createPairingCode', () => {
   it('returns a code expiring in 10 minutes and stores only its hash', async () => {
-    const { store, deps, crypto } = setup();
+    const { store, deps, crypto } = await setup();
 
     const { code, expiresAt } = await createPairingCode(deps, null);
 
@@ -44,7 +48,7 @@ describe('createPairingCode', () => {
   });
 
   it('records the device that created the code', async () => {
-    const { store, deps, crypto } = setup();
+    const { store, deps, crypto } = await setup();
     const { code } = await createPairingCode(deps, 'device-9');
     await store.run(async ({ pairingCodes }) => {
       expect(
@@ -56,7 +60,7 @@ describe('createPairingCode', () => {
 
 describe('claimPairingCode', () => {
   it('creates a device storing only the credential hash, and marks the code used', async () => {
-    const { store, deps, crypto } = setup();
+    const { store, deps, crypto } = await setup();
     const { code } = await createPairingCode(deps, null);
 
     const result = await claimPairingCode(deps, code, '  Pixel de Marie ');
@@ -66,6 +70,7 @@ describe('claimPairingCode', () => {
       const device = await devices.get('device-1');
       expect(device).toEqual({
         id: 'device-1',
+        accountId: 'acc-1',
         name: 'Pixel de Marie',
         credentialHash: crypto.sha256Hex(result.credential),
         createdAt: '2026-10-01T10:00:00.000Z',
@@ -80,7 +85,7 @@ describe('claimPairingCode', () => {
   });
 
   it('accepts a code typed in lower case without the dash', async () => {
-    const { deps } = setup();
+    const { deps } = await setup();
     const { code } = await createPairingCode(deps, null);
     const typed = code.replace('-', '').toLowerCase();
 
@@ -90,7 +95,7 @@ describe('claimPairingCode', () => {
   });
 
   it('rejects an unknown code and records a failure', async () => {
-    const { store, deps } = setup();
+    const { store, deps } = await setup();
 
     await expect(claimPairingCode(deps, 'ZZZZ-ZZZZ', 'Phone')).rejects.toThrow(
       InvalidCodeError,
@@ -103,7 +108,7 @@ describe('claimPairingCode', () => {
   });
 
   it('rejects a used code', async () => {
-    const { deps } = setup();
+    const { deps } = await setup();
     const { code } = await createPairingCode(deps, null);
     await claimPairingCode(deps, code, 'Phone');
 
@@ -113,7 +118,7 @@ describe('claimPairingCode', () => {
   });
 
   it('rejects a code older than 10 minutes', async () => {
-    const { deps, clock } = setup();
+    const { deps, clock } = await setup();
     const { code } = await createPairingCode(deps, null);
     clock.ms += 10 * 60 * 1000;
 
@@ -123,15 +128,15 @@ describe('claimPairingCode', () => {
   });
 
   it('keeps a failed claim from creating a device', async () => {
-    const { store, deps } = setup();
+    const { store, deps } = await setup();
     await claimPairingCode(deps, 'ZZZZ-ZZZZ', 'Phone').catch(() => undefined);
     await store.run(async ({ devices }) => {
-      expect(await devices.all()).toEqual([]);
+      expect(await devices.forAccount('acc-1')).toEqual([]);
     });
   });
 
   it('rejects a device name that is empty or over 60 characters, without burning the code', async () => {
-    const { store, deps, crypto } = setup();
+    const { store, deps, crypto } = await setup();
     const { code } = await createPairingCode(deps, null);
 
     await expect(claimPairingCode(deps, code, '   ')).rejects.toThrow(
@@ -158,7 +163,7 @@ describe('claimPairingCode', () => {
       claimPairingCode(deps, 'ZZZZ-ZZZZ', 'Phone').catch((e) => e);
 
     it('answers TooManyAttempts from the 6th failure within 10 minutes, with the seconds to wait', async () => {
-      const { deps, clock } = setup();
+      const { deps, clock } = await setup();
       for (let i = 0; i < 5; i++) {
         expect(await fail(deps)).toBeInstanceOf(InvalidCodeError);
         clock.ms += 1000;
@@ -172,7 +177,7 @@ describe('claimPairingCode', () => {
     });
 
     it('blocks even a valid code while the limit holds', async () => {
-      const { deps } = setup();
+      const { deps } = await setup();
       const { code } = await createPairingCode(deps, null);
       for (let i = 0; i < 5; i++) await fail(deps);
 
@@ -182,7 +187,7 @@ describe('claimPairingCode', () => {
     });
 
     it('lets claims through again once the failures leave the window', async () => {
-      const { deps, clock } = setup();
+      const { deps, clock } = await setup();
       for (let i = 0; i < 5; i++) await fail(deps);
       clock.ms += 10 * 60 * 1000 + 1;
       const { code } = await createPairingCode(deps, null);
@@ -193,7 +198,7 @@ describe('claimPairingCode', () => {
     });
 
     it('persists across a new store instance on the same data', async () => {
-      const { store, deps } = setup();
+      const { store, deps } = await setup();
       for (let i = 0; i < 5; i++) await fail(deps);
 
       // A restart builds the use case again over the same store.

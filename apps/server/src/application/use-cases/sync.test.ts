@@ -8,6 +8,7 @@ import {
 
 import type { Clock } from '../ports/clock';
 import type { ListRecord } from '../ports/store';
+import { scopedTo } from '../testing/contracts/scoped-store';
 import { InMemoryStore } from '../testing/in-memory-store';
 import { TooManyChangesError, sync } from './sync';
 
@@ -40,11 +41,13 @@ const createList = (
 });
 
 const setup = async () => {
-  const store = new InMemoryStore();
+  const raw = new InMemoryStore();
+  const store = await scopedTo(raw, 'acc-1');
   const clock = new FakeClock();
   await store.run(({ devices }) =>
     devices.add({
       id: 'd-1',
+      accountId: 'acc-1',
       name: 'Téléphone',
       credentialHash: 'hash-1',
       createdAt: '2026-10-01T09:00:00.000Z',
@@ -57,8 +60,17 @@ const setup = async () => {
     lastSeq = 0,
     at = hlc(NOW - 500),
     deviceId = 'd-1',
-  ) => sync({ store, clock }, deviceId, { lastSeq, hlc: at, changes });
-  return { store, clock, run };
+  ) =>
+    sync(
+      { store: raw, clock },
+      { accountId: 'acc-1', deviceId },
+      {
+        lastSeq,
+        hlc: at,
+        changes,
+      },
+    );
+  return { raw, store, clock, run };
 };
 
 const rowOf = (rows: ServerRow[], kind: string, id: string) =>
@@ -396,11 +408,11 @@ describe('sync', () => {
   });
 
   it('applies nothing when a change fails midway', async () => {
-    const { run, store } = await setup();
-    const realRun = store.run.bind(store);
+    const { run, store, raw } = await setup();
+    const realRun = raw.runForAccount.bind(raw);
     let saves = 0;
-    jest.spyOn(store, 'run').mockImplementation((work) =>
-      realRun((repos) =>
+    jest.spyOn(raw, 'runForAccount').mockImplementation((accountId, work) =>
+      realRun(accountId, (repos) =>
         work({
           ...repos,
           lists: {

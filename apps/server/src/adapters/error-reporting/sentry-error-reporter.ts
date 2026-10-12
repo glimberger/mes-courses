@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/node';
 
 import type { ErrorReporter } from '../../application/ports/error-reporter';
+import { scrubAddresses, scrubError } from './scrubber';
 
 const FLUSH_TIMEOUT_MS = 2000;
 
@@ -8,7 +9,7 @@ const FLUSH_TIMEOUT_MS = 2000;
  * Sentry reporter (research R15). Request bodies, headers and cookies never leave the Pi, nor do
  * breadcrumbs, `extra` data and the user; the only contexts are the fixed `{ operation, route }`
  * tags. An exception message is kept, so callers must not put a pairing code or a credential in
- * one. `Sentry.init` is global: the reporter is built once, at start-up. The caller picks the console reporter
+ * one (addresses are scrubbed anyway, research R10). `Sentry.init` is global: the reporter is built once, at start-up. The caller picks the console reporter
  * when no DSN is set.
  */
 export const createSentryErrorReporter = ({
@@ -45,14 +46,36 @@ export const createSentryErrorReporter = ({
       delete event.breadcrumbs;
       delete event.extra;
       delete event.user;
+      // A second line after not putting an address in a message (research R10).
+      if (event.message !== undefined) {
+        event.message = scrubAddresses(event.message);
+      }
+      for (const exception of event.exception?.values ?? []) {
+        if (exception.value !== undefined) {
+          exception.value = scrubAddresses(exception.value);
+        }
+      }
+      if (event.tags) {
+        for (const [name, value] of Object.entries(event.tags)) {
+          if (typeof value === 'string')
+            event.tags[name] = scrubAddresses(value);
+        }
+      }
       return event;
     },
   });
 
   return {
-    report: (error, { operation, route }) => {
+    report: (error, { operation, route, accountId }) => {
       try {
-        Sentry.captureException(error, { tags: { operation, route } });
+        // The opaque account id is the only identifier a report carries (research R10).
+        Sentry.captureException(scrubError(error), {
+          tags: {
+            operation,
+            route,
+            ...(accountId === undefined ? {} : { accountId }),
+          },
+        });
       } catch {
         // Reporting never breaks the server.
       }

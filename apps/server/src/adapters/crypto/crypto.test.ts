@@ -2,6 +2,7 @@ import type { Random } from '../../application/ports/random';
 import {
   generateCredential,
   generatePairingCode,
+  generateTemporaryPassword,
   normalizeCode,
   sha256Hex,
   systemRandom,
@@ -105,5 +106,33 @@ describe('sha256Hex', () => {
     ['abc', 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'],
   ])('matches the known vector for %j', (input, expected) => {
     expect(sha256Hex(input)).toBe(expected);
+  });
+});
+
+describe('generateTemporaryPassword', () => {
+  it('004 R3 is 16 characters formatted XXXX-XXXX-XXXX-XXXX from the unambiguous alphabet', () => {
+    for (let i = 0; i < 200; i++) {
+      const password = generateTemporaryPassword(systemRandom);
+      expect(password).toMatch(/^[A-Z2-9]{4}(-[A-Z2-9]{4}){3}$/);
+      expect(password).not.toMatch(/[01OIL]/);
+    }
+  });
+
+  it('004 R3 never repeats over many passwords', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 1_000; i++) {
+      seen.add(generateTemporaryPassword(systemRandom));
+    }
+
+    expect(seen.size).toBe(1_000);
+  });
+
+  it('004 R3 skips the biased bytes, so each character is equally likely', () => {
+    const limit = 256 - (256 % 31);
+    const passwords = generateTemporaryPassword(
+      fixedRandom(limit, 255, ...Array.from({ length: 16 }, () => 0)),
+    );
+
+    expect(passwords).toBe('AAAA-AAAA-AAAA-AAAA');
   });
 });

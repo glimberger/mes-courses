@@ -69,4 +69,19 @@ describe('ConsoleErrorReporter', () => {
     expect(() => reporter.crashNatively()).not.toThrow();
     expect(print).toHaveBeenCalledTimes(1);
   });
+
+  it('004 R10 prints no email address: not in the message, a URL or a nested cause', () => {
+    const reporter = new ConsoleErrorReporter();
+
+    reporter.report(
+      new Error('GET https://x.fr/?e=marie@example.org', {
+        cause: new Error('for paul@example.org'),
+      }),
+      { operation: 'signIn' },
+    );
+
+    const [, , printed] = print.mock.calls[0] ?? [];
+    expect((printed as Error).message).toBe('GET https://x.fr/?e=[email]');
+    expect(((printed as Error).cause as Error).message).toBe('for [email]');
+  });
 });

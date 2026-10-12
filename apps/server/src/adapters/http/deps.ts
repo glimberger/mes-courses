@@ -2,6 +2,7 @@ import type { Clock } from '../../application/ports/clock';
 import type { ErrorReporter } from '../../application/ports/error-reporter';
 import type { IdGenerator } from '../../application/ports/id-generator';
 import type { PairingCrypto } from '../../application/ports/pairing-crypto';
+import type { AccountRecord } from '../../domain/account';
 import type { DeviceRecord, ServerStore } from '../../application/ports/store';
 
 export type AppDeps = {
@@ -22,5 +23,7 @@ declare module 'fastify' {
   interface FastifyRequest {
     /** The authorized device, set by the auth hook on non-public routes. */
     device?: DeviceRecord;
+    /** The account the device belongs to, set with `device`. */
+    account?: AccountRecord;
   }
 }

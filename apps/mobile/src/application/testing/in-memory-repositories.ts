@@ -362,6 +362,11 @@ export class InMemoryRepositories implements Repositories {
     },
   };
 
+  /** Forgets everything, as the SQLite eraser does: a first launch again. */
+  clear(): void {
+    this.state = emptyState();
+  }
+
   /** A copy of everything stored, to give back to `restore`. */
   snapshot(): State {
     return copyState(this.state);

@@ -1,5 +1,10 @@
 /** Fixed technical identifiers only, never request content (research R15, Principle VIII). */
-export type ErrorContext = { operation: string; route: string };
+export type ErrorContext = {
+  operation: string;
+  route: string;
+  /** The opaque account id, the only user identifier a report may carry (004 research R10). */
+  accountId?: string;
+};
 
 export interface ErrorReporter {
   /** Never throws and never blocks. */

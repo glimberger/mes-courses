@@ -14,11 +14,14 @@ export const registerSyncRoutes = (
     '/v1/sync',
     { schema: { body: syncBodySchema } },
     async (request, reply) => {
-      const deviceId = request.device?.id;
-      if (deviceId === undefined)
-        return sendError(reply, 'DeviceNotAuthorized');
+      const device = request.device;
+      if (device === undefined) return sendError(reply, 'DeviceNotAuthorized');
       try {
-        return await sync(deps, deviceId, request.body);
+        return await sync(
+          deps,
+          { accountId: device.accountId, deviceId: device.id },
+          request.body,
+        );
       } catch (error) {
         if (error instanceof TooManyChangesError) {
           return sendError(reply, 'BadRequest');

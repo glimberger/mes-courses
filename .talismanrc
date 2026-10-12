@@ -105,7 +105,7 @@ fileignoreconfig:
   - filename: apps/server/src/adapters/sqlite/sql-database.ts
     ignore_detectors: [filename]
   - filename: apps/server/src/adapters/sqlite/sqlite-store.ts
-    ignore_detectors: [filename]
+    ignore_detectors: [filename, filecontent]
   - filename: apps/server/src/adapters/sqlite/sqlite-store.test.ts
     ignore_detectors: [filename]
   # The crypto test asserts the published SHA-256 vectors, and the pairing-code alphabet is a
@@ -134,4 +134,58 @@ fileignoreconfig:
   # The environment template for the Pi holds variable names only, no values.
   - filename: deploy/mes-courses.env.example
     ignore_detectors: [filename]
+  # Feature 004 phase 2: account, password-hash and attempt-key code. Column and field names such
+  # as password_hash or keyHash trip the pattern detector; no file holds a secret.
+  - filename: .dependency-cruiser.cjs
+    ignore_detectors: [filecontent]
+  - filename: apps/server/package.json
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/crypto/password-hasher.test.ts
+    ignore_detectors: [filecontent, filename]
+  - filename: apps/server/src/adapters/crypto/password-hasher.ts
+    ignore_detectors: [filecontent, filename]
+  - filename: apps/server/src/adapters/sqlite/migrations.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/sqlite/migrations.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/ports/auth-attempt-repository.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/ports/pairing-crypto.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/ports/password-hasher.ts
+    ignore_detectors: [filecontent, filename]
+  - filename: apps/server/src/application/testing/contracts/account-repository.contract.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/testing/contracts/auth-attempt-repository.contract.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/testing/fake-pairing-crypto.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/testing/fake-password-hasher.ts
+    ignore_detectors: [filecontent, filename]
+  - filename: apps/server/src/application/use-cases/authenticate-device.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/composition/admin-prompt.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/composition/create-admin.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/composition/create-admin.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/composition/set-password.test.ts
+    ignore_detectors: [filecontent, filename]
+  - filename: apps/server/src/composition/set-password.ts
+    ignore_detectors: [filecontent, filename]
+  - filename: apps/server/src/domain/account.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/domain/account.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/domain/attempts.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/domain/attempts.ts
+    ignore_detectors: [filecontent]
+  - filename: packages/sync-core/src/account.test.ts
+    ignore_detectors: [filecontent]
+  - filename: packages/sync-core/src/account.ts
+    ignore_detectors: [filecontent]
+  - filename: packages/sync-core/src/protocol.ts
+    ignore_detectors: [filecontent]
 version: "1.0"

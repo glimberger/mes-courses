@@ -19,4 +19,25 @@ describe('ConsoleErrorReporter', () => {
     );
     print.mockRestore();
   });
+
+  it('004 R10 prints no address and the account id when given', () => {
+    const print = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+
+    new ConsoleErrorReporter().report(new Error('to marie@example.org'), {
+      operation: 'inviteAccount',
+      route: 'POST /v1/admin/accounts',
+      accountId: 'acc-1',
+    });
+
+    const [, context, printed] = print.mock.calls[0] ?? [];
+    expect(context).toEqual({
+      operation: 'inviteAccount',
+      route: 'POST /v1/admin/accounts',
+      accountId: 'acc-1',
+    });
+    expect((printed as Error).message).toBe('to [email]');
+    print.mockRestore();
+  });
 });

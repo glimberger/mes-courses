@@ -1,5 +1,6 @@
 import type { Hlc } from '@mes-courses/sync-core';
 
+import type { AccountRecord } from '../../../domain/account';
 import type {
   AppliedChangeRecord,
   ArticleRecord,
@@ -87,12 +88,29 @@ export const item = (
   ...overrides,
 });
 
+export const account = (
+  id: string,
+  email: string | null,
+  overrides: Partial<AccountRecord> = {},
+): AccountRecord => ({
+  id,
+  email,
+  role: 'user',
+  passwordHash: null,
+  temporaryPasswordHash: null,
+  temporaryExpiresAt: null,
+  suspendedAt: null,
+  createdAt: '2026-10-01T10:00:00.000Z',
+  ...overrides,
+});
+
 export const device = (
   id: string,
   credentialHash: string,
   overrides: Partial<DeviceRecord> = {},
 ): DeviceRecord => ({
   id,
+  accountId: 'acc-default',
   name: 'Téléphone',
   credentialHash,
   createdAt: '2026-10-01T10:00:00.000Z',

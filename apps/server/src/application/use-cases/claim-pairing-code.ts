@@ -54,7 +54,12 @@ export const claimPairingCode = async (
   if (name === null) throw new InvalidDeviceNameError();
 
   const outcome = await store.run(
-    async ({ pairingCodes, pairingFailures, devices }): Promise<Outcome> => {
+    async ({
+      accounts,
+      pairingCodes,
+      pairingFailures,
+      devices,
+    }): Promise<Outcome> => {
       const nowMs = clock.nowMs();
       const now = new Date(nowMs).toISOString();
       const since = new Date(nowMs - FAILURE_WINDOW_MS).toISOString();
@@ -82,11 +87,15 @@ export const claimPairingCode = async (
         return { kind: 'invalid' };
       }
 
+      // Interim (004 T016, removed with pairing in T046): the device joins the only account.
+      const [soleAccount] = await accounts.all();
+      if (soleAccount === undefined) throw new Error('No account to pair with');
       const credential = crypto.generateCredential();
       const deviceId = ids.next();
       await pairingCodes.markUsed(codeHash, now);
       await devices.add({
         id: deviceId,
+        accountId: soleAccount.id,
         name,
         credentialHash: crypto.sha256Hex(credential),
         createdAt: now,

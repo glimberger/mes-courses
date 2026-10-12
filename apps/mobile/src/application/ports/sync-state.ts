@@ -5,6 +5,11 @@ export type SyncState = {
   serverUrl: string | null;
   serverId: string | null;
   deviceId: string | null;
+  /**
+   * The account whose data this replica holds (004 data-model.md): `null` before any sign-in, and
+   * for a device paired before accounts until its next sync tells it.
+   */
+  accountId: string | null;
   /** Highest server `seq` applied locally; 0 before the first sync. */
   lastSeq: number;
   /** The device's HLC state; never moves backwards. */
@@ -37,6 +42,7 @@ export const initialSyncState = (): SyncState => ({
   serverUrl: null,
   serverId: null,
   deviceId: null,
+  accountId: null,
   lastSeq: 0,
   maxHlc: minHlc(LOCAL_DEVICE_ID),
   lastSyncAt: null,

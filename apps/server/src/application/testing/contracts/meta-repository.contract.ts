@@ -1,10 +1,10 @@
-import type { ServerStore } from '../../ports/store';
+import type { ScopedStore } from './scoped-store';
 
 export const metaRepositoryContract = (
-  createStore: () => Promise<ServerStore>,
+  createStore: () => Promise<ScopedStore>,
 ) => {
   describe('MetaRepository contract', () => {
-    let store: ServerStore;
+    let store: ScopedStore;
 
     beforeEach(async () => {
       store = await createStore();

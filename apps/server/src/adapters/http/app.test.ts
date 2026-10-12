@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 
 import type { Clock } from '../../application/ports/clock';
 import type { ErrorReporter } from '../../application/ports/error-reporter';
+import { account, device } from '../../application/testing/contracts/entities';
 import { InMemoryStore } from '../../application/testing/in-memory-store';
 import { createFakePairingCrypto } from '../../application/testing/fake-pairing-crypto';
 import { createPairingCode } from '../../application/use-cases/create-pairing-code';
@@ -26,8 +27,12 @@ type Harness = {
   pair: (name?: string) => Promise<{ deviceId: string; credential: string }>;
 };
 
-const harness = (overrides: Partial<AppDeps> = {}): Harness => {
+const harness = async (overrides: Partial<AppDeps> = {}): Promise<Harness> => {
   const store = new InMemoryStore();
+  // The account the interim pairing of T016 attaches devices to.
+  await store.run(({ accounts }) =>
+    accounts.add(account('acc-1', 'marie@example.org')),
+  );
   const clock = new FakeClock();
   const reporter: jest.Mocked<ErrorReporter> = { report: jest.fn() };
   let id = 0;
@@ -61,7 +66,7 @@ const bearer = (credential: string) => ({
 describe('HTTP app', () => {
   describe('GET /v1/health', () => {
     it('needs no authorization and carries the server identity', async () => {
-      const { app, store } = harness();
+      const { app, store } = await harness();
       const serverId = await store.run(({ meta }) => meta.serverId());
 
       const response = await app.inject({ method: 'GET', url: '/v1/health' });
@@ -77,7 +82,7 @@ describe('HTTP app', () => {
 
   describe('app version', () => {
     it('refuses a version below minAppVersion with 426, before authorization', async () => {
-      const { app } = harness();
+      const { app } = await harness();
 
       const response = await app.inject({
         method: 'GET',
@@ -96,7 +101,7 @@ describe('HTTP app', () => {
     });
 
     it('reads nothing when it refuses', async () => {
-      const { app, store } = harness();
+      const { app, store } = await harness();
       const run = jest.spyOn(store, 'run');
       // The identity lookup is the only read, and only for the body: the credential is not looked up.
       await app.inject({
@@ -109,7 +114,7 @@ describe('HTTP app', () => {
     });
 
     it('accepts the minimum and anything above', async () => {
-      const { app } = harness();
+      const { app } = await harness();
       for (const version of ['1.2.0', '1.2.1', '2.0.0']) {
         const response = await app.inject({
           method: 'GET',
@@ -127,7 +132,7 @@ describe('HTTP app', () => {
       ['an unknown credential', 'Bearer nope'],
       ['another scheme', 'Basic abc'],
     ])('answers 401 for %s', async (_label, authorization) => {
-      const { app } = harness();
+      const { app } = await harness();
 
       const response = await app.inject({
         method: 'POST',
@@ -141,7 +146,7 @@ describe('HTTP app', () => {
     });
 
     it('answers 401 for a revoked device', async () => {
-      const { app, store, pair } = harness();
+      const { app, store, pair } = await harness();
       const { deviceId, credential } = await pair();
       await store.run(async ({ devices }) => {
         const device = await devices.get(deviceId);
@@ -163,7 +168,7 @@ describe('HTTP app', () => {
     });
 
     it('answers 401 before any read of the data', async () => {
-      const { app, store } = harness();
+      const { app, store } = await harness();
       const tables = jest.spyOn(store, 'run');
       await app.inject({
         method: 'POST',
@@ -177,7 +182,7 @@ describe('HTTP app', () => {
 
   describe('request limits', () => {
     it('answers 400 for a body over 1 MB', async () => {
-      const { app } = harness();
+      const { app } = await harness();
 
       const response = await app.inject({
         method: 'POST',
@@ -190,7 +195,7 @@ describe('HTTP app', () => {
     });
 
     it('answers 400 for a body that breaks the schema', async () => {
-      const { app } = harness();
+      const { app } = await harness();
 
       const response = await app.inject({
         method: 'POST',
@@ -203,7 +208,7 @@ describe('HTTP app', () => {
     });
 
     it('answers 404 for an unknown route', async () => {
-      const { app, pair } = harness();
+      const { app, pair } = await harness();
       const { credential } = await pair();
 
       const response = await app.inject({
@@ -219,7 +224,7 @@ describe('HTTP app', () => {
 
   describe('POST /v1/pairing/claim', () => {
     it('authorizes the device and returns its credential once', async () => {
-      const { app, store, deps } = harness();
+      const { app, store, deps } = await harness();
       const { code } = await createPairingCode(deps, null);
 
       const response = await app.inject({
@@ -243,7 +248,7 @@ describe('HTTP app', () => {
     });
 
     it('answers 400 InvalidCode for an unknown code', async () => {
-      const { app } = harness();
+      const { app } = await harness();
 
       const response = await app.inject({
         method: 'POST',
@@ -256,7 +261,7 @@ describe('HTTP app', () => {
     });
 
     it('rejects a wrong type or an unknown property instead of coercing it', async () => {
-      const { app } = harness();
+      const { app } = await harness();
       const claim = (payload: object) =>
         app.inject({ method: 'POST', url: '/v1/pairing/claim', payload });
 
@@ -273,7 +278,7 @@ describe('HTTP app', () => {
     });
 
     it('keeps the error body when the identity lookup fails', async () => {
-      const { app, store, reporter } = harness();
+      const { app, store, reporter } = await harness();
       jest.spyOn(store, 'run').mockRejectedValue(new Error('database locked'));
 
       const response = await app.inject({
@@ -289,7 +294,7 @@ describe('HTTP app', () => {
     });
 
     it('answers 400 for an empty device name', async () => {
-      const { app } = harness();
+      const { app } = await harness();
 
       const response = await app.inject({
         method: 'POST',
@@ -302,7 +307,7 @@ describe('HTTP app', () => {
     });
 
     it('answers 429 with Retry-After from the 6th failure', async () => {
-      const { app, clock } = harness();
+      const { app, clock } = await harness();
       const claim = () =>
         app.inject({
           method: 'POST',
@@ -324,7 +329,7 @@ describe('HTTP app', () => {
 
   describe('POST /v1/pairing-codes', () => {
     it('gives an authorized device a code valid for 10 minutes', async () => {
-      const { app, store, pair, deps } = harness();
+      const { app, store, pair, deps } = await harness();
       const { deviceId, credential } = await pair();
 
       const response = await app.inject({
@@ -348,7 +353,7 @@ describe('HTTP app', () => {
 
   describe('unexpected errors', () => {
     it('answers 500 ServerError and reports only the operation and the route', async () => {
-      const h = harness();
+      const h = await harness();
       const { credential } = await h.pair();
       const app = buildApp({
         ...h.deps,
@@ -373,6 +378,129 @@ describe('HTTP app', () => {
         operation: 'http',
         route: 'POST /v1/pairing-codes',
       });
+    });
+  });
+  describe('004 account authorization (contracts/auth-api.md)', () => {
+    /** A device of account `acc-2`, made directly in the store. */
+    const otherAccountDevice = async (h: Harness) => {
+      await h.store.run(async ({ accounts, devices }) => {
+        await accounts.add(account('acc-2', 'paul@example.org'));
+        await devices.add(
+          device('d-other', h.deps.crypto.sha256Hex('credential-other'), {
+            accountId: 'acc-2',
+            name: 'Tablette de Paul',
+          }),
+        );
+      });
+      return 'credential-other';
+    };
+
+    it('004 US5-3 answers 403 AccountSuspended on sync and devices, keeping the data', async () => {
+      const h = await harness();
+      const { credential } = await h.pair();
+      await h.store.run(({ accounts }) =>
+        accounts.update(
+          account('acc-1', 'marie@example.org', {
+            suspendedAt: '2026-10-01T10:00:00.000Z',
+          }),
+        ),
+      );
+
+      for (const [method, url] of [
+        ['POST', '/v1/sync'],
+        ['GET', '/v1/devices'],
+      ] as const) {
+        const response = await h.app.inject({
+          method,
+          url,
+          headers: bearer(credential),
+          ...(method === 'POST'
+            ? {
+                payload: {
+                  lastSeq: 0,
+                  hlc: { wallMs: 1, counter: 0, deviceId: 'x' },
+                  changes: [],
+                },
+              }
+            : {}),
+        });
+        expect(response.statusCode).toBe(403);
+        expect(response.json().error).toBe('AccountSuspended');
+      }
+    });
+
+    it('004 US5-4 answers 401 AccountDeleted for a credential of a deleted account, and 401 DeviceNotAuthorized for an unknown one', async () => {
+      const h = await harness();
+      await h.store.run(({ endedCredentials }) =>
+        endedCredentials.add(
+          h.deps.crypto.sha256Hex('credential-gone'),
+          'accountDeleted',
+          '2026-10-01T10:00:00.000Z',
+        ),
+      );
+
+      const deleted = await h.app.inject({
+        method: 'GET',
+        url: '/v1/devices',
+        headers: bearer('credential-gone'),
+      });
+      const unknown = await h.app.inject({
+        method: 'GET',
+        url: '/v1/devices',
+        headers: bearer('credential-never'),
+      });
+
+      expect(deleted.statusCode).toBe(401);
+      expect(deleted.json().error).toBe('AccountDeleted');
+      expect(unknown.statusCode).toBe(401);
+      expect(unknown.json().error).toBe('DeviceNotAuthorized');
+    });
+
+    it('004 R9 adds the accountId to authenticated responses', async () => {
+      const h = await harness();
+      const { credential } = await h.pair();
+
+      const response = await h.app.inject({
+        method: 'GET',
+        url: '/v1/devices',
+        headers: bearer(credential),
+      });
+
+      expect(response.json().accountId).toBe('acc-1');
+    });
+
+    it('004 US3-3 lists only the caller devices and answers 404 for another account device', async () => {
+      const h = await harness();
+      const { credential } = await h.pair();
+      await otherAccountDevice(h);
+
+      const list = await h.app.inject({
+        method: 'GET',
+        url: '/v1/devices',
+        headers: bearer(credential),
+      });
+      const rename = await h.app.inject({
+        method: 'PATCH',
+        url: '/v1/devices/d-other',
+        headers: bearer(credential),
+        payload: { name: 'Volé' },
+      });
+      const revoke = await h.app.inject({
+        method: 'DELETE',
+        url: '/v1/devices/d-other',
+        headers: bearer(credential),
+      });
+
+      expect(
+        list.json().devices.map((d: { id: string }) => d.id),
+      ).not.toContain('d-other');
+      expect(rename.statusCode).toBe(404);
+      expect(revoke.statusCode).toBe(404);
+      const untouched = await h.store.run(({ devices }) =>
+        devices.get('d-other'),
+      );
+      expect(untouched?.name).toBe('Tablette de Paul');
+      expect(untouched?.revokedAt).toBeNull();
     });
   });
 });

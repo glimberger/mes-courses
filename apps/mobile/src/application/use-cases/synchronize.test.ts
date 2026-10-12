@@ -397,6 +397,37 @@ describe('synchronize', () => {
     });
   });
 
+  describe('the account (004)', () => {
+    it('004 US3-5 learns the account from the first response that names it, on a device paired before accounts', async () => {
+      await connect();
+      expect((await state()).accountId).toBeNull();
+      handler = (request) => ok(respond(request, { accountId: 'account-1' }));
+
+      await synchronize();
+
+      expect((await state()).accountId).toBe('account-1');
+    });
+
+    it('004 keeps the account it knows when a later response names another', async () => {
+      await connect();
+      handler = (request) => ok(respond(request, { accountId: 'account-1' }));
+      await synchronize();
+      handler = (request) => ok(respond(request, { accountId: 'account-2' }));
+
+      await synchronize();
+
+      expect((await state()).accountId).toBe('account-1');
+    });
+
+    it('004 stays null while no response names an account', async () => {
+      await connect();
+
+      await synchronize();
+
+      expect((await state()).accountId).toBeNull();
+    });
+  });
+
   describe('failures', () => {
     beforeEach(async () => {
       await connect();
