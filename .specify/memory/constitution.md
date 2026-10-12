@@ -1,9 +1,11 @@
 <!--
 Sync Impact Report
-Version change: 2.4.0 -> 2.5.0 (MINOR: materially expanded guidance on task grouping and commits)
-Modified principles: none renamed; Principle I unchanged
-Modified sections: Development Workflow (task grouping, increments), Quality Gates (merge gate
-  on test-first evidence)
+Version change: 2.5.0 -> 2.6.0 (MINOR: materially expanded guidance on where French text may live)
+Modified principles: X (French Interface, No Internationalization): a message-delivering driven
+  adapter, such as the server's email adapter, may hold the French text it sends
+Modified sections: none
+Migration note: no existing code changes; feature 004 puts its four French emails in the
+  server's adapters/mail/ and relies on this clause
 Added/removed sections: none
 Deferred TODOs: none
 -->
@@ -182,9 +184,14 @@ The application targets French-speaking users only, and its interface is written
   French conventions (for example a decimal comma).
 - There is no internationalization system: no translation library, message catalog,
   translation keys or language switch. Text is written directly where the UI adapter uses it.
-- User-facing text exists only in the user interface adapter (Principle VI). Domain and
-  application code never produce display text; they return typed results and errors that the
-  adapter turns into French messages.
+- User-facing text exists only in the user interface adapter (Principle VI), with one extension:
+  a driven adapter that delivers a message to the user outside the interface, such as the
+  server's email adapter, MAY hold the French text of the messages it sends. It plays the role
+  of the user interface adapter for those messages. Domain and application code never produce
+  display text, and the port of such an adapter carries no text: it carries typed data that the
+  adapter turns into French messages. Every other adapter holds no user-facing text.
+- Domain and application code never produce display text; they return typed results and errors
+  that the adapter turns into French messages.
 - Tests assert the French text as the user reads it (Principle II).
 
 Rationale: a single audience needs a single language; an internationalization layer would be
@@ -324,4 +331,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 2.5.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-10
+**Version**: 2.6.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-12
