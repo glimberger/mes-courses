@@ -17,6 +17,8 @@ const text = (notice: Notice): string => {
       return `« ${notice.name} » ajouté`;
     case 'deviceConnected':
       return 'Appareil connecté. Synchronisation en cours…';
+    case 'invitationSent':
+      return `Invitation envoyée à ${notice.email}.`;
     case 'articleDeletedElsewhere':
       return 'Cet article a été supprimé sur un autre appareil.';
     case 'itemRemovedElsewhere':

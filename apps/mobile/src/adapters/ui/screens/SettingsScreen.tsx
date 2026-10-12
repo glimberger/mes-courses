@@ -33,6 +33,15 @@ export type DevicesState =
   | { type: 'unavailable' }
   | { type: 'success'; devices: DeviceInfo[] };
 
+/** What the Compte section shows (contracts/ui-screens.md, Settings). */
+export type AccountState =
+  | { type: 'loading' }
+  | { type: 'error' }
+  | { type: 'offline' }
+  // Revoked or outdated: the connection state says why, and retrying cannot help.
+  | { type: 'unavailable' }
+  | { type: 'success'; email: string; administrator: boolean };
+
 type Dialog =
   | { type: 'rename'; device: DeviceInfo }
   | { type: 'revoke'; device: DeviceInfo }
@@ -52,7 +61,9 @@ export const SettingsScreen = () => {
   );
   const syncNow = useAppStore((state) => state.syncNow);
   const listDevices = useAppStore((state) => state.listDevices);
+  const getAccountSettings = useAppStore((state) => state.getAccountSettings);
   const [devices, setDevices] = useState<DevicesState>({ type: 'loading' });
+  const [account, setAccount] = useState<AccountState>({ type: 'loading' });
   const [dialog, setDialog] = useState<Dialog | null>(null);
   // Bumped to load the list again; the effect below loads it.
   const [reload, setReload] = useState(0);
@@ -62,7 +73,10 @@ export const SettingsScreen = () => {
   const [wasConnected, setWasConnected] = useState(isConnected);
   if (wasConnected !== isConnected) {
     setWasConnected(isConnected);
-    if (!isConnected) setDevices({ type: 'loading' });
+    if (!isConnected) {
+      setDevices({ type: 'loading' });
+      setAccount({ type: 'loading' });
+    }
   }
   useEffect(() => {
     if (!isConnected) return;
@@ -88,8 +102,37 @@ export const SettingsScreen = () => {
       current = false;
     };
   }, [isConnected, listDevices, reload]);
+  // The address and the role are the server's to tell on every opening, never read from storage.
+  useEffect(() => {
+    if (!isConnected) return;
+    let current = true;
+    void getAccountSettings().then(({ account: outcome }) => {
+      if (!current || outcome === null) return;
+      if (outcome.ok) {
+        setAccount({
+          type: 'success',
+          email: outcome.value.email,
+          administrator: outcome.value.role === 'administrator',
+        });
+      } else {
+        const { type } = outcome.error;
+        setAccount({
+          type:
+            type === 'Offline'
+              ? 'offline'
+              : type === 'DeviceNotAuthorized' || type === 'UpdateRequired'
+                ? 'unavailable'
+                : 'error',
+        });
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [isConnected, getAccountSettings, reload]);
   const loadDevices = () => {
     setDevices({ type: 'loading' });
+    setAccount({ type: 'loading' });
     setReload((count) => count + 1);
   };
 
@@ -118,6 +161,8 @@ export const SettingsScreen = () => {
                 canSyncNow: connection === 'connected' && status !== 'sending',
               }
         }
+        account={account}
+        onManageAccounts={() => navigation.navigate('Accounts')}
         devices={devices}
         onRetryDevices={loadDevices}
         onRenameDevice={(device) => setDialog({ type: 'rename', device })}
@@ -156,6 +201,9 @@ export type SettingsViewProps = {
     lastSyncAt: string | null;
     canSyncNow: boolean;
   } | null;
+  account: AccountState;
+  /** "Gérer les comptes" (administrators only). */
+  onManageAccounts: () => void;
   devices: DevicesState;
   onRetryDevices: () => void;
   onRenameDevice: (device: DeviceInfo) => void;
@@ -171,6 +219,8 @@ export const SettingsView = ({
   onConnect,
   onSyncNow,
   server,
+  account,
+  onManageAccounts,
   devices,
   onRetryDevices,
   onRenameDevice,
@@ -198,6 +248,13 @@ export const SettingsView = ({
         </>
       ) : (
         <>
+          <List.Subheader accessibilityRole="header">Compte</List.Subheader>
+          <AccountSection
+            account={account}
+            onRetry={onRetryDevices}
+            onManageAccounts={onManageAccounts}
+          />
+
           <List.Subheader accessibilityRole="header">Serveur</List.Subheader>
           <List.Item
             title={withoutScheme(server.url)}
@@ -239,6 +296,55 @@ export const SettingsView = ({
     </ScrollView>
   </View>
 );
+
+const AccountSection = ({
+  account,
+  onRetry,
+  onManageAccounts,
+}: {
+  account: AccountState;
+  onRetry: () => void;
+  onManageAccounts: () => void;
+}) => {
+  switch (account.type) {
+    case 'loading':
+      return <LoadingState />;
+    case 'error':
+      return (
+        <ErrorState
+          message="Impossible de charger le compte."
+          onRetry={onRetry}
+        />
+      );
+    case 'offline':
+      // Being offline is normal: no error color.
+      return (
+        <Text variant="bodyMedium" style={styles.offline}>
+          Compte indisponible hors connexion.
+        </Text>
+      );
+    case 'unavailable':
+      return (
+        <Text variant="bodyMedium" style={styles.offline}>
+          Compte indisponible pour le moment.
+        </Text>
+      );
+    case 'success':
+      return (
+        <>
+          <List.Item
+            title={account.email}
+            description={account.administrator ? 'Administrateur' : undefined}
+          />
+          {account.administrator && (
+            <Button mode="outlined" onPress={onManageAccounts}>
+              Gérer les comptes
+            </Button>
+          )}
+        </>
+      );
+  }
+};
 
 const DevicesSection = ({
   devices,

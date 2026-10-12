@@ -1,5 +1,9 @@
 import { InMemoryCredentialStore } from '../../../application/testing/in-memory-credential-store';
 import { OfflineSyncServer } from '../../../application/testing/offline-sync-server';
+import { OfflineAccountServer } from '../../../application/testing/offline-account-server';
+import { OfflineAdminServer } from '../../../application/testing/offline-admin-server';
+import type { AccountServer } from '../../../application/ports/account-server';
+import type { AdminServer } from '../../../application/ports/admin-server';
 import type { SyncServer } from '../../../application/ports/sync-server';
 import { StorageFull } from '../../../application/ports/storage-full';
 import {
@@ -59,6 +63,10 @@ export type StoryScenario = {
   };
   /** What the fake `SyncServer` answers, method by method; the others stay unreachable. */
   syncServer?: Partial<SyncServer>;
+  /** What the fake `AdminServer` answers, method by method; the others stay unreachable. */
+  adminServer?: Partial<AdminServer>;
+  /** What the fake `AccountServer` answers, method by method; the others stay unreachable. */
+  accountServer?: Partial<AccountServer>;
   /**
    * Runs once the store is built, through its actions only. It is awaited until it resolves or
    * calls a use case held `pending`, whichever comes first, so a loading state can be prepared.
@@ -136,6 +144,11 @@ export const buildStoryStore = async (scenario: StoryScenario) => {
   }
   const real = createUseCases({
     syncServer: Object.assign(new OfflineSyncServer(), scenario.syncServer),
+    accountServer: Object.assign(
+      new OfflineAccountServer(),
+      scenario.accountServer,
+    ),
+    adminServer: Object.assign(new OfflineAdminServer(), scenario.adminServer),
     credentials: new InMemoryCredentialStore(
       connected && !connected.withoutCredential ? 'story-credential' : null,
     ),

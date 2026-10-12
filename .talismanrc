@@ -188,4 +188,32 @@ fileignoreconfig:
     ignore_detectors: [filecontent]
   - filename: packages/sync-core/src/protocol.ts
     ignore_detectors: [filecontent]
+  # Feature 004 phase 3: invitation code, mail templates and the Accounts screen. Words such as
+  # temporaryPassword, keyExtractor and keyboardType trip the pattern detector; no file holds a secret.
+  - filename: apps/mobile/src/application/ports/account-server.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/use-cases/list-accounts.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/mail/console-mailer.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/use-cases/invite-account.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/testing/start-test-server.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/mail/smtp-mailer.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/use-cases/get-account.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/mail/templates.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/mail/templates.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/use-cases/invite-account.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/mobile/src/adapters/ui/screens/InviteAccountDialog.tsx
+    ignore_detectors: [filecontent]
+  - filename: apps/mobile/src/adapters/ui/screens/AccountsScreen.tsx
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/mail/smtp-mailer.test.ts
+    ignore_detectors: [filecontent]
 version: "1.0"

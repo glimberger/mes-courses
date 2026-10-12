@@ -5,6 +5,8 @@ import { isBelow } from '../../domain/version';
 import { authenticate } from './auth';
 import type { AppDeps } from './deps';
 import { sendError } from './errors';
+import { registerAccountRoutes } from './routes/account';
+import { registerAdminRoutes } from './routes/admin';
 import { registerDeviceRoutes } from './routes/devices';
 import { registerHealthRoutes } from './routes/health';
 import { registerPairingRoutes } from './routes/pairing';
@@ -74,6 +76,13 @@ export const buildApp = (deps: AppDeps): FastifyInstance => {
     if (result.kind === 'suspended') {
       return sendError(reply, 'AccountSuspended');
     }
+    // The role is the server's to decide, before the route reads anything (US1-5).
+    if (
+      request.routeOptions.config.administrator === true &&
+      result.account.role !== 'administrator'
+    ) {
+      return sendError(reply, 'Forbidden');
+    }
     request.device = result.device;
     request.account = result.account;
   });
@@ -97,6 +106,8 @@ export const buildApp = (deps: AppDeps): FastifyInstance => {
   });
 
   registerHealthRoutes(app);
+  registerAccountRoutes(app);
+  registerAdminRoutes(app, deps);
   registerDeviceRoutes(app, deps);
   registerPairingRoutes(app, deps);
   registerSyncRoutes(app, deps);

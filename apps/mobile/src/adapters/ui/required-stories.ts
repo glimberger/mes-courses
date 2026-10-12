@@ -90,4 +90,17 @@ export const requiredStories: readonly string[] = [
   'Components/SyncStatusBar/DisconnectedByServer',
   'Components/SyncStatusBar/UpdateRequired',
   'Screens/CurrentList/WithSyncStatus',
+  // 004 Multi-user accounts
+  // User Story 1
+  'Screens/Accounts/Loading',
+  'Screens/Accounts/Error',
+  'Screens/Accounts/Offline',
+  'Screens/Accounts/Empty',
+  'Screens/Accounts/Success',
+  'Dialogs/InviteAccountDialog/Default',
+  'Dialogs/InviteAccountDialog/AlreadyExists',
+  'Dialogs/InviteAccountDialog/InvalidEmail',
+  'Dialogs/InviteAccountDialog/MailFailed',
+  'Screens/Settings/SignedIn',
+  'Screens/Settings/SignedInAdministrator',
 ];

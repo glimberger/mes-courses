@@ -1,5 +1,7 @@
 import { InMemoryCredentialStore } from '../../../application/testing/in-memory-credential-store';
 import { OfflineSyncServer } from '../../../application/testing/offline-sync-server';
+import { OfflineAccountServer } from '../../../application/testing/offline-account-server';
+import { OfflineAdminServer } from '../../../application/testing/offline-admin-server';
 import { StorageFull } from '../../../application/ports/storage-full';
 import {
   InMemoryRepositories,
@@ -56,6 +58,8 @@ const buildStore = () => {
   const unitOfWork = new InMemoryUnitOfWork(new InMemoryRepositories());
   const useCases: UseCases = createUseCases({
     syncServer: new OfflineSyncServer(),
+    accountServer: new OfflineAccountServer(),
+    adminServer: new OfflineAdminServer(),
     credentials: new InMemoryCredentialStore(),
     unitOfWork,
     ids: new SequentialIdGenerator(),

@@ -8,6 +8,7 @@ import type { ErrorReporter } from '../../application/ports/error-reporter';
 import { ScreenErrorBoundary } from './components/app-error-boundary';
 import { NoticeSnackbar } from './components/NoticeSnackbar';
 import { UndoSnackbar } from './components/UndoSnackbar';
+import { AccountsScreen } from './screens/AccountsScreen';
 import { AddArticlesScreen } from './screens/AddArticlesScreen';
 import { CreateArticleScreen } from './screens/CreateArticleScreen';
 import { CurrentListScreen } from './screens/CurrentListScreen';
@@ -64,6 +65,7 @@ export const Navigation = ({
           <Stack.Screen name="EditArticle" component={EditArticleScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="ConnectServer" component={ConnectServerScreen} />
+          <Stack.Screen name="Accounts" component={AccountsScreen} />
         </Stack.Navigator>
       </NavigationContainer>
       <SyncAnnouncer />

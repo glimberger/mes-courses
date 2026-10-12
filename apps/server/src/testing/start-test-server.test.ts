@@ -40,4 +40,34 @@ describe('startTestServer', () => {
       await server.close();
     }
   });
+
+  it('004 creates accounts with a working device credential and shows the emails sent', async () => {
+    const server = await startTestServer();
+    try {
+      const admin = await server.createAccount({
+        role: 'administrator',
+        email: 'admin@example.org',
+      });
+      const headers = {
+        authorization: `Bearer ${admin.deviceCredential}`,
+        'content-type': 'application/json',
+      };
+
+      const invited = await fetch(`${server.url}/v1/admin/accounts`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ email: 'marie@example.org' }),
+      });
+
+      expect(invited.status).toBe(201);
+      expect(server.mails()).toEqual([
+        expect.objectContaining({
+          kind: 'invitation',
+          to: 'marie@example.org',
+        }),
+      ]);
+    } finally {
+      await server.close();
+    }
+  });
 });

@@ -21,6 +21,8 @@ export type Notice =
   | { type: 'articleAdded'; name: string }
   /** The device is paired with a server; the first sync starts (US4-4). */
   | { type: 'deviceConnected' }
+  /** The administrator invited an address (US1-1). Kept in memory, never reported. */
+  | { type: 'invitationSent'; email: string }
   /** A pull deleted the article of an undo offer, or of a form (FR-008, FR-020a). */
   | { type: 'articleDeletedElsewhere' }
   /** A pull removed the item a form was editing from its list (FR-020a). */

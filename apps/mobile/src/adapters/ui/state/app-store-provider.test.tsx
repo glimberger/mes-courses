@@ -1,5 +1,7 @@
 import { InMemoryCredentialStore } from '../../../application/testing/in-memory-credential-store';
 import { OfflineSyncServer } from '../../../application/testing/offline-sync-server';
+import { OfflineAccountServer } from '../../../application/testing/offline-account-server';
+import { OfflineAdminServer } from '../../../application/testing/offline-admin-server';
 import { Text } from 'react-native';
 import { act, render, screen } from '@testing-library/react-native';
 
@@ -19,6 +21,8 @@ const buildStore = () =>
   createAppStore({
     useCases: createUseCases({
       syncServer: new OfflineSyncServer(),
+      accountServer: new OfflineAccountServer(),
+      adminServer: new OfflineAdminServer(),
       credentials: new InMemoryCredentialStore(),
       unitOfWork: new InMemoryUnitOfWork(new InMemoryRepositories()),
       ids: new SequentialIdGenerator(),

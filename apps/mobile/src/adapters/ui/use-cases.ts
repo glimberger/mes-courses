@@ -1,3 +1,8 @@
+import type { AccountServer } from '../../application/ports/account-server';
+import type {
+  AdminServer,
+  Forbidden,
+} from '../../application/ports/admin-server';
 import type { Clock } from '../../application/ports/clock';
 import type { CredentialStore } from '../../application/ports/credential-store';
 import type { IdGenerator } from '../../application/ports/id-generator';
@@ -7,6 +12,15 @@ import type {
   SyncServer,
 } from '../../application/ports/sync-server';
 import type { UnitOfWork } from '../../application/ports/unit-of-work';
+import {
+  createGetAccountSettings,
+  type AccountSettings,
+} from '../../application/use-cases/get-account-settings';
+import {
+  createInviteAccount,
+  type InviteAccountError,
+} from '../../application/use-cases/invite-account';
+import { createListAccounts } from '../../application/use-cases/list-accounts';
 import { createAddArticleToList } from '../../application/use-cases/add-article-to-list';
 import {
   createChangeServerUrl,
@@ -61,7 +75,7 @@ import type {
   ArticleUsage,
   DeletedArticle,
 } from '../../domain/article';
-import type { PairingCode } from '@mes-courses/sync-core';
+import type { AccountSummary, PairingCode } from '@mes-courses/sync-core';
 import type { CatalogView } from '../../domain/catalog-view';
 import type {
   Category,
@@ -174,6 +188,13 @@ export type UseCases = {
   ) => Promise<Result<void, SyncFailure | DeviceNotFound>>;
   disconnect: () => Promise<Result<void, never>>;
   changeServerUrl: (url: string) => Promise<Result<void, ChangeServerUrlError>>;
+  getAccountSettings: () => Promise<AccountSettings>;
+  listAccounts: () => Promise<
+    Result<AccountSummary[], SyncFailure | Forbidden>
+  >;
+  inviteAccount: (
+    email: string,
+  ) => Promise<Result<AccountSummary, InviteAccountError>>;
 };
 
 /** The name of one use case. */
@@ -188,6 +209,8 @@ export const createUseCases = (ports: {
   ids: IdGenerator;
   clock: Clock;
   syncServer: SyncServer;
+  accountServer: AccountServer;
+  adminServer: AdminServer;
   credentials: CredentialStore;
   /** Accepts `http://` server addresses; development builds only. */
   allowInsecure?: boolean;
@@ -221,4 +244,7 @@ export const createUseCases = (ports: {
   revokeDevice: createRevokeDevice(ports),
   disconnect: createDisconnect(ports),
   changeServerUrl: createChangeServerUrl(ports),
+  getAccountSettings: createGetAccountSettings(ports),
+  listAccounts: createListAccounts(ports),
+  inviteAccount: createInviteAccount(ports),
 });

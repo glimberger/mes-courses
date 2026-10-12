@@ -68,3 +68,39 @@ export const DevicesError: Story = {
 export const DevicesOffline: Story = {
   parameters: { scenario: { seed: fixture, connected } },
 };
+
+const signedIn = {
+  seed: fixture,
+  connected,
+  syncServer: { listDevices: async () => ok([]) },
+};
+
+/** Signed in: the address under "Compte", no administration. */
+export const SignedIn: Story = {
+  parameters: {
+    scenario: {
+      ...signedIn,
+      accountServer: {
+        getAccount: async () =>
+          ok({ id: 'account-1', email: 'lea@example.org', role: 'user' }),
+      },
+    },
+  },
+};
+
+/** An administrator: "Administrateur" and "Gérer les comptes". */
+export const SignedInAdministrator: Story = {
+  parameters: {
+    scenario: {
+      ...signedIn,
+      accountServer: {
+        getAccount: async () =>
+          ok({
+            id: 'account-1',
+            email: 'admin@example.org',
+            role: 'administrator',
+          }),
+      },
+    },
+  },
+};

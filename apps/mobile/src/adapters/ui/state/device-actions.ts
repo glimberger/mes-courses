@@ -8,6 +8,7 @@ import type { ChangeServerUrlError } from '../../../application/use-cases/change
 import type { DeviceInfo } from '../../../application/use-cases/list-devices';
 import type { NameError } from '../../../domain/name';
 import { err, ok, type Result } from '../../../domain/result';
+import { reactToFailure } from './failure-reactions';
 import type { StoreKit, SyncSlice, WriteFailed } from './store-kit';
 import { UnexpectedResult } from './unexpected-result';
 
@@ -44,9 +45,10 @@ type Helpers = {
 const SCREEN = 'Settings';
 
 export const createDeviceActions = (
-  { set, useCases, report, onLocalWrite }: StoreKit,
+  kit: StoreKit,
   { loadSyncInfo, waitForCycle, setSync, resetFailures }: Helpers,
 ): DeviceActions => {
+  const { set, useCases, report, onLocalWrite } = kit;
   /**
    * Runs a use case. A throw is reported and answered as a server error, since the request may
    * have failed in any way; a failure result changes the connection or is reported as the tag
@@ -63,22 +65,7 @@ export const createDeviceActions = (
       report(error, operation, SCREEN);
       return err({ type: 'ServerError' });
     }
-    if (outcome.ok) return outcome;
-    switch (outcome.error.type) {
-      case 'DeviceNotAuthorized':
-      case 'UpdateRequired':
-        setSync({
-          connection:
-            outcome.error.type === 'UpdateRequired'
-              ? 'updateRequired'
-              : 'disconnectedByServer',
-        });
-        break;
-      case 'ServerError':
-      case 'UntrustedServer':
-        report(new UnexpectedResult(outcome.error.type), operation, SCREEN);
-        break;
-    }
+    if (!outcome.ok) reactToFailure(kit, operation, SCREEN, outcome.error);
     return outcome;
   };
 

@@ -113,3 +113,11 @@ export const syncBodySchema = {
     },
   },
 } as const;
+
+/** The bound is generous: `normalizeEmail` decides what a valid address is (254 characters). */
+export const inviteBodySchema = {
+  type: 'object',
+  required: ['email'],
+  additionalProperties: false,
+  properties: { email: { type: 'string', maxLength: 512 } },
+} as const;

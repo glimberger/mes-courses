@@ -4,11 +4,17 @@ import { ConsoleErrorReporter } from '../adapters/error-reporting/console-error-
 import { openDatabase } from '../adapters/sqlite/open-database';
 import { SqliteStore } from '../adapters/sqlite/sqlite-store';
 import type { ErrorReporter } from '../application/ports/error-reporter';
-import { databasePath, LISTEN_HOST, listenPort } from './config';
+import {
+  databasePath,
+  LISTEN_HOST,
+  listenPort,
+  mailConfig,
+  publicUrl,
+} from './config';
 import { installCrashHandlers, type ProcessLike } from './crash-handlers';
 import { serverRelease } from './release';
 import { installShutdownHandlers } from './shutdown';
-import { appDeps } from './wiring';
+import { appDeps, createMailer } from './wiring';
 
 type Env = Record<string, string | undefined>;
 
@@ -32,8 +38,21 @@ export const main = async (
     : new ConsoleErrorReporter();
   installCrashHandlers(proc, errorReporter, exit);
 
+  const mail = mailConfig(env);
+  if (mail.mode === 'unconfigured') {
+    console.warn(
+      'MES_COURSES_SMTP_URL is empty: invitations and resets cannot be sent (MailFailed)',
+    );
+  }
   const db = openDatabase(databasePath(env));
-  const app = buildApp(appDeps({ store: new SqliteStore(db), errorReporter }));
+  const app = buildApp(
+    appDeps({
+      store: new SqliteStore(db),
+      errorReporter,
+      mailer: createMailer(mail),
+      publicUrl: publicUrl(env),
+    }),
+  );
   try {
     await app.listen({ host: LISTEN_HOST, port: listenPort(env) });
   } catch (error) {

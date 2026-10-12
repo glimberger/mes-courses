@@ -11,6 +11,7 @@ export type RootStackParamList = {
   EditArticle: { articleId: ArticleId };
   Settings: undefined;
   ConnectServer: undefined;
+  Accounts: undefined;
 };
 
 declare global {
