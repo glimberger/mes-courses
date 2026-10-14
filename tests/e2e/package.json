@@ -16,10 +16,10 @@
   },
   "devDependencies": {
     "@types/jest": "^30",
+    "@types/node": "^24",
     "detox": "patch:detox@npm%3A20.51.4#~/.yarn/patches/detox-npm-20.51.4-f0776917eb.patch",
     "jest": "^30",
     "ts-jest": "^29",
-    "typescript": "~6.0.3",
-    "@types/node": "^24"
+    "typescript": "~6.0.3"
   }
 }
