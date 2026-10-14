@@ -38,6 +38,37 @@ The constraints the maintainer set are part of the requirement, not implementati
 - Q: What is the release action that delivers to production? → A: Pushing a version tag
   `vX.Y.Z` on a commit of the default branch. The tag is checked against the version in the app
   configuration of that commit.
+- Q: How are writes sent by phones during the health-check window handled when the database
+  copy is restored? → A: They cannot exist: a new version is reachable by phones only after it
+  passed its health check. Until then, phones see an unreachable server (a normal state).
+- Q: What does the Pi do when the previous version also fails its health check after a
+  rollback? → A: It leaves the previous version in service, never a stopped instance, and
+  reports a critical error; systemd keeps restarting it.
+- Q: How is the maintainer told of a failed deployment on staging? → A: By email, through an
+  alert on the delivery agent's error reports in every environment; other staging errors send
+  no email.
+- Q: Is the unsigned, root-only local deployment (`deploy-file`) an accepted exception to
+  FR-017? → A: Yes, as a documented exception: only a local deployment started by hand by root
+  on the Pi skips the verification.
+- Q: What happens to a release whose production server turns healthy only after the release run
+  stopped waiting? → A: The release is partial (Android published, iOS not submitted); the
+  maintainer completes it by re-running the failed jobs of the same run, on the same commit.
+- Q: How is an iOS build started with `--no-wait` recorded, given GitHub only knows it was
+  queued? → A: The run records "queued on EAS" with the EAS link; the build's own result is
+  followed in EAS (its email), and a refusal at queue time fails the iOS target of the run.
+- Q: How does the maintainer ship the fix after a production rollback? → A: By a new pull
+  request, a higher version and a new tag; a tag whose release failed is never reused.
+- Q: Does an app-only release publish the F-Droid repository when its carried-over server commit
+  is one that failed? → A: Yes: a failed server commit is ignored like an unchanged server, and
+  the repository is published if the server now in service is healthy.
+- Q: Must one agent pass be bounded so a slow staging cannot delay production? → A: Yes: every
+  download and runtime build has its own time limit; past it the step fails, is reported, and
+  the next instance is handled.
+- Q: Must the Expo credential held by GitHub be limited to this project? → A: No: the scope of
+  an Expo robot user is the account, which holds only this project; FR-028 is worded on what it
+  cannot do (billing, members, App Store credentials).
+- Q: Must the Pi detect and report that the deployment agent itself stopped running? → A: Yes:
+  each pass checks in, and no pass for 30 minutes emails the maintainer.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -137,6 +168,8 @@ the failure notice.
 2. **Given** the new version does not pass its health check within the allowed delay, **When**
    the delay expires, **Then** the instance runs its previous version on the database copy taken
    before the deployment, and the maintainer is notified with the failed version.
+   Phones reach neither the failed version nor any state of the database that is later
+   discarded.
 3. **Given** a version failed on an instance, **When** the Pi checks for deployments again,
    **Then** it does not retry that same version, until a newer one is delivered.
 4. **Given** a deployment fails on staging, **When** this happens, **Then** production is not
@@ -202,6 +235,14 @@ each environment and compare them with the commits that were delivered.
 - A server version contains a database migration and fails after migrating: the database copy
   taken before the deployment is what the previous version runs on (US3).
 - A version tag is pushed on a commit outside the default branch: the release is refused.
+- The production server turns healthy only after the release run stopped waiting for it: the
+  release run is failed and the release is partial (the Android build is published, the iOS
+  build is not submitted). Re-running the failed jobs of the same run completes it on the same
+  commit; no new tag is needed.
+- A production release is rolled back by the Pi: the tag stays recorded as a failed release and
+  is never reused; the fix is a new pull request with a higher version and a new tag.
+- A slow or hanging step on one instance (a download, a runtime build) fails at its own time
+  limit and never holds the other instance beyond it.
 - The production release names a commit older than the one already in production: it is
   refused; a faulty release is fixed forward (README "Releases").
 - The Android signing key is lost: the app can no longer be updated in place on the phones; the
@@ -209,8 +250,10 @@ each environment and compare them with the commits that were delivered.
   user reinstalls after a sync).
 - The iPhone that receives staging builds is not registered for internal distribution: the
   build cannot be installed on it; registering a device is a documented one-time step.
-- The EAS build allowance is exhausted: the iOS staging build fails visibly, while the Android
-  staging build and the server deployment still complete.
+- The EAS build allowance is exhausted: the iOS staging build is refused when it is queued, so
+  the run shows the iOS target failed, while the Android staging build and the server
+  deployment still complete. A build that fails later, inside EAS, is reported by EAS (its
+  email), not by the run.
 - The same commit is delivered to staging twice (for example, a re-run): the second delivery is
   harmless and changes nothing.
 - The staging app is pointed at the production server, or the reverse: it works as any app with
@@ -279,14 +322,32 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
 - **FR-016**: Any credential the Pi uses to fetch deployments MUST be read-only and limited to
   what it fetches.
 - **FR-017**: The Pi MUST verify that a server version it fetched was produced by the
-  repository's delivery workflow for the expected commit before installing it.
+  repository's delivery workflow for the expected commit before installing it. The only
+  exception is a local deployment started by hand by root on the Pi, which goes through the same
+  deployment and rollback path without a signature.
 - **FR-018**: The Pi MUST deploy at most one version at a time per instance, always the latest
   one published for that instance, and MUST ignore a version older than the one installed.
+  "Older" is the position of the commit on the default branch (its number of ancestors): the
+  later commit is the newer version.
 - **FR-019**: Before a new version first starts, the Pi MUST copy the instance's database; when
-  the new version fails to start or to pass its health check within a bounded delay, the Pi MUST
-  restore the previous version and that copy, and MUST NOT retry the failed version.
+  the new version fails to start or to pass its health check, the Pi MUST restore the previous
+  version and that copy, and MUST NOT retry the failed version. The health check is a request to
+  the instance's version endpoint (FR-029) that must report the expected commit, and the delay
+  is 60 seconds for the new version and 60 seconds again for the restored one. A failure before
+  the instance is stopped (download, checksum, unpacking) counts as a failed version too: it is
+  reported and not retried.
+- **FR-019a**: A new version MUST NOT receive requests from phones until it has passed its health
+  check, so that no write accepted by a version that is then rolled back can be lost.
+- **FR-019b**: The Pi MUST NOT leave an instance stopped on purpose. When the restored previous
+  version does not pass its health check either, the Pi MUST leave it in service, keep the
+  service manager restarting it, and report a critical error to the maintainer.
 - **FR-020**: The outcome of every deployment on the Pi (success, rollback with its reason) MUST
-  be reported to the maintainer, by the same channel as the server's error reports.
+  be reported to the maintainer, by the same channel as the server's error reports. A failed or
+  rolled-back deployment MUST reach the maintainer by email in both environments; the alert is
+  tied to the delivery agent's reports, so staging's other errors stay silent. The notice names
+  the instance, the failed version (commit) and the reason.
+- **FR-020a**: The maintainer MUST be notified by email when the deployment agent has not
+  completed a pass for 30 minutes, whatever the cause (timer disabled, crash, Pi down).
 
 **Android distribution**
 
@@ -310,14 +371,16 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
   TestFlight through EAS Submit, started from the delivery workflow rather than from the
   maintainer's machine.
 - **FR-028**: The only Expo credential GitHub holds MUST be one that can start builds and
-  submissions for this project; App Store credentials stay in EAS.
+  submissions, and cannot change billing or members; App Store credentials stay in EAS. Its
+  scope is the Expo account, which holds only this project.
 
 **Traceability**
 
 - **FR-029**: Each server instance MUST expose its version and the commit it runs, without
   authentication and without revealing anything else.
 - **FR-030**: Each delivery run MUST record its commit, its environment, and the outcome of each
-  target (server, Android, iOS).
+  target (server, Android, iOS). For iOS, the outcome the run records is that the build was
+  queued on EAS (with its link); the result of the build itself is followed in EAS.
 - **FR-031**: The README's release and Pi deployment procedures MUST be replaced by the new
   workflow, including the one-time set-up of the staging instance, the F-Droid repositories, the
   signing key and the device registration.
@@ -349,9 +412,10 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
 - **SC-003**: A production release needs exactly one action from the maintainer, and no
   interactive session on the Pi or on their own machine.
 - **SC-004**: A server version that fails to start is replaced by the previous version, with the
-  previous data, within 5 minutes, in every case tested.
-- **SC-005**: Production server unavailability during a successful deployment is under
-  30 seconds.
+  previous data, within 5 minutes of the Pi starting that version, in every case tested.
+- **SC-005**: Production server unavailability during a successful deployment, from the moment
+  the old version stops answering to the first successful health answer of the new one, is under
+  30 seconds, measured by a request every second.
 - **SC-006**: The Pi accepts no new inbound connection type, and no secret in GitHub can open a
   session on the Pi (checked by inspecting the secrets list and the Pi's firewall and listening
   ports).

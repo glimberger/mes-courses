@@ -14,6 +14,7 @@ A value, not a record: `'staging' | 'production'`.
 | Channel release tag  | `channel-staging`                    | `channel-production`               |
 | systemd instance     | `mes-courses@staging`                | `mes-courses@production`           |
 | Local port           | 3001                                 | 3000                               |
+| Validation port      | 3101                                 | 3100                               |
 | Android application  | `com.glimberger.mescourses.staging`  | `com.glimberger.mescourses`        |
 | iOS channel          | EAS internal (ad hoc)                | TestFlight                         |
 | Sentry environment   | `staging`                            | `production`                       |
@@ -85,6 +86,7 @@ is written atomically (a temporary file, then a rename).
 | `failedCommits`     | string[] (≤ 10, newest first)          | Server commits that failed here and are never retried      |
 | `fdroid`            | `{ commit, versionCode } \| null`      | The repository being served                                |
 | `lastFetchSuccessAt`| ISO 8601 \| `null`                     | For the "fetch failing for over an hour" report (R10)      |
+| `inFlight`          | `{ commit, previousCommit } \| null`   | Set before the service is stopped, cleared at the outcome. A pass that finds it set rolls that deployment back (R6) |
 
 A missing file means a fresh instance: everything is `null`. The quickstart's migration starts the
 production instance in that state, and the agent then deploys the current production manifest
@@ -102,21 +104,30 @@ and written into `InstanceState`.
                   │ installed           install error ──▶ failed (nothing was stopped)
                   ▼
             ┌────────────┐
-            │ switching  │  stop service, copy database, point `current` at the new release, start
-            └─────┬──────┘
-                  ▼
-            ┌──────────────┐ health reports the expected commit within 60 s
-            │ health-check │──────────────────────────────────────────────▶ succeeded
+            │ switching  │  set `inFlight`, stop service, copy database, point `current`
+            └─────┬──────┘  at the new release, start it on the VALIDATION port (no phone
+                  ▼         can reach it, FR-019a)
+            ┌──────────────┐ health on the validation port reports the expected commit
+            │ validating   │ within 60 s
             └─────┬────────┘
-                  │ timeout, or the service exited
+                  │ healthy: drop the port override, restart on the public port
                   ▼
-            ┌──────────────┐ previous release and database copy back, start,
-            │ rolling-back │ previous version healthy within 60 s ─────────▶ rolled-back
+            ┌──────────────┐ health on the public port reports the expected commit
+            │ opening      │ within 60 s ──────────────────────────────────▶ succeeded
             └─────┬────────┘
+                  │ timeout, or the service exited (here or in `validating`)
+                  ▼
+            ┌──────────────┐ previous release and database copy back, start on the
+            │ rolling-back │ public port, previous version healthy within 60 s
+            └─────┬────────┘ ───────────────────────────────────────────────▶ rolled-back
                   │ previous version unhealthy too
                   ▼
-               broken (service left stopped, critical report)
+               degraded (previous version left in service under Restart=always,
+                         critical report; never stopped on purpose, FR-019b)
 ```
+
+`inFlight` is cleared at every outcome. A pass that finds it set (the agent or the Pi died
+during a deployment) starts at `rolling-back`.
 
 **Outcomes and their effects**:
 
@@ -125,8 +136,11 @@ and written into `InstanceState`.
 | `succeeded`   | `previousServer ← server`, `server ← new`                           | info            | runs         |
 | `failed`      | `failedCommits += new`                                              | error           | skipped      |
 | `rolled-back` | `failedCommits += new`                                              | error           | skipped      |
-| `broken`      | `failedCommits += new`, `server ← null`                             | critical error  | skipped      |
-| no server change | unchanged                                                        | none            | runs         |
+| `degraded`    | `failedCommits += new` (`server` keeps the previous release)        | critical error  | skipped      |
+| no server change, or the server entry is a commit in `failedCommits` | unchanged | none (the commit was reported when it failed) | runs, if the server now in service is healthy |
+
+Every `failed`, `rolled-back` and `degraded` outcome is emailed to the maintainer in both
+environments (FR-020, R10).
 
 `manifestSequence` advances only when the whole manifest was handled with no failure. A failed
 server deployment does not block a later manifest whose server entry is a different commit.

@@ -20,8 +20,10 @@ Technically:
   deployment agent run by a systemd timer. It fetches the manifests with a read-only,
   single-repository token, verifies them, and deploys each instance of a new template unit
   (`mes-courses@staging`, `mes-courses@production`). It copies the database with the service
-  stopped, checks health and rolls back on failure. It reports to Sentry. No inbound port, and
-  no credential to the Pi in GitHub.
+  stopped, starts the new version on an internal validation port, opens it to the phones only
+  after its health check passes, and rolls back otherwise. It never leaves an instance stopped
+  on purpose. It reports to Sentry, which emails the maintainer about failed deployments and
+  about an agent that went silent. No inbound port, and no credential to the Pi in GitHub.
 - **Android out of EAS and Google Play** (R7, R11, R12,
   [ADR-0007](../../docs/adr/0007-android-fdroid-distribution.md)). Gradle builds the APK in
   Actions, `apksigner` signs it with an upload key held in secrets, and `fdroidserver`
@@ -113,7 +115,13 @@ new, one reusable new, two changed), one new workspace, and about ten files in `
 
 **Post-design re-check (after Phase 1)**: the contracts add no dependency and no layer violation.
 `deploy-file` (contracts/pi-layout.md) deploys without a signature. It is root-only and uses the
-same deployment path, so it adds no untested route. Still **Pass**.
+same deployment path, so it adds no untested route. It is the one documented exception to
+FR-017 (clarification 2026-10-14). Still **Pass**.
+
+**Re-check after the 2026-10-14 clarifications** (FR-019a, FR-019b, FR-020, FR-020a): the
+validation port, the `degraded` outcome and the agent check-in add behavior to the agent's
+domain and ports (a port opener, a check-in in the reporter). Each is driven by a test double
+like the others. No new dependency: `captureCheckIn` is in `@sentry/node`. Still **Pass**.
 
 ## Architecture Decisions
 

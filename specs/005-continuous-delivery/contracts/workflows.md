@@ -42,6 +42,15 @@ If `wait-production-health` times out, the release run fails, and the Pi's own r
 (rollback, R10) says why. The F-Droid repository is not swapped, because the agent swaps it only
 after a healthy server.
 
+**Partial release**: if the server turns healthy only after the wait expired, the Pi swaps the
+F-Droid repository but `ios` never ran. The maintainer completes the release with *Re-run failed
+jobs* on the same run: `wait-production-health` polls again, then `ios` starts, all on the tag's
+commit. Jobs that succeeded (`publish`) are not run again and no new tag is needed.
+
+**iOS outcome in the run** (FR-030): `ios` records "queued on EAS" with the build URL in the run
+summary. A refusal at queue time (exhausted allowance, bad credential) fails the job. The result
+of the build is followed in EAS, which emails it.
+
 ## `android-apk.yml` (reusable)
 
 **Input**: `variant` (`staging` | `production`). **Secrets**: the APK key and `SENTRY_AUTH_TOKEN`

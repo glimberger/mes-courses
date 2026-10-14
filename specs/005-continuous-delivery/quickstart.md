@@ -63,10 +63,13 @@ key, password or token for the Pi.
      the token and the server's Sentry DSN.
 5. **Install the agent** from the latest production release (§7). Before the first release, use
    the agent bundle of this feature's pull request run.
-6. `systemctl daemon-reload`, `systemctl enable mes-courses@production mes-courses@staging`,
+6. **Sentry alert** (research R10, once): add an issue alert rule on the tag
+   `component:delivery-agent`, in every environment, for new issues and monitor issues, emailing
+   the maintainer. Production errors keep the two existing rules.
+7. `systemctl daemon-reload`, `systemctl enable mes-courses@production mes-courses@staging`,
    `systemctl enable --now mes-courses-agent.timer`, `systemctl restart caddy`, then
    `systemctl start mes-courses-agent`.
-7. **Cleanup** once production answers: `systemctl disable mes-courses`, remove the old unit and
+8. **Cleanup** once production answers: `systemctl disable mes-courses`, remove the old unit and
    `/etc/mes-courses.env`, remove the git checkout in `/opt/mes-courses` (keep the new folders),
    and delete the Pi's deploy key from the repository (`gh repo deploy-key list`, then
    `gh repo deploy-key delete <id>`).
@@ -158,6 +161,12 @@ runtime: `nix build github:NixOS/nixpkgs/<rev>#nodejs_24 --out-link /opt/mes-cou
 - a tag on a branch commit outside `main` fails;
 - a tag equal to the production version fails.
 
+**Partial release (edge case)**: on a scratch production setup, stop the agent timer before a
+release so `wait-production-health` times out, then start it. Expected: the run is failed, the
+Pi deploys and swaps the repository, and *Re-run failed jobs* on the same run makes the health
+poll succeed and `ios` start on the tag's commit, with no new tag.
+
+
 ## 10. Failed deployment and rollback (US3, SC-004)
 
 1. On a scratch branch, make the server exit at startup (for example a throw in `main.ts`), then
@@ -170,13 +179,25 @@ runtime: `nix build github:NixOS/nixpkgs/<rev>#nodejs_24 --out-link /opt/mes-cou
 2. Expected within 5 minutes: `mes-courses@staging` runs its previous release on the database
    copy (`…/main.js status` shows the failed commit), Sentry has an error event in `staging`
    naming the commit, and the next agent passes do not retry it (SC-004, US3 scenarios 1 to 3).
-3. Production's health and `journalctl -u mes-courses@production` show no restart during the
+3. During the failed start, `curl https://staging.courses.<domain>/v1/health` gets no answer
+   from the failed version (phones never reach it, FR-019a), and the validation port answers only
+   on `127.0.0.1`.
+4. The maintainer receives the failure email for **staging** (the alert rule on
+   `component:delivery-agent`, FR-020).
+5. Production's health and `journalctl -u mes-courses@production` show no restart during the
    test (US3 scenario 4).
-4. `main.js forget-failure staging <sha>` clears the mark. Then deliver a fixed commit.
+6. `main.js forget-failure staging <sha>` clears the mark. Then deliver a fixed commit.
+7. Degraded case (FR-019b): deliver a failing server with a database copy that the previous
+   version also rejects, for example by corrupting the copy. Expected: `mes-courses@staging`
+   stays up under systemd, a critical error is reported, and the instance is never left stopped
+   on purpose.
 
 ## 11. Pi offline and race (spec edge cases)
 
 1. `systemctl stop mes-courses-agent.timer`, merge two server changes, then start the timer
    again. Expected: one deployment, of the later commit.
-2. Revoke the token on GitHub, then wait for an hour. Expected: one Sentry error (`401`), and both
+2. Agent silence (FR-020a): `systemctl stop mes-courses-agent.timer`, then wait 30 minutes.
+   Expected: the Sentry monitor `mes-courses-agent` reports a missed check-in and the maintainer
+   receives an email. Start the timer again; the monitor recovers.
+3. Revoke the token on GitHub, then wait for an hour. Expected: one Sentry error (`401`), and both
    instances keep running. Create a new token and put it in `agent.env`. The next pass succeeds.

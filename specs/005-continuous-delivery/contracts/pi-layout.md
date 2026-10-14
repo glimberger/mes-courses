@@ -39,6 +39,10 @@ paths are part of the contract: the agent's adapters and the unit files must agr
 ├── mes-courses.db          # owned by mes-courses-<env>, StateDirectory (0700)
 └── backups/<UTC>-<sha>.db  # 5 most recent (research R9)
 /var/lib/mes-courses-agent/<env>.json   # InstanceState (data-model)
+/run/mes-courses/<env>.env              # written by the agent for the duration of a validation
+                                        # only: MES_COURSES_PORT=<validation port>, 3100 production
+                                        # and 3101 staging. Overrides the public port (FR-019a);
+                                        # emptied at boot
 /srv/fdroid/<env>/
 ├── <sha>/repo/             # unpacked repository, the current one and the previous one
 └── current -> <sha>
@@ -51,6 +55,8 @@ User=mes-courses-%i
 Group=mes-courses-%i
 WorkingDirectory=/opt/mes-courses/%i/current/apps/server
 EnvironmentFile=/etc/mes-courses/%i.env
+EnvironmentFile=-/run/mes-courses/%i.env
+
 ExecStartPre=/usr/bin/test -f /opt/mes-courses/%i/current/apps/server/dist/composition/main.js
 ExecStart=/opt/mes-courses/%i/current/runtime/bin/node --conditions=production /opt/mes-courses/%i/current/apps/server/dist/composition/main.js
 StateDirectory=mes-courses/%i
@@ -71,11 +77,11 @@ The mail check, `Restart=always` and the hardening lines are kept as they are.
 
 | Command                                        | Effect                                                      | Exit code              |
 | ---------------------------------------------- | ----------------------------------------------------------- | ---------------------- |
-| `main.js run`                                  | One pass over staging, then production                      | 0 unless `broken`      |
+| `main.js run`                                  | One pass over staging, then production, then a monitor check-in | 0 unless `degraded` |
 | `main.js run --only <env>`                     | One pass over one environment                               | same                   |
 | `main.js status`                               | Prints both `InstanceState`s and the health of each instance | 0                      |
 | `main.js forget-failure <env> <sha>`           | Removes a commit from `failedCommits`, to retry it by hand  | 0, or 1 if unknown     |
-| `main.js deploy-file <env> <server tarball>`   | Deploys a local server artifact through the same deployment and rollback path, without a manifest (no signature: only root can run it). For the rollback check (quickstart §10) and an emergency fix while GitHub is unreachable | 0 if `succeeded`, 1 otherwise |
+| `main.js deploy-file <env> <server tarball>`   | Deploys a local server artifact through the same deployment and rollback path, without a manifest (no signature: the documented exception to FR-017, only root can run it). For the rollback check (quickstart §10) and an emergency fix while GitHub is unreachable | 0 if `succeeded`, 1 otherwise |
 
 CI-side commands of the same workspace, run with `yarn workspace @mes-courses/delivery …`:
 

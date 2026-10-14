@@ -154,16 +154,25 @@ For each instance, a run:
 2. compares it with the instance's local state ([data-model.md](data-model.md)): it ignores a
    manifest whose `sequence` is lower than or equal to the installed one, and a server commit
    already marked as failed;
-3. **server**, if the manifest names a newer one: downloads and verifies the tarball, unpacks it
-   into `releases/<sha>/`, builds the runtime (R3), stops the service, copies the database
-   (R9), switches the `current` symlink, starts the service and polls
-   `http://127.0.0.1:<port>/v1/health` until `release.commit` equals the expected commit, for at
-   most 60 seconds. If it times out or the service exits, it rolls back: stop, put the previous
-   symlink and the database copy back, start, mark the commit failed;
+3. **server**, if the manifest names a newer one: downloads and verifies the tarball, unpacks
+   it into `releases/<sha>/`, builds the runtime (R3), records the deployment as in flight in
+   the instance state, stops the service, copies the database (R9), switches the `current`
+   symlink, and starts the service **on the instance's validation port**, not its public one
+   (R9, FR-019a). It polls `http://127.0.0.1:<validation port>/v1/health` until
+   `release.commit` equals the expected commit, for at most 60 seconds. Only then does it open
+   the instance to the phones (R9). If the check times out or the service exits, it rolls back:
+   stop, put the previous symlink and the database copy back, start on the public port, mark the
+   commit failed. A deployment found in flight at the start of a pass (the agent or the Pi died
+   during it) is rolled back the same way;
 4. **F-Droid repository**, if the manifest names a newer one, and only once the server step
    succeeded or had nothing to do (FR-011): downloads and verifies the repository bundle, unpacks
-   it beside the served folder and swaps the folder's symlink atomically;
-5. reports the outcome (R10) and writes the new state.
+      it beside the served folder and swaps the folder's symlink atomically;
+5. reports the outcome (R10), writes the new state, and checks in with the monitor of R10
+   (FR-020a).
+
+Every download and every runtime build has its own time limit (5 minutes), so a slow step on
+one instance fails, is reported as an error, and never holds the other instance longer than
+that.
 
 The agent depends on no package beyond `@sentry/node`, which is already in the lockfile. It uses
 `fetch`, `node:crypto`, `node:child_process` (for `systemctl`, `ssh-keygen`, `tar` and `nix`) and
@@ -171,10 +180,15 @@ The agent depends on no package beyond `@sentry/node`, which is already in the l
 roll back. Its ports are the channel source, the signature verifier, the service manager, the
 health probe, the database snapshot, the release store, the state store and the reporter.
 
+**Local deployment**: `main.js deploy-file` is the one documented exception to the
+verification of R5 (FR-017). Only root on the Pi can run it, which is the access that could
+replace the files anyway. It goes through the same install, validation and rollback path.
+
 **Privileges**: the agent runs as root, because it stops and starts services and copies
 databases owned by the instances' users. The unit sandboxes it with `ProtectSystem=strict`,
 `ProtectHome=true`, `PrivateTmp=true`, `NoNewPrivileges=true` and `ReadWritePaths` limited to
-`/opt/mes-courses`, `/var/lib/mes-courses`, `/var/lib/mes-courses-agent` and `/srv/fdroid`.
+`/opt/mes-courses`, `/var/lib/mes-courses`, `/var/lib/mes-courses-agent`, `/run/mes-courses`
+and `/srv/fdroid`.
 Before anything is unpacked or run, it handles only data whose signature it verified.
 
 **Updating the agent**: by hand, with a documented command that installs the `delivery` bundle
@@ -266,13 +280,27 @@ checkpointed and the files are quiescent, so a plain copy of `mes-courses.db` (p
 `-shm` if present) to `/var/lib/mes-courses/%i/backups/<UTC timestamp>-<previous sha>.db` is
 consistent. The agent keeps the 5 most recent copies per instance.
 
-A rollback stops the service, puts back the copy taken for this deployment, switches `current`
-back and starts the service. It then checks the health of the previous version with the same
-60-second limit. If that also fails, the agent reports a critical error and leaves the service
-stopped rather than looping.
+**Validation port** (FR-019a). Each instance has two ports on `127.0.0.1`: the public one that
+Caddy proxies (3000 production, 3001 staging) and a validation one (3100 production, 3101
+staging). The unit reads `EnvironmentFile=/etc/mes-courses/%i.env`, then
+`EnvironmentFile=-/run/mes-courses/%i.env`. Before it starts the new version, the agent writes
+`MES_COURSES_PORT=<validation port>` into the second file, so Caddy has nothing to reach and the
+phones see an unreachable server. After a healthy answer on the validation port, the agent
+deletes the file, restarts the service on the public port (migrations are already applied, so
+this start is short) and checks the health there once more, for at most 60 seconds. No write
+from a phone can reach a version that is then rolled back. `/run` is emptied at boot, so a Pi
+that reboots during a deployment starts the service on the public port; the in-flight record of
+R6 makes the next agent pass roll that deployment back.
 
-Expected downtime: stop, copy (the database is a few MB) and start plus migrations take about
-5 to 10 seconds on the Pi, within SC-005's 30 seconds. The phones see an unreachable server,
+A rollback stops the service, puts back the copy taken for this deployment, switches `current`
+back and starts the service **on the public port**: the previous version already served the
+phones. It checks its health with the same 60-second limit. If that also fails, the outcome is
+`degraded` (FR-019b): the agent does not stop the service, leaves the previous version running
+under `Restart=always`, and reports a critical error.
+
+Expected downtime: stop, copy (the database is a few MB), start with migrations, validate and
+restart on the public port take about 10 to 20 seconds on the Pi, within SC-005's 30 seconds;
+quickstart §9 step 5 measures it. The phones see an unreachable server,
 which is a normal state (Principle VII).
 
 **Rationale**: migrations run at startup (003) and can be destructive (004's migration 2). A copy
@@ -281,7 +309,11 @@ app (001 FR-040).
 
 **Alternatives considered**: `sqlite3 .backup` on a live database avoids a few seconds of
 downtime, but adds the `sqlite3` CLI and still needs the stop for the code switch. A
-blue-green switch in Caddy would need two writers on one SQLite file; rejected.
+blue-green switch in Caddy would need two writers on one SQLite file; rejected. Opening the
+new version to the phones at once and restoring the copy on failure was the first design: it
+loses the writes accepted during the 60-second window (clarification 2026-10-14). Switching
+Caddy's upstream through its admin API instead of restarting would save one start, at the cost
+of a second moving part; rejected (Principle IV).
 
 ## R10. Reporting deployment outcomes (FR-020)
 
@@ -292,8 +324,12 @@ blue-green switch in Caddy would need two writers on one SQLite file; rejected.
 - a **rollback**, a signature or checksum failure, a fetch failure that lasts more than an hour,
   a `401` or `403` from GitHub, and an agent too old for a manifest are reported as **errors**.
   The README's existing alert rules ("new issue", "regression", production only) email the
-  maintainer for production. Staging errors are visible in Sentry without an email, like today's
-  `preview` builds;
+  maintainer for production. A third issue alert rule, on the tag `component:delivery-agent` in
+  every environment, emails the maintainer about the agent's errors, so a failed staging
+  deployment reaches them too (FR-020). The other staging errors are visible in Sentry without
+  an email, like today's `preview` builds;
+- a deployment that ends `degraded` (the previous version failed its check after a rollback,
+  FR-019b) is reported as a **critical** error with the same tag;
 - a **successful deployment** is a Sentry **info** event with a fixed fingerprint per
   environment. It creates one issue, which emails once and then stays grouped. It gives a
   timeline of deployments with their commits.
@@ -305,9 +341,17 @@ journal only, like the server (003 R15).
 **Rationale**: the spec asks for the same channel as the server's errors. Sentry's alert rules
 already route production to the maintainer.
 
-**Alternatives considered**: Sentry Cron monitors (check-ins) would alert on a missed run, but
-need a monitor per environment and a slug in config. A GitHub commit status written back by the
-Pi would need a write token on the Pi; rejected (FR-016).
+**Agent liveness** (FR-020a). Each pass ends with a Sentry Cron check-in (`captureCheckIn`,
+monitor slug `mes-courses-agent`), `ok` or `error`. The first check-in creates the monitor
+(`monitorConfig`): an interval of 2 minutes and a margin that counts a pass as missed after 30
+minutes. A missed or failed check-in opens a monitor issue, which the alert rule above (set on
+monitor issues too) emails. One monitor covers both instances, since one pass handles both, and
+it also fires when the Pi is down. With no DSN there is no check-in, like the rest of the
+reporting.
+
+**Alternatives considered**: a monitor per environment adds nothing, since one pass covers both.
+Without a monitor, the silence of the agent would show only in `main.js status`. A GitHub commit
+status written back by the Pi would need a write token on the Pi; rejected (FR-016).
 
 ## R11. Android build and signing in GitHub Actions (FR-021, FR-022, FR-025)
 
@@ -394,17 +438,16 @@ signer.
 - The EAS environment and the Sentry environment are both called `staging`. The app's
   `sentry-error-reporter.ts` allows `production` and `staging`, which replaces `preview`
   (FR-004). The README's alert rules are unchanged: they filter on `production`.
-- Staging: `npx eas-cli build --profile staging --platform ios --non-interactive --no-wait`. The
-  job summary records the EAS build URL. EAS emails the build result, and the maintainer
+- Staging: `npx eas-cli build --profile staging --platform ios --non-interactive --no-wait`. The job summary records that the build was **queued** on EAS, with its URL (FR-030).
+  A refusal at queue time, such as an exhausted allowance, fails the `ios` job. EAS emails the build result, and the maintainer
   installs from EAS's internal distribution link.
 - Production: once the production server reports the release commit (R15),
   `npx eas-cli build --profile production --platform ios --non-interactive --no-wait --auto-submit`.
   `submit.production.ios.ascAppId` is set in `eas.json`, and the App Store Connect API key stays
   in EAS (FR-028).
 - `submit.production.android` is removed. EAS no longer builds or submits Android.
-- GitHub holds one Expo credential, `EXPO_TOKEN`: the access token of an Expo **robot user** with
-  the *Developer* role on the account. It can build and submit, but cannot change billing or
-  members.
+- GitHub holds one Expo credential, `EXPO_TOKEN`: the access token of an Expo **robot user** with the *Developer* role on the account. It can build and submit, but cannot change billing or
+  members. Its scope is the Expo account, which holds only this project (FR-028).
 - The ad hoc device list is managed with `eas device:create` on the maintainer's devices, a
   one-time step ([quickstart.md](quickstart.md) §5).
 - `--no-wait` keeps runner minutes low on a private repository, since an iOS build takes 15 to
