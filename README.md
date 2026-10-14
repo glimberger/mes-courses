@@ -66,8 +66,6 @@ This is a Yarn workspaces monorepo ([research R20](specs/001-shopping-lists/rese
 - [Nix](https://nixos.org/download) with flakes enabled. The dev shell provides Node.js 24, Yarn 4
   (through Corepack, the version comes from `packageManager`) and watchman. Optionally
   [`direnv`](https://direnv.net) with `nix-direnv`, so the shell loads when you enter the folder.
-- [Talisman](https://github.com/thoughtworks/talisman) on `PATH` (for example
-  `brew install talisman`): the pre-commit hook runs it to block potential secrets.
 - For device builds: Android Studio (Android) or Xcode (iOS, macOS only).
 - For the end-to-end journeys: an Android emulator named `Pixel_API_35` (or the name in
   `DETOX_AVD_NAME`) and a JDK 17; on macOS, for iOS, Xcode and
@@ -92,8 +90,7 @@ French. Check it still applies when Paper is upgraded, and drop it once Paper do
 
 `yarn install` also installs the Git hooks ([Lefthook](https://lefthook.dev), `lefthook.yml`).
 Before each commit, Prettier formats the staged files and stages the result, ESLint checks
-them, then Talisman checks what is about to be committed. Install Talisman first, or the hook
-fails. Before each push, `yarn typecheck`, `yarn test` and `yarn test:architecture` run in
+them. Before each push, `yarn typecheck`, `yarn test` and `yarn test:architecture` run in
 parallel on the whole repository (about 20 seconds), so uncommitted work in the tree can block
 a push. The E2E suites never run from a hook.
 
@@ -122,7 +119,7 @@ and hooks apply to every session started here; the hooks need `git`, `jq` (in th
   HEAD, no commit or push from `main`, no push to `main`, no force push (`--force-with-lease` is
   allowed), no skipping the Git hooks (`--no-verify`, `-n`, `LEFTHOOK=0`, `core.hooksPath`), no PR
   merge, and no change to the guardrail files: `.claude/settings.json`, `.claude/settings.local.json`, `.claude/hooks/`,
-  `lefthook.yml`, `.github/workflows/`, `.dependency-cruiser.cjs`, `.talismanrc` and the
+  `lefthook.yml`, `.github/workflows/`, `.dependency-cruiser.cjs` and the
   feature scope files. Only you edit those.
 - **Feature scope**: on a Spec Kit feature branch (`feat/003-...` for `specs/003-...`), if the
   feature folder holds an `agent-scope.txt`, edits are limited to that folder and the paths it
