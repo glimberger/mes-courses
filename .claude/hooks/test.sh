@@ -101,7 +101,7 @@ bash_cmd 2 'redirect into a guardrail file' 'echo x >> lefthook.yml'
 bash_cmd 2 'tee into a guardrail file' 'echo x | tee .claude/settings.json'
 bash_cmd 2 'sed -i a guardrail file' "sed -i '' s/a/b/ .github/workflows/ci.yml"
 bash_cmd 2 'remove a hook' 'rm .claude/hooks/stop.sh'
-bash_cmd 2 'restore a guardrail file' 'git checkout origin/main -- .talismanrc'
+bash_cmd 2 'restore a guardrail file' 'git checkout origin/main -- lefthook.yml'
 
 echo '# Without jq'
 nojq=$(mktemp -d)

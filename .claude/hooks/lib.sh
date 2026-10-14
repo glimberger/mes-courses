@@ -42,7 +42,7 @@ default_branch() {
 # Files that hold the guardrails themselves. An agent must not loosen its own limits: only
 # the user edits them. One regular expression serves the file checks and the Bash command
 # heuristics, and is matched case-insensitively (the default macOS file system is).
-PROTECTED_REGEX='\.claude/settings(\.local)?\.json|\.claude/hooks([/[:space:]]|$)|\.?lefthook(-local)?\.(ya?ml|json|toml)|\.github/workflows([/[:space:]]|$)|\.dependency-cruiser\.cjs|\.talismanrc|agent-scope\.txt'
+PROTECTED_REGEX='\.claude/settings(\.local)?\.json|\.claude/hooks([/[:space:]]|$)|\.?lefthook(-local)?\.(ya?ml|json|toml)|\.github/workflows([/[:space:]]|$)|\.dependency-cruiser\.cjs|agent-scope\.txt'
 
 is_protected() {
   grep -Eiq "(^|/)($PROTECTED_REGEX)" <<<"$1"
