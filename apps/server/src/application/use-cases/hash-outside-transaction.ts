@@ -1,4 +1,5 @@
 import type { AccountRecord } from '../../domain/account';
+import type { ErrorReporter } from '../ports/error-reporter';
 
 /**
  * Password hashing is deliberately slow, and the store runs one transaction at a time, so a use
@@ -22,3 +23,21 @@ export const sameCredentials = (
       before.temporaryPasswordHash === after.temporaryPasswordHash &&
       before.temporaryExpiresAt === after.temporaryExpiresAt &&
       before.suspendedAt === after.suspendedAt;
+
+/**
+ * Reports that every round found the account changed, just before the use case refuses. The
+ * caller sees a plain refusal, so this is the only trace of a user who may have given the right
+ * credentials. Fixed identifiers only, no request content.
+ */
+export const reportExhaustedRounds = (
+  reporter: ErrorReporter | undefined,
+  operation: string,
+  route: string,
+  accountId?: string,
+): void =>
+  reporter?.report(
+    new Error(
+      `Credentials changed during all ${MAX_HASHING_ROUNDS} hashing rounds`,
+    ),
+    { operation, route, ...(accountId === undefined ? {} : { accountId }) },
+  );

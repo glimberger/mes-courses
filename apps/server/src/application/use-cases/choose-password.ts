@@ -15,6 +15,7 @@ import {
 } from './attempt-limits';
 import {
   MAX_HASHING_ROUNDS,
+  reportExhaustedRounds,
   sameCredentials,
 } from './hash-outside-transaction';
 import {
@@ -130,5 +131,10 @@ export const choosePassword = async (
     if (outcome !== null) return outcome;
   }
   // The account kept changing under us: refuse without counting an attempt.
+  reportExhaustedRounds(
+    deps.errorReporter,
+    'choosePassword',
+    'POST /v1/auth/choose-password',
+  );
   return { kind: 'invalid' };
 };

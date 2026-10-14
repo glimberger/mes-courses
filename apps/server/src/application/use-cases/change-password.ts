@@ -5,6 +5,7 @@ import {
 
 import type { AccountRecord } from '../../domain/account';
 import type { Clock } from '../ports/clock';
+import type { ErrorReporter } from '../ports/error-reporter';
 import type { PairingCrypto } from '../ports/pairing-crypto';
 import type { PasswordHasher } from '../ports/password-hasher';
 import type { DirectoryRepositories, ServerStore } from '../ports/store';
@@ -16,6 +17,7 @@ import {
 } from './attempt-limits';
 import {
   MAX_HASHING_ROUNDS,
+  reportExhaustedRounds,
   sameCredentials,
 } from './hash-outside-transaction';
 
@@ -24,6 +26,8 @@ export type OwnAccountDeps = {
   clock: Clock;
   crypto: Pick<PairingCrypto, 'sha256Hex'>;
   hasher: PasswordHasher;
+  /** Told when the hashing rounds ran out; optional so a caller without one still works. */
+  errorReporter?: ErrorReporter;
 };
 
 /** The answers the current password check shares with `deleteOwnAccount`. */
@@ -43,7 +47,7 @@ export type ChangePasswordOutcome =
  * transaction: see hash-outside-transaction.ts.
  */
 export const withCurrentPassword = async <Prepared, Result>(
-  { store, clock, crypto, hasher }: OwnAccountDeps,
+  { store, clock, crypto, hasher, errorReporter }: OwnAccountDeps,
   request: { accountId: string; password: string; clientAddress: string },
   prepare: (passwordIsRight: boolean) => Promise<Prepared>,
   decide: (
@@ -113,6 +117,12 @@ export const withCurrentPassword = async <Prepared, Result>(
     if (outcome !== null) return outcome.result;
   }
   // The account kept changing under us: refuse without counting an attempt.
+  reportExhaustedRounds(
+    errorReporter,
+    'withCurrentPassword',
+    '/v1/account',
+    request.accountId,
+  );
   return { kind: 'invalid' };
 };
 

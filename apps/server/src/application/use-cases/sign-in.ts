@@ -7,6 +7,7 @@ import {
 import { isTemporaryExpired, type AccountRecord } from '../../domain/account';
 import { cleanDeviceName } from '../../domain/device';
 import type { Clock } from '../ports/clock';
+import type { ErrorReporter } from '../ports/error-reporter';
 import type { IdGenerator } from '../ports/id-generator';
 import type { PairingCrypto } from '../ports/pairing-crypto';
 import type { PasswordHasher } from '../ports/password-hasher';
@@ -19,6 +20,7 @@ import {
 } from './attempt-limits';
 import {
   MAX_HASHING_ROUNDS,
+  reportExhaustedRounds,
   sameCredentials,
 } from './hash-outside-transaction';
 
@@ -28,6 +30,8 @@ export type SignInDeps = {
   crypto: Pick<PairingCrypto, 'generateCredential' | 'sha256Hex'>;
   hasher: PasswordHasher;
   ids: IdGenerator;
+  /** Told when the hashing rounds ran out; optional so a caller without one still works. */
+  errorReporter?: ErrorReporter;
 };
 
 /** The device a successful sign-in created. */
@@ -164,5 +168,6 @@ export const signIn = async (
     if (outcome !== null) return outcome;
   }
   // The account kept changing under us: refuse without counting an attempt.
+  reportExhaustedRounds(deps.errorReporter, 'signIn', 'POST /v1/auth/sign-in');
   return { kind: 'invalid' };
 };

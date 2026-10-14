@@ -243,4 +243,39 @@ describe('hashing stays outside the store transaction', () => {
     );
     expect(devices).toEqual([]);
   });
+
+  it('004 review: running out of rounds is reported, with no request content', async () => {
+    const reports: { error: unknown; context: unknown }[] = [];
+    const errorReporter = {
+      report: (error: unknown, context: unknown) =>
+        void reports.push({ error, context }),
+    };
+
+    const signed = await instrumented();
+    signed.onVerify(touchAccount(signed.inner, 100));
+    await signIn({ ...signed.deps, errorReporter }, signInRequest(CURRENT));
+
+    const changed = await instrumented();
+    changed.onVerify(touchAccount(changed.inner, 100));
+    await changePassword(
+      { ...changed.deps, errorReporter },
+      {
+        accountId: 'acc-1',
+        currentPassword: CURRENT,
+        newPassword: NEXT,
+        clientAddress: '10.0.0.1',
+      },
+    );
+
+    expect(reports.map(({ context }) => context)).toEqual([
+      { operation: 'signIn', route: 'POST /v1/auth/sign-in' },
+      {
+        operation: 'withCurrentPassword',
+        route: '/v1/account',
+        accountId: 'acc-1',
+      },
+    ]);
+    expect(JSON.stringify(reports)).not.toContain(CURRENT);
+    expect(JSON.stringify(reports)).not.toContain('marie@example.org');
+  });
 });

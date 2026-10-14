@@ -357,12 +357,12 @@ fileignoreconfig:
     checksum: 85965a29876b8ed8fb381acbaeb9567cda28ed96fa59e38b431d9806261dfe98
   - filename: apps/server/src/application/use-cases/request-password-reset.ts
     checksum: 8ab46abc8ee34a840f3adeac569f898dbc0966788ab02d2c02a39f1b764d48a4
-  - filename: apps/server/src/application/use-cases/change-password.ts
-    checksum: 141dc07ad0195c67f5a9df72166a2279a79224ee63903e099f5d57220e7cb187
-  - filename: apps/server/src/application/use-cases/choose-password.ts
-    checksum: c04bf013bf61459300cc0a0348da8c92defdeebad0ed854e91537035a5b04531
   - filename: apps/server/src/application/use-cases/hash-outside-transaction.ts
     checksum: 01312a18e8f0f3d0f9bbefda91218b66c144adeaea53abf7a8be9006654ee605
   - filename: apps/server/src/application/use-cases/hash-outside-transaction.test.ts
-    checksum: 0d68b27ff93ea7e72f2cdcd93a32383f8db78f061e6ffa9cb70a0534dae8c2d2
+    checksum: 6c4f26848554445fcce486d5527762f3b5a98c28234dd2903fe7d027fca278cc
+  - filename: apps/server/src/application/use-cases/change-password.ts
+    checksum: b4f431dfa87cedd72386b986085de0c17ea06c93e2fc4834e0a96f195a375dd7
+  - filename: apps/server/src/application/use-cases/choose-password.ts
+    checksum: 9cf27a8bcd657d6f7d1b6570a2292b3e07995e0f4f78f65e5c6d77e349579369
 version: "1.0"
