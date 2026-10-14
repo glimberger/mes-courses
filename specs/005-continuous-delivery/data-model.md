@@ -88,7 +88,11 @@ is written atomically (a temporary file, then a rename).
 | `lastFetchSuccessAt`| ISO 8601 \| `null`                     | For the "fetch failing for over an hour" report (R10)      |
 | `inFlight`          | `{ commit, previousCommit } \| null`   | Set before the service is stopped, cleared at the outcome. A pass that finds it set rolls that deployment back (R6) |
 
-A missing file means a fresh instance: everything is `null`. The quickstart's migration starts the
+A missing file means a fresh instance: everything is `null`. If the instance already has a
+`current` release (a missing or unreadable file, FR-033), the agent does not redeploy: it keeps
+the service running, reports an error, moves an unreadable file aside as `<env>.json.corrupt`,
+and rebuilds `server` from the commit in the release's `build-info.json` with an empty
+`failedCommits`. The quickstart's migration starts the
 production instance in that state, and the agent then deploys the current production manifest
 (research R8).
 

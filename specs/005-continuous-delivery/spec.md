@@ -69,6 +69,19 @@ The constraints the maintainer set are part of the requirement, not implementati
   cannot do (billing, members, App Store credentials).
 - Q: Must the Pi detect and report that the deployment agent itself stopped running? → A: Yes:
   each pass checks in, and no pass for 30 minutes emails the maintainer.
+- Q: Who may reach the F-Droid repositories? → A: Anyone who knows the address; both are public
+  URLs served by the Pi. The address is unlisted and the APK of an invite-only app is unusable
+  without an account, so the exposure is accepted (Assumptions).
+- Q: What happens to Android users who do not leave Google Play? → A: Their install keeps
+  working and syncing. The maintainer tells every Android user directly when the guide is
+  published, and does not raise `minAppVersion` above the last Google Play build before the
+  migration is done.
+- Q: What happens when the EAS build allowance runs out? → A: The iOS staging build fails when
+  queued and is never replaced silently (no batching, no fallback); the run shows it (FR-030).
+  The expected load is one iOS staging build per merged app change.
+- Q: How do production iOS users receive the TestFlight build? → A: As TestFlight internal
+  testers (invited in App Store Connect), who get the build without a beta review; external
+  testing is out of scope while the app reaches only the maintainer's circle.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -229,7 +242,13 @@ each environment and compare them with the commits that were delivered.
 - The Pi is offline or rebooting when a staging or production version is published: it deploys
   the latest pending version when it is back, and skips the intermediate ones.
 - The Pi cannot reach GitHub for a long time: both instances keep running their current version;
-  nothing is lost and nothing restarts.
+  nothing is lost and nothing restarts. After one hour without a successful fetch, the agent
+  reports an error to the maintainer (FR-020).
+- The Pi lacks the disk space for a deployment: the deployment fails before anything is stopped,
+  counts as a failed version, and is reported with the free space found (FR-032).
+- The agent's state file of an instance is missing or unreadable while a release runs: the agent
+  leaves the running version untouched, reports an error, and rebuilds the state from the
+  installed release, with no failed version remembered (FR-033).
 - A release is triggered while a staging deployment is in progress on the Pi: the two instances
   are deployed one after the other, never in a way that one disturbs the other.
 - A server version contains a database migration and fails after migrating: the database copy
@@ -245,14 +264,16 @@ each environment and compare them with the commits that were delivered.
   limit and never holds the other instance beyond it.
 - The production release names a commit older than the one already in production: it is
   refused; a faulty release is fixed forward (README "Releases").
-- The Android signing key is lost: the app can no longer be updated in place on the phones; the
-  key has a documented offline backup, and its loss is a documented recovery procedure (every
-  user reinstalls after a sync).
+- The Android signing key is lost or compromised: the app can no longer be updated in place on
+  the phones, or can no longer be trusted. The key has a documented offline backup. Without it,
+  or after a compromise, a new key is made and every Android user reinstalls after a sync; the
+  maintainer tells them directly (FR-022). The F-Droid repository key is handled the same way
+  (FR-023): a new key means a new link, and users add the repository again.
 - The iPhone that receives staging builds is not registered for internal distribution: the
   build cannot be installed on it; registering a device is a documented one-time step.
 - The EAS build allowance is exhausted: the iOS staging build is refused when it is queued, so
   the run shows the iOS target failed, while the Android staging build and the server
-  deployment still complete. A build that fails later, inside EAS, is reported by EAS (its
+  deployment still complete; nothing retries or batches it (Clarifications). A build that fails later, inside EAS, is reported by EAS (its
   email), not by the run.
 - The same commit is delivered to staging twice (for example, a re-run): the second delivery is
   harmless and changes nothing.
@@ -281,6 +302,10 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
   MUST NOT affect the other.
 - **FR-003**: The staging app MUST be installable next to the production app on the same phone,
   with a distinct app identity, a name and icon that mark it as staging, and separate local data.
+  Concretely, on both platforms: the name is "Mes courses (test)" (production: "Mes courses");
+  the icon carries a staging badge on the production art; the Android package and the iOS bundle
+  identifier end in `.staging`; and, since the identity differs, no local storage or keychain
+  group is shared.
 - **FR-004**: Error reports MUST carry the environment they come from (staging or production),
   for the app and the server, so production alerts ignore staging (README "Sentry alerts").
 
@@ -345,9 +370,21 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
   be reported to the maintainer, by the same channel as the server's error reports. A failed or
   rolled-back deployment MUST reach the maintainer by email in both environments; the alert is
   tied to the delivery agent's reports, so staging's other errors stay silent. The notice names
-  the instance, the failed version (commit) and the reason.
+  the instance, the failed version (commit) and the reason, and reaches the maintainer as soon as
+  the report is sent. A failure to fetch deployments that lasts more than one hour is reported
+  the same way.
 - **FR-020a**: The maintainer MUST be notified by email when the deployment agent has not
   completed a pass for 30 minutes, whatever the cause (timer disabled, crash, Pi down).
+
+- **FR-032**: Before installing a version, the Pi MUST check it has enough free disk space for
+  the release, its runtime and one more copy of the database, and MUST fail the deployment
+  before stopping anything when it does not. The Pi MUST keep, for each instance, at least the
+  running release, the previous one (the rollback target) and the database copy taken before the
+  latest deployment, and MUST bound everything older so the disk cannot fill up; the exact
+  counts are a plan choice.
+- **FR-033**: When an instance's state file is missing or unreadable while a release is
+  installed, the Pi MUST leave the running version in service, report an error, and rebuild the
+  state from the installed release; it MUST NOT stop or redeploy the instance because of it.
 
 **Android distribution**
 
@@ -355,21 +392,37 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
   and no Google Play involved.
 - **FR-022**: The Android signing key MUST be stored only as a GitHub Actions secret and in an
   offline backup held by the maintainer; it MUST NOT appear in the repository or in build logs.
-  Production and staging builds MAY share a key since their app identities differ.
+  Production and staging builds MAY share a key since their app identities differ. The loss and
+  compromise procedure MUST be documented: a new key, a new install for every user after a sync,
+  and a direct message from the maintainer to every Android user.
 - **FR-023**: Each F-Droid repository MUST be signed, and served over HTTPS by the Pi at a
   stable address that an F-Droid client (F-Droid or Droid-ify) can add from a link or QR code.
+  The link and the QR code MUST carry the repository key's fingerprint, so the client verifies
+  the repository; the guide tells users never to add the address without it. The repository key
+  has an offline backup; its loss or compromise is handled by making a new key and publishing a
+  new link.
 - **FR-024**: Each published APK MUST have a version code higher than every earlier APK of the
-  same app identity, so the F-Droid client offers it as an update.
+  same app identity, so the F-Droid client offers it as an update. The ordering is per app
+  identity: the staging and production versions do not constrain one another, and the same
+  commit delivered twice yields the same version code and changes nothing. The version name is
+  the app configuration's version (`X.Y.Z`) for production, and that version followed by
+  `-staging.<number>` for staging.
 - **FR-025**: The Android build MUST upload its source maps and native debug files to error
   tracking, so reports stay readable (constitution VIII), as EAS Build did.
 - **FR-026**: A migration guide MUST explain to an Android user how to move from the Google Play
-  install to the F-Droid repository without losing data.
+  install to the F-Droid repository without losing data. It is written in French, published in
+  the repository's documentation, and sent to every Android user by the maintainer. It tells the
+  user not to uninstall while the synchronization cannot complete (server unreachable, errors):
+  they must fix that first, because unsynchronized changes are lost with the install. The first
+  production F-Droid release comes before the guide, and the guide before Google Play stops
+  receiving builds, so no Android user is left without an update path.
 
 **iOS distribution**
 
 - **FR-027**: iOS builds MUST keep going through EAS Build; production builds MUST be submitted to
   TestFlight through EAS Submit, started from the delivery workflow rather than from the
-  maintainer's machine.
+  maintainer's machine. Production users are TestFlight internal testers; a submitted build
+  reaches them without a beta review.
 - **FR-028**: The only Expo credential GitHub holds MUST be one that can start builds and
   submissions, and cannot change billing or members; App Store credentials stay in EAS. Its
   scope is the Expo account, which holds only this project.
@@ -384,6 +437,10 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
 - **FR-031**: The README's release and Pi deployment procedures MUST be replaced by the new
   workflow, including the one-time set-up of the staging instance, the F-Droid repositories, the
   signing key and the device registration.
+- **FR-034**: The move of the existing production instance to the new layout MUST be a documented
+  one-time procedure that leaves the old unit and the old database untouched until the new
+  instance has passed its health check, states the expected downtime, and gives the steps to go
+  back to the old unit if the migration fails.
 
 ### Key Entities
 
@@ -407,8 +464,9 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
 
 - **SC-001**: After a non-documentation change is merged, the staging server runs it within
   15 minutes of CI turning green, with no manual step.
-- **SC-002**: After a change to the app is merged, the Android staging build is offered by the
-  F-Droid client within 30 minutes of CI turning green, with no manual step.
+- **SC-002**: After a change to the app is merged, the Android staging build is published in the
+  staging F-Droid repository within 30 minutes of CI turning green, with no manual step. The
+  client then offers it when it next checks; that schedule is the client's (Assumptions).
 - **SC-003**: A production release needs exactly one action from the maintainer, and no
   interactive session on the Pi or on their own machine.
 - **SC-004**: A server version that fails to start is replaced by the previous version, with the
@@ -420,7 +478,9 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
   session on the Pi (checked by inspecting the secrets list and the Pi's firewall and listening
   ports).
 - **SC-007**: An Android user migrates from Google Play to the F-Droid repository in under
-  10 minutes, losing no synchronized data.
+  10 minutes, from opening the guide to seeing their lists after signing in, losing no
+  synchronized data. Settings kept only on the device are not synchronized data and are lost
+  with the uninstall.
 - **SC-008**: Over the first month, every delivery to staging or production can be traced back to
   its commit, and no delivery reached production without passing staging first.
 
@@ -437,7 +497,12 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
 - The staging server sends real emails through the same mail relay, so invitations can be tried
   end to end; staging accounts are the maintainer's test accounts.
 - The F-Droid repositories are served by the Pi alongside the servers; there is one repository
-  per environment, so users add only the production one.
+  per environment, so users add only the production one. Both are public URLs, unlisted: anyone
+  who knows the staging address can read the staging APK. This is accepted, because the APKs
+  hold no data and the app is unusable without an invited account.
+- The F-Droid clients check for updates on their own schedule (Droid-ify in the background,
+  F-Droid periodically), so the time between publication and the offer on the phone is theirs
+  and is not a requirement of this feature.
 - Only the maintainer's devices receive staging builds; on iOS, staging devices are registered
   once for ad hoc distribution.
 - The iOS staging build uses its own bundle identifier, so it installs next to the production app

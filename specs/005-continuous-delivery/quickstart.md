@@ -69,6 +69,13 @@ key, password or token for the Pi.
 7. `systemctl daemon-reload`, `systemctl enable mes-courses@production mes-courses@staging`,
    `systemctl enable --now mes-courses-agent.timer`, `systemctl restart caddy`, then
    `systemctl start mes-courses-agent`.
+   **Back out** (FR-034). The old unit `mes-courses` and `~/pre-005.db` stay untouched until the
+   cleanup below. Expected downtime: from the `systemctl stop` of step 4 to the first healthy
+   answer of `mes-courses@production`, a few minutes (do it in a quiet hour). If the new instance
+   does not answer: `systemctl stop mes-courses@production mes-courses-agent.timer`, move the
+   database and the env file back to their old paths, `systemctl start mes-courses`, and check
+   `https://courses.<domain>/v1/health`. Cleanup (step 8) only starts after the new instance has
+   passed its health check and a phone has synced.
 8. **Cleanup** once production answers: `systemctl disable mes-courses`, remove the old unit and
    `/etc/mes-courses.env`, remove the git checkout in `/opt/mes-courses` (keep the new folders),
    and delete the Pi's deploy key from the repository (`gh repo deploy-key list`, then
@@ -131,11 +138,18 @@ runtime: `nix build github:NixOS/nixpkgs/<rev>#nodejs_24 --out-link /opt/mes-cou
 
 ## 8. Move an Android user from Google Play (US4, SC-007)
 
+0. Order for the maintainer: first production F-Droid release, then the guide (in French, in the
+   repository's documentation), then a direct message with the guide to every Android user. Google
+   Play receives no build after that, and `minAppVersion` stays at or below the last Google Play
+   build until everyone has migrated.
 1. On the phone with the Google Play install: open *Réglages* and check that the synchronization
    status shows nothing pending, then sync once more.
+   If synchronization cannot finish (server unreachable, errors), stop here: do not uninstall until
+   it does, or the unsynchronized changes are lost.
 2. Uninstall the Google Play app. This erases the local replica, and the data stays on the
    server.
-3. Install F-Droid or Droid-ify, add the production repository (§6) and install "Mes courses".
+3. Install F-Droid or Droid-ify, add the production repository from the link or QR code of §6
+   (they carry the key fingerprint; never type the address alone), install the app and install "Mes courses".
 4. Sign in. Expected: every list, article and category is back. Time the whole procedure: it
    must take under 10 minutes (SC-007).
 

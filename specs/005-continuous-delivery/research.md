@@ -278,7 +278,13 @@ isolation FR-002 asks for at no extra cost.
 **Decision**: the service is stopped before the copy. With the server stopped, SQLite's WAL is
 checkpointed and the files are quiescent, so a plain copy of `mes-courses.db` (plus `-wal` and
 `-shm` if present) to `/var/lib/mes-courses/%i/backups/<UTC timestamp>-<previous sha>.db` is
-consistent. The agent keeps the 5 most recent copies per instance.
+consistent. The agent keeps the 5 most recent copies per instance and the 3 most recent releases
+(FR-032 requires at least the running release, the rollback target and the latest copy).
+
+**Disk check** (FR-032). Before downloading, the agent compares the free space of the data
+volume with the release size, the runtime build and the database size, plus a margin of 1 GiB.
+Too little space fails the deployment before anything is stopped (a failed version, reported with
+the free space found).
 
 **Validation port** (FR-019a). Each instance has two ports on `127.0.0.1`: the public one that
 Caddy proxies (3000 production, 3001 staging) and a validation one (3100 production, 3101

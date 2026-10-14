@@ -14,9 +14,9 @@
 - [x] CHK002 Is the behavior defined when the previous version also fails its health check after a rollback (the plan's `broken` outcome leaves the service stopped), and is that outcome reconciled with US3's "does not take the server down"? [Gap, Conflict, Spec §US3, data-model §Deployment]
 - [x] CHK003 Are requirements defined for a deployment that fails before anything is stopped (download, checksum, unpack or Nix runtime build error), including whether such a failure counts as "the failed version" that is never retried? [Gap, Spec §FR-019, data-model §Outcomes]
 - [x] CHK004 Is it specified whether the Pi must detect, and report, that the deployment agent itself stopped running (timer disabled, agent crash), given that FR-020 only covers deployment outcomes? [Gap, Spec §FR-020, research §R10]
-- [ ] CHK005 Are requirements defined for insufficient disk space on the Pi (database copies, three releases per instance, Nix runtimes, two F-Droid trees)? [Gap, Edge Case]
-- [ ] CHK006 Is the expected behavior specified when the agent's local state file is missing or corrupt on an instance that already runs a release (redeploy, refuse, report)? [Gap, data-model §InstanceState]
-- [ ] CHK007 Are requirements defined for the one-time migration of the existing production instance to the new layout, including how to go back if that migration fails? [Gap, Spec §FR-031, research §R8]
+- [x] CHK005 Are requirements defined for insufficient disk space on the Pi (database copies, three releases per instance, Nix runtimes, two F-Droid trees)? [Gap, Edge Case]
+- [x] CHK006 Is the expected behavior specified when the agent's local state file is missing or corrupt on an instance that already runs a release (redeploy, refuse, report)? [Gap, data-model §InstanceState]
+- [x] CHK007 Are requirements defined for the one-time migration of the existing production instance to the new layout, including how to go back if that migration fails? [Gap, Spec §FR-031, research §R8]
 - [x] CHK008 Does the spec state what retention of database copies and server releases is required on the Pi, or is the plan's 5 copies and 3 releases a free implementation choice? [Completeness, Spec §FR-019, research §R9]
 
 ## Deploy Safety: Requirement Clarity
@@ -34,7 +34,7 @@
 - [x] CHK016 Is the root-only `deploy-file` command, which deploys without a signature, consistent with FR-017's "MUST verify … before installing it", or is it recorded as an explicit exception in the spec? [Conflict, Spec §FR-017, contracts/pi-layout.md]
 - [x] CHK017 Is the behavior of an app-only manifest whose carried-over server entry is a commit already marked failed defined, i.e. does the F-Droid step treat it as "nothing to do" and publish, or stay blocked? [Ambiguity, data-model §Outcomes, research §R6]
 - [x] CHK018 Is US3 scenario 3 ("does not retry that same version until a newer one is delivered") consistent with the plan's `forget-failure` command and its 10-entry `failedCommits` limit? [Consistency, Spec §US3, data-model §InstanceState]
-- [ ] CHK019 Is the edge case "the Pi cannot reach GitHub for a long time … nothing restarts" consistent with the plan's error report after one hour of failed fetches, and is that report a spec requirement? [Consistency, Spec §Edge Cases, research §R10]
+- [x] CHK019 Is the edge case "the Pi cannot reach GitHub for a long time … nothing restarts" consistent with the plan's error report after one hour of failed fetches, and is that report a spec requirement? [Consistency, Spec §Edge Cases, research §R10]
 - [x] CHK020 Is FR-002's isolation ("breaking one MUST NOT affect the other") reconciled with a single root agent that deploys both instances in sequence, e.g. a staging deployment hanging or failing in a way that delays a production release? [Consistency, Spec §FR-002, Spec §US3 scenario 4, research §R6]
 
 ## Deploy Safety: Scenario and Recovery Coverage
@@ -46,30 +46,30 @@
 
 ## Android Distribution: Completeness and Clarity
 
-- [ ] CHK025 Is it specified who may reach the staging F-Droid repository, given it is served at a public address while the spec assumes only the maintainer's devices receive staging builds? [Conflict, Spec §Assumptions, Spec §FR-023]
-- [ ] CHK026 Is the exposure of the production F-Droid repository (a public URL serving the APK of an invite-only app) stated as an accepted assumption? [Assumption, Spec §FR-023]
-- [ ] CHK027 Are requirements defined for loss, compromise or rotation of the F-Droid repository signing key, as they are for the APK signing key? [Gap, Spec §FR-022, Spec §Edge Cases, research §R12]
-- [ ] CHK028 Is the APK signing key loss procedure specified beyond "documented" (what users see, how they are told, how the new key is introduced), and is key compromise covered as well as loss? [Clarity, Spec §Edge Cases, Spec §FR-022]
-- [ ] CHK029 Is US4 scenario 2's "the client verifies it is the maintainer's repository" tied to a requirement that the link or QR code carries the key fingerprint, and is the behavior defined when a user adds the address without it? [Clarity, Spec §US4, Spec §FR-023]
-- [ ] CHK030 Is the Android version name (shown to users) specified for staging and production APKs, alongside FR-024's version code? [Gap, Spec §FR-024]
-- [ ] CHK031 Is FR-024's ordering rule clear when two staging deliveries publish the same commit, or when a production release's commit is older than the latest staging build? [Clarity, Spec §FR-024, Spec §Edge Cases]
-- [ ] CHK032 Are the delay and conditions under which the F-Droid client offers an update stated as assumptions (client schedule, background checks), given SC-002's 30 minutes depends on them? [Assumption, Spec §SC-002, research §R12]
+- [x] CHK025 Is it specified who may reach the staging F-Droid repository, given it is served at a public address while the spec assumes only the maintainer's devices receive staging builds? [Conflict, Spec §Assumptions, Spec §FR-023]
+- [x] CHK026 Is the exposure of the production F-Droid repository (a public URL serving the APK of an invite-only app) stated as an accepted assumption? [Assumption, Spec §FR-023]
+- [x] CHK027 Are requirements defined for loss, compromise or rotation of the F-Droid repository signing key, as they are for the APK signing key? [Gap, Spec §FR-022, Spec §Edge Cases, research §R12]
+- [x] CHK028 Is the APK signing key loss procedure specified beyond "documented" (what users see, how they are told, how the new key is introduced), and is key compromise covered as well as loss? [Clarity, Spec §Edge Cases, Spec §FR-022]
+- [x] CHK029 Is US4 scenario 2's "the client verifies it is the maintainer's repository" tied to a requirement that the link or QR code carries the key fingerprint, and is the behavior defined when a user adds the address without it? [Clarity, Spec §US4, Spec §FR-023]
+- [x] CHK030 Is the Android version name (shown to users) specified for staging and production APKs, alongside FR-024's version code? [Gap, Spec §FR-024]
+- [x] CHK031 Is FR-024's ordering rule clear when two staging deliveries publish the same commit, or when a production release's commit is older than the latest staging build? [Clarity, Spec §FR-024, Spec §Edge Cases]
+- [x] CHK032 Are the delay and conditions under which the F-Droid client offers an update stated as assumptions (client schedule, background checks), given SC-002's 30 minutes depends on them? [Assumption, Spec §SC-002, research §R12]
 
 ## Android Migration from Google Play
 
-- [ ] CHK033 Are the migration guide's audience, language (French, constitution X) and publication place specified? [Gap, Spec §FR-026]
-- [ ] CHK034 Is the order of events specified between the first F-Droid production release, publishing the guide and the last Google Play build, so no Android user is left without an update path? [Gap, Spec §Assumptions, Spec §FR-026]
-- [ ] CHK035 Are requirements defined for users who do not migrate (the Play install stops receiving updates and may fall below `minAppVersion`), including how they are told? [Gap, Spec §US4]
-- [ ] CHK036 Does the guide's requirement cover a user who cannot reach a synchronized state before uninstalling (server unreachable, sync errors)? [Edge Case, Spec §US4 scenario 1]
-- [ ] CHK037 Is SC-007's "under 10 minutes" defined with a start and end point, and does "losing no synchronized data" exclude the device-only settings that uninstalling deletes? [Measurability, Spec §SC-007]
+- [x] CHK033 Are the migration guide's audience, language (French, constitution X) and publication place specified? [Gap, Spec §FR-026]
+- [x] CHK034 Is the order of events specified between the first F-Droid production release, publishing the guide and the last Google Play build, so no Android user is left without an update path? [Gap, Spec §Assumptions, Spec §FR-026]
+- [x] CHK035 Are requirements defined for users who do not migrate (the Play install stops receiving updates and may fall below `minAppVersion`), including how they are told? [Gap, Spec §US4]
+- [x] CHK036 Does the guide's requirement cover a user who cannot reach a synchronized state before uninstalling (server unreachable, sync errors)? [Edge Case, Spec §US4 scenario 1]
+- [x] CHK037 Is SC-007's "under 10 minutes" defined with a start and end point, and does "losing no synchronized data" exclude the device-only settings that uninstalling deletes? [Measurability, Spec §SC-007]
 
 ## iOS Distribution and Staging Variant
 
 - [x] CHK038 Is "fails visibly" for an iOS staging build consistent with FR-030, given the plan's `--no-wait` runs record only that a build was queued and EAS reports the result outside GitHub? [Conflict, Spec §Edge Cases, Spec §FR-030, research §R13]
-- [ ] CHK039 Is it specified how production iOS users receive a TestFlight build (internal or external testers, beta review delay), so the release's end point on iOS is defined? [Gap, Spec §FR-027, Spec §US2]
+- [x] CHK039 Is it specified how production iOS users receive a TestFlight build (internal or external testers, beta review delay), so the release's end point on iOS is defined? [Gap, Spec §FR-027, Spec §US2]
 - [x] CHK040 Is FR-028's "can start builds and submissions for this project" consistent with an Expo robot user whose Developer role applies at the account level? [Consistency, Spec §FR-028, research §R13]
-- [ ] CHK041 Is the expected monthly number of iOS staging builds stated against the EAS allowance, and is the behavior once it is exhausted (skip, batch, fail) a requirement rather than a note? [Clarity, Spec §Edge Cases, research §R13]
-- [ ] CHK042 Are FR-003's "name and icon that mark it as staging" and "separate local data" specific enough to be checked on both platforms (exact name, icon difference, no shared storage or keychain group)? [Measurability, Spec §FR-003, Spec §US1 scenario 6]
+- [x] CHK041 Is the expected monthly number of iOS staging builds stated against the EAS allowance, and is the behavior once it is exhausted (skip, batch, fail) a requirement rather than a note? [Clarity, Spec §Edge Cases, research §R13]
+- [x] CHK042 Are FR-003's "name and icon that mark it as staging" and "separate local data" specific enough to be checked on both platforms (exact name, icon difference, no shared storage or keychain group)? [Measurability, Spec §FR-003, Spec §US1 scenario 6]
 
 ## Notes
 
