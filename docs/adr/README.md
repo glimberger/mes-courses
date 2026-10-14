@@ -33,9 +33,12 @@ plan creates, supersedes or relies on.
 
 ## Index
 
-| ADR                                      | Title                                      | Status   |
-| ---------------------------------------- | ------------------------------------------ | -------- |
-| [0001](0001-react-native-expo.md)        | React Native with Expo                     | Accepted |
-| [0002](0002-yarn-workspaces-monorepo.md) | Yarn workspaces monorepo                   | Accepted |
-| [0003](0003-storybook-on-device.md)      | Screen validation with on-device Storybook | Accepted |
-| [0004](0004-detox-end-to-end-tests.md)   | End-to-end tests with Detox                | Accepted |
+| ADR                                            | Title                                            | Status   |
+| ---------------------------------------------- | ------------------------------------------------ | -------- |
+| [0001](0001-react-native-expo.md)              | React Native with Expo                           | Accepted |
+| [0002](0002-yarn-workspaces-monorepo.md)       | Yarn workspaces monorepo                         | Accepted |
+| [0003](0003-storybook-on-device.md)            | Screen validation with on-device Storybook       | Accepted |
+| [0004](0004-detox-end-to-end-tests.md)         | End-to-end tests with Detox                      | Accepted |
+| [0005](0005-accounts-and-authentication.md)    | Accounts in one database; scrypt passwords       | Accepted |
+| [0006](0006-pull-based-continuous-delivery.md) | Delivery built in Actions, pulled by the Pi      | Proposed |
+| [0007](0007-android-fdroid-distribution.md)    | Android through a self-hosted F-Droid repository | Proposed |
