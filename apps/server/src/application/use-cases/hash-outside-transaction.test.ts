@@ -123,9 +123,7 @@ describe('hashing stays outside the store transaction', () => {
         password: CURRENT,
         clientAddress: '10.0.0.1',
       }),
-    ).toMatchObject({
-      kind: expect.stringMatching(/deleted|lastAdministrator/),
-    });
+    ).toMatchObject({ kind: 'deleted' });
     expect(deleted.openDuringHashing.every((open) => open === 0)).toBe(true);
   });
 
@@ -168,5 +166,81 @@ describe('hashing stays outside the store transaction', () => {
     });
 
     expect(outcome).toEqual({ kind: 'invalid' });
+  });
+
+  /** Moves the temporary expiry on the n first hashes, so the account differs from what was read. */
+  const touchAccount = (
+    inner: InstanceType<typeof InMemoryStore>,
+    times: number,
+  ) => {
+    let touched = 0;
+    return async () => {
+      if (touched >= times) return;
+      touched++;
+      await inner.run(async ({ accounts }) => {
+        const account = await accounts.get('acc-1');
+        if (account === null) throw new Error('missing account');
+        await accounts.update({
+          ...account,
+          temporaryExpiresAt: `2026-10-2${touched}T10:00:00.000Z`,
+        });
+      });
+    };
+  };
+
+  it('004 review: a stale first round is redone and the second succeeds', async () => {
+    const signed = await instrumented();
+    signed.onVerify(touchAccount(signed.inner, 1));
+    expect((await signIn(signed.deps, signInRequest(CURRENT))).kind).toBe(
+      'signedIn',
+    );
+
+    const chosen = await instrumented();
+    chosen.onVerify(touchAccount(chosen.inner, 1));
+    expect(
+      (
+        await choosePassword(chosen.deps, {
+          email: 'marie@example.org',
+          temporaryPassword: TEMP,
+          newPassword: NEXT,
+          deviceName: 'Pixel 8',
+          clientAddress: '10.0.0.1',
+        })
+      ).kind,
+    ).toBe('signedIn');
+
+    const changed = await instrumented();
+    changed.onVerify(touchAccount(changed.inner, 1));
+    expect(
+      await changePassword(changed.deps, {
+        accountId: 'acc-1',
+        currentPassword: CURRENT,
+        newPassword: NEXT,
+        clientAddress: '10.0.0.1',
+      }),
+    ).toEqual({ kind: 'changed' });
+
+    const deleted = await instrumented();
+    deleted.onVerify(touchAccount(deleted.inner, 1));
+    expect(
+      await deleteOwnAccount(deleted.deps, {
+        accountId: 'acc-1',
+        password: CURRENT,
+        clientAddress: '10.0.0.1',
+      }),
+    ).toMatchObject({ kind: 'deleted' });
+  });
+
+  it('004 review: an account that keeps changing is refused after the last round', async () => {
+    const { deps, inner, onVerify } = await instrumented();
+    onVerify(touchAccount(inner, 100));
+
+    expect(await signIn(deps, signInRequest(CURRENT))).toEqual({
+      kind: 'invalid',
+    });
+    const devices = await inner.run(({ devices }) =>
+      devices.forAccount('acc-1'),
+    );
+    expect(devices).toEqual([]);
   });
 });
