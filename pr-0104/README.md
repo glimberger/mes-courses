@@ -2,4 +2,4 @@
 
 https://github.com/glimberger/mes-courses/pull/104
 
-- `ios-light`: 65 screenshots
+- `*`: 0 screenshots
