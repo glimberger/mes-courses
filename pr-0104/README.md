@@ -2,4 +2,5 @@
 
 https://github.com/glimberger/mes-courses/pull/104
 
-- `*`: 0 screenshots
+- `android-dark`: 50 screenshots
+- `android-light`: 50 screenshots
