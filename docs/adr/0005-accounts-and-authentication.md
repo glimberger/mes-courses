@@ -1,6 +1,6 @@
 # ADR-0005: Accounts live in one database, bound per request; passwords use scrypt
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-10-12
 - **Decided by**: proposed by the agent, approved by the maintainer
 - **Supersedes**: none

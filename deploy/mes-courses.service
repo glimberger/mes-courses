@@ -20,6 +20,8 @@ EnvironmentFile=/etc/mes-courses.env
 # --conditions=production makes @mes-courses/sync-core resolve to its compiled dist/ instead of
 # its TypeScript source (see its package.json "exports").
 ExecStartPre=/usr/bin/test -f /opt/mes-courses/apps/server/dist/composition/main.js
+# Refuses to start, naming the variable, when a mail variable of /etc/mes-courses.env is empty.
+ExecStartPre=/bin/sh -c 'for v in MES_COURSES_SMTP_URL MES_COURSES_MAIL_FROM MES_COURSES_PUBLIC_URL; do [ -n "$$(printenv $$v)" ] || { echo "$$v is empty in /etc/mes-courses.env" >&2; exit 1; }; done'
 ExecStart=/opt/mes-courses/runtime/bin/node --conditions=production /opt/mes-courses/apps/server/dist/composition/main.js
 Restart=always
 RestartSec=5

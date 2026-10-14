@@ -16,10 +16,34 @@ const BODY_LIMIT = 1024 * 1024;
 
 export type { AppDeps } from './deps';
 
-export const buildApp = (deps: AppDeps): FastifyInstance => {
+export type AppOptions = {
+  /** Where Fastify's request log goes; tests give a sink to check what it holds (SC-008). */
+  logStream?: { write(line: string): void };
+};
+
+export const buildApp = (
+  deps: AppDeps,
+  { logStream }: AppOptions = {},
+): FastifyInstance => {
+  const logger = logStream
+    ? {
+        level: 'info',
+        stream: logStream,
+        // The method, the path and the status only: never the client address, host or headers.
+        serializers: {
+          req: (request: { method: string; url: string }) => ({
+            method: request.method,
+            url: request.url,
+          }),
+          res: (reply: { statusCode: number }) => ({
+            statusCode: reply.statusCode,
+          }),
+        },
+      }
+    : false;
   const app = Fastify({
     bodyLimit: BODY_LIMIT,
-    logger: false,
+    logger,
     // Only Caddy, on this machine, may name the client address (`X-Forwarded-For`); from anyone
     // else the header is ignored, so the sign-in limits cannot be dodged by forging it.
     trustProxy: '127.0.0.1',

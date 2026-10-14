@@ -43,7 +43,8 @@ describe('signing in to a server that cannot be reached', () => {
     await typeInto('Adresse du serveur', '127.0.0.1:9');
     await typeInto('Adresse e-mail', 'marie@example.org');
     await typeInto('Mot de passe', 'any password');
-    await element(by.label('Se connecter')).tap();
+    // The screen title carries the same label as the button: the button comes second.
+    await element(by.label('Se connecter')).atIndex(1).tap();
 
     await waitFor(
       element(
@@ -57,8 +58,14 @@ describe('signing in to a server that cannot be reached', () => {
   });
 
   it('FR-002 the current list still works at once: add and tick an item', async () => {
-    await element(by.label('Retour')).tap();
-    await element(by.label('Retour')).tap();
+    if (device.getPlatform() === 'ios') {
+      // iOS offers to save the password just typed, in a system sheet no test can reach: a
+      // restart ends it, and the data of the device is kept.
+      await device.launchApp({ newInstance: true });
+    } else {
+      await element(by.label('Retour')).tap();
+      await element(by.label('Retour')).tap();
+    }
     await openAddArticles(true);
     await createArticle('Lait', 'Crèmerie');
     await backToList();

@@ -131,9 +131,6 @@ fileignoreconfig:
     ignore_detectors: [filecontent]
   - filename: apps/server/src/application/use-cases/apply-with-merge.ts
     ignore_detectors: [filecontent]
-  # The environment template for the Pi holds variable names only, no values.
-  - filename: deploy/mes-courses.env.example
-    ignore_detectors: [filename]
   # Feature 004 phase 2: account, password-hash and attempt-key code. Column and field names such
   # as password_hash or keyHash trip the pattern detector; no file holds a secret.
   - filename: .dependency-cruiser.cjs
@@ -224,12 +221,8 @@ fileignoreconfig:
     checksum: faa9f5873cfaf5c57f6b9c9cc8e71c9df5b9046f03f7b66d540e31550847c87b
   - filename: apps/server/src/application/use-cases/choose-password.ts
     checksum: 22a8133b6fd4f405a81689d53dfc95c4670ab99983269da66981edfbb45ee349
-  - filename: README.md
-    checksum: b1f0a73bcc79aedaaba3c5cf86399b7a1a7acf6732a9fa96da911bb63f15d5ea
   - filename: .github/scripts/server-smoke.sh
     checksum: 7dc7407c82304c32f0f26261feb1def9994b2979372a545eb2413f78b146a9e9
-  - filename: tests/e2e/journeys/sync-unreachable.e2e.ts
-    checksum: 4748cefefc61c8341e27e4b1e9b2e5f9e214767b12311a1a31bad9bfbf66d514
   - filename: apps/server/src/composition/report-context.test.ts
     checksum: 7c99e0ccefadc3840f2ad96e2ac1f8b63f3dd1cf3696486d9fa4db7f9dcd7c64
   - filename: tests/sync/src/performance.test.ts
@@ -360,4 +353,12 @@ fileignoreconfig:
     checksum: 1cc2506154bfc338f0b71857578219a1945d3d745a15121753b857967077db3f
   - filename: tests/sync/src/account-adapter.test.ts
     checksum: f015ad123cca82b0dfb7adee404eef6a0d15380b5dea275e15443f66f6f65713
+  - filename: deploy/mes-courses.env.example
+    checksum: 4d13ce5ef90a4d2175b8eebba254a6beae6f42e20a28990a997c146da1902815
+  - filename: tests/e2e/journeys/sync-unreachable.e2e.ts
+    checksum: 2bfab9ee5e07cbe6e79986843ec546022739e0a1c14696f987f2e61a80b8170c
+  - filename: README.md
+    checksum: daaf6e3dae992c31b6da57b5ba0728c96f3c7777f2c4cee3da3841b164e7e4b6
+  - filename: tests/sync/src/no-personal-data.test.ts
+    checksum: e9b76bfbdbb35fce31ffcabc5e6682527766c121088aacd77f7116f0c8a4a9a4
 version: "1.0"

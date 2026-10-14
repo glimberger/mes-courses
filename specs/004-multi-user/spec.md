@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-12
 
-**Status**: Clarified
+**Status**: Implemented
 
 **Input**: User description: "gestion multi-utilisateurs. The application is open to other users; they sign in with their email. On registration they receive an email containing their credentials."
 

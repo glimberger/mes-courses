@@ -157,6 +157,8 @@ export type TestServer = {
   }): Promise<TestAccount>;
   /** The emails the server sent, in order. */
   mails(): MailMessage[];
+  /** Makes every next send fail (or work again), as an unreachable relay would. */
+  failMails(failing: boolean): void;
   /** What the server reported as errors, in order. */
   reports(): RecordedReport[];
   /** An invited account with a known temporary password; no email is sent. */
@@ -185,7 +187,13 @@ export const buildTestApp = ({
   clock,
   mailer = createFakeMailer(),
   database,
-}: { clock?: Clock; mailer?: FakeMailer; database?: SqlDatabase } = {}) => {
+  logStream,
+}: {
+  clock?: Clock;
+  mailer?: FakeMailer;
+  database?: SqlDatabase;
+  logStream?: { write(line: string): void };
+} = {}) => {
   let db: SqlDatabase;
   if (database) {
     // A database left by an older version: the server migrates it as it does at start.
@@ -209,7 +217,7 @@ export const buildTestApp = ({
     ...(clock ? { clock } : {}),
   });
   return {
-    app: buildApp(deps),
+    app: buildApp(deps, logStream ? { logStream } : {}),
     deps,
     store,
     db,
@@ -238,6 +246,7 @@ export const startTestServer = async ({
   mailer,
   database,
   port: wantedPort = 0,
+  logSink,
 }: {
   clock?: Clock;
   mailer?: FakeMailer;
@@ -245,6 +254,8 @@ export const startTestServer = async ({
   database?: SqlDatabase;
   /** To come back at the address of a server just closed, with a database of its own. */
   port?: number;
+  /** Receives every line of the server's request log (the log test, SC-008). */
+  logSink?: (line: string) => void;
 } = {}): Promise<TestServer> => {
   const {
     app,
@@ -260,9 +271,15 @@ export const startTestServer = async ({
     ...(clock ? { clock } : {}),
     ...(mailer ? { mailer } : {}),
     ...(database ? { database } : {}),
+    ...(logSink ? { logStream: { write: logSink } } : {}),
   });
   const listen = async (instance: typeof app, port: number) => {
-    await instance.listen({ host: '127.0.0.1', port });
+    await instance.listen({
+      host: '127.0.0.1',
+      port,
+      // The default line names the address; the log never does (SC-008).
+      listenTextResolver: () => 'Server listening',
+    });
     const address = instance.server.address();
     return `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
   };
@@ -271,12 +288,18 @@ export const startTestServer = async ({
     url,
     createAccount,
     mails: () => [...usedMailer.sent],
+    failMails: (failing) => {
+      usedMailer.failing = failing;
+    },
     reports: () => [...reports],
     invite,
     suspend,
     signIn: signInDevice,
     listenAlso: async () => {
-      const other = buildApp(deps);
+      const other = buildApp(
+        deps,
+        logSink ? { logStream: { write: logSink } } : {},
+      );
       return { url: await listen(other, 0), close: () => other.close() };
     },
     close: async () => {

@@ -6,3 +6,5 @@ export { FakeClock } from '../src/application/testing/fake-clock';
 export { buildTestAppStack, type TestAppStack } from './app-stack';
 export { createAccountServer } from '../src/adapters/sync-http/account-server';
 export { createAdminServer } from '../src/adapters/sync-http/admin-server';
+export { createAppStore } from '../src/adapters/ui/state/app-store';
+export { RecordingErrorReporter } from '../src/application/testing/recording-error-reporter';
