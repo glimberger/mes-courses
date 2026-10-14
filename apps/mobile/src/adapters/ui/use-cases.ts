@@ -18,6 +18,10 @@ import {
   type AccountSettings,
 } from '../../application/use-cases/get-account-settings';
 import {
+  createRequestPasswordReset,
+  type RequestPasswordResetError,
+} from '../../application/use-cases/request-password-reset';
+import {
   createInviteAccount,
   type InviteAccountError,
 } from '../../application/use-cases/invite-account';
@@ -188,6 +192,10 @@ export type UseCases = {
     confirmation: string,
     deviceName: string,
   ) => Promise<Result<void, ChooseInitialPasswordError>>;
+  requestPasswordReset: (
+    url: string,
+    email: string,
+  ) => Promise<Result<void, RequestPasswordResetError>>;
   synchronize: () => Promise<SyncResult>;
   releaseHeldChanges: (undoId: string) => Promise<void>;
   getSyncInfo: () => Promise<SyncInfo>;
@@ -250,6 +258,7 @@ export const createUseCases = (ports: {
   createCategory: createCreateCategory(ports),
   signIn: createSignIn(ports),
   chooseInitialPassword: createChooseInitialPassword(ports),
+  requestPasswordReset: createRequestPasswordReset(ports),
   synchronize: createSynchronize(ports),
   releaseHeldChanges: createReleaseHeldChanges(ports),
   getSyncInfo: createGetSyncInfo(ports),

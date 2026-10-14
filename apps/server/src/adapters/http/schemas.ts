@@ -106,6 +106,8 @@ export const inviteBodySchema = {
   properties: { email: { type: 'string', maxLength: 512 } },
 } as const;
 
+export const passwordResetBodySchema = inviteBodySchema;
+
 /** Every password field is capped at 512 UTF-16 units (contracts/auth-api.md). */
 const passwordSchema = { type: 'string', maxLength: 512 } as const;
 const emailSchema = { type: 'string', maxLength: 512 } as const;

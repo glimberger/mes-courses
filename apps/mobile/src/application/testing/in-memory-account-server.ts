@@ -5,6 +5,7 @@ import type {
   AccountPairing,
   AccountServer,
   ChoosePasswordServerError,
+  PasswordResetServerError,
   SignInOutcome,
   SignInServerError,
 } from '../ports/account-server';
@@ -31,6 +32,9 @@ export class InMemoryAccountServer implements AccountServer {
   /** What `choosePassword` answers. */
   choosePasswordResult: Result<AccountPairing, ChoosePasswordServerError> =
     ok(PAIRING);
+  /** What `requestPasswordReset` answers. */
+  passwordResetResult: Result<void, PasswordResetServerError> = ok(undefined);
+  readonly passwordResetCalls: { url: string; email: string }[] = [];
   readonly signInCalls: {
     url: string;
     email: string;
@@ -89,6 +93,16 @@ export class InMemoryAccountServer implements AccountServer {
     return this.offline
       ? err({ type: 'ServerUnreachable' })
       : this.choosePasswordResult;
+  };
+
+  requestPasswordReset: AccountServer['requestPasswordReset'] = async (
+    url,
+    email,
+  ) => {
+    this.passwordResetCalls.push({ url, email });
+    return this.offline
+      ? err({ type: 'ServerUnreachable' })
+      : this.passwordResetResult;
   };
 
   getAccount: AccountServer['getAccount'] = async () =>

@@ -7,6 +7,8 @@ export class OfflineAccountServer implements AccountServer {
     err({ type: 'ServerUnreachable' });
   choosePassword: AccountServer['choosePassword'] = async () =>
     err({ type: 'ServerUnreachable' });
+  requestPasswordReset: AccountServer['requestPasswordReset'] = async () =>
+    err({ type: 'ServerUnreachable' });
   getAccount: AccountServer['getAccount'] = async () =>
     err({ type: 'Offline' });
 }

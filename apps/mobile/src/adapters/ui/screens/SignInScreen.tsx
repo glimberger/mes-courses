@@ -16,6 +16,7 @@ import { useAnnouncement } from '../accessibility/announce';
 import { BackAction } from '../components/BackAction';
 import { Button } from '../components/Button';
 import { PasswordField } from '../components/PasswordField';
+import { ForgotPasswordDialog } from './ForgotPasswordDialog';
 import type { RootStackParamList } from '../routes';
 import type { AppState } from '../state/app-store';
 import { useAppStore } from '../state/use-app-store';
@@ -79,6 +80,7 @@ export const SignInScreen = () => {
   const [deviceName, setDeviceName] = useState(capped(Device.modelName ?? ''));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [forgotten, setForgotten] = useState(false);
 
   const submit = async () => {
     setSaving(true);
@@ -104,22 +106,30 @@ export const SignInScreen = () => {
   };
 
   return (
-    <SignInForm
-      onBack={navigation.canGoBack() ? () => navigation.goBack() : null}
-      address={address}
-      onChangeAddress={setAddress}
-      email={email}
-      onChangeEmail={setEmail}
-      password={password}
-      onChangePassword={setPassword}
-      deviceName={deviceName}
-      onChangeDeviceName={(text) => setDeviceName(capped(text))}
-      error={error}
-      saving={saving}
-      onSubmit={() => void submit()}
-      // The ForgotPasswordDialog opens from here once US4 provides it (T054).
-      onForgotPassword={() => undefined}
-    />
+    <>
+      <SignInForm
+        onBack={navigation.canGoBack() ? () => navigation.goBack() : null}
+        address={address}
+        onChangeAddress={setAddress}
+        email={email}
+        onChangeEmail={setEmail}
+        password={password}
+        onChangePassword={setPassword}
+        deviceName={deviceName}
+        onChangeDeviceName={(text) => setDeviceName(capped(text))}
+        error={error}
+        saving={saving}
+        onSubmit={() => void submit()}
+        onForgotPassword={() => setForgotten(true)}
+      />
+      {forgotten && (
+        <ForgotPasswordDialog
+          address={address}
+          initialEmail={email}
+          onClose={() => setForgotten(false)}
+        />
+      )}
+    </>
   );
 };
 

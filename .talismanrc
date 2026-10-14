@@ -230,8 +230,6 @@ fileignoreconfig:
     checksum: 7dc7407c82304c32f0f26261feb1def9994b2979372a545eb2413f78b146a9e9
   - filename: tests/e2e/journeys/sync-unreachable.e2e.ts
     checksum: 4748cefefc61c8341e27e4b1e9b2e5f9e214767b12311a1a31bad9bfbf66d514
-  - filename: apps/mobile/src/adapters/sync-http/account-server.ts
-    checksum: 83f37ebf6d66ce372ab1a2ba4fa96b0232443a75d247d0e1b2c00cd7eb610318
   - filename: apps/server/src/composition/report-context.test.ts
     checksum: 7c99e0ccefadc3840f2ad96e2ac1f8b63f3dd1cf3696486d9fa4db7f9dcd7c64
   - filename: tests/sync/src/performance.test.ts
@@ -240,8 +238,6 @@ fileignoreconfig:
     checksum: 51b22692eeafe28ced196fdc2d6b75c06b953876caac0098749584d053c2f9fe
   - filename: apps/server/src/testing/start-test-server.test.ts
     checksum: dbbbb0f8ecc80b26cb1a08b69f518376060e6e3478d7eef077cd32f77add1939
-  - filename: tests/sync/src/account-adapter.test.ts
-    checksum: 0b2518e959abd80bd836ec1a53088dd63ef03f39688c26cb0e71c209a0f15935
   - filename: apps/server/src/application/use-cases/sign-in.ts
     checksum: e6c6000e75f3ee798e108bc27603fe2c5258c3f1f149b694124790508af79afa
   - filename: tests/sync/src/sign-in.scenario.test.ts
@@ -256,20 +252,12 @@ fileignoreconfig:
     checksum: 056b6975167e2ed357082dc9a7ffe4da6e9f9d45d2c39b88378d5faf79c02076
   - filename: apps/server/src/application/use-cases/sign-in.test.ts
     checksum: e6a1f21d2cf1f64184add7f19bbff39487fba44b53c76062b778f4c5735a8198
-  - filename: apps/mobile/src/adapters/ui/use-cases.ts
-    checksum: 9e7989f3c1ac1aa232e920580bd8958d8e72d75a3b8131b0a6697e411302c4ea
   - filename: apps/mobile/src/adapters/ui/screens/SignInScreen.stories.tsx
     checksum: 3759bccad811eead4a8d2c99ef62435dc594cf9c3d683ab6efab4001577316cb
   - filename: apps/mobile/src/adapters/ui/screens/ChoosePasswordScreen.stories.tsx
     checksum: a0c0727f5dc8d700806ecf3cccf00eb131c19ae1826d0aa500838ab3e3f5a567
-  - filename: apps/mobile/src/application/testing/offline-account-server.ts
-    checksum: 7a88da7c44ff57727ef640850f773952e0dbae65a8b73ad1ebb0b100c700fe06
   - filename: apps/mobile/src/adapters/ui/testing/story-store.test.ts
     checksum: 0b791bdb9370aff39b1ff1f5219090ea3acf688828a79c392e46e10707a1db99
-  - filename: apps/server/src/adapters/http/schemas.ts
-    checksum: 84bd47e938faca8e61db13a58e20eee06f9af898d0ce747345225bbc9d7c9bf2
-  - filename: apps/mobile/src/application/testing/in-memory-account-server.ts
-    checksum: 14e296eb22bb8472a3a80f0ef41d38b465ecdae66b19667d513d2235781ee3c2
   - filename: tests/sync/src/revocation.test.ts
     checksum: 9dc969a1dc2d889e24e34c4fbd4049b23a71ec7fbbcfa297181cdf0bda9d03db
   - filename: apps/mobile/src/adapters/ui/components/notice-snackbar.test.tsx
@@ -280,12 +268,40 @@ fileignoreconfig:
     checksum: b6a42160d2162435fe0665db597028e8aa40e0b08009a82cc2e568de19153434
   - filename: apps/mobile/src/adapters/ui/state/sync-actions.ts
     checksum: 693f399bc83d7ad0147c332bbbaa8fac67b40642f9263c909d1dd9d9e7a5842f
-  - filename: apps/mobile/src/adapters/ui/screens/sign-in-screen.test.tsx
-    checksum: 605de9f2169feec15bf70c212cbabeea1a98217bca88df69d9a3a5186c0bd7b2
   - filename: apps/server/src/adapters/http/routes/auth.ts
     checksum: 20f0392e9fe17df24c1f7f0642950b5df24cf5783edc231e2d6d3cfda1776ad1
   - filename: apps/mobile/src/adapters/ui/screens/ChoosePasswordScreen.tsx
     checksum: a2292339e452d9b0c190d57307639d9a7ab6867c7ae30bff67637215c2ef777e
+  - filename: apps/mobile/src/application/use-cases/request-password-reset.test.ts
+    checksum: 885466a777445eb1b87206c582ff33237701a5e5334ceb0dee75e6d33c63f2c4
+  - filename: apps/mobile/src/application/use-cases/request-password-reset.ts
+    checksum: 4b0dfef70e196e2fcf0dadb65a46092b4f6a9906d226cd9ae543c902ab17da29
+  - filename: apps/server/src/application/use-cases/request-password-reset.test.ts
+    checksum: 9b84d3db567db49c14c6fce0b556bf878048fbaff71baff7b8e0050b79bfde51
+  - filename: apps/server/src/application/use-cases/request-password-reset.ts
+    checksum: fa6d8de458bb66e8ccbaec73aeda94a0ca7e476a9ecf40a1fbfb6a0428a1c9d6
+  - filename: tests/sync/src/password-reset.scenario.test.ts
+    checksum: 447980ab3fcc9c5ed47053168ceb2f3d19ffb3a0534538602a2e3d6a9d957c46
+  - filename: apps/mobile/src/adapters/ui/screens/SignInScreen.tsx
+    checksum: 6480cb83c2773492b274bfaba32243a1106c5d264033329e63007fb8d8e9b682
+  - filename: apps/mobile/src/adapters/ui/screens/ForgotPasswordDialog.tsx
+    checksum: 40b486f1d484e7ad0918404aa87941bd63c2f7ad8f649a2c2bd8c6231918f36e
+  - filename: apps/mobile/src/adapters/ui/use-cases.ts
+    checksum: d2d97ab0c5d4bd2e8f9dc928cbb73ec9086da6eca2302f1ea603cbbb464ebfc0
+  - filename: apps/server/src/adapters/http/schemas.ts
+    checksum: 7259c51bf11ad031d1165c1bbbc9722dfbeba48968a2d7bcb5baf39aa882e079
+  - filename: apps/mobile/src/adapters/sync-http/account-server.ts
+    checksum: 3dbb3f32b8cd0b5bc539e1ffeddd67f3085a642ebbbdcfe9bfc93b9d89451b87
+  - filename: apps/mobile/src/adapters/ui/screens/sign-in-screen.test.tsx
+    checksum: 4af34211c68a229429bed4304f2dc507ffe3e416257b0ef9590ddd9d42939d2d
+  - filename: tests/sync/src/account-adapter.test.ts
+    checksum: ee676070080d4ba46cc55fbd3d2a3d2503749100a10ea0559f4acd256f5ccf84
+  - filename: apps/mobile/src/application/testing/in-memory-account-server.ts
+    checksum: 1f2055dc8b564e1b875bdaf9f42b3ae61e436d9cd1a904c2f0ffb5f3bc9f711f
+  - filename: apps/mobile/src/adapters/ui/state/accounts-actions.ts
+    checksum: d6e32f1eeda658091b8398c66c0b4387afb68f5098e4bcbae8f052453bfb5dd4
+  - filename: apps/mobile/src/application/testing/offline-account-server.ts
+    checksum: 290af3a31760a722a5ff91e6aa4e20df1a3833d2eeca680959ccd1d64b27f855
   - filename: apps/server/src/adapters/http/routes/auth.test.ts
-    checksum: 42b1a4268cd44350cb2bab71134f09ab95b26ac925132312799b201a27f320b6
+    checksum: 37f662d2652fd7011e6325ccae73fe98a369d4e8b7e7eda14e0eea2ef061e276
 version: "1.0"

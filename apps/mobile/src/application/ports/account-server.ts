@@ -51,6 +51,16 @@ export type ChoosePasswordServerError =
   | UntrustedServer
   | UpdateRequired;
 
+export type PasswordResetServerError =
+  | InvalidEmailRefused
+  | TooManyAttempts
+  | ServerUnreachable
+  | UntrustedServer
+  | UpdateRequired;
+
+/** The server refused the address as malformed (the app checks it first). */
+export type InvalidEmailRefused = { type: 'InvalidEmail' };
+
 /**
  * The HTTP adapter for the caller's own account, over the same transport as `SyncServer`. Grows
  * story by story: the password reset and the account's own changes come with US4 and US6.
@@ -69,5 +79,10 @@ export interface AccountServer {
     newPassword: string,
     deviceName: string,
   ): Promise<Result<AccountPairing, ChoosePasswordServerError>>;
+  /** Asks for a new temporary password by email; the answer is the same for any address. */
+  requestPasswordReset(
+    url: string,
+    email: string,
+  ): Promise<Result<void, PasswordResetServerError>>;
   getAccount(conn: Connection): Promise<Result<AccountInfo, SyncFailure>>;
 }

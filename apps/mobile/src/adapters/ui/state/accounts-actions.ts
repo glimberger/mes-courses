@@ -4,6 +4,7 @@ import type { Forbidden } from '../../../application/ports/admin-server';
 import type { SyncFailure } from '../../../application/ports/sync-server';
 import type { AccountSettings } from '../../../application/use-cases/get-account-settings';
 import type { InviteAccountError } from '../../../application/use-cases/invite-account';
+import type { RequestPasswordResetError } from '../../../application/use-cases/request-password-reset';
 import { err, type Result } from '../../../domain/result';
 import { reactToFailure } from './failure-reactions';
 import type { StoreKit } from './store-kit';
@@ -16,6 +17,11 @@ export type AccountsActions = {
   listAccounts: () => Promise<
     Result<AccountSummary[], SyncFailure | Forbidden>
   >;
+  /** Asks for a new temporary password by email (US4-1). */
+  requestPasswordReset: (
+    url: string,
+    email: string,
+  ) => Promise<Result<void, RequestPasswordResetError | SyncFailure>>;
   /** Invites an address (US1-1 to US1-4). */
   inviteAccount: (
     email: string,
@@ -73,6 +79,11 @@ export const createAccountsActions = (kit: StoreKit): AccountsActions => {
 
     listAccounts: () =>
       call('listAccounts', 'Accounts', () => useCases.listAccounts()),
+
+    requestPasswordReset: (url, email) =>
+      call('requestPasswordReset', 'ForgotPassword', () =>
+        useCases.requestPasswordReset(url, email),
+      ),
 
     inviteAccount: async (email) => {
       const outcome = await call('inviteAccount', 'Accounts', () =>

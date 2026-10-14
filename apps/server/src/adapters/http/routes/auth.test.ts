@@ -414,3 +414,117 @@ describe('removed pairing routes (004 T046)', () => {
     },
   );
 });
+
+describe('POST /v1/auth/password-reset', () => {
+  const reset = (
+    post: ReturnType<typeof setup>['post'],
+    email = 'marie@example.org',
+  ) => post('/v1/auth/password-reset', { email });
+
+  it('004 US4-1 answers 202 {} and mails the new temporary password after the reply', async () => {
+    const { post, db, mailer, createAccount } = setup();
+    await createAccount({ email: 'marie@example.org' });
+
+    const response = await reset(post);
+
+    expect(response.statusCode).toBe(202);
+    expect(response.json()).toEqual({
+      serverId: expect.any(String),
+      apiVersion: 1,
+      minAppVersion: '1.1.0',
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(mailer.sent).toEqual([
+      expect.objectContaining({
+        kind: 'newTemporaryPassword',
+        to: 'marie@example.org',
+      }),
+    ]);
+    db.close();
+  });
+
+  it('004 US4-3 answers a known, an unknown and a suspended address with the same status, body and headers', async () => {
+    const { post, db, mailer, createAccount, suspend } = setup();
+    await createAccount({ email: 'marie@example.org' });
+    const { accountId } = await createAccount({ email: 'paul@example.org' });
+    await suspend(accountId);
+
+    const known = await reset(post);
+    const unknown = await reset(post, 'nobody@example.org');
+    const suspended = await reset(post, 'paul@example.org');
+
+    for (const other of [unknown, suspended]) {
+      expect(other.statusCode).toBe(known.statusCode);
+      expect(other.body).toBe(known.body);
+      expect(Object.keys(other.headers).sort()).toEqual(
+        Object.keys(known.headers).sort(),
+      );
+    }
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(mailer.sent).toHaveLength(1);
+    db.close();
+  });
+
+  it('004 US4-1 answers before the mail service does', async () => {
+    const { post, db, mailer, createAccount } = setup();
+    await createAccount({ email: 'marie@example.org' });
+    mailer.hold();
+
+    const response = await reset(post);
+
+    expect(response.statusCode).toBe(202);
+    expect(mailer.sent).toEqual([]);
+    mailer.release();
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(mailer.sent).toHaveLength(1);
+    db.close();
+  });
+
+  it('004 US4-1 still answers 202 when the mail fails, and reports it without the address', async () => {
+    const { post, db, mailer, reports, createAccount } = setup();
+    await createAccount({ email: 'marie@example.org' });
+    mailer.failing = true;
+
+    const response = await reset(post);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(response.statusCode).toBe(202);
+    expect(response.json()).toEqual({
+      serverId: expect.any(String),
+      apiVersion: 1,
+      minAppVersion: '1.1.0',
+    });
+    expect(reports).toHaveLength(1);
+    expect(reports[0]?.context).toMatchObject({
+      operation: 'requestPasswordReset',
+    });
+    expect(JSON.stringify(reports)).not.toContain('marie@example.org');
+    db.close();
+  });
+
+  it('004 US4-3 answers 400 InvalidEmail to a malformed address and 400 BadRequest to a missing one', async () => {
+    const { post, db } = setup();
+
+    const malformed = await reset(post, 'not an address');
+    const missing = await post('/v1/auth/password-reset', {});
+
+    expect(malformed.statusCode).toBe(400);
+    expect(malformed.json().error).toBe('InvalidEmail');
+    expect(missing.statusCode).toBe(400);
+    expect(missing.json().error).toBe('BadRequest');
+    db.close();
+  });
+
+  it('004 US4-4 answers 429 with Retry-After on the 4th request in an hour', async () => {
+    const { post, db, createAccount } = setup();
+    await createAccount({ email: 'marie@example.org' });
+    for (let i = 0; i < 3; i++) await reset(post);
+
+    const response = await reset(post);
+
+    expect(response.statusCode).toBe(429);
+    expect(response.json().error).toBe('TooManyAttempts');
+    expect(Number(response.headers['retry-after'])).toBeGreaterThan(0);
+    db.close();
+  });
+});

@@ -4,6 +4,14 @@ import { startTestServer, type TestServer } from '@mes-courses/server/testing';
 const APP_VERSION = '1.1.0';
 const PASSWORD = 'a long enough password';
 
+/** The reset email is sent after the answer: waits until the server has sent `count` of them. */
+const waitForMails = async (server: TestServer, count: number) => {
+  for (let i = 0; i < 100 && server.mails().length < count; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  expect(server.mails()).toHaveLength(count);
+};
+
 describe('AccountServer HTTP adapter: sign-in', () => {
   let server: TestServer;
 
@@ -230,5 +238,79 @@ describe('AccountServer HTTP adapter: choosePassword', () => {
     const text = JSON.stringify(result);
     expect(text).not.toContain(temporaryPassword);
     expect(text).not.toContain('short"');
+  });
+});
+
+describe('AccountServer HTTP adapter: password reset', () => {
+  let server: TestServer;
+
+  beforeEach(async () => {
+    server = await startTestServer();
+  });
+  afterEach(async () => {
+    await server.close();
+  });
+
+  const accountServer = (appVersion = APP_VERSION) =>
+    createAccountServer({ appVersion });
+
+  it('004 US4-1 answers success for a known address and mails it', async () => {
+    await server.createAccount({ email: 'marie@example.org' });
+
+    expect(
+      await accountServer().requestPasswordReset(
+        server.url,
+        'marie@example.org',
+      ),
+    ).toEqual({ ok: true, value: undefined });
+    await waitForMails(server, 1);
+  });
+
+  it('004 US4-3 answers the same success for an unknown address, and mails nothing', async () => {
+    const known = await accountServer().requestPasswordReset(
+      server.url,
+      'nobody@example.org',
+    );
+
+    expect(known).toEqual({ ok: true, value: undefined });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(server.mails()).toEqual([]);
+  });
+
+  it('004 US4-3 reports a malformed address the server refused', async () => {
+    expect(
+      await accountServer().requestPasswordReset(server.url, 'not an address'),
+    ).toEqual({ ok: false, error: { type: 'InvalidEmail' } });
+  });
+
+  it('004 US4-4 reports the minutes to wait on the 4th request in an hour', async () => {
+    for (let i = 0; i < 3; i++) {
+      await accountServer().requestPasswordReset(server.url, 'a@example.org');
+    }
+
+    expect(
+      await accountServer().requestPasswordReset(server.url, 'a@example.org'),
+    ).toEqual({
+      ok: false,
+      error: { type: 'TooManyAttempts', minutesToWait: 60 },
+    });
+  });
+
+  it('004 R5 reports that an update is required for an old app', async () => {
+    expect(
+      await accountServer('1.0.0').requestPasswordReset(
+        server.url,
+        'a@example.org',
+      ),
+    ).toEqual({ ok: false, error: { type: 'UpdateRequired' } });
+  });
+
+  it('004 US4-1 reports an unreachable server', async () => {
+    expect(
+      await accountServer().requestPasswordReset(
+        'http://127.0.0.1:9',
+        'a@example.org',
+      ),
+    ).toEqual({ ok: false, error: { type: 'ServerUnreachable' } });
   });
 });

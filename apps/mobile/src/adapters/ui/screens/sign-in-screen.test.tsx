@@ -307,3 +307,88 @@ describe('ChoosePassword', () => {
     );
   });
 });
+
+describe('ForgotPasswordDialog', () => {
+  type Reset = Awaited<ReturnType<AccountServer['requestPasswordReset']>>;
+
+  const openDialog = async (
+    requestPasswordReset: AccountServer['requestPasswordReset'],
+  ) => {
+    await renderSignIn({ requestPasswordReset });
+    fill('courses.example.fr', 'Marie@Example.org', '');
+    fireEvent.press(
+      screen.getByRole('button', { name: 'Mot de passe oublié ?' }),
+    );
+    await screen.findAllByRole('header', { name: 'Mot de passe oublié' });
+  };
+  // The dialog's field comes after the form's in the tree.
+  const emailField = () => screen.getAllByLabelText('Adresse e-mail').at(-1);
+  const send = () =>
+    fireEvent.press(screen.getByRole('button', { name: 'Envoyer' }));
+
+  it('004 US4-1 shows the text of the dialog, with the email prefilled from SignIn', async () => {
+    await openDialog(async () => ok(undefined));
+
+    expect(
+      screen.getByText(
+        'Saisissez votre adresse e-mail. Si un compte existe, vous recevrez un mot de passe temporaire.',
+      ),
+    ).toBeOnTheScreen();
+    expect(emailField()?.props.value).toBe('Marie@Example.org');
+    expect(screen.getByRole('button', { name: 'Annuler' })).toBeOnTheScreen();
+  });
+
+  it('004 US4-1 sends the request and says an email was sent if an account exists', async () => {
+    const reset = jest.fn(async (): Promise<Reset> => ok(undefined));
+    await openDialog(reset);
+
+    send();
+
+    expect(
+      await screen.findByText(
+        "Si un compte existe pour cette adresse, un e-mail vient d'être envoyé.",
+      ),
+    ).toBeOnTheScreen();
+    expect(reset).toHaveBeenCalledWith(
+      'https://courses.example.fr',
+      'marie@example.org',
+    );
+  });
+
+  it.each([
+    [err({ type: 'InvalidEmail' }), 'Saisissez une adresse e-mail valide.'],
+    [
+      err({ type: 'TooManyAttempts', minutesToWait: 42 }),
+      'Trop de demandes. Réessayez dans 42 minutes.',
+    ],
+    [
+      err({ type: 'ServerUnreachable' }),
+      "Impossible de joindre le serveur. Vérifiez l'adresse et votre connexion.",
+    ],
+  ] as [Reset, string][])(
+    '004 US4-4 shows "%#" and keeps the dialog open',
+    async (result, message) => {
+      await openDialog(async () => result);
+
+      send();
+
+      expect(await screen.findByText(message)).toBeOnTheScreen();
+      expect(screen.getByRole('button', { name: 'Envoyer' })).toBeOnTheScreen();
+    },
+  );
+
+  it('004 US4-3 closes with "Annuler" and keeps what was typed in SignIn', async () => {
+    await openDialog(async () => ok(undefined));
+
+    fireEvent.press(screen.getByRole('button', { name: 'Annuler' }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryAllByRole('header', { name: 'Mot de passe oublié' }),
+      ).toHaveLength(0),
+    );
+    expect(screen.getByLabelText('Adresse du serveur').props.value).toBe(
+      'courses.example.fr',
+    );
+  });
+});

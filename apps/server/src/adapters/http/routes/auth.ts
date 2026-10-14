@@ -1,10 +1,16 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 
 import { choosePassword } from '../../../application/use-cases/choose-password';
+import { MailFailedError } from '../../../application/ports/mailer';
+import { requestPasswordReset } from '../../../application/use-cases/request-password-reset';
 import { signIn, type SignedIn } from '../../../application/use-cases/sign-in';
 import type { AppDeps } from '../deps';
 import { sendError } from '../errors';
-import { choosePasswordBodySchema, signInBodySchema } from '../schemas';
+import {
+  choosePasswordBodySchema,
+  passwordResetBodySchema,
+  signInBodySchema,
+} from '../schemas';
 
 type Failure =
   | { kind: 'invalidEmail' }
@@ -90,6 +96,38 @@ export const registerAuthRoutes = (
       });
       if (outcome.kind === 'signedIn') return signedInBody(outcome);
       return sendFailure(reply, outcome);
+    },
+  );
+
+  app.post<{ Body: { email: string } }>(
+    '/v1/auth/password-reset',
+    { config, schema: { body: passwordResetBodySchema } },
+    async (request, reply) => {
+      const outcome = await requestPasswordReset(deps, {
+        email: request.body.email,
+        clientAddress: request.ip,
+      });
+      if (outcome.kind === 'invalidEmail') {
+        return sendError(reply, 'InvalidEmail');
+      }
+      if (outcome.kind === 'blocked') return sendFailure(reply, outcome);
+
+      const { message } = outcome;
+      if (message !== null) {
+        // Sent after the answer and never awaited by it: the response time must not reveal
+        // whether the account exists, and a failure cannot change the answer (research R4).
+        void deps.mailer.send(message).catch((error: unknown) => {
+          // Only the fixed error of the mail adapter: no address (FR-020).
+          deps.errorReporter.report(
+            error instanceof MailFailedError ? error : new MailFailedError(),
+            {
+              operation: 'requestPasswordReset',
+              route: 'POST /v1/auth/password-reset',
+            },
+          );
+        });
+      }
+      return reply.status(202).send({});
     },
   );
 };

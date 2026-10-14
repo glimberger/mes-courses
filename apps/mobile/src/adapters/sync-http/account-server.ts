@@ -154,6 +154,34 @@ export const createAccountServer = (
       return err({ type: 'ServerUnreachable' });
     },
 
+    async requestPasswordReset(url, email) {
+      const answer = await send(url, '/v1/auth/password-reset', {
+        method: 'POST',
+        body: { email },
+      });
+      if (answer.kind === 'untrusted') return err({ type: 'UntrustedServer' });
+      if (answer.kind === 'unreachable') {
+        return err({ type: 'ServerUnreachable' });
+      }
+      switch (answer.status) {
+        case 202:
+          return ok(undefined);
+        case 400:
+          return errorCode(answer.body) === 'InvalidEmail'
+            ? err({ type: 'InvalidEmail' })
+            : err({ type: 'ServerUnreachable' });
+        case 426:
+          return err({ type: 'UpdateRequired' });
+        case 429:
+          return err({
+            type: 'TooManyAttempts',
+            minutesToWait: minutesToWait(answer.headers.get('Retry-After')),
+          });
+        default:
+          return err({ type: 'ServerUnreachable' });
+      }
+    },
+
     async getAccount(conn) {
       const answer = await send(conn.url, '/v1/account', {
         method: 'GET',
