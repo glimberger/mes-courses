@@ -304,4 +304,20 @@ fileignoreconfig:
     checksum: 290af3a31760a722a5ff91e6aa4e20df1a3833d2eeca680959ccd1d64b27f855
   - filename: apps/server/src/adapters/http/routes/auth.test.ts
     checksum: 37f662d2652fd7011e6325ccae73fe98a369d4e8b7e7eda14e0eea2ef061e276
+  - filename: apps/server/src/application/use-cases/delete-account.ts
+    checksum: 330ea64bf01851f70f157de11aa025c26cde93317d8932e68eab4216d4d18029
+  - filename: apps/server/src/application/use-cases/resend-credentials.ts
+    checksum: 0c68e46fb8386fd634c2ee9c12fa4153562ed5a1afd6e28a571450485eb0d7df
+  - filename: apps/server/src/application/use-cases/delete-account.test.ts
+    checksum: 7aecc1134fdcdd813cbda0eba3213171012168b6348b23c8ec8ed172dab58382
+  - filename: apps/server/src/application/use-cases/suspend-account.test.ts
+    checksum: 7ce0a39d86a3b6c7dc1b44b3e4aaba74638bc4c2624660d4b38f3d734697f871
+  - filename: apps/server/src/application/use-cases/resend-credentials.test.ts
+    checksum: be8a35d9c77b9df76557b5246e81710de306ce383287a9b3e1f2609db1bd4720
+  - filename: apps/server/src/application/use-cases/reactivate-account.test.ts
+    checksum: c1666ade610b8ea09e5a011106b9be1499062c82717aca51d6fd7709c8c06faa
+  - filename: apps/server/src/adapters/http/routes/admin.test.ts
+    checksum: 7d23e2c3781df281d5190b65785aada42d21f828f25b73a875b12612a07bae49
+  - filename: tests/sync/src/administration.scenario.test.ts
+    checksum: 24e365bc54545b1e51ccc3853ff9d4c6cfb9d9cb8caad64a49011ac21bf3372c
 version: "1.0"

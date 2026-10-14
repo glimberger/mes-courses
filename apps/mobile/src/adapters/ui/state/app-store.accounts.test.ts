@@ -62,7 +62,7 @@ describe('accounts actions', () => {
     expect(JSON.stringify(errorReporter.reports)).not.toContain('marie@');
   });
 
-  it('004 a device the server refuses moves the connection to disconnectedByServer', async () => {
+  it('004 a device the server refuses signs the device out', async () => {
     const { store } = await build({
       adminServer: {
         listAccounts: async () => err({ type: 'DeviceNotAuthorized' }),
@@ -71,7 +71,7 @@ describe('accounts actions', () => {
 
     await store.getState().listAccounts();
 
-    expect(store.getState().sync.connection).toBe('disconnectedByServer');
+    expect(store.getState().sync.connection).toBe('signedOut');
   });
 
   it('004 offline is normal: nothing is reported and the connection is unchanged', async () => {

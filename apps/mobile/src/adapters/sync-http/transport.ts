@@ -105,7 +105,15 @@ export const errorCode = (body: unknown): ErrorBody['error'] | null =>
 export const syncFailure = (
   answer: Answer & { kind: 'response' },
 ): SyncFailure => {
-  if (answer.status === 401) return { type: 'DeviceNotAuthorized' };
+  const code = errorCode(answer.body);
+  if (answer.status === 401) {
+    return code === 'AccountDeleted'
+      ? { type: 'AccountDeleted' }
+      : { type: 'DeviceNotAuthorized' };
+  }
+  if (answer.status === 403 && code === 'AccountSuspended') {
+    return { type: 'AccountSuspended' };
+  }
   if (answer.status === 426) return { type: 'UpdateRequired' };
   return { type: 'ServerError' };
 };

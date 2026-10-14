@@ -325,12 +325,34 @@ describe('Settings, devices (003 US4)', () => {
     await act(() => store.getState().syncNow());
 
     expect(
-      await screen.findByText("Cet appareil n'est plus connecté au serveur."),
+      await screen.findByText(
+        "Cet appareil n'est plus autorisé. Reconnectez-vous.",
+      ),
     ).toBeOnTheScreen();
     fireEvent.press(screen.getByRole('button', { name: 'Se reconnecter' }));
 
     expect(
       await screen.findByRole('header', { name: 'Se connecter' }),
     ).toBeOnTheScreen();
+  });
+
+  it('004 US5-4 explains the sign-out in a dialog, and "Compris" erases the local copy', async () => {
+    const sync = jest.fn(async () => err({ type: 'AccountDeleted' as const }));
+    const { store } = await openSettings({ syncServer: { sync } });
+    await act(() => store.getState().syncNow());
+
+    expect(await screen.findByText('Compte supprimé')).toBeOnTheScreen();
+    expect(
+      screen.getByText(
+        'Ce compte a été supprimé. Les listes de ce compte vont être effacées de cet appareil.',
+      ),
+    ).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole('button', { name: 'Compris' }));
+
+    await waitFor(() =>
+      expect(store.getState().sync.connection).toBe('notConnected'),
+    );
+    expect(store.getState().sync.signedOutReason).toBeNull();
+    expect(screen.queryByText('Compte supprimé')).not.toBeOnTheScreen();
   });
 });

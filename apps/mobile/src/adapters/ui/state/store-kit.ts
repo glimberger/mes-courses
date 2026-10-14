@@ -8,6 +8,7 @@ import type { ListSummary } from '../../../domain/list-summary';
 import type { NameError } from '../../../domain/name';
 import type { QuantityError } from '../../../domain/quantity';
 import type { Result } from '../../../domain/result';
+import type { SignedOutReason } from '../../../application/use-cases/synchronize';
 import type { UseCases } from '../use-cases';
 import type { ScreenState } from './screen-state';
 
@@ -25,6 +26,10 @@ export type Notice =
   | { type: 'passwordChosen' }
   /** The administrator invited an address (US1-1). Kept in memory, never reported. */
   | { type: 'invitationSent'; email: string }
+  /** The administrator lifted a suspension (US5-3). */
+  | { type: 'accountReactivated' }
+  /** The administrator resent an account's credentials (US5-6). */
+  | { type: 'credentialsResent' }
   /** A pull deleted the article of an undo offer, or of a form (FR-008, FR-020a). */
   | { type: 'articleDeletedElsewhere' }
   /** A pull removed the item a form was editing from its list (FR-020a). */
@@ -38,7 +43,15 @@ export type PendingUndo =
 /** The state of the connection to the server and of the last cycles (research R14). */
 export type SyncSlice = {
   connection:
-    'notConnected' | 'connected' | 'disconnectedByServer' | 'updateRequired';
+    | 'notConnected'
+    | 'connected'
+    /** The administrator suspended the account: data kept, edits queued (US5-2). */
+    | 'suspended'
+    /** The server refuses the device for good; the data stays until the message is read. */
+    | 'signedOut'
+    | 'updateRequired';
+  /** Why the device is signed out; `null` in every other connection state. */
+  signedOutReason: SignedOutReason | null;
   status: 'saved' | 'waiting' | 'sending' | 'failed';
   /** The changes waiting to be sent, held ones excluded. */
   pendingCount: number;

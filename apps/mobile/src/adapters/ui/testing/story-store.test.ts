@@ -210,7 +210,7 @@ describe('createStoryStore', () => {
         syncServer: { sync: async () => err({ type: 'DeviceNotAuthorized' }) },
       });
 
-      expect(store.getState().sync.connection).toBe('disconnectedByServer');
+      expect(store.getState().sync.connection).toBe('signedOut');
     });
 
     it('drives the server fake: an update required', async () => {

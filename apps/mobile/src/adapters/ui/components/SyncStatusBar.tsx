@@ -23,17 +23,30 @@ const modifications = (count: number) =>
 /** What the bar shows for the slice, or null when a never-connected device has nothing to show. */
 const display = ({
   connection,
+  signedOutReason,
   status,
   pendingCount,
 }: SyncSlice): Display | null => {
   switch (connection) {
     case 'notConnected':
       return null;
-    case 'disconnectedByServer':
+    case 'signedOut':
+      return signedOutReason === 'accountDeleted'
+        ? {
+            icon: 'cloud-off-outline',
+            text: 'Ce compte a été supprimé.',
+            action: { label: 'Se connecter', target: 'reconnect' },
+          }
+        : {
+            icon: 'cloud-off-outline',
+            text: "Cet appareil n'est plus autorisé. Reconnectez-vous.",
+            action: { label: 'Se reconnecter', target: 'reconnect' },
+          };
+    case 'suspended':
+      // Not an error: the lists stay on the phone and keep working (Principle VII).
       return {
-        icon: 'cloud-off-outline',
-        text: "Cet appareil n'est plus connecté au serveur.",
-        action: { label: 'Se reconnecter', target: 'reconnect' },
+        icon: 'pause-circle-outline',
+        text: 'Votre compte est suspendu. Vos listes restent sur cet appareil.',
       };
     case 'updateRequired':
       return {

@@ -9,6 +9,13 @@ export const renameDeviceBodySchema = {
   properties: { name: { type: 'string', maxLength: 200 } },
 } as const;
 
+/** `/v1/admin/accounts/:id/...` */
+export const accountIdParamsSchema = {
+  type: 'object',
+  required: ['id'],
+  properties: { id: { type: 'string', minLength: 1, maxLength: 200 } },
+} as const;
+
 const hlcSchema = {
   type: 'object',
   required: ['wallMs', 'counter', 'deviceId'],

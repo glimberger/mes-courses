@@ -100,8 +100,8 @@ describe('a server replaced by an empty one (003 FR-018a)', () => {
       port: Number(new URL(url).port),
     });
 
-    expect(await cycleAfterRestart(a)).toBe('disconnectedByServer');
-    expect(await cycleAfterRestart(b)).toBe('disconnectedByServer');
+    expect(await cycleAfterRestart(a)).toBe('signedOut');
+    expect(await cycleAfterRestart(b)).toBe('signedOut');
     expect(await pendingCount(a)).toBe(waiting);
     expect((await readModel(a)).items.map((item) => item.name)).toEqual([
       'Beurre',

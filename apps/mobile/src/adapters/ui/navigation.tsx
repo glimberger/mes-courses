@@ -15,6 +15,7 @@ import { CreateArticleScreen } from './screens/CreateArticleScreen';
 import { CurrentListScreen } from './screens/CurrentListScreen';
 import { EditArticleScreen } from './screens/EditArticleScreen';
 import { ListsScreen } from './screens/ListsScreen';
+import { SignedOutNotice } from './screens/SignedOutNoticeDialog';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { SignInScreen } from './screens/SignInScreen';
 import type { RootStackParamList } from './routes';
@@ -76,6 +77,7 @@ export const Navigation = ({
       <SyncAnnouncer />
       <UndoSnackbar />
       <NoticeSnackbar />
+      <SignedOutNotice />
     </>
   );
 };

@@ -26,6 +26,18 @@ export const requiredStories: readonly string[] = [
   'Screens/CurrentList/Success',
   'Screens/CurrentList/AllInCart',
   'Dialogs/FinishShoppingDialog/Default',
+  // User Story 5
+  'Components/SyncStatusBar/SignedOutRevoked',
+  'Components/SyncStatusBar/SignedOutAccountDeleted',
+  'Components/SyncStatusBar/Suspended',
+  'Dialogs/SignedOutNotice/Revoked',
+  'Dialogs/SignedOutNotice/AccountDeleted',
+  'Dialogs/SignedOutNotice/PendingChangesLost',
+  'Dialogs/SuspendAccountDialog/Default',
+  'Dialogs/SuspendAccountDialog/LastAdministrator',
+  'Dialogs/DeleteAccountDialog/Default',
+  'Dialogs/DeleteAccountDialog/LastAdministrator',
+  'Dialogs/ResendCredentialsDialog/Default',
   // User Story 2
   'Components/ArticleRow/Default',
   'Components/ArticleRow/AlreadyOnList',
@@ -79,7 +91,6 @@ export const requiredStories: readonly string[] = [
   'Components/SyncStatusBar/Waiting',
   'Components/SyncStatusBar/Sending',
   'Components/SyncStatusBar/Failed',
-  'Components/SyncStatusBar/DisconnectedByServer',
   'Components/SyncStatusBar/UpdateRequired',
   'Screens/CurrentList/WithSyncStatus',
   // 004 Multi-user accounts

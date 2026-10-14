@@ -253,6 +253,7 @@ export const createAppStoreWith = <Actions extends object>(
       pendingUndo: null,
       sync: {
         connection: 'notConnected',
+        signedOutReason: null,
         status: 'saved',
         pendingCount: 0,
         lastSyncAt: null,

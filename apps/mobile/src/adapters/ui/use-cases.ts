@@ -3,6 +3,22 @@ import type {
   AdminServer,
   Forbidden,
 } from '../../application/ports/admin-server';
+import {
+  createSuspendAccount,
+  type SuspendAccountError,
+} from '../../application/use-cases/suspend-account';
+import {
+  createReactivateAccount,
+  type ReactivateAccountError,
+} from '../../application/use-cases/reactivate-account';
+import {
+  createResendCredentials,
+  type ResendCredentialsError,
+} from '../../application/use-cases/resend-credentials';
+import {
+  createDeleteAccountAsAdmin,
+  type DeleteAccountAsAdminError,
+} from '../../application/use-cases/delete-account-as-admin';
 import type { Clock } from '../../application/ports/clock';
 import type { CredentialStore } from '../../application/ports/credential-store';
 import type { LocalDataEraser } from '../../application/ports/local-data-eraser';
@@ -25,6 +41,7 @@ import {
   createInviteAccount,
   type InviteAccountError,
 } from '../../application/use-cases/invite-account';
+import { createAcknowledgeSignedOut } from '../../application/use-cases/acknowledge-signed-out';
 import { createListAccounts } from '../../application/use-cases/list-accounts';
 import { createAddArticleToList } from '../../application/use-cases/add-article-to-list';
 import {
@@ -216,6 +233,17 @@ export type UseCases = {
   inviteAccount: (
     email: string,
   ) => Promise<Result<AccountSummary, InviteAccountError>>;
+  acknowledgeSignedOut: () => Promise<Result<void, never>>;
+  suspendAccount: (id: string) => Promise<Result<void, SuspendAccountError>>;
+  reactivateAccount: (
+    id: string,
+  ) => Promise<Result<void, ReactivateAccountError>>;
+  resendCredentials: (
+    id: string,
+  ) => Promise<Result<void, ResendCredentialsError>>;
+  deleteAccountAsAdmin: (
+    id: string,
+  ) => Promise<Result<void, DeleteAccountAsAdminError>>;
 };
 
 /** The name of one use case. */
@@ -270,4 +298,9 @@ export const createUseCases = (ports: {
   getAccountSettings: createGetAccountSettings(ports),
   listAccounts: createListAccounts(ports),
   inviteAccount: createInviteAccount(ports),
+  acknowledgeSignedOut: createAcknowledgeSignedOut(ports),
+  suspendAccount: createSuspendAccount(ports),
+  reactivateAccount: createReactivateAccount(ports),
+  resendCredentials: createResendCredentials(ports),
+  deleteAccountAsAdmin: createDeleteAccountAsAdmin(ports),
 });

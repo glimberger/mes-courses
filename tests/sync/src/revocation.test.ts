@@ -105,7 +105,7 @@ describe('device management against a real server (003 US4)', () => {
     });
     await addArticle(b, 'Houmous');
 
-    expect(await cycle(b)).toBe('disconnectedByServer');
+    expect(await cycle(b)).toBe('signedOut');
     expect(await itemNames(b)).toContain('Houmous');
     expect(await pendingCount(b)).toBeGreaterThan(0);
     expect((await b.useCases.getSyncInfo()).connection).toBe('connected');

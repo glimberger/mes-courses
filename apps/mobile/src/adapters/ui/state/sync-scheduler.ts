@@ -1,8 +1,11 @@
 import { AppState, type AppStateStatus } from 'react-native';
 
 export type SyncSchedulerDeps = {
-  /** Runs one cycle; `failed` makes the next delay grow (research R9, R14). */
-  runCycle: () => Promise<{ failed: boolean }>;
+  /**
+   * Runs one cycle; `failed` makes the next delay grow (research R9, R14), `slow` waits the
+   * longest delay without counting a failure (a suspended account, a signed-out device).
+   */
+  runCycle: () => Promise<{ failed: boolean; slow?: boolean }>;
   /** Calls `listener(true)` when the device gets a connection back (FR-004); optional. */
   onNetworkChange?: (listener: (connected: boolean) => void) => {
     remove: () => void;
@@ -20,6 +23,7 @@ export type SyncScheduler = {
 const WRITE_DELAY_MS = 1_000;
 const BASE_DELAY_MS = 5_000;
 const MAX_DELAY_MS = 5 * 60_000;
+const SLOW_DELAY_MS = MAX_DELAY_MS;
 
 /** 5 s, then 10 s, 20 s, … up to 5 min after each failed cycle in a row. */
 const delayAfter = (failures: number): number =>
@@ -46,9 +50,13 @@ export const createSyncScheduler = ({
     writeTimer = undefined;
   };
 
+  let slow = false;
   const scheduleNext = () => {
     clearTimeout(cycleTimer);
-    cycleTimer = setTimeout(request, delayAfter(failures));
+    cycleTimer = setTimeout(
+      request,
+      slow ? SLOW_DELAY_MS : delayAfter(failures),
+    );
   };
 
   const run = async () => {
@@ -56,8 +64,11 @@ export const createSyncScheduler = ({
     clearTimers();
     let failed: boolean;
     try {
-      ({ failed } = await runCycle());
+      const result = await runCycle();
+      failed = result.failed;
+      slow = result.slow === true;
     } catch {
+      slow = false;
       // The store reports its own failures; a cycle that throws counts as failed.
       failed = true;
     }

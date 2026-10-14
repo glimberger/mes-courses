@@ -74,6 +74,10 @@ const adminServerOf = (
     ? {
         listAccounts: server.listAccounts,
         invite: server.invite,
+        suspend: server.suspend,
+        reactivate: server.reactivate,
+        resendCredentials: server.resendCredentials,
+        delete: server.delete,
       }
     : server;
 
@@ -259,5 +263,138 @@ describe('InviteAccountDialog', () => {
 
     await waitFor(() => expect(dialogHeaders()).toHaveLength(0));
     expect(server.invited).toEqual([]);
+  });
+});
+
+describe('Account actions (US5)', () => {
+  const marie = account('account-2', 'marie@example.org');
+  const paul = account('account-3', 'paul@example.org', { state: 'invited' });
+  const lea = account('account-4', 'lea@example.org', { state: 'suspended' });
+
+  const menu = async (email: string) => {
+    fireEvent.press(
+      await screen.findByRole('button', { name: `Actions de ${email}` }),
+    );
+  };
+  const confirm = (name: string) =>
+    fireEvent.press(screen.getAllByRole('button', { name }).at(-1) as never);
+
+  it('004 US5-2 suspends after a confirmation that says the data is kept', async () => {
+    const server = new InMemoryAdminServer([administrator, marie]);
+    await openAccounts(server);
+
+    await menu('marie@example.org');
+    fireEvent.press(screen.getByText('Suspendre'));
+
+    expect(
+      await screen.findByText(
+        'marie@example.org ne pourra plus synchroniser. Ses données sont conservées.',
+      ),
+    ).toBeOnTheScreen();
+    confirm('Suspendre');
+
+    expect(await screen.findByText('Suspendu')).toBeOnTheScreen();
+    expect(server.suspended).toEqual(['account-2']);
+  });
+
+  it('004 US5-3 reactivates at once and says so', async () => {
+    const server = new InMemoryAdminServer([administrator, lea]);
+    await openAccounts(server);
+
+    await menu('lea@example.org');
+    fireEvent.press(screen.getByText('Réactiver'));
+
+    expect(await screen.findByText('Compte réactivé.')).toBeOnTheScreen();
+    await waitFor(() => expect(screen.getAllByText('Actif')).toHaveLength(2));
+    expect(server.reactivated).toEqual(['account-4']);
+  });
+
+  it('004 US5-5 refuses to suspend the only administrator, in words', async () => {
+    const server = new InMemoryAdminServer([administrator, marie]);
+    await openAccounts(server);
+
+    await menu('admin@example.org');
+    fireEvent.press(screen.getByText('Suspendre'));
+    confirm('Suspendre');
+
+    expect(
+      await screen.findByText(
+        'Le seul administrateur ne peut pas être suspendu.',
+      ),
+    ).toBeOnTheScreen();
+    expect(server.suspended).toEqual([]);
+  });
+
+  it('004 US5-6 offers "Renvoyer les identifiants" to invited accounts only', async () => {
+    const server = new InMemoryAdminServer([administrator, marie, paul]);
+    await openAccounts(server);
+
+    await menu('marie@example.org');
+    expect(screen.queryByText('Renvoyer les identifiants')).toBeNull();
+    fireEvent.press(screen.getByText('Supprimer'));
+    fireEvent.press(screen.getByRole('button', { name: 'Annuler' }));
+
+    await menu('paul@example.org');
+    fireEvent.press(screen.getByText('Renvoyer les identifiants'));
+    expect(
+      await screen.findByText(
+        "Un nouveau mot de passe temporaire sera envoyé à paul@example.org. L'ancien ne fonctionnera plus.",
+      ),
+    ).toBeOnTheScreen();
+    confirm('Renvoyer');
+
+    expect(await screen.findByText('E-mail envoyé.')).toBeOnTheScreen();
+    expect(server.resent).toEqual(['account-3']);
+  });
+
+  it('004 US5-6 reuses the invitation failure message when the resend email fails', async () => {
+    const server = new InMemoryAdminServer([administrator, paul]);
+    server.resendMailFails = true;
+    await openAccounts(server);
+
+    await menu('paul@example.org');
+    fireEvent.press(screen.getByText('Renvoyer les identifiants'));
+    confirm('Renvoyer');
+
+    expect(
+      await screen.findByText(
+        "L'invitation n'a pas pu être envoyée. Réessayez.",
+      ),
+    ).toBeOnTheScreen();
+  });
+
+  it('004 US5-4 deletes after a warning that there is no way back', async () => {
+    const server = new InMemoryAdminServer([administrator, marie]);
+    await openAccounts(server);
+
+    await menu('marie@example.org');
+    fireEvent.press(screen.getByText('Supprimer'));
+    expect(
+      await screen.findByText(
+        'Le compte de marie@example.org et toutes ses listes seront supprimés du serveur, sans retour possible.',
+      ),
+    ).toBeOnTheScreen();
+    confirm('Supprimer');
+
+    await waitFor(() => expect(server.deleted).toEqual(['account-2']));
+    expect(
+      await screen.findByText('Vous êtes le seul utilisateur.'),
+    ).toBeOnTheScreen();
+  });
+
+  it('004 US5-5 refuses to delete the only administrator, in words', async () => {
+    const server = new InMemoryAdminServer([administrator, marie]);
+    await openAccounts(server);
+
+    await menu('admin@example.org');
+    fireEvent.press(screen.getByText('Supprimer'));
+    confirm('Supprimer');
+
+    expect(
+      await screen.findByText(
+        'Le seul administrateur ne peut pas être supprimé.',
+      ),
+    ).toBeOnTheScreen();
+    expect(server.deleted).toEqual([]);
   });
 });

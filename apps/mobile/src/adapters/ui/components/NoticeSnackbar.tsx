@@ -21,6 +21,10 @@ const text = (notice: Notice): string => {
       return 'Mot de passe enregistré. Bienvenue !';
     case 'invitationSent':
       return `Invitation envoyée à ${notice.email}.`;
+    case 'accountReactivated':
+      return 'Compte réactivé.';
+    case 'credentialsResent':
+      return 'E-mail envoyé.';
     case 'articleDeletedElsewhere':
       return 'Cet article a été supprimé sur un autre appareil.';
     case 'itemRemovedElsewhere':

@@ -61,9 +61,22 @@ export const Failed: Story = {
   }),
 };
 
-export const DisconnectedByServer: Story = {
+/** Also what a phone restored from a backup shows (a server address with no credential). */
+export const SignedOutRevoked: Story = {
   parameters: scenario({
     syncServer: { sync: async () => err({ type: 'DeviceNotAuthorized' }) },
+  }),
+};
+
+export const SignedOutAccountDeleted: Story = {
+  parameters: scenario({
+    syncServer: { sync: async () => err({ type: 'AccountDeleted' }) },
+  }),
+};
+
+export const Suspended: Story = {
+  parameters: scenario({
+    syncServer: { sync: async () => err({ type: 'AccountSuspended' }) },
   }),
 };
 

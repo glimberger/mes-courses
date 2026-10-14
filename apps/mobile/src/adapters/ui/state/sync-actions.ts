@@ -5,7 +5,7 @@ import type {
   SignInResult,
 } from '../../../application/use-cases/sign-in';
 import type { SyncResult } from '../../../application/use-cases/synchronize';
-import { err, type Result } from '../../../domain/result';
+import { err, ok, type Result } from '../../../domain/result';
 import { reactToFailure } from './failure-reactions';
 import { createDeviceActions, type DeviceActions } from './device-actions';
 import type { StoreKit, SyncSlice, WriteFailed } from './store-kit';
@@ -17,9 +17,14 @@ export type SyncActions = DeviceActions & {
    * Runs one cycle: sets the slice, reloads the regions when rows were pulled, and reacts to what
    * the pull removed (R10a). `failed` is true when the cycle ended in `waiting` or `failed`.
    */
-  syncNow: () => Promise<{ failed: boolean }>;
+  syncNow: () => Promise<{ failed: boolean; slow?: boolean }>;
   /** "Réessayer" on a failed status: runs a cycle at once (US3-4). */
-  retry: () => Promise<{ failed: boolean }>;
+  retry: () => Promise<{ failed: boolean; slow?: boolean }>;
+  /**
+   * The user read the "signed out" message: the local copy is erased and the device returns to a
+   * first launch (US5-4, US6-5, FR-017).
+   */
+  acknowledgeSignedOut: () => Promise<Result<void, WriteFailed>>;
   /** Tells the user a pull removed what a form was editing; the form then closes itself. */
   noticeRemoteRemoval: (reason: 'articleDeleted' | 'itemRemoved') => void;
   /** Signs this device in (US2-1). */
@@ -70,7 +75,7 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
   let failureStreak = 0;
   let failureReported = false;
   let storageFullShown = false;
-  let inFlight: Promise<{ failed: boolean }> | null = null;
+  let inFlight: Promise<{ failed: boolean; slow?: boolean }> | null = null;
 
   /**
    * Reads the address, the last sync and, unless `keepConnection`, the connection; a failed read
@@ -83,7 +88,11 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
         serverUrl: info.serverUrl,
         lastSyncAt: info.lastSyncAt,
         pendingCount: info.pendingCount,
-        ...(!keepConnection && { connection: info.connection }),
+        ...(!keepConnection && {
+          connection: info.connection,
+          // A server address with no credential reads as a revoked device (003 FR-018b).
+          signedOutReason: info.connection === 'signedOut' ? 'revoked' : null,
+        }),
       });
       return true;
     } catch (error) {
@@ -179,9 +188,18 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
         }
         return;
       }
-      case 'disconnectedByServer':
+      case 'signedOut':
+        setSync({
+          connection: 'signedOut',
+          signedOutReason: outcome.reason,
+          status: 'waiting',
+        });
+        return;
+      case 'suspended':
+        setSync({ connection: 'suspended', status: 'waiting' });
+        return;
       case 'updateRequired':
-        setSync({ connection: outcome.type, status: 'waiting' });
+        setSync({ connection: 'updateRequired', status: 'waiting' });
         return;
       case 'notConnected':
         setSync({ connection: 'notConnected', status: 'saved' });
@@ -191,7 +209,11 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
     }
   };
 
-  const cycle = async (): Promise<{ failed: boolean }> => {
+  const cycle = async (): Promise<{ failed: boolean; slow?: boolean }> => {
+    // A device the server signed out has nothing to ask until it signs in again.
+    if (get().sync.connection === 'signedOut')
+      return { failed: false, slow: true };
+    const before = get().sync.connection;
     setSync({ status: 'sending' });
     let result: SyncResult;
     try {
@@ -222,11 +244,20 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
       // even when it fails, so the merges and removals of this cycle are not lost.
       publishEffects(result.effects);
     }
-    // `disconnectedByServer` and `updateRequired` come from the cycle, which knows more.
+    // The refusals come from the cycle, which knows more; a suspended account stays so until a
+    // cycle succeeds.
     await loadSyncInfo(
-      result.outcome.type === 'disconnectedByServer' ||
-        result.outcome.type === 'updateRequired',
+      result.outcome.type === 'signedOut' ||
+        result.outcome.type === 'suspended' ||
+        result.outcome.type === 'updateRequired' ||
+        (before === 'suspended' && result.outcome.type !== 'saved'),
     );
+    if (
+      result.outcome.type === 'saved' &&
+      get().sync.signedOutReason !== null
+    ) {
+      setSync({ signedOutReason: null });
+    }
     if (result.outcome.type === 'saved') {
       // A write made during the cycle is still waiting, though the cycle itself succeeded. When
       // the count could not be read, the last known one stands (the failure is reported).
@@ -234,9 +265,13 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
         status: get().sync.pendingCount > 0 ? 'waiting' : 'saved',
       });
     }
+    if (result.outcome.type === 'suspended') {
+      // Not a failure: the account comes back when the administrator lifts the suspension.
+      return { failed: false, slow: true };
+    }
     return {
-      // A revoked or outdated app backs off like a failing one, instead of asking every 5 s. An
-      // unpaired one has nothing to send and shows no status, so it keeps the base delay.
+      // An outdated app backs off like a failing one, instead of asking every 5 s. An unpaired
+      // one has nothing to send and shows no status, so it keeps the base delay.
       failed:
         result.outcome.type !== 'saved' &&
         result.outcome.type !== 'notConnected',
@@ -322,6 +357,30 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
     return outcome;
   };
 
+  const acknowledgeSignedOut: SyncActions['acknowledgeSignedOut'] =
+    async () => {
+      // A cycle saving its state after the erasure would restore the old server fields.
+      await inFlight?.catch(() => undefined);
+      try {
+        await useCases.acknowledgeSignedOut();
+      } catch (error) {
+        set({ notice: { type: 'writeFailed' } });
+        report(error, 'acknowledgeSignedOut', 'SignedOutNotice');
+        return err({ type: 'WriteFailed' });
+      }
+      failureStreak = 0;
+      failureReported = false;
+      set({ pendingUndo: null });
+      setSync({
+        connection: 'notConnected',
+        signedOutReason: null,
+        status: 'saved',
+      });
+      await loadSyncInfo();
+      await get().refresh();
+      return ok(undefined);
+    };
+
   const noticeRemoteRemoval: SyncActions['noticeRemoteRemoval'] = (reason) => {
     // The form is closing: the user must be told why. Only the storage-full notice, shown once
     // per streak, is kept.
@@ -354,6 +413,7 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
     retry: syncNow,
     signIn,
     chooseInitialPassword,
+    acknowledgeSignedOut,
     noticeRemoteRemoval,
     ...devices,
   };

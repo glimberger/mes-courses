@@ -1,6 +1,7 @@
 import {
   createAccountServer,
   createAdminServer,
+  createSyncServer,
 } from '@mes-courses/mobile/testing';
 import { startTestServer, type TestServer } from '@mes-courses/server/testing';
 
@@ -126,6 +127,117 @@ describe('AdminServer and AccountServer HTTP adapters', () => {
         credential: 'c',
       }),
     ).toEqual({ ok: false, error: { type: 'Offline' } });
+  });
+
+  it('004 US5-2/3 suspends and reactivates over HTTP, and the sync adapter reports AccountSuspended', async () => {
+    const admin = await server.createAccount({ role: 'administrator' });
+    const user = await server.createAccount({ email: 'marie@example.org' });
+    const adminServer = createAdminServer({ appVersion: APP_VERSION });
+    const syncServer = createSyncServer({ appVersion: APP_VERSION });
+    const request = {
+      lastSeq: 0,
+      hlc: { wallMs: 1, counter: 0, deviceId: 'device-1' },
+      changes: [],
+    };
+
+    expect(
+      await adminServer.suspend(
+        connection(admin.deviceCredential),
+        user.accountId,
+      ),
+    ).toEqual({ ok: true, value: undefined });
+    expect(
+      await syncServer.sync(connection(user.deviceCredential), request),
+    ).toEqual({
+      ok: false,
+      error: { type: 'AccountSuspended' },
+    });
+    expect(
+      await adminServer.reactivate(
+        connection(admin.deviceCredential),
+        user.accountId,
+      ),
+    ).toEqual({ ok: true, value: undefined });
+    expect(
+      (await syncServer.sync(connection(user.deviceCredential), request)).ok,
+    ).toBe(true);
+  });
+
+  it('004 US5-4 deletes over HTTP, and the sync adapter reports AccountDeleted', async () => {
+    const admin = await server.createAccount({ role: 'administrator' });
+    const user = await server.createAccount({ email: 'marie@example.org' });
+    const adminServer = createAdminServer({ appVersion: APP_VERSION });
+    const syncServer = createSyncServer({ appVersion: APP_VERSION });
+
+    expect(
+      await adminServer.delete(
+        connection(admin.deviceCredential),
+        user.accountId,
+      ),
+    ).toEqual({ ok: true, value: undefined });
+
+    expect(
+      await syncServer.sync(connection(user.deviceCredential), {
+        lastSeq: 0,
+        hlc: { wallMs: 1, counter: 0, deviceId: 'device-1' },
+        changes: [],
+      }),
+    ).toEqual({ ok: false, error: { type: 'AccountDeleted' } });
+  });
+
+  it('004 US5-5 reports LastAdministrator on suspend and delete of the only administrator', async () => {
+    const admin = await server.createAccount({ role: 'administrator' });
+    const adminServer = createAdminServer({ appVersion: APP_VERSION });
+    const conn = connection(admin.deviceCredential);
+
+    expect(await adminServer.suspend(conn, admin.accountId)).toEqual({
+      ok: false,
+      error: { type: 'LastAdministrator' },
+    });
+    expect(await adminServer.delete(conn, admin.accountId)).toEqual({
+      ok: false,
+      error: { type: 'LastAdministrator' },
+    });
+  });
+
+  it('004 US5-6 resends credentials, reports NotInvited, MailFailed and NotFound', async () => {
+    const admin = await server.createAccount({ role: 'administrator' });
+    const active = await server.createAccount({ email: 'active@example.org' });
+    const invited = await server.invite('paul@example.org');
+    const adminServer = createAdminServer({ appVersion: APP_VERSION });
+    const conn = connection(admin.deviceCredential);
+
+    expect(
+      await adminServer.resendCredentials(conn, invited.accountId),
+    ).toEqual({
+      ok: true,
+      value: undefined,
+    });
+    expect(server.mails()).toEqual([
+      expect.objectContaining({ kind: 'invitation', to: 'paul@example.org' }),
+    ]);
+    expect(await adminServer.resendCredentials(conn, active.accountId)).toEqual(
+      {
+        ok: false,
+        error: { type: 'NotInvited' },
+      },
+    );
+    expect(await adminServer.resendCredentials(conn, 'nobody')).toEqual({
+      ok: false,
+      error: { type: 'NotFound' },
+    });
+  });
+
+  it('004 US5 reports Forbidden to an ordinary user on every administration action', async () => {
+    const user = await server.createAccount();
+    const adminServer = createAdminServer({ appVersion: APP_VERSION });
+    const conn = connection(user.deviceCredential);
+    const forbidden = { ok: false, error: { type: 'Forbidden' } };
+
+    expect(await adminServer.suspend(conn, 'x')).toEqual(forbidden);
+    expect(await adminServer.reactivate(conn, 'x')).toEqual(forbidden);
+    expect(await adminServer.resendCredentials(conn, 'x')).toEqual(forbidden);
+    expect(await adminServer.delete(conn, 'x')).toEqual(forbidden);
   });
 
   it('004 US6-1 getAccount returns the id, the address and the role', async () => {
