@@ -10,6 +10,7 @@ import { parseStoryList, shotPath, type Scheme } from './names';
 //   SHOTS_OUT      output folder (default: artifacts/shots)
 //   SHOTS_STORIES  file with one story id per line (default: every story)
 //   SHOTS_SCHEMES  comma-separated, light and/or dark (default: light,dark)
+// With SHOTS_STORIES the walk stops once every listed story is captured.
 // The build shows one story at a time; `shots-next` moves to the next and is labelled with the
 // id of the story on screen (apps/mobile/src/adapters/ui/testing/story-shots.tsx).
 
@@ -97,14 +98,22 @@ describe('story screenshots', () => {
       const first = await currentId();
       let id = first;
       do {
-        await settle();
         walked.push(id);
         if (WANTED === null || WANTED.includes(id)) {
+          // Only a story to capture waits for the settle delay; the others are walked through.
+          await settle();
           const taken = await device.takeScreenshot(`${scheme}-${seen.length}`);
           const target = path.join(OUT, shotPath({ platform, scheme, id }));
           mkdirSync(path.dirname(target), { recursive: true });
           renameSync(taken, target);
           seen.push(id);
+        }
+        // Every listed story is captured: no need to walk back to the first one.
+        if (
+          WANTED !== null &&
+          WANTED.every((wanted) => seen.includes(wanted))
+        ) {
+          break;
         }
         await advance();
         // The new story's control is mounted by the next render.
