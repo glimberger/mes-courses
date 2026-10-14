@@ -85,7 +85,8 @@ export const SignInScreen = () => {
   const submit = async () => {
     setSaving(true);
     setError(null);
-    const name = deviceName.trim();
+    // A phone that reports no model still needs a name: the server refuses an empty one.
+    const name = deviceName.trim() || 'Mon appareil';
     const outcome = await signIn(address, email, password, name);
     setSaving(false);
     if (!outcome.ok) {

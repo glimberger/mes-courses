@@ -1,3 +1,5 @@
+import { compareHlc } from '@mes-courses/sync-core';
+
 import type { IdGenerator } from '../../application/ports/id-generator';
 import type { LocalDataEraser } from '../../application/ports/local-data-eraser';
 import type { UnitOfWork } from '../../application/ports/unit-of-work';
@@ -36,11 +38,18 @@ export const sqliteLocalDataEraser = ({
 }): LocalDataEraser => ({
   erase: () =>
     unitOfWork.run(async (repos) => {
+      // The HLC high-water mark belongs to the device, not to the account: forgetting it could
+      // stamp new writes lower than ones other devices already hold.
+      const { maxHlc } = await repos.syncState.get();
       // Same connection, so inside the transaction the run opened.
       await withStorageErrors(async () => {
         for (const table of TABLES)
           await db.runAsync(`DELETE FROM ${table}`, []);
       });
       await seedStore(repos, ids, seed);
+      const seeded = await repos.syncState.get();
+      if (compareHlc(maxHlc, seeded.maxHlc) > 0) {
+        await repos.syncState.save({ ...seeded, maxHlc });
+      }
     }),
 });

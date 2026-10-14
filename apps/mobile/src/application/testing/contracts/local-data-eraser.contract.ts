@@ -91,6 +91,23 @@ export const localDataEraserContract = (
       });
     });
 
+    it('004 R11 keeps the HLC high-water mark: it belongs to the device, not the account', async () => {
+      const { eraser, unitOfWork } = await create(SEED);
+      await fill(unitOfWork);
+      const ahead = { wallMs: 9_000_000_000_000, counter: 3, deviceId: 'd-1' };
+      await unitOfWork.run(async (repos) =>
+        repos.syncState.save({
+          ...(await repos.syncState.get()),
+          maxHlc: ahead,
+        }),
+      );
+
+      await eraser.erase();
+
+      const state = await unitOfWork.run((repos) => repos.syncState.get());
+      expect(state.maxHlc).toEqual(ahead);
+    });
+
     it('004 R11 works on a store that is already a first launch, and twice in a row', async () => {
       const { eraser, unitOfWork } = await create(SEED);
 

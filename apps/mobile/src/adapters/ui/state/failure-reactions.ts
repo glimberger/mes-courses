@@ -19,6 +19,8 @@ export const reactToFailure = (
     sync.connection === 'connected' || sync.connection === 'suspended';
   switch (failure.type) {
     case 'UpdateRequired':
+      // A signed-out device keeps its notice: the acknowledge-and-erase flow reads it.
+      if (sync.connection === 'signedOut') break;
       set({ sync: { ...sync, connection: 'updateRequired' } });
       break;
     case 'DeviceNotAuthorized':

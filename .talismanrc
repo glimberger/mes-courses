@@ -267,10 +267,6 @@ fileignoreconfig:
     checksum: 885466a777445eb1b87206c582ff33237701a5e5334ceb0dee75e6d33c63f2c4
   - filename: apps/mobile/src/application/use-cases/request-password-reset.ts
     checksum: 4b0dfef70e196e2fcf0dadb65a46092b4f6a9906d226cd9ae543c902ab17da29
-  - filename: apps/server/src/application/use-cases/request-password-reset.test.ts
-    checksum: 9b84d3db567db49c14c6fce0b556bf878048fbaff71baff7b8e0050b79bfde51
-  - filename: apps/server/src/application/use-cases/request-password-reset.ts
-    checksum: fa6d8de458bb66e8ccbaec73aeda94a0ca7e476a9ecf40a1fbfb6a0428a1c9d6
   - filename: tests/sync/src/password-reset.scenario.test.ts
     checksum: 447980ab3fcc9c5ed47053168ceb2f3d19ffb3a0534538602a2e3d6a9d957c46
   - filename: apps/mobile/src/adapters/ui/screens/SignInScreen.tsx
@@ -361,4 +357,8 @@ fileignoreconfig:
     checksum: daaf6e3dae992c31b6da57b5ba0728c96f3c7777f2c4cee3da3841b164e7e4b6
   - filename: tests/sync/src/no-personal-data.test.ts
     checksum: e9b76bfbdbb35fce31ffcabc5e6682527766c121088aacd77f7116f0c8a4a9a4
+  - filename: apps/server/src/application/use-cases/request-password-reset.test.ts
+    checksum: 85965a29876b8ed8fb381acbaeb9567cda28ed96fa59e38b431d9806261dfe98
+  - filename: apps/server/src/application/use-cases/request-password-reset.ts
+    checksum: 8ab46abc8ee34a840f3adeac569f898dbc0966788ab02d2c02a39f1b764d48a4
 version: "1.0"

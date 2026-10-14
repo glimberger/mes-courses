@@ -27,6 +27,13 @@ describe('scrubAddresses', () => {
     expect(scrubAddresses('MARIE@EXAMPLE.ORG')).toBe(REDACTED);
   });
 
+  it('004 R10 stays fast on a long text without an address', () => {
+    const text = 'a'.repeat(100_000);
+    const started = Date.now();
+    expect(scrubAddresses(text)).toBe(text);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
   it('004 R10 leaves text without an address untouched', () => {
     const text = 'POST /v1/sync failed at 12:30 (user@host is not an address)';
     expect(scrubAddresses(text)).toBe(text);

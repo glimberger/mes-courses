@@ -47,6 +47,18 @@ export const requestPasswordReset = async (
   if (email === null) return { kind: 'invalidEmail' };
   const keys = attemptKeys(crypto.sha256Hex, email, request.clientAddress);
 
+  // A blocked request is refused before it pays for a hash, so a flood past the limit stays cheap.
+  // The decision below checks again, in the transaction that counts the attempt.
+  const early = await store.run(async (repos) =>
+    retryAfterIfBlocked(
+      repos.authAttempts,
+      'passwordReset',
+      keys,
+      clock.nowMs(),
+    ),
+  );
+  if (early !== null) return { kind: 'blocked', retryAfterSeconds: early };
+
   // Generated and hashed whatever the address, so an unknown one costs what a known one does.
   const temporaryPassword = crypto.generateTemporaryPassword();
   const temporaryPasswordHash = await hasher.hash(

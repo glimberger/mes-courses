@@ -133,6 +133,16 @@ describe('requestPasswordReset', () => {
     });
   });
 
+  it('004 US4-4 refuses a blocked request before it pays for a hash', async () => {
+    const { deps } = await setup();
+    for (let i = 0; i < 3; i++) await ask(deps);
+    const hash = jest.spyOn(deps.hasher, 'hash');
+
+    expect(await ask(deps)).toMatchObject({ kind: 'blocked' });
+
+    expect(hash).not.toHaveBeenCalled();
+  });
+
   it('004 US4-4 limits a client to 10 requests an hour across addresses', async () => {
     const { deps } = await setup();
     for (let i = 0; i < 10; i++) await ask(deps, `user${i}@example.org`);

@@ -1,3 +1,5 @@
+import { compareHlc } from '@mes-courses/sync-core';
+
 import type { IdGenerator } from '../ports/id-generator';
 import type { LocalDataEraser } from '../ports/local-data-eraser';
 import type { UnitOfWork } from '../ports/unit-of-work';
@@ -21,8 +23,13 @@ export const inMemoryLocalDataEraser = ({
 }): LocalDataEraser => ({
   erase: () =>
     unitOfWork.run(async (repos) => {
+      const { maxHlc } = await repos.syncState.get();
       repositories.clear();
       await seedStore(repos, ids, seed);
+      const seeded = await repos.syncState.get();
+      if (compareHlc(maxHlc, seeded.maxHlc) > 0) {
+        await repos.syncState.save({ ...seeded, maxHlc });
+      }
     }),
 });
 
