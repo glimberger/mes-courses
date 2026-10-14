@@ -11,4 +11,8 @@ export class OfflineAccountServer implements AccountServer {
     err({ type: 'ServerUnreachable' });
   getAccount: AccountServer['getAccount'] = async () =>
     err({ type: 'Offline' });
+  changePassword: AccountServer['changePassword'] = async () =>
+    err({ type: 'Offline' });
+  deleteAccount: AccountServer['deleteAccount'] = async () =>
+    err({ type: 'Offline' });
 }

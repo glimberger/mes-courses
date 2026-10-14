@@ -75,6 +75,24 @@ const authFailure = (
   }
 };
 
+/**
+ * The refusals the account's own changes share: a wrong current password is a 401 that names
+ * itself, unlike the 401 of a device the server no longer knows.
+ */
+const ownAccountFailure = (answer: Answer & { kind: 'response' }) => {
+  const code = errorCode(answer.body);
+  if (answer.status === 401 && code === 'InvalidCredentials') {
+    return { type: 'InvalidCredentials' } as const;
+  }
+  if (answer.status === 429) {
+    return {
+      type: 'TooManyAttempts',
+      minutesToWait: minutesToWait(answer.headers.get('Retry-After')),
+    } as const;
+  }
+  return syncFailure(answer);
+};
+
 const toPairing = (
   body: AccountPairing & { account: AccountInfo },
 ): { pairing: AccountPairing; account: AccountInfo } => ({
@@ -180,6 +198,43 @@ export const createAccountServer = (
         default:
           return err({ type: 'ServerUnreachable' });
       }
+    },
+
+    async changePassword(conn, currentPassword, newPassword) {
+      const answer = await send(conn.url, '/v1/account/password', {
+        method: 'POST',
+        body: { currentPassword, newPassword },
+        credential: conn.credential,
+      });
+      if (answer.kind !== 'response') return transportFailure(answer);
+      if (answer.status === 204) return ok(undefined);
+      const problem = (answer.body as { problem?: unknown } | null)?.problem;
+      if (
+        answer.status === 400 &&
+        errorCode(answer.body) === 'InvalidPassword' &&
+        typeof problem === 'string' &&
+        PASSWORD_PROBLEMS.includes(problem)
+      ) {
+        return err({
+          type: 'PasswordRejected',
+          problem: problem as PasswordProblem,
+        });
+      }
+      return err(ownAccountFailure(answer));
+    },
+
+    async deleteAccount(conn, password) {
+      const answer = await send(conn.url, '/v1/account', {
+        method: 'DELETE',
+        body: { password },
+        credential: conn.credential,
+      });
+      if (answer.kind !== 'response') return transportFailure(answer);
+      if (answer.status === 204) return ok(undefined);
+      if (errorCode(answer.body) === 'LastAdministrator') {
+        return err({ type: 'LastAdministrator' });
+      }
+      return err(ownAccountFailure(answer));
     },
 
     async getAccount(conn) {

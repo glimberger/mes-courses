@@ -62,7 +62,15 @@ import {
 import { createCreateCategory } from '../../application/use-cases/create-category';
 import { createCreateList } from '../../application/use-cases/create-list';
 import { createDeleteArticle } from '../../application/use-cases/delete-article';
-import { createDisconnect } from '../../application/use-cases/disconnect';
+import {
+  createChangePassword,
+  type ChangePasswordError,
+} from '../../application/use-cases/change-password';
+import {
+  createDeleteMyAccount,
+  type DeleteMyAccountError,
+} from '../../application/use-cases/delete-my-account';
+import { createSignOut } from '../../application/use-cases/sign-out';
 import { createEditArticle } from '../../application/use-cases/edit-article';
 import { createFinishShopping } from '../../application/use-cases/finish-shopping';
 import { createGetArticleUsage } from '../../application/use-cases/get-article-usage';
@@ -224,7 +232,15 @@ export type UseCases = {
   revokeDevice: (
     id: string,
   ) => Promise<Result<void, SyncFailure | DeviceNotFound>>;
-  disconnect: () => Promise<Result<void, never>>;
+  signOut: () => Promise<Result<void, never>>;
+  changePassword: (
+    current: string,
+    next: string,
+    confirmation: string,
+  ) => Promise<Result<void, ChangePasswordError>>;
+  deleteMyAccount: (
+    password: string,
+  ) => Promise<Result<void, DeleteMyAccountError>>;
   changeServerUrl: (url: string) => Promise<Result<void, ChangeServerUrlError>>;
   getAccountSettings: () => Promise<AccountSettings>;
   listAccounts: () => Promise<
@@ -293,7 +309,9 @@ export const createUseCases = (ports: {
   listDevices: createListDevices(ports),
   renameDevice: createRenameDevice(ports),
   revokeDevice: createRevokeDevice(ports),
-  disconnect: createDisconnect(ports),
+  signOut: createSignOut(ports),
+  changePassword: createChangePassword(ports),
+  deleteMyAccount: createDeleteMyAccount(ports),
   changeServerUrl: createChangeServerUrl(ports),
   getAccountSettings: createGetAccountSettings(ports),
   listAccounts: createListAccounts(ports),

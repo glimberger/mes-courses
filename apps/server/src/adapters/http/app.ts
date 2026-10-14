@@ -116,7 +116,7 @@ export const buildApp = (deps: AppDeps): FastifyInstance => {
   });
 
   registerHealthRoutes(app);
-  registerAccountRoutes(app);
+  registerAccountRoutes(app, deps);
   registerAdminRoutes(app, deps);
   registerAuthRoutes(app, deps);
   registerDeviceRoutes(app, deps);

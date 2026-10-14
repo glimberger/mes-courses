@@ -1,5 +1,6 @@
 import type { AccountSummary } from '@mes-courses/sync-core';
 
+import type { ChangePasswordError } from '../../../application/use-cases/change-password';
 import type { ReactivateAccountError } from '../../../application/use-cases/reactivate-account';
 import type { ResendCredentialsError } from '../../../application/use-cases/resend-credentials';
 import type { SuspendAccountError } from '../../../application/use-cases/suspend-account';
@@ -40,6 +41,12 @@ export type AccountsActions = {
   resendCredentials: (
     id: string,
   ) => Promise<Result<void, ResendCredentialsError>>;
+  /** Changes the password of the signed-in account; the other devices stay signed in (US6-2). */
+  changePassword: (
+    current: string,
+    next: string,
+    confirmation: string,
+  ) => Promise<Result<void, ChangePasswordError>>;
   /** Deletes an account and its data from the server (US5-4, US5-5). */
   deleteAccountAsAdmin: (
     id: string,
@@ -131,6 +138,14 @@ export const createAccountsActions = (kit: StoreKit): AccountsActions => {
         useCases.resendCredentials(id),
       );
       if (outcome.ok) kit.set({ notice: { type: 'credentialsResent' } });
+      return outcome;
+    },
+
+    changePassword: async (current, next, confirmation) => {
+      const outcome = await call('changePassword', 'Settings', () =>
+        useCases.changePassword(current, next, confirmation),
+      );
+      if (outcome.ok) kit.set({ notice: { type: 'passwordChanged' } });
       return outcome;
     },
 

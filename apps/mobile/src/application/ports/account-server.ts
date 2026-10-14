@@ -5,6 +5,7 @@ import type {
 } from '@mes-courses/sync-core';
 
 import type { Result } from '../../domain/result';
+import type { LastAdministrator } from './admin-server';
 import type {
   Connection,
   ServerUnreachable,
@@ -58,12 +59,18 @@ export type PasswordResetServerError =
   | UntrustedServer
   | UpdateRequired;
 
+/** The caller's own changes: a wrong current password is `InvalidCredentials`. */
+export type ChangePasswordServerError =
+  InvalidCredentials | PasswordRejected | TooManyAttempts | SyncFailure;
+
+export type DeleteOwnAccountServerError =
+  InvalidCredentials | LastAdministrator | TooManyAttempts | SyncFailure;
+
 /** The server refused the address as malformed (the app checks it first). */
 export type InvalidEmailRefused = { type: 'InvalidEmail' };
 
 /**
- * The HTTP adapter for the caller's own account, over the same transport as `SyncServer`. Grows
- * story by story: the password reset and the account's own changes come with US4 and US6.
+ * The HTTP adapter for the caller's own account, over the same transport as `SyncServer`.
  */
 export interface AccountServer {
   signIn(
@@ -85,4 +92,15 @@ export interface AccountServer {
     email: string,
   ): Promise<Result<void, PasswordResetServerError>>;
   getAccount(conn: Connection): Promise<Result<AccountInfo, SyncFailure>>;
+  /** The other devices stay signed in (US6-2). */
+  changePassword(
+    conn: Connection,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<Result<void, ChangePasswordServerError>>;
+  /** Deletes the caller's account and its data from the server (US6-6). */
+  deleteAccount(
+    conn: Connection,
+    password: string,
+  ): Promise<Result<void, DeleteOwnAccountServerError>>;
 }

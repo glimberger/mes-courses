@@ -248,8 +248,6 @@ fileignoreconfig:
     checksum: 811c37f5871ec7eb4faa839f577a119e6de5db386ee3b34436d4fcc94185eb32
   - filename: apps/mobile/src/adapters/ui/components/PasswordField.tsx
     checksum: a981c6b18f98d53e1477045be3062ab5b1c923c4de06c28849dba461e82e7af4
-  - filename: apps/mobile/src/adapters/ui/state/error-context.test.ts
-    checksum: 056b6975167e2ed357082dc9a7ffe4da6e9f9d45d2c39b88378d5faf79c02076
   - filename: apps/server/src/application/use-cases/sign-in.test.ts
     checksum: e6a1f21d2cf1f64184add7f19bbff39487fba44b53c76062b778f4c5735a8198
   - filename: apps/mobile/src/adapters/ui/screens/SignInScreen.stories.tsx
@@ -286,26 +284,10 @@ fileignoreconfig:
     checksum: 6480cb83c2773492b274bfaba32243a1106c5d264033329e63007fb8d8e9b682
   - filename: apps/mobile/src/adapters/ui/screens/ForgotPasswordDialog.tsx
     checksum: 40b486f1d484e7ad0918404aa87941bd63c2f7ad8f649a2c2bd8c6231918f36e
-  - filename: apps/mobile/src/adapters/ui/use-cases.ts
-    checksum: d2d97ab0c5d4bd2e8f9dc928cbb73ec9086da6eca2302f1ea603cbbb464ebfc0
-  - filename: apps/server/src/adapters/http/schemas.ts
-    checksum: 7259c51bf11ad031d1165c1bbbc9722dfbeba48968a2d7bcb5baf39aa882e079
-  - filename: apps/mobile/src/adapters/sync-http/account-server.ts
-    checksum: 3dbb3f32b8cd0b5bc539e1ffeddd67f3085a642ebbbdcfe9bfc93b9d89451b87
   - filename: apps/mobile/src/adapters/ui/screens/sign-in-screen.test.tsx
     checksum: 4af34211c68a229429bed4304f2dc507ffe3e416257b0ef9590ddd9d42939d2d
-  - filename: tests/sync/src/account-adapter.test.ts
-    checksum: ee676070080d4ba46cc55fbd3d2a3d2503749100a10ea0559f4acd256f5ccf84
-  - filename: apps/mobile/src/application/testing/in-memory-account-server.ts
-    checksum: 1f2055dc8b564e1b875bdaf9f42b3ae61e436d9cd1a904c2f0ffb5f3bc9f711f
-  - filename: apps/mobile/src/adapters/ui/state/accounts-actions.ts
-    checksum: d6e32f1eeda658091b8398c66c0b4387afb68f5098e4bcbae8f052453bfb5dd4
-  - filename: apps/mobile/src/application/testing/offline-account-server.ts
-    checksum: 290af3a31760a722a5ff91e6aa4e20df1a3833d2eeca680959ccd1d64b27f855
   - filename: apps/server/src/adapters/http/routes/auth.test.ts
     checksum: 37f662d2652fd7011e6325ccae73fe98a369d4e8b7e7eda14e0eea2ef061e276
-  - filename: apps/server/src/application/use-cases/delete-account.ts
-    checksum: 330ea64bf01851f70f157de11aa025c26cde93317d8932e68eab4216d4d18029
   - filename: apps/server/src/application/use-cases/resend-credentials.ts
     checksum: 0c68e46fb8386fd634c2ee9c12fa4153562ed5a1afd6e28a571450485eb0d7df
   - filename: apps/server/src/application/use-cases/delete-account.test.ts
@@ -320,4 +302,62 @@ fileignoreconfig:
     checksum: 7d23e2c3781df281d5190b65785aada42d21f828f25b73a875b12612a07bae49
   - filename: tests/sync/src/administration.scenario.test.ts
     checksum: 24e365bc54545b1e51ccc3853ff9d4c6cfb9d9cb8caad64a49011ac21bf3372c
+  - filename: apps/mobile/src/application/use-cases/change-password.test.ts
+    checksum: 2885c84ea43fdc23423cfd9f35b614c9e13d3b9c5fc3465463b9bd4a427d86cc
+  - filename: apps/mobile/src/application/use-cases/change-password.ts
+    checksum: 165af0cb702c4a8cc9aaba805ebcd7b0fe42c4a7beb014c9501449c1ca231df9
+  - filename: apps/server/src/application/use-cases/change-password.test.ts
+    checksum: 23bdb11dbd852417d0fb69cf8778dd794674da3368c36feaacdb09c6bac42990
+  - filename: apps/server/src/application/use-cases/change-password.ts
+    checksum: 6397ba762b7c2ff74d4ee942bb1e2e98c2d7c94502f07a4367c5db5e90eea5b8
+  - filename: apps/mobile/src/adapters/ui/components/NoticeSnackbar.stories.tsx
+    checksum: 502cf8a3662004dffd2607d875ecb67367fe3204b32badc5e67c09ef474b99d1
+  - filename: apps/mobile/src/adapters/ui/screens/SettingsScreen.tsx
+    checksum: fafd47d14dbb287e72620e051602f53e98081de2f6f02a192e533caf71023a5b
+  - filename: apps/mobile/src/application/use-cases/delete-my-account.test.ts
+    checksum: 4be95e43d74cba9e23a0bd3fb89612bdfdfcaba76b13965eefef354cb5c347bd
+  - filename: apps/mobile/src/adapters/ui/screens/accessibility.test.tsx
+    checksum: 502f342810f6c0d1c08790a11547bbe027747000001903575479c641cf974a34
+  - filename: apps/mobile/src/application/use-cases/delete-my-account.ts
+    checksum: 8f5f8624ef2fd8f34f44e6063ffe29bda02694712da7ff0349714abd901a7838
+  - filename: apps/mobile/src/application/testing/offline-account-server.ts
+    checksum: 919102fbde0d91c4b40e63ff3cf1ffff4c81f612136c6cfc8ed624775be1d4b7
+  - filename: apps/mobile/src/adapters/ui/screens/ChangePasswordDialog.stories.tsx
+    checksum: e724562542ead0bf307a56d4931651e593ec30f17b146a0c82078bdbde951cb7
+  - filename: apps/server/src/adapters/http/routes/account.ts
+    checksum: 0821cd7364b8b82330cfaec06e8324f94d9b6a7a900cd8d65cc50353b0e23389
+  - filename: apps/mobile/src/adapters/ui/screens/settings-own-account.test.tsx
+    checksum: d009d18d8f450bf75ae6552dbb502c8d39b3ba20268a4937d70f897f0b10de6e
+  - filename: apps/mobile/src/adapters/ui/screens/DeleteMyAccountDialog.stories.tsx
+    checksum: e3e0092ac8cb5f328a9a87f330499b7b764b02bec17109a5c416502563b35d65
+  - filename: apps/server/src/application/use-cases/delete-own-account.ts
+    checksum: 0ddb84312c73586d9b8b104f8229c5b2dd297c24b5e6e1c02ba47f4b702150b6
+  - filename: apps/mobile/src/adapters/ui/screens/ChangePasswordDialog.tsx
+    checksum: 142549baafcd1dcd5250953d1c2cacd7ac2b7114fed23a152f593a2ddb58a7d6
+  - filename: apps/mobile/src/adapters/ui/screens/DeleteMyAccountDialog.tsx
+    checksum: 6de58bf893d03615006f681e2f128da55179a196a692635541a7464b094d36b4
+  - filename: tests/sync/src/own-account.scenario.test.ts
+    checksum: f3067ba9ea757f26630f2dacbc083058a08ae5df87b37fcf160418470d356d7f
+  - filename: apps/server/src/adapters/http/routes/account.test.ts
+    checksum: 3ccac86e0d3c98cdccbcf8744c545a25130e7dcd958392a104963661402a7649
+  - filename: apps/mobile/src/adapters/ui/state/error-context.test.ts
+    checksum: f85e307e77b3f884274693df30b9349deeba764854769db84ddecf8e0fd68ae2
+  - filename: apps/server/src/adapters/http/schemas.ts
+    checksum: 58e33f2b8fa53d13549945e9f384014f1275326e43294d2bf7c10cce3fcd01a8
+  - filename: apps/mobile/src/adapters/ui/state/device-actions.ts
+    checksum: fd31cbbcb72c665532c2a8b14234c1773dad0caac2f73b3f549d72cfe2b89370
+  - filename: apps/server/src/application/use-cases/delete-own-account.test.ts
+    checksum: 52ae1c497a6237e34e9307b968a574d2ad9d7e15c46cdd639b08c456a656c29f
+  - filename: apps/server/src/application/use-cases/delete-account.ts
+    checksum: 5fc338ae4ba8018a0d18306a7f6c8b8c069d76c8f325eec28d29d9fd24cb8ad6
+  - filename: apps/mobile/src/adapters/ui/state/accounts-actions.ts
+    checksum: c81135adb8384931808d0c977bf596ee77debbb81bc0b3a077f00ed871aaea19
+  - filename: apps/mobile/src/adapters/ui/use-cases.ts
+    checksum: ce5c391c233741dbfc44a7ae5de03786ff3d32bca4e7389c00eb73429d58ed04
+  - filename: apps/mobile/src/adapters/sync-http/account-server.ts
+    checksum: 1965eb7a90d0e0e3ffc67e2ac391a6fa5f544234f8fd1ced4b5c1cbfa030bae2
+  - filename: apps/mobile/src/application/testing/in-memory-account-server.ts
+    checksum: 1cc2506154bfc338f0b71857578219a1945d3d745a15121753b857967077db3f
+  - filename: tests/sync/src/account-adapter.test.ts
+    checksum: f015ad123cca82b0dfb7adee404eef6a0d15380b5dea275e15443f66f6f65713
 version: "1.0"

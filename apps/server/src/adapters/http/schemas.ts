@@ -143,3 +143,17 @@ export const choosePasswordBodySchema = {
     deviceName: deviceNameSchema,
   },
 } as const;
+
+export const changePasswordBodySchema = {
+  type: 'object',
+  required: ['currentPassword', 'newPassword'],
+  additionalProperties: false,
+  properties: { currentPassword: passwordSchema, newPassword: passwordSchema },
+} as const;
+
+export const deleteAccountBodySchema = {
+  type: 'object',
+  required: ['password'],
+  additionalProperties: false,
+  properties: { password: passwordSchema },
+} as const;

@@ -104,3 +104,22 @@ export const SignedInAdministrator: Story = {
     },
   },
 };
+
+/** The account is loading: the address is the server's to tell on every opening. */
+export const AccountLoading: Story = {
+  parameters: {
+    scenario: { ...signedIn, pending: ['getAccountSettings'] },
+  },
+};
+
+/** The account failed to load: "Réessayer". */
+export const AccountError: Story = {
+  parameters: {
+    scenario: { ...signedIn, failing: ['getAccountSettings'] },
+  },
+};
+
+/** Offline: the address is not shown and nothing is in the error color (US6-1). */
+export const AccountOffline: Story = {
+  parameters: { scenario: signedIn },
+};

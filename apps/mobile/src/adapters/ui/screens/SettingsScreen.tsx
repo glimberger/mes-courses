@@ -14,11 +14,12 @@ import { SyncStatusBar } from '../components/SyncStatusBar';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
-import { ChangeServerUrlDialog } from './ChangeServerUrlDialog';
+import { ChangePasswordDialog } from './ChangePasswordDialog';
+import { DeleteMyAccountDialog } from './DeleteMyAccountDialog';
 import { DeviceRow } from './DeviceRow';
-import { DisconnectDialog } from './DisconnectDialog';
 import { RenameDeviceDialog } from './RenameDeviceDialog';
 import { RevokeDeviceDialog } from './RevokeDeviceDialog';
+import { SignOutDialog } from './SignOutDialog';
 
 /** The address as people say it: without the scheme. */
 const withoutScheme = (url: string) => url.replace(/^https?:\/\//, '');
@@ -44,12 +45,16 @@ export type AccountState =
 type Dialog =
   | { type: 'rename'; device: DeviceInfo }
   | { type: 'revoke'; device: DeviceInfo }
-  | { type: 'changeUrl' }
-  | { type: 'disconnect' };
+  | { type: 'changePassword' }
+  | { type: 'signOut' }
+  | { type: 'deleteAccount' };
+
+/** Said when an action that needs the server is chosen offline (contracts/ui-screens.md). */
+const CONNECTION_NEEDED = 'Connexion au serveur nécessaire.';
 
 /**
- * Settings (US4-1, US4-8): offers to connect a device that never was, and shows the server, the
- * devices and their management for one that is.
+ * Settings (US4-1, US4-8, US6-1 to US6-7): offers to sign in on a device that never was, and
+ * shows the account, the server, the devices and their management for one that is.
  */
 export const SettingsScreen = () => {
   const navigation =
@@ -63,6 +68,8 @@ export const SettingsScreen = () => {
   const [devices, setDevices] = useState<DevicesState>({ type: 'loading' });
   const [account, setAccount] = useState<AccountState>({ type: 'loading' });
   const [dialog, setDialog] = useState<Dialog | null>(null);
+  // An action needing the server was chosen while the account could not be read.
+  const [connectionNeeded, setConnectionNeeded] = useState(false);
   // Bumped to load the list again; the effect below loads it.
   const [reload, setReload] = useState(0);
 
@@ -129,9 +136,20 @@ export const SettingsScreen = () => {
     };
   }, [isConnected, getAccountSettings, reload]);
   const loadDevices = () => {
+    setConnectionNeeded(false);
     setDevices({ type: 'loading' });
     setAccount({ type: 'loading' });
     setReload((count) => count + 1);
+  };
+
+  /** Opens a dialog that needs the server, or says so when the account is out of reach. */
+  const openOnline = (opened: Dialog) => {
+    if (account.type === 'offline') {
+      setConnectionNeeded(true);
+      return;
+    }
+    setConnectionNeeded(false);
+    setDialog(opened);
   };
 
   const closeDialog = () => {
@@ -165,8 +183,10 @@ export const SettingsScreen = () => {
         onRetryDevices={loadDevices}
         onRenameDevice={(device) => setDialog({ type: 'rename', device })}
         onRevokeDevice={(device) => setDialog({ type: 'revoke', device })}
-        onChangeUrl={() => setDialog({ type: 'changeUrl' })}
-        onDisconnect={() => setDialog({ type: 'disconnect' })}
+        onChangePassword={() => openOnline({ type: 'changePassword' })}
+        onSignOut={() => setDialog({ type: 'signOut' })}
+        onDeleteAccount={() => openOnline({ type: 'deleteAccount' })}
+        connectionNeeded={connectionNeeded}
       />
       {dialog?.type === 'rename' && (
         <RenameDeviceDialog device={dialog.device} onClose={closeDialog} />
@@ -174,11 +194,20 @@ export const SettingsScreen = () => {
       {dialog?.type === 'revoke' && (
         <RevokeDeviceDialog device={dialog.device} onClose={closeDialog} />
       )}
-      {dialog?.type === 'changeUrl' && serverUrl !== null && (
-        <ChangeServerUrlDialog currentUrl={serverUrl} onClose={closeDialog} />
+      {dialog?.type === 'changePassword' && (
+        <ChangePasswordDialog onClose={closeDialog} />
       )}
-      {dialog?.type === 'disconnect' && (
-        <DisconnectDialog onClose={closeDialog} />
+      {dialog?.type === 'signOut' && (
+        <SignOutDialog
+          onClose={closeDialog}
+          onSignedOut={() => navigation.navigate('SignIn')}
+        />
+      )}
+      {dialog?.type === 'deleteAccount' && (
+        <DeleteMyAccountDialog
+          onClose={closeDialog}
+          onDeleted={() => navigation.navigate('SignIn')}
+        />
       )}
     </>
   );
@@ -202,8 +231,11 @@ export type SettingsViewProps = {
   onRetryDevices: () => void;
   onRenameDevice: (device: DeviceInfo) => void;
   onRevokeDevice: (device: DeviceInfo) => void;
-  onChangeUrl: () => void;
-  onDisconnect: () => void;
+  onChangePassword: () => void;
+  onSignOut: () => void;
+  onDeleteAccount: () => void;
+  /** "Connexion au serveur nécessaire." under the actions (offline). */
+  connectionNeeded: boolean;
 };
 
 /** The content of Settings, its data given as props so a story can show each state. */
@@ -218,8 +250,10 @@ export const SettingsView = ({
   onRetryDevices,
   onRenameDevice,
   onRevokeDevice,
-  onChangeUrl,
-  onDisconnect,
+  onChangePassword,
+  onSignOut,
+  onDeleteAccount,
+  connectionNeeded,
 }: SettingsViewProps) => (
   <View style={styles.screen}>
     <Appbar.Header>
@@ -244,6 +278,7 @@ export const SettingsView = ({
             account={account}
             onRetry={onRetryDevices}
             onManageAccounts={onManageAccounts}
+            onChangePassword={onChangePassword}
           />
 
           <List.Subheader accessibilityRole="header">Serveur</List.Subheader>
@@ -263,9 +298,6 @@ export const SettingsView = ({
           >
             Synchroniser maintenant
           </Button>
-          <Button mode="outlined" onPress={onChangeUrl}>
-            {"Modifier l'adresse"}
-          </Button>
 
           <List.Subheader accessibilityRole="header">Appareils</List.Subheader>
           <DevicesSection
@@ -276,9 +308,17 @@ export const SettingsView = ({
           />
 
           <List.Subheader accessibilityRole="header">Actions</List.Subheader>
-          <Button mode="outlined" onPress={onDisconnect}>
-            Déconnecter cet appareil
+          <Button mode="outlined" onPress={onSignOut}>
+            Se déconnecter de cet appareil
           </Button>
+          <Button mode="outlined" onPress={onDeleteAccount}>
+            Supprimer mon compte
+          </Button>
+          {connectionNeeded && (
+            <Text variant="bodyMedium" style={styles.offline}>
+              {CONNECTION_NEEDED}
+            </Text>
+          )}
         </>
       )}
     </ScrollView>
@@ -289,10 +329,12 @@ const AccountSection = ({
   account,
   onRetry,
   onManageAccounts,
+  onChangePassword,
 }: {
   account: AccountState;
   onRetry: () => void;
   onManageAccounts: () => void;
+  onChangePassword: () => void;
 }) => {
   switch (account.type) {
     case 'loading':
@@ -307,9 +349,14 @@ const AccountSection = ({
     case 'offline':
       // Being offline is normal: no error color.
       return (
-        <Text variant="bodyMedium" style={styles.offline}>
-          Compte indisponible hors connexion.
-        </Text>
+        <>
+          <Text variant="bodyMedium" style={styles.offline}>
+            Compte indisponible hors connexion.
+          </Text>
+          <Button mode="outlined" onPress={onChangePassword}>
+            Changer de mot de passe
+          </Button>
+        </>
       );
     case 'unavailable':
       return (
@@ -324,6 +371,9 @@ const AccountSection = ({
             title={account.email}
             description={account.administrator ? 'Administrateur' : undefined}
           />
+          <Button mode="outlined" onPress={onChangePassword}>
+            Changer de mot de passe
+          </Button>
           {account.administrator && (
             <Button mode="outlined" onPress={onManageAccounts}>
               Gérer les comptes

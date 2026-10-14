@@ -117,7 +117,7 @@ describe('device management against a real server (003 US4)', () => {
     expect(await itemNames(a)).toContain('Houmous');
   });
 
-  it('003 US4-11 a device disconnects itself and the server data is untouched', async () => {
+  it('004 US6-4 a device signs itself out: its copy is erased and the server data is untouched', async () => {
     const a = await newDevice();
     const b = await newDevice();
     await pairWithPiCode(a, 'Pixel de A');
@@ -127,14 +127,12 @@ describe('device management against a real server (003 US4)', () => {
     expect(await cycle(b)).toBe('saved');
     await addArticle(b, 'Lait');
 
-    await b.useCases.disconnect();
+    await b.useCases.signOut();
 
     expect((await b.useCases.getSyncInfo()).connection).toBe('notConnected');
     expect(await b.credentials.read()).toBeNull();
-    expect(await itemNames(b)).toEqual(
-      expect.arrayContaining(['Pain', 'Lait']),
-    );
-    expect(await pendingCount(b)).toBeGreaterThan(0);
+    // First-launch defaults only: neither Pain nor Lait.
+    expect(await itemNames(b)).toEqual([]);
     expect(await cycle(b)).toBe('notConnected');
     const devices = await a.useCases.listDevices();
     expect(devices.ok && devices.value.map((d) => d.name)).toEqual([

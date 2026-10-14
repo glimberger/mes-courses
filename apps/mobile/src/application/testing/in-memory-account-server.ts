@@ -5,6 +5,8 @@ import type {
   AccountPairing,
   AccountServer,
   ChoosePasswordServerError,
+  ChangePasswordServerError,
+  DeleteOwnAccountServerError,
   PasswordResetServerError,
   SignInOutcome,
   SignInServerError,
@@ -34,6 +36,16 @@ export class InMemoryAccountServer implements AccountServer {
     ok(PAIRING);
   /** What `requestPasswordReset` answers. */
   passwordResetResult: Result<void, PasswordResetServerError> = ok(undefined);
+  /** What `changePassword` answers. */
+  changePasswordResult: Result<void, ChangePasswordServerError> = ok(undefined);
+  /** What `deleteAccount` answers. */
+  deleteAccountResult: Result<void, DeleteOwnAccountServerError> =
+    ok(undefined);
+  readonly changePasswordCalls: {
+    currentPassword: string;
+    newPassword: string;
+  }[] = [];
+  readonly deleteAccountCalls: { password: string }[] = [];
   readonly passwordResetCalls: { url: string; email: string }[] = [];
   readonly signInCalls: {
     url: string;
@@ -107,4 +119,18 @@ export class InMemoryAccountServer implements AccountServer {
 
   getAccount: AccountServer['getAccount'] = async () =>
     this.offline ? err({ type: 'Offline' }) : ok({ ...this.account });
+
+  changePassword: AccountServer['changePassword'] = async (
+    _conn,
+    currentPassword,
+    newPassword,
+  ) => {
+    this.changePasswordCalls.push({ currentPassword, newPassword });
+    return this.offline ? err({ type: 'Offline' }) : this.changePasswordResult;
+  };
+
+  deleteAccount: AccountServer['deleteAccount'] = async (_conn, password) => {
+    this.deleteAccountCalls.push({ password });
+    return this.offline ? err({ type: 'Offline' }) : this.deleteAccountResult;
+  };
 }

@@ -2,6 +2,7 @@ import type {
   DeviceNotFound,
   SyncFailure,
 } from '../../../application/ports/sync-server';
+import type { DeleteMyAccountError } from '../../../application/use-cases/delete-my-account';
 import type { ChangeServerUrlError } from '../../../application/use-cases/change-server-url';
 import type { DeviceInfo } from '../../../application/use-cases/list-devices';
 import type { NameError } from '../../../domain/name';
@@ -20,8 +21,12 @@ export type DeviceActions = {
   revokeDevice: (
     id: string,
   ) => Promise<Result<void, SyncFailure | DeviceNotFound>>;
-  /** Leaves the server; the lists stay on this device (US4-11). */
-  disconnect: () => Promise<Result<void, WriteFailed>>;
+  /** Signs this device out; its copy of the lists is erased (US6-4). */
+  signOut: () => Promise<Result<void, WriteFailed>>;
+  /** Deletes the account after checking the password, then leaves as `signOut` does (US6-6). */
+  deleteMyAccount: (
+    password: string,
+  ) => Promise<Result<void, DeleteMyAccountError | WriteFailed>>;
   /** Moves the connection to a new address of the same server (FR-016). */
   changeServerUrl: (
     url: string,
@@ -65,25 +70,55 @@ export const createDeviceActions = (
     return outcome;
   };
 
+  /** The copy is erased and the credential gone: the device reads as a first launch. */
+  const returnToFirstLaunch = async () => {
+    resetFailures();
+    set({ pendingUndo: null });
+    setSync({
+      connection: 'notConnected',
+      signedOutReason: null,
+      status: 'saved',
+    });
+    await loadSyncInfo();
+    await kit.get().refresh();
+  };
+
   return {
     listDevices: () => call('listDevices', () => useCases.listDevices()),
     renameDevice: (id, name) =>
       call('renameDevice', () => useCases.renameDevice(id, name)),
     revokeDevice: (id) => call('revokeDevice', () => useCases.revokeDevice(id)),
 
-    disconnect: async () => {
-      // A cycle saving its state after the disconnection would restore the old server fields.
+    signOut: async () => {
+      // A cycle saving its state after the erasure would restore the old server fields.
       await waitForCycle();
       try {
-        await useCases.disconnect();
+        await useCases.signOut();
       } catch (error) {
         set({ notice: { type: 'writeFailed' } });
-        report(error, 'disconnect', SCREEN);
+        report(error, 'signOut', SCREEN);
         return err({ type: 'WriteFailed' });
       }
-      resetFailures();
-      await loadSyncInfo();
-      setSync({ status: 'saved' });
+      await returnToFirstLaunch();
+      return ok(undefined);
+    },
+
+    deleteMyAccount: async (password) => {
+      await waitForCycle();
+      let outcome: Awaited<ReturnType<typeof useCases.deleteMyAccount>>;
+      try {
+        outcome = await useCases.deleteMyAccount(password);
+      } catch (error) {
+        // The request may have failed in any way: nothing is known to have changed.
+        set({ notice: { type: 'writeFailed' } });
+        report(error, 'deleteMyAccount', SCREEN);
+        return err({ type: 'WriteFailed' });
+      }
+      if (!outcome.ok) {
+        reactToFailure(kit, 'deleteMyAccount', SCREEN, outcome.error);
+        return outcome;
+      }
+      await returnToFirstLaunch();
       return ok(undefined);
     },
 

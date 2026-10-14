@@ -1,3 +1,4 @@
+import type { AccountServer } from '../../../application/ports/account-server';
 import type { SyncServer } from '../../../application/ports/sync-server';
 import type { ArticleId } from '../../../domain/article';
 import { err } from '../../../domain/result';
@@ -202,6 +203,8 @@ type SyncCase = {
   failing?: UseCaseName;
   /** What the fake server answers instead of being unreachable. */
   syncServer?: Partial<SyncServer>;
+  /** What the fake account server answers instead of being unreachable. */
+  accountServer?: Partial<AccountServer>;
   /** Unset: the device starts paired with `url`. */
   notConnected?: true;
   run: (state: AppState) => Promise<unknown>;
@@ -262,9 +265,35 @@ const syncCases: Record<string, SyncCase> = {
     syncServer: { revokeDevice: serverError },
     run: (state) => state.revokeDevice('device-2'),
   },
-  '003 disconnect, throwing': {
-    failing: 'disconnect',
-    run: (state) => state.disconnect(),
+  '004 signOut, throwing': {
+    failing: 'signOut',
+    run: (state) => state.signOut(),
+  },
+  '004 deleteMyAccount, throwing': {
+    failing: 'deleteMyAccount',
+    run: (state) => state.deleteMyAccount('a password'),
+  },
+  '004 deleteMyAccount, a server error': {
+    accountServer: { deleteAccount: async () => err({ type: 'ServerError' }) },
+    run: (state) => state.deleteMyAccount('a password'),
+  },
+  '004 changePassword, throwing': {
+    failing: 'changePassword',
+    run: (state) =>
+      state.changePassword(
+        'a password',
+        'another password',
+        'another password',
+      ),
+  },
+  '004 changePassword, a server error': {
+    accountServer: { changePassword: async () => err({ type: 'ServerError' }) },
+    run: (state) =>
+      state.changePassword(
+        'a password long',
+        'another password',
+        'another password',
+      ),
   },
   '003 changeServerUrl, throwing': {
     failing: 'changeServerUrl',
@@ -288,11 +317,15 @@ const syncCases: Record<string, SyncCase> = {
 describe('the context of every report the sync makes', () => {
   it.each(Object.entries(syncCases))(
     'FR-022 %s reports with the operation and screen only, never an address, a name, a code or a credential',
-    async (_action, { failing, syncServer, notConnected, run }) => {
+    async (
+      _action,
+      { failing, syncServer, accountServer, notConnected, run },
+    ) => {
       const { store, errorReporter } = await buildStoryStore({
         seed: fixture,
         failing: failing ? [failing] : [],
         ...(syncServer && { syncServer }),
+        ...(accountServer && { accountServer }),
         ...(!notConnected && { connected }),
       });
       await store.getState().loadCurrentList();
@@ -303,6 +336,8 @@ describe('the context of every report the sync makes', () => {
         ...content,
         ...syncSecrets,
         'maison.example.fr',
+        'a password',
+        'another password',
       ]);
     },
   );

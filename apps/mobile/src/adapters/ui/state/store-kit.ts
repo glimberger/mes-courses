@@ -24,6 +24,8 @@ export type Notice =
   | { type: 'signedIn' }
   /** The person chose their password and the device is signed in (US2-2). */
   | { type: 'passwordChosen' }
+  /** The person changed their password (US6-2). */
+  | { type: 'passwordChanged' }
   /** The administrator invited an address (US1-1). Kept in memory, never reported. */
   | { type: 'invitationSent'; email: string }
   /** The administrator lifted a suspension (US5-3). */

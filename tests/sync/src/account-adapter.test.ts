@@ -314,3 +314,184 @@ describe('AccountServer HTTP adapter: password reset', () => {
     ).toEqual({ ok: false, error: { type: 'ServerUnreachable' } });
   });
 });
+
+describe('AccountServer HTTP adapter: the account itself', () => {
+  let server: TestServer;
+
+  beforeEach(async () => {
+    server = await startTestServer();
+  });
+  afterEach(async () => {
+    await server.close();
+  });
+
+  const accountServer = (appVersion = APP_VERSION) =>
+    createAccountServer({ appVersion });
+  const connectionOf = (deviceCredential: string) => ({
+    url: server.url,
+    deviceId: 'device',
+    credential: deviceCredential,
+  });
+
+  it('004 US6-2 changes the password; the new one signs in and the old one does not', async () => {
+    const { deviceCredential } = await server.createAccount({
+      email: 'marie@example.org',
+    });
+
+    const result = await accountServer().changePassword(
+      connectionOf(deviceCredential),
+      PASSWORD,
+      'a brand new password',
+    );
+
+    expect(result).toEqual({ ok: true, value: undefined });
+    expect(
+      (
+        await accountServer().signIn(
+          server.url,
+          'marie@example.org',
+          'a brand new password',
+          'Pixel',
+        )
+      ).ok,
+    ).toBe(true);
+    expect(
+      await accountServer().signIn(
+        server.url,
+        'marie@example.org',
+        PASSWORD,
+        'Pixel',
+      ),
+    ).toEqual({ ok: false, error: { type: 'InvalidCredentials' } });
+  });
+
+  it('004 US6-2 reports a wrong current password', async () => {
+    const { deviceCredential } = await server.createAccount();
+
+    expect(
+      await accountServer().changePassword(
+        connectionOf(deviceCredential),
+        'not my password',
+        'a brand new password',
+      ),
+    ).toEqual({ ok: false, error: { type: 'InvalidCredentials' } });
+  });
+
+  it('004 US6-2 reports the rule a new password breaks, SameAsCurrent included', async () => {
+    const { deviceCredential } = await server.createAccount();
+    const conn = connectionOf(deviceCredential);
+
+    expect(
+      await accountServer().changePassword(conn, PASSWORD, PASSWORD),
+    ).toEqual({
+      ok: false,
+      error: { type: 'PasswordRejected', problem: 'SameAsCurrent' },
+    });
+    expect(
+      await accountServer().changePassword(conn, PASSWORD, 'short'),
+    ).toEqual({
+      ok: false,
+      error: { type: 'PasswordRejected', problem: 'TooShort' },
+    });
+  });
+
+  it('004 FR-006 reports the wait after five wrong passwords', async () => {
+    const { deviceCredential } = await server.createAccount();
+    const conn = connectionOf(deviceCredential);
+    for (let i = 0; i < 5; i++) {
+      await accountServer().changePassword(conn, 'wrong wrong wrong', 'x');
+    }
+
+    const result = await accountServer().changePassword(
+      conn,
+      PASSWORD,
+      'a brand new password',
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { type: 'TooManyAttempts', minutesToWait: expect.any(Number) },
+    });
+  });
+
+  it('004 US6-2 reports a device the server no longer knows as not authorized, not as a wrong password', async () => {
+    expect(
+      await accountServer().changePassword(
+        connectionOf('unknown-credential'),
+        PASSWORD,
+        'a brand new password',
+      ),
+    ).toEqual({ ok: false, error: { type: 'DeviceNotAuthorized' } });
+  });
+
+  it('004 US6-2 reports an unreachable server as offline', async () => {
+    const { deviceCredential } = await server.createAccount();
+    const conn = connectionOf(deviceCredential);
+    await server.close();
+
+    expect(
+      await accountServer().changePassword(conn, PASSWORD, 'x'.repeat(14)),
+    ).toEqual({ ok: false, error: { type: 'Offline' } });
+    server = await startTestServer();
+  });
+
+  it('004 US6-6 deletes the account: it can no longer sign in', async () => {
+    const { deviceCredential } = await server.createAccount({
+      email: 'marie@example.org',
+    });
+
+    const result = await accountServer().deleteAccount(
+      connectionOf(deviceCredential),
+      PASSWORD,
+    );
+
+    expect(result).toEqual({ ok: true, value: undefined });
+    expect(
+      await accountServer().signIn(
+        server.url,
+        'marie@example.org',
+        PASSWORD,
+        'Pixel',
+      ),
+    ).toEqual({ ok: false, error: { type: 'InvalidCredentials' } });
+    expect(
+      await accountServer().getAccount(connectionOf(deviceCredential)),
+    ).toEqual({ ok: false, error: { type: 'AccountDeleted' } });
+  });
+
+  it('004 US6-6 reports a wrong password and keeps the account', async () => {
+    const { deviceCredential } = await server.createAccount();
+    const conn = connectionOf(deviceCredential);
+
+    expect(
+      await accountServer().deleteAccount(conn, 'not my password'),
+    ).toEqual({ ok: false, error: { type: 'InvalidCredentials' } });
+    expect((await accountServer().getAccount(conn)).ok).toBe(true);
+  });
+
+  it('004 US6-7 reports the only administrator', async () => {
+    const { deviceCredential } = await server.createAccount({
+      role: 'administrator',
+    });
+
+    expect(
+      await accountServer().deleteAccount(
+        connectionOf(deviceCredential),
+        PASSWORD,
+      ),
+    ).toEqual({ ok: false, error: { type: 'LastAdministrator' } });
+  });
+
+  it('004 FR-006 reports the wait after five wrong passwords on deletion', async () => {
+    const { deviceCredential } = await server.createAccount();
+    const conn = connectionOf(deviceCredential);
+    for (let i = 0; i < 5; i++) {
+      await accountServer().deleteAccount(conn, 'wrong wrong wrong');
+    }
+
+    expect(await accountServer().deleteAccount(conn, PASSWORD)).toMatchObject({
+      ok: false,
+      error: { type: 'TooManyAttempts' },
+    });
+  });
+});

@@ -19,6 +19,8 @@ const text = (notice: Notice): string => {
       return 'Connecté. Synchronisation en cours…';
     case 'passwordChosen':
       return 'Mot de passe enregistré. Bienvenue !';
+    case 'passwordChanged':
+      return 'Mot de passe modifié.';
     case 'invitationSent':
       return `Invitation envoyée à ${notice.email}.`;
     case 'accountReactivated':
