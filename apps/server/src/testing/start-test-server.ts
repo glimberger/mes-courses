@@ -1,5 +1,12 @@
+import { DatabaseSync } from 'node:sqlite';
+
 import { buildApp } from '../adapters/http/app';
-import { openDatabase } from '../adapters/sqlite/open-database';
+import { MIGRATIONS, migrate } from '../adapters/sqlite/migrations';
+import {
+  NodeSqlDatabase,
+  openDatabase,
+} from '../adapters/sqlite/open-database';
+import type { SqlDatabase } from '../adapters/sqlite/sql-database';
 import { SqliteStore } from '../adapters/sqlite/sqlite-store';
 import type { Clock } from '../application/ports/clock';
 import type {
@@ -177,8 +184,17 @@ export type TestServer = {
 export const buildTestApp = ({
   clock,
   mailer = createFakeMailer(),
-}: { clock?: Clock; mailer?: FakeMailer } = {}) => {
-  const db = openDatabase(':memory:');
+  database,
+}: { clock?: Clock; mailer?: FakeMailer; database?: SqlDatabase } = {}) => {
+  let db: SqlDatabase;
+  if (database) {
+    // A database left by an older version: the server migrates it as it does at start.
+    db = database;
+    db.exec('PRAGMA foreign_keys = ON');
+    migrate(db);
+  } else {
+    db = openDatabase(':memory:');
+  }
   const store = new SqliteStore(db);
   const reports: RecordedReport[] = [];
   const errorReporter: ErrorReporter = {
@@ -220,10 +236,13 @@ export const buildTestApp = ({
 export const startTestServer = async ({
   clock,
   mailer,
+  database,
   port: wantedPort = 0,
 }: {
   clock?: Clock;
   mailer?: FakeMailer;
+  /** A database an older version left (see `openDatabaseAtVersion1`); migrated on start. */
+  database?: SqlDatabase;
   /** To come back at the address of a server just closed, with a database of its own. */
   port?: number;
 } = {}): Promise<TestServer> => {
@@ -240,6 +259,7 @@ export const startTestServer = async ({
   } = buildTestApp({
     ...(clock ? { clock } : {}),
     ...(mailer ? { mailer } : {}),
+    ...(database ? { database } : {}),
   });
   const listen = async (instance: typeof app, port: number) => {
     await instance.listen({ host: '127.0.0.1', port });
@@ -264,4 +284,15 @@ export const startTestServer = async ({
       db.close();
     },
   };
+};
+
+/**
+ * An empty in-memory database at the schema 003 shipped (migration 1 only), for the tests that
+ * fill it as 003's code did and check what the migration to accounts makes of it (SC-005).
+ */
+export const openDatabaseAtVersion1 = (): SqlDatabase => {
+  const db = new NodeSqlDatabase(new DatabaseSync(':memory:'));
+  db.exec('PRAGMA foreign_keys = ON');
+  migrate(db, MIGRATIONS.slice(0, 1));
+  return db;
 };

@@ -12,68 +12,68 @@
 
 ## Authentication Requirements
 
-- [ ] CHK001 Is "a device" defined for the purpose of limiting failed sign-ins, given that a device has no identity before it signs in? [Ambiguity, Spec §FR-006]
-- [ ] CHK002 Are the limits on failed sign-ins quantified in the spec itself (attempts, window, lock duration), or only deferred to the plan as "sensible values"? [Clarity, Spec §FR-006, Assumptions]
-- [ ] CHK003 Is it stated that the sign-in, the password change and the reset travel only over a verified TLS connection? [Gap, Spec §FR-006, 003 FR-019]
-- [ ] CHK004 Is the lifetime of a signed-in device defined (never expires, expires after inactivity, or ends only on sign-out, revocation, suspension or deletion)? [Gap, Spec §FR-007]
-- [ ] CHK005 Is the rule "different from the temporary one" extended to say whether a changed password must differ from the current one? [Gap, Spec §FR-005, US6-2]
-- [ ] CHK006 Is the maximum length of a password, and whether spaces and any Unicode are allowed, specified, not only the 12-character minimum? [Completeness, Spec §FR-005]
-- [ ] CHK007 Is it specified what happens to a device that is mid-way through "choose a password" when its temporary password is replaced or expires? [Edge Case, Gap, Spec §FR-004]
-- [ ] CHK008 Does the spec say whether changing the password signs out, or keeps, the other devices, and is that choice justified against the case of a stolen device? [Clarity, Spec §US6-2]
+- [x] CHK001 Is "a device" defined for the purpose of limiting failed sign-ins, given that a device has no identity before it signs in? [Ambiguity, Spec §FR-006] — Reviewed: FR-006 now says "for a device (the client's network address)"; R6 gives the reason.
+- [x] CHK002 Are the limits on failed sign-ins quantified in the spec itself (attempts, window, lock duration), or only deferred to the plan as "sensible values"? [Clarity, Spec §FR-006, Assumptions] — Reviewed: Deferred to the plan on purpose (Assumptions); R6 gives 5/10 min per address, 20/10 min per client.
+- [x] CHK003 Is it stated that the sign-in, the password change and the reset travel only over a verified TLS connection? [Gap, Spec §FR-006, 003 FR-019] — Reviewed: R5: only Caddy's TLS reaches the server; release app refuses `http://`.
+- [x] CHK004 Is the lifetime of a signed-in device defined (never expires, expires after inactivity, or ends only on sign-out, revocation, suspension or deletion)? [Gap, Spec §FR-007] — Reviewed: R5: no expiry, ends only on sign-out, revocation or deletion; suspension pauses.
+- [x] CHK005 Is the rule "different from the temporary one" extended to say whether a changed password must differ from the current one? [Gap, Spec §FR-005, US6-2] — Reviewed: R3: `SameAsCurrent` on change; a post-reset password may equal the old one, with the reason.
+- [x] CHK006 Is the maximum length of a password, and whether spaces and any Unicode are allowed, specified, not only the 12-character minimum? [Completeness, Spec §FR-005] — Reviewed: R3: 12 to 128 code points after NFC, any character, no trimming.
+- [x] CHK007 Is it specified what happens to a device that is mid-way through "choose a password" when its temporary password is replaced or expires? [Edge Case, Gap, Spec §FR-004] — Reviewed: R4: `choose-password` re-verifies; the screen returns to SignIn.
+- [x] CHK008 Does the spec say whether changing the password signs out, or keeps, the other devices, and is that choice justified against the case of a stolen device? [Clarity, Spec §US6-2] — Reviewed: US6-2 keeps other devices; R9 justifies it against a stolen device (revoke it).
 
 ## Password Reset and Temporary Passwords
 
-- [ ] CHK009 Is the behavior of "forgot my password" defined for an account that was invited and never signed in, which has no current password to keep? [Gap, Spec §FR-010, US5-6]
-- [ ] CHK010 Is the difference between "send the credentials again" and a reset requested by the user stated, or are the two requirements redundant? [Ambiguity, Spec §US5-6, FR-013]
-- [ ] CHK011 Is it specified that a reset request for a suspended account sends nothing and still shows the same message? [Gap, Spec §US4-1, FR-014]
-- [ ] CHK012 Is "valid until its first successful use or 7 days" consistent with the clarified rule that a reset leaves the current password working, for the case where a temporary password is never used? [Consistency, Spec §FR-004, Clarifications]
-- [ ] CHK013 Is "a short time" in the reset throttling quantified, and is it stated whether the limit applies per address, per requester, or both? [Ambiguity, Spec §US4-4, FR-010]
-- [ ] CHK014 Is the risk of putting a password in clear in an email (readable in a mailbox, in transit, in backups) recorded as an accepted risk, with its mitigations (single purpose, 7 days, replace at first use)? [Assumption, Spec §FR-003, FR-004]
+- [x] CHK009 Is the behavior of "forgot my password" defined for an account that was invited and never signed in, which has no current password to keep? [Gap, Spec §FR-010, US5-6] — Reviewed: R4: a reset on an invited account replaces its temporary password.
+- [x] CHK010 Is the difference between "send the credentials again" and a reset requested by the user stated, or are the two requirements redundant? [Ambiguity, Spec §US5-6, FR-013] — Reviewed: R4: comparison table (who, for, email, failure, limits).
+- [x] CHK011 Is it specified that a reset request for a suspended account sends nothing and still shows the same message? [Gap, Spec §US4-1, FR-014] — Reviewed: US4-6 and R4: nothing sent, same `202`.
+- [x] CHK012 Is "valid until its first successful use or 7 days" consistent with the clarified rule that a reset leaves the current password working, for the case where a temporary password is never used? [Consistency, Spec §FR-004, Clarifications] — Reviewed: R4: temporary expiry never touches the current password.
+- [x] CHK013 Is "a short time" in the reset throttling quantified, and is it stated whether the limit applies per address, per requester, or both? [Ambiguity, Spec §US4-4, FR-010] — Reviewed: R6: 3/hour per address and 10/hour per client, both.
+- [x] CHK014 Is the risk of putting a password in clear in an email (readable in a mailbox, in transit, in backups) recorded as an accepted risk, with its mitigations (single purpose, 7 days, replace at first use)? [Assumption, Spec §FR-003, FR-004] — Reviewed: R4: accepted risk with mitigations.
 
 ## Data Separation
 
-- [ ] CHK015 Is "refuses any request that reads or changes the data of another account" specified for all the kinds of identifiers a client can send (lists, items, articles, categories, devices), including ids that exist in another account? [Completeness, Spec §FR-009]
-- [ ] CHK016 Is the guarantee "no data of one account is ever sent to a device of another" stated for responses that carry only counters or ordering information, not just rows? [Clarity, Spec §SC-003]
-- [ ] CHK017 Are the same-name merge rules of 003 stated to apply only within one account, so that two accounts with the same article name never merge? [Consistency, Spec §FR-009, US3-4]
-- [ ] CHK018 Is the device list restricted to the caller's own devices in every place it appears, including administrator views? [Consistency, Spec §FR-012, FR-013, US6-1]
-- [ ] CHK019 Is it specified whether an administrator can see another account's lists, articles or categories, or only its email, state and last sync? [Gap, Spec §FR-013, US5-1]
+- [x] CHK015 Is "refuses any request that reads or changes the data of another account" specified for all the kinds of identifiers a client can send (lists, items, articles, categories, devices), including ids that exist in another account? [Completeness, Spec §FR-009] — Reviewed: R1: every id is read inside the caller's account; foreign ids are unknown entities or `404`.
+- [x] CHK016 Is the guarantee "no data of one account is ever sent to a device of another" stated for responses that carry only counters or ordering information, not just rows? [Clarity, Spec §SC-003] — Reviewed: R1: `seq` gaps reveal only the count of other accounts' changes, accepted.
+- [x] CHK017 Are the same-name merge rules of 003 stated to apply only within one account, so that two accounts with the same article name never merge? [Consistency, Spec §FR-009, US3-4] — Reviewed: R1: live-name indexes are per account.
+- [x] CHK018 Is the device list restricted to the caller's own devices in every place it appears, including administrator views? [Consistency, Spec §FR-012, FR-013, US6-1] — Reviewed: R12: every device list is the caller's own, administrator included.
+- [x] CHK019 Is it specified whether an administrator can see another account's lists, articles or categories, or only its email, state and last sync? [Gap, Spec §FR-013, US5-1] — Reviewed: R12: email, role, state, invitation expiry and last sync only.
 
 ## Administration
 
-- [ ] CHK020 Is the recovery path defined for an administrator who forgot their password while the mail service is down? [Recovery, Gap, Spec §FR-010, FR-013]
-- [ ] CHK021 Is it stated that suspending or deleting an account is refused for the last administrator in every form (own account, another administrator's, and both through the self-service screen)? [Consistency, Spec §US5-5, US6-7, FR-016]
-- [ ] CHK022 Are administrator actions on an account that is itself invited and never signed in (suspend, delete, reactivate) defined, including what state reactivation returns to? [Coverage, Spec §US5, Key Entities]
-- [ ] CHK023 Is a record of administrator actions (who suspended or deleted whom, and when) required or explicitly out of scope? [Gap, Spec §FR-013]
-- [ ] CHK024 Does the spec say whether the administrator is told when an invited person has not signed in after the temporary password expired? [Gap, Spec §US5-1, FR-004]
+- [x] CHK020 Is the recovery path defined for an administrator who forgot their password while the mail service is down? [Recovery, Gap, Spec §FR-010, FR-013] — Reviewed: R17: `set-password` command on the Pi.
+- [x] CHK021 Is it stated that suspending or deleting an account is refused for the last administrator in every form (own account, another administrator's, and both through the self-service screen)? [Consistency, Spec §US5-5, US6-7, FR-016] — Reviewed: R12: rule applies to every path (admin routes and `DELETE /v1/account`).
+- [x] CHK022 Are administrator actions on an account that is itself invited and never signed in (suspend, delete, reactivate) defined, including what state reactivation returns to? [Coverage, Spec §US5, Key Entities] — Reviewed: R12: suspend, reactivate back to invited, delete; no resend while suspended.
+- [x] CHK023 Is a record of administrator actions (who suspended or deleted whom, and when) required or explicitly out of scope? [Gap, Spec §FR-013] — Reviewed: R12/R14: no audit log, explicitly out of scope (single administrator).
+- [x] CHK024 Does the spec say whether the administrator is told when an invited person has not signed in after the temporary password expired? [Gap, Spec §US5-1, FR-004] — Reviewed: R12: `invitationExpired` shown in Accounts, no notification.
 
 ## Account Deletion and Retention
 
-- [ ] CHK025 Is "all its data on the server are deleted" defined to cover everything stored about the account (devices, attempt records, applied changes, logs), and are any retained remnants named? [Clarity, Spec §FR-016, SC-007]
-- [ ] CHK026 Is it specified how a device learns that its account was deleted, given that its record is deleted too, and what the user sees in each of the revoked, suspended and deleted cases? [Completeness, Spec §US5-4, US6-5, FR-017]
-- [ ] CHK027 Is the data kept on a device after a deletion, a revocation and a suspension stated for each case separately and consistently? [Consistency, Spec §US5-2, US5-4, US6-3, FR-017]
-- [ ] CHK028 Is the reference "(User Story 6, scenario 5)" in US5-4 consistent with the wording of US6-5, which also mentions "suspension-then-deletion" that US5 does not define? [Conflict, Spec §US5-4, US6-5]
+- [x] CHK025 Is "all its data on the server are deleted" defined to cover everything stored about the account (devices, attempt records, applied changes, logs), and are any retained remnants named? [Clarity, Spec §FR-016, SC-007] — Reviewed: R16 lists what is deleted and the named remnants; SC-007 points to it.
+- [x] CHK026 Is it specified how a device learns that its account was deleted, given that its record is deleted too, and what the user sees in each of the revoked, suspended and deleted cases? [Completeness, Spec §US5-4, US6-5, FR-017] — Reviewed: R7/R11: three distinct answers and messages.
+- [x] CHK027 Is the data kept on a device after a deletion, a revocation and a suspension stated for each case separately and consistently? [Consistency, Spec §US5-2, US5-4, US6-3, FR-017] — Reviewed: US5-2, US5-4, US6-3 and FR-017 now agree: kept until the message was seen, then erased; suspension keeps the copy.
+- [x] CHK028 Is the reference "(User Story 6, scenario 5)" in US5-4 consistent with the wording of US6-5, which also mentions "suspension-then-deletion" that US5 does not define? [Conflict, Spec §US5-4, US6-5] — Reviewed: US5-4 points to US6-5, which now reads "including the deletion of a suspended account"; the term is gone.
 
 ## Privacy and Observability
 
-- [ ] CHK029 Is "any other personal data" in error reports enumerated (device names, server address, IP address, email domain), so the requirement can be checked? [Clarity, Spec §FR-018]
-- [ ] CHK030 Is "pseudonymous" defined for account identifiers in reports (random, not derived from the address)? [Ambiguity, Spec §FR-018]
-- [ ] CHK031 Does SC-008 cover every place an address could land, not only "error report or server log used for diagnosis" (analytics, crash dumps, the mail provider's logs)? [Coverage, Spec §SC-008]
-- [ ] CHK032 Is retention of the email addresses and sign-in records stated, together with who may read them (the maintainer, the mail provider)? [Gap, Spec §FR-001, FR-020]
-- [ ] CHK033 Is the transfer of addresses and temporary passwords to the mail provider recorded as a dependency and a trust assumption? [Assumption, Spec §FR-003, FR-020, Assumptions]
+- [x] CHK029 Is "any other personal data" in error reports enumerated (device names, server address, IP address, email domain), so the requirement can be checked? [Clarity, Spec §FR-018] — Reviewed: R10: enumerated list.
+- [x] CHK030 Is "pseudonymous" defined for account identifiers in reports (random, not derived from the address)? [Ambiguity, Spec §FR-018] — Reviewed: R9/R10: opaque random id, not derived from the address.
+- [x] CHK031 Does SC-008 cover every place an address could land, not only "error report or server log used for diagnosis" (analytics, crash dumps, the mail provider's logs)? [Coverage, Spec §SC-008] — Reviewed: R10: scope of SC-008 stated, provider logs named as outside.
+- [x] CHK032 Is retention of the email addresses and sign-in records stated, together with who may read them (the maintainer, the mail provider)? [Gap, Spec §FR-001, FR-020] — Reviewed: R16: retention and readers table.
+- [x] CHK033 Is the transfer of addresses and temporary passwords to the mail provider recorded as a dependency and a trust assumption? [Assumption, Spec §FR-003, FR-020, Assumptions] — Reviewed: R8: relay trusted with addresses and temporary passwords.
 
 ## Offline and Failure Behavior
 
-- [ ] CHK034 Is the time between a suspension, deletion or revocation and its effect on an offline device bounded or explicitly stated as unbounded? [Clarity, Spec §FR-007, SC-004]
-- [ ] CHK035 Is "100% of requests ... are refused" in SC-004 measurable given that a device offline makes no request, and is the measurable form stated? [Measurability, Spec §SC-004]
-- [ ] CHK036 Are the requirements for a mail failure on a reset, where the answer must not reveal whether the account exists, consistent with the requirement to tell the administrator when an invitation fails? [Consistency, Spec §FR-003, FR-010, FR-020]
-- [ ] CHK037 Is the behavior defined when the server stops between creating an account and sending its email, leaving an invited account that never received credentials? [Recovery, Gap, Spec §FR-003, US5-6]
-- [ ] CHK038 Is the loss of data pending on a device at sign-out, deletion or revocation stated as accepted for each case, with the warnings required? [Coverage, Spec §US6-4, Edge Cases]
+- [x] CHK034 Is the time between a suspension, deletion or revocation and its effect on an offline device bounded or explicitly stated as unbounded? [Clarity, Spec §FR-007, SC-004] — Reviewed: R5: unbounded, applied at the next request.
+- [x] CHK035 Is "100% of requests ... are refused" in SC-004 measurable given that a device offline makes no request, and is the measurable form stated? [Measurability, Spec §SC-004] — Reviewed: R5: SC-004 measured on requests made after the change (T058).
+- [x] CHK036 Are the requirements for a mail failure on a reset, where the answer must not reveal whether the account exists, consistent with the requirement to tell the administrator when an invitation fails? [Consistency, Spec §FR-003, FR-010, FR-020] — Reviewed: R4 table, US5-6, T056 and contracts/auth-api.md now agree: a failed resend restores the previous temporary password; a failed anonymous reset cannot be reported to the caller, both are reported to the tracking tool.
+- [x] CHK037 Is the behavior defined when the server stops between creating an account and sending its email, leaving an invited account that never received credentials? [Recovery, Gap, Spec §FR-003, US5-6] — Reviewed: R8: account stays invited with no email; administrator resends.
+- [x] CHK038 Is the loss of data pending on a device at sign-out, deletion or revocation stated as accepted for each case, with the warnings required? [Coverage, Spec §US6-4, Edge Cases] — Reviewed: R11: voluntary sign-out warns; forced sign-out reports the count lost.
 
 ## Dependencies and Assumptions
 
-- [ ] CHK039 Is the assumption of about 10 accounts turned into a limit, or is behavior beyond it explicitly unspecified? [Assumption, Spec §Assumptions]
-- [ ] CHK040 Is the single-administrator assumption consistent with the "at least one administrator at all times" rule, and with how the maintainer's account is created when the server is reset? [Consistency, Spec §FR-013, FR-015, Edge Cases]
-- [ ] CHK041 Is the assumption that no email verification is needed validated against the risk of inviting a mistyped address, which would send credentials to a stranger? [Assumption, Spec §Assumptions, FR-003]
+- [x] CHK039 Is the assumption of about 10 accounts turned into a limit, or is behavior beyond it explicitly unspecified? [Assumption, Spec §Assumptions] — Reviewed: R18: no limit enforced, behavior beyond ~10 accounts explicitly unspecified.
+- [x] CHK040 Is the single-administrator assumption consistent with the "at least one administrator at all times" rule, and with how the maintainer's account is created when the server is reset? [Consistency, Spec §FR-013, FR-015, Edge Cases] — Reviewed: R2: migration 2 creates the administrator on every database; `create-admin` names it.
+- [x] CHK041 Is the assumption that no email verification is needed validated against the risk of inviting a mistyped address, which would send credentials to a stranger? [Assumption, Spec §Assumptions, FR-003] — Reviewed: R12: accepted risk, undone by deleting the account.
 
 ## Notes
 

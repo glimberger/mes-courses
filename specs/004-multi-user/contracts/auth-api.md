@@ -144,8 +144,8 @@ DELETE /v1/admin/accounts/:id                  -> 204 | 404 NotFound | 409 LastA
 - `POST /v1/admin/accounts` follows the order of research R8: create, send, and on failure delete
   again and answer `502 MailFailed` with nothing left behind (US1-4).
 - `resend-credentials` replaces the temporary password and sends the email; if the send fails the
-  account keeps the new temporary password and the answer is `502 MailFailed`, so the
-  administrator tries again.
+  previous temporary password and its expiry are restored (as `inviteAccount` removes the account,
+  research R4, R8, US5-6) and the answer is `502 MailFailed`, so the administrator tries again.
 - `suspend` on an already suspended account and `reactivate` on an account that is not suspended
   are `204` no-ops (idempotent).
 - An administrator acting on their own account hits `LastAdministrator` when no other active
