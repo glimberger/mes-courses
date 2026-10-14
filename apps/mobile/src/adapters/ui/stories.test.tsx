@@ -7,6 +7,7 @@ import { act, render } from '@testing-library/react-native';
 
 import preview from '../../../.rnstorybook/preview';
 import { requiredStories } from './required-stories';
+import { composeShotStories } from './testing/story-shots';
 
 // The scheme every story is rendered with, read by `useColorScheme`.
 let mockColorScheme: 'light' | 'dark' = 'light';
@@ -76,6 +77,25 @@ describe('required stories exist', () => {
   for (const id of requiredStories) {
     it(`has the story ${id}`, () => {
       expect(ids).toContain(id);
+    });
+  }
+});
+
+describe('the screenshot build shows the stories this test renders', () => {
+  const files = globSync('src/adapters/ui/**/*.stories.tsx', { cwd: APP_ROOT });
+  for (const file of files) {
+    it(`${file} has the same story ids`, () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const storyModule = require(path.join(APP_ROOT, file));
+      const composed = composeStories(storyModule, preview);
+      const expected = Object.getOwnPropertyNames(composed);
+
+      const ids = composeShotStories(
+        storyModule,
+        [preview.decorators ?? []].flat(),
+      ).map((story) => story.id.slice(storyModule.default.title.length + 1));
+
+      expect(ids).toEqual(expected);
     });
   }
 });

@@ -6,8 +6,12 @@ const IOS_PROJECT = 'Mescourses';
 
 // The whole build chain (prebuild, then Gradle or Xcode) runs in one shell with this environment,
 // so that Sentry's build steps see SENTRY_DISABLE_AUTO_UPLOAD too.
-const build = (commands) =>
-  `cd ${APP_DIR} && env -u EXPO_PUBLIC_SENTRY_DSN -u STORYBOOK_ENABLED DETOX_BUILD=1 SENTRY_DISABLE_AUTO_UPLOAD=true sh -c '${commands}'`;
+const build = (commands, env = '-u STORYBOOK_ENABLED') =>
+  `cd ${APP_DIR} && env -u EXPO_PUBLIC_SENTRY_DSN ${env} DETOX_BUILD=1 SENTRY_DISABLE_AUTO_UPLOAD=true sh -c '${commands}'`;
+
+// The screenshot builds show the stories one by one (apps/mobile/index.ts, STORY_SHOTS). They
+// replace the release build at the same paths: `yarn test:e2e:*` builds again before it runs.
+const SHOTS_ENV = 'STORYBOOK_ENABLED=true STORY_SHOTS=true';
 
 /** @type {Detox.DetoxConfig} */
 module.exports = {
@@ -41,6 +45,23 @@ module.exports = {
       binaryPath: `${APP_DIR}/android/app/build/outputs/apk/release/app-release.apk`,
       testBinaryPath: `${APP_DIR}/android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk`,
     },
+    'android.shots': {
+      type: 'android.apk',
+      build: build(
+        'yarn expo prebuild --platform android && cd android && ./gradlew :app:assembleRelease :app:assembleAndroidTest -DtestBuildType=release',
+        SHOTS_ENV,
+      ),
+      binaryPath: `${APP_DIR}/android/app/build/outputs/apk/release/app-release.apk`,
+      testBinaryPath: `${APP_DIR}/android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk`,
+    },
+    'ios.shots': {
+      type: 'ios.app',
+      build: build(
+        `yarn expo prebuild --platform ios && xcodebuild -workspace ios/${IOS_PROJECT}.xcworkspace -scheme ${IOS_PROJECT} -configuration Release -sdk iphonesimulator -derivedDataPath ios/build`,
+        SHOTS_ENV,
+      ),
+      binaryPath: `${APP_DIR}/ios/build/Build/Products/Release-iphonesimulator/${IOS_PROJECT}.app`,
+    },
     'ios.release': {
       type: 'ios.app',
       build: build(
@@ -70,5 +91,7 @@ module.exports = {
   configurations: {
     'android.emu.release': { device: 'emulator', app: 'android.release' },
     'ios.sim.release': { device: 'simulator', app: 'ios.release' },
+    'android.emu.shots': { device: 'emulator', app: 'android.shots' },
+    'ios.sim.shots': { device: 'simulator', app: 'ios.shots' },
   },
 };

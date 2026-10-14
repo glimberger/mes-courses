@@ -2587,6 +2587,7 @@ __metadata:
   resolution: "@mes-courses/e2e-tests@workspace:tests/e2e"
   dependencies:
     "@types/jest": "npm:^30"
+    "@types/node": "npm:^24"
     detox: "patch:detox@npm%3A20.51.4#~/.yarn/patches/detox-npm-20.51.4-f0776917eb.patch"
     jest: "npm:^30"
     ts-jest: "npm:^29"

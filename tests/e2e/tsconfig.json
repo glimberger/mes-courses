@@ -7,5 +7,5 @@
     "esModuleInterop": true,
     "isolatedModules": true
   },
-  "include": ["journeys/**/*.ts", "support/**/*.ts"]
+  "include": ["journeys/**/*.ts", "support/**/*.ts", "screenshots/**/*.ts"]
 }
