@@ -14,6 +14,11 @@ import {
   retryAfterIfBlocked,
 } from './attempt-limits';
 import {
+  MAX_HASHING_ROUNDS,
+  reportExhaustedRounds,
+  sameCredentials,
+} from './hash-outside-transaction';
+import {
   createSignedInDevice,
   type SignedIn,
   type SignInDeps,
@@ -53,47 +58,83 @@ export const choosePassword = async (
   const keys = attemptKeys(crypto.sha256Hex, email, request.clientAddress);
   const temporary = normalizeTemporaryPassword(request.temporaryPassword);
 
-  return store.run(async (repos): Promise<ChoosePasswordOutcome> => {
-    const nowMs = clock.nowMs();
-    await pruneAttempts(repos.authAttempts, nowMs);
+  for (let round = 0; round < MAX_HASHING_ROUNDS; round++) {
+    // Short read, then the hashes outside the transaction (see hash-outside-transaction.ts).
+    const read = await store.run(async (repos) => {
+      await pruneAttempts(repos.authAttempts, clock.nowMs());
+      return {
+        wait: await retryAfterIfBlocked(
+          repos.authAttempts,
+          'signIn',
+          keys,
+          clock.nowMs(),
+        ),
+        account: await repos.accounts.findByEmail(email),
+      };
+    });
+    if (read.wait !== null) {
+      return { kind: 'blocked', retryAfterSeconds: read.wait };
+    }
 
-    const wait = await retryAfterIfBlocked(
-      repos.authAttempts,
-      'signIn',
-      keys,
-      nowMs,
-    );
-    if (wait !== null) return { kind: 'blocked', retryAfterSeconds: wait };
-
-    const account = await repos.accounts.findByEmail(email);
     const matches = await hasher.verify(
       temporary,
-      account?.temporaryPasswordHash ?? null,
+      read.account?.temporaryPasswordHash ?? null,
     );
-    if (!matches || account === null || account.email === null) {
-      await recordAttempt(repos.authAttempts, 'signIn', keys, nowMs);
-      return { kind: 'invalid' };
-    }
-    if (isTemporaryExpired(account, nowMs)) return { kind: 'expired' };
-    if (account.suspendedAt !== null) return { kind: 'suspended' };
-
     // Told only to whoever holds the temporary password.
-    const problem = validateNewPassword(request.newPassword, {
-      temporary: request.temporaryPassword,
-    });
-    if (problem !== null) return { kind: 'invalidPassword', problem };
+    const problem = matches
+      ? validateNewPassword(request.newPassword, {
+          temporary: request.temporaryPassword,
+        })
+      : null;
+    const newPasswordHash =
+      matches && problem === null
+        ? await hasher.hash(request.newPassword)
+        : null;
 
-    await repos.accounts.update({
-      ...account,
-      passwordHash: await hasher.hash(request.newPassword),
-      temporaryPasswordHash: null,
-      temporaryExpiresAt: null,
-    });
-    return createSignedInDevice(
-      deps,
-      repos,
-      { ...account, email: account.email },
-      deviceName,
+    const outcome = await store.run(
+      async (repos): Promise<ChoosePasswordOutcome | null> => {
+        const nowMs = clock.nowMs();
+        const wait = await retryAfterIfBlocked(
+          repos.authAttempts,
+          'signIn',
+          keys,
+          nowMs,
+        );
+        if (wait !== null) return { kind: 'blocked', retryAfterSeconds: wait };
+
+        const account = await repos.accounts.findByEmail(email);
+        if (!sameCredentials(read.account, account)) return null;
+
+        if (!matches || account === null || account.email === null) {
+          await recordAttempt(repos.authAttempts, 'signIn', keys, nowMs);
+          return { kind: 'invalid' };
+        }
+        if (isTemporaryExpired(account, nowMs)) return { kind: 'expired' };
+        if (account.suspendedAt !== null) return { kind: 'suspended' };
+        if (problem !== null) return { kind: 'invalidPassword', problem };
+        if (newPasswordHash === null) return null;
+
+        await repos.accounts.update({
+          ...account,
+          passwordHash: newPasswordHash,
+          temporaryPasswordHash: null,
+          temporaryExpiresAt: null,
+        });
+        return createSignedInDevice(
+          deps,
+          repos,
+          { ...account, email: account.email },
+          deviceName,
+        );
+      },
     );
-  });
+    if (outcome !== null) return outcome;
+  }
+  // The account kept changing under us: refuse without counting an attempt.
+  reportExhaustedRounds(
+    deps.errorReporter,
+    'choosePassword',
+    'POST /v1/auth/choose-password',
+  );
+  return { kind: 'invalid' };
 };
