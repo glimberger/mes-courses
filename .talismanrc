@@ -219,8 +219,6 @@ fileignoreconfig:
     checksum: 37ba183e58155dc3daba8448abccc29443f008af1fd1132f7854c1a2c5382b0b
   - filename: apps/server/src/application/use-cases/choose-password.test.ts
     checksum: faa9f5873cfaf5c57f6b9c9cc8e71c9df5b9046f03f7b66d540e31550847c87b
-  - filename: apps/server/src/application/use-cases/choose-password.ts
-    checksum: 22a8133b6fd4f405a81689d53dfc95c4670ab99983269da66981edfbb45ee349
   - filename: .github/scripts/server-smoke.sh
     checksum: 7dc7407c82304c32f0f26261feb1def9994b2979372a545eb2413f78b146a9e9
   - filename: apps/server/src/composition/report-context.test.ts
@@ -297,8 +295,6 @@ fileignoreconfig:
     checksum: 165af0cb702c4a8cc9aaba805ebcd7b0fe42c4a7beb014c9501449c1ca231df9
   - filename: apps/server/src/application/use-cases/change-password.test.ts
     checksum: 23bdb11dbd852417d0fb69cf8778dd794674da3368c36feaacdb09c6bac42990
-  - filename: apps/server/src/application/use-cases/change-password.ts
-    checksum: 6397ba762b7c2ff74d4ee942bb1e2e98c2d7c94502f07a4367c5db5e90eea5b8
   - filename: apps/mobile/src/adapters/ui/components/NoticeSnackbar.stories.tsx
     checksum: 502cf8a3662004dffd2607d875ecb67367fe3204b32badc5e67c09ef474b99d1
   - filename: apps/mobile/src/adapters/ui/screens/SettingsScreen.tsx
@@ -361,4 +357,12 @@ fileignoreconfig:
     checksum: 85965a29876b8ed8fb381acbaeb9567cda28ed96fa59e38b431d9806261dfe98
   - filename: apps/server/src/application/use-cases/request-password-reset.ts
     checksum: 8ab46abc8ee34a840f3adeac569f898dbc0966788ab02d2c02a39f1b764d48a4
+  - filename: apps/server/src/application/use-cases/change-password.ts
+    checksum: 141dc07ad0195c67f5a9df72166a2279a79224ee63903e099f5d57220e7cb187
+  - filename: apps/server/src/application/use-cases/choose-password.ts
+    checksum: c04bf013bf61459300cc0a0348da8c92defdeebad0ed854e91537035a5b04531
+  - filename: apps/server/src/application/use-cases/hash-outside-transaction.ts
+    checksum: 01312a18e8f0f3d0f9bbefda91218b66c144adeaea53abf7a8be9006654ee605
+  - filename: apps/server/src/application/use-cases/hash-outside-transaction.test.ts
+    checksum: 60f9368b743fe33416a2c87e7db4c93c55b98242fcdd5f8a2284a768206322d4
 version: "1.0"

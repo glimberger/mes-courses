@@ -17,6 +17,10 @@ import {
   recordAttempt,
   retryAfterIfBlocked,
 } from './attempt-limits';
+import {
+  MAX_HASHING_ROUNDS,
+  sameCredentials,
+} from './hash-outside-transaction';
 
 export type SignInDeps = {
   store: ServerStore;
@@ -94,46 +98,71 @@ export const signIn = async (
   if (deviceName === null) return { kind: 'invalidDeviceName' };
   const keys = attemptKeys(crypto.sha256Hex, email, request.clientAddress);
 
-  return store.run(async (repos): Promise<SignInOutcome> => {
-    const nowMs = clock.nowMs();
-    await pruneAttempts(repos.authAttempts, nowMs);
+  for (let round = 0; round < MAX_HASHING_ROUNDS; round++) {
+    // Short read: the limit and the account. Nothing slow runs while the store is held.
+    const read = await store.run(async (repos) => {
+      await pruneAttempts(repos.authAttempts, clock.nowMs());
+      return {
+        wait: await retryAfterIfBlocked(
+          repos.authAttempts,
+          'signIn',
+          keys,
+          clock.nowMs(),
+        ),
+        account: await repos.accounts.findByEmail(email),
+      };
+    });
+    if (read.wait !== null) {
+      return { kind: 'blocked', retryAfterSeconds: read.wait };
+    }
 
-    const wait = await retryAfterIfBlocked(
-      repos.authAttempts,
-      'signIn',
-      keys,
-      nowMs,
-    );
-    if (wait !== null) return { kind: 'blocked', retryAfterSeconds: wait };
-
-    const account = await repos.accounts.findByEmail(email);
-    // Both checks always run, against a dummy hash when there is nothing to compare, so an unknown
-    // address costs what a known one does.
+    // Both checks always run, against a dummy hash when there is nothing to compare, so an
+    // unknown address costs what a known one does.
     const currentMatches = await hasher.verify(
       request.password,
-      account?.passwordHash ?? null,
+      read.account?.passwordHash ?? null,
     );
     const temporaryMatches = await hasher.verify(
       normalizeTemporaryPassword(request.password),
-      account?.temporaryPasswordHash ?? null,
+      read.account?.temporaryPasswordHash ?? null,
     );
 
-    if (account === null || account.email === null) {
-      await recordAttempt(repos.authAttempts, 'signIn', keys, nowMs);
-      return { kind: 'invalid' };
-    }
-    const known = { ...account, email: account.email };
+    const outcome = await store.run(
+      async (repos): Promise<SignInOutcome | null> => {
+        const nowMs = clock.nowMs();
+        const wait = await retryAfterIfBlocked(
+          repos.authAttempts,
+          'signIn',
+          keys,
+          nowMs,
+        );
+        if (wait !== null) return { kind: 'blocked', retryAfterSeconds: wait };
 
-    if (currentMatches) {
-      if (account.suspendedAt !== null) return { kind: 'suspended' };
-      return createSignedInDevice(deps, repos, known, deviceName);
-    }
-    if (temporaryMatches) {
-      if (isTemporaryExpired(account, nowMs)) return { kind: 'expired' };
-      if (account.suspendedAt !== null) return { kind: 'suspended' };
-      return { kind: 'passwordChangeRequired' };
-    }
-    await recordAttempt(repos.authAttempts, 'signIn', keys, nowMs);
-    return { kind: 'invalid' };
-  });
+        const account = await repos.accounts.findByEmail(email);
+        // Changed while hashing: the answers above may be stale, so read again.
+        if (!sameCredentials(read.account, account)) return null;
+
+        if (account === null || account.email === null) {
+          await recordAttempt(repos.authAttempts, 'signIn', keys, nowMs);
+          return { kind: 'invalid' };
+        }
+        const known = { ...account, email: account.email };
+
+        if (currentMatches) {
+          if (account.suspendedAt !== null) return { kind: 'suspended' };
+          return createSignedInDevice(deps, repos, known, deviceName);
+        }
+        if (temporaryMatches) {
+          if (isTemporaryExpired(account, nowMs)) return { kind: 'expired' };
+          if (account.suspendedAt !== null) return { kind: 'suspended' };
+          return { kind: 'passwordChangeRequired' };
+        }
+        await recordAttempt(repos.authAttempts, 'signIn', keys, nowMs);
+        return { kind: 'invalid' };
+      },
+    );
+    if (outcome !== null) return outcome;
+  }
+  // The account kept changing under us: refuse without counting an attempt.
+  return { kind: 'invalid' };
 };
