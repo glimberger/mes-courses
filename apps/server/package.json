@@ -9,20 +9,25 @@
     "dev": "MES_COURSES_DB=.data/mes-courses.db tsx watch --clear-screen=false src/composition/main.ts",
     "build": "yarn workspace @mes-courses/sync-core build && tsc -p tsconfig.json",
     "start": "node --conditions=production dist/composition/main.js",
-    "pairing-code": "tsx src/composition/pairing-code.ts",
-    "pairing-code:dev": "MES_COURSES_DB=.data/mes-courses.db tsx src/composition/pairing-code.ts",
+    "create-admin": "node dist/composition/create-admin.js",
+    "create-admin:dev": "MES_COURSES_DB=.data/mes-courses.db tsx src/composition/create-admin.ts",
+    "set-password": "node dist/composition/set-password.js",
     "test": "jest --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@mes-courses/sync-core": "workspace:*",
     "@sentry/node": "^11.5.0",
-    "fastify": "5"
+    "fastify": "5",
+    "nodemailer": "^10.1.0"
   },
   "devDependencies": {
     "@types/jest": "^30",
     "@types/node": "^24",
+    "@types/nodemailer": "^8.0.2",
+    "@types/smtp-server": "^3.5.13",
     "jest": "^30",
+    "smtp-server": "^3.19.21",
     "ts-jest": "^29",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3"

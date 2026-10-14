@@ -91,6 +91,21 @@ describe('createSentryErrorReporter', () => {
       expect(JSON.stringify(sent)).not.toMatch(/Lait|secret/);
     });
 
+    it('004 R10 removes addresses from the message, the exception values and the tag values', async () => {
+      const sent = await send({
+        type: undefined,
+        message: 'failed for a@b.fr',
+        exception: { values: [{ value: 'boom for c@d.fr' }] },
+        tags: { route: 'GET /v1/x?e=e%40f.fr', operation: 'sync' },
+      });
+
+      expect(JSON.stringify(sent)).not.toMatch(/@|%40/);
+      expect(sent?.tags).toEqual({
+        route: 'GET /v1/x?e=[email]',
+        operation: 'sync',
+      });
+    });
+
     it('keeps an event that has no request', async () => {
       const event: ErrorEvent = { type: undefined, message: 'boom' };
 
@@ -110,6 +125,34 @@ describe('createSentryErrorReporter', () => {
       expect(captureException).toHaveBeenCalledWith(error, {
         tags: { operation: 'sync', route: 'POST /v1/sync' },
       });
+    });
+
+    it('004 R10 sends the opaque account id as the only identifier', () => {
+      const error = new Error('boom');
+
+      reporter().report(error, {
+        operation: 'inviteAccount',
+        route: 'POST /v1/admin/accounts',
+        accountId: 'acc-1',
+      });
+
+      expect(captureException).toHaveBeenCalledWith(error, {
+        tags: {
+          operation: 'inviteAccount',
+          route: 'POST /v1/admin/accounts',
+          accountId: 'acc-1',
+        },
+      });
+    });
+
+    it('004 R10 removes an address from the error before sending it', () => {
+      reporter().report(new Error('mail to marie@example.org failed'), {
+        operation: 'a',
+        route: 'b',
+      });
+
+      const [sent] = captureException.mock.calls[0] ?? [];
+      expect((sent as Error).message).toBe('mail to [email] failed');
     });
 
     it('never throws', () => {

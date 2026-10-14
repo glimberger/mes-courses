@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-native';
 import type { ServerRow } from '@mes-courses/sync-core';
 
 import type { ArticleId } from '../../../domain/article';
+import { ok } from '../../../domain/result';
 import { fixture } from '../testing/fixtures';
 import {
   OTHER_DEVICE_HLC,
@@ -42,6 +43,26 @@ export const StorageFull: Story = {
       seed: fixture,
       failingWith: { toggleItemInCart: 'storageFull' },
       prepare: tickLait,
+    },
+  },
+};
+
+const changePassword: StoryScenario['prepare'] = async (store) => {
+  await store.changePassword(
+    'mot de passe actuel',
+    'nouveau mot de passe',
+    'nouveau mot de passe',
+  );
+};
+
+/** The person changed their password (US6-2). */
+export const PasswordChanged: Story = {
+  parameters: {
+    scenario: {
+      seed: fixture,
+      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      accountServer: { changePassword: async () => ok(undefined) },
+      prepare: changePassword,
     },
   },
 };

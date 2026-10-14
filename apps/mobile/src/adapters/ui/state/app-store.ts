@@ -20,6 +20,10 @@ import {
   createEditListActions,
   type EditListActions,
 } from './edit-list-actions';
+import {
+  createAccountsActions,
+  type AccountsActions,
+} from './accounts-actions';
 import { createListsActions, type ListsActions } from './lists-actions';
 import { createSyncActions, type SyncActions } from './sync-actions';
 import type {
@@ -49,7 +53,8 @@ export type AppState = StoreCore &
   ListsActions &
   CategoriesActions &
   ArticlesActions &
-  SyncActions;
+  SyncActions &
+  AccountsActions;
 
 export type AppStore = StoreApi<AppState>;
 
@@ -248,6 +253,7 @@ export const createAppStoreWith = <Actions extends object>(
       pendingUndo: null,
       sync: {
         connection: 'notConnected',
+        signedOutReason: null,
         status: 'saved',
         pendingCount: 0,
         lastSyncAt: null,
@@ -276,5 +282,6 @@ export const createAppStore = (deps: AppStoreDeps): AppStore =>
       ...createCategoriesActions(kit),
       ...createArticlesActions(kit),
       ...createSyncActions(kit),
+      ...createAccountsActions(kit),
     };
   });

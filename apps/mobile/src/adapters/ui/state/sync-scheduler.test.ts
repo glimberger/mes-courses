@@ -17,7 +17,7 @@ describe('sync scheduler', () => {
   let cycles: number;
   let active: number;
   let maxActive: number;
-  let outcomes: { failed: boolean }[];
+  let outcomes: { failed: boolean; slow?: boolean }[];
   let release: (() => void) | undefined;
   let hold: boolean;
   let scheduler: SyncScheduler;
@@ -214,6 +214,26 @@ describe('sync scheduler', () => {
     }
 
     expect(gaps).toEqual([10, 20, 40, 80, 160, 300, 300, 300]);
+  });
+
+  it('004 US5-2 waits 5 min between cycles while the account is suspended, then returns to 5 s', async () => {
+    outcomes = [
+      { failed: false, slow: true },
+      { failed: false, slow: true },
+      { failed: false },
+    ];
+    scheduler.start();
+    await advance(0);
+    expect(cycles).toBe(1);
+
+    await advance(299 * SECOND);
+    expect(cycles).toBe(1);
+    await advance(SECOND);
+    expect(cycles).toBe(2);
+    await advance(300 * SECOND);
+    expect(cycles).toBe(3);
+    await advance(5 * SECOND);
+    expect(cycles).toBe(4);
   });
 
   it('resets the delay to 5 s after a success', async () => {

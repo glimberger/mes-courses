@@ -1,5 +1,27 @@
+import type { AccountServer } from '../../application/ports/account-server';
+import type {
+  AdminServer,
+  Forbidden,
+} from '../../application/ports/admin-server';
+import {
+  createSuspendAccount,
+  type SuspendAccountError,
+} from '../../application/use-cases/suspend-account';
+import {
+  createReactivateAccount,
+  type ReactivateAccountError,
+} from '../../application/use-cases/reactivate-account';
+import {
+  createResendCredentials,
+  type ResendCredentialsError,
+} from '../../application/use-cases/resend-credentials';
+import {
+  createDeleteAccountAsAdmin,
+  type DeleteAccountAsAdminError,
+} from '../../application/use-cases/delete-account-as-admin';
 import type { Clock } from '../../application/ports/clock';
 import type { CredentialStore } from '../../application/ports/credential-store';
+import type { LocalDataEraser } from '../../application/ports/local-data-eraser';
 import type { IdGenerator } from '../../application/ports/id-generator';
 import type {
   DeviceNotFound,
@@ -7,6 +29,20 @@ import type {
   SyncServer,
 } from '../../application/ports/sync-server';
 import type { UnitOfWork } from '../../application/ports/unit-of-work';
+import {
+  createGetAccountSettings,
+  type AccountSettings,
+} from '../../application/use-cases/get-account-settings';
+import {
+  createRequestPasswordReset,
+  type RequestPasswordResetError,
+} from '../../application/use-cases/request-password-reset';
+import {
+  createInviteAccount,
+  type InviteAccountError,
+} from '../../application/use-cases/invite-account';
+import { createAcknowledgeSignedOut } from '../../application/use-cases/acknowledge-signed-out';
+import { createListAccounts } from '../../application/use-cases/list-accounts';
 import { createAddArticleToList } from '../../application/use-cases/add-article-to-list';
 import {
   createChangeServerUrl,
@@ -15,14 +51,26 @@ import {
 import { createChangeItemQuantity } from '../../application/use-cases/change-item-quantity';
 import { createCreateArticleAndAddToList } from '../../application/use-cases/create-article-and-add-to-list';
 import {
-  createConnectToServer,
-  type ConnectError,
-} from '../../application/use-cases/connect-to-server';
+  createSignIn,
+  type SignInError,
+  type SignInResult,
+} from '../../application/use-cases/sign-in';
+import {
+  createChooseInitialPassword,
+  type ChooseInitialPasswordError,
+} from '../../application/use-cases/choose-initial-password';
 import { createCreateCategory } from '../../application/use-cases/create-category';
 import { createCreateList } from '../../application/use-cases/create-list';
-import { createCreatePairingCode } from '../../application/use-cases/create-pairing-code';
 import { createDeleteArticle } from '../../application/use-cases/delete-article';
-import { createDisconnect } from '../../application/use-cases/disconnect';
+import {
+  createChangePassword,
+  type ChangePasswordError,
+} from '../../application/use-cases/change-password';
+import {
+  createDeleteMyAccount,
+  type DeleteMyAccountError,
+} from '../../application/use-cases/delete-my-account';
+import { createSignOut } from '../../application/use-cases/sign-out';
 import { createEditArticle } from '../../application/use-cases/edit-article';
 import { createFinishShopping } from '../../application/use-cases/finish-shopping';
 import { createGetArticleUsage } from '../../application/use-cases/get-article-usage';
@@ -61,7 +109,7 @@ import type {
   ArticleUsage,
   DeletedArticle,
 } from '../../domain/article';
-import type { PairingCode } from '@mes-courses/sync-core';
+import type { AccountSummary } from '@mes-courses/sync-core';
 import type { CatalogView } from '../../domain/catalog-view';
 import type {
   Category,
@@ -155,15 +203,27 @@ export type UseCases = {
   ) => Promise<
     Result<{ categoryId: CategoryId }, NameError | NameAlreadyUsed<Category>>
   >;
-  connectToServer: (
+  signIn: (
     url: string,
-    code: string,
+    email: string,
+    password: string,
     deviceName: string,
-  ) => Promise<Result<void, ConnectError>>;
+  ) => Promise<Result<SignInResult, SignInError>>;
+  chooseInitialPassword: (
+    url: string,
+    email: string,
+    temporaryPassword: string,
+    newPassword: string,
+    confirmation: string,
+    deviceName: string,
+  ) => Promise<Result<void, ChooseInitialPasswordError>>;
+  requestPasswordReset: (
+    url: string,
+    email: string,
+  ) => Promise<Result<void, RequestPasswordResetError>>;
   synchronize: () => Promise<SyncResult>;
   releaseHeldChanges: (undoId: string) => Promise<void>;
   getSyncInfo: () => Promise<SyncInfo>;
-  createPairingCode: () => Promise<Result<PairingCode, SyncFailure>>;
   listDevices: () => Promise<Result<DeviceInfo[], SyncFailure>>;
   renameDevice: (
     id: string,
@@ -172,8 +232,34 @@ export type UseCases = {
   revokeDevice: (
     id: string,
   ) => Promise<Result<void, SyncFailure | DeviceNotFound>>;
-  disconnect: () => Promise<Result<void, never>>;
+  signOut: () => Promise<Result<void, never>>;
+  changePassword: (
+    current: string,
+    next: string,
+    confirmation: string,
+  ) => Promise<Result<void, ChangePasswordError>>;
+  deleteMyAccount: (
+    password: string,
+  ) => Promise<Result<void, DeleteMyAccountError>>;
   changeServerUrl: (url: string) => Promise<Result<void, ChangeServerUrlError>>;
+  getAccountSettings: () => Promise<AccountSettings>;
+  listAccounts: () => Promise<
+    Result<AccountSummary[], SyncFailure | Forbidden>
+  >;
+  inviteAccount: (
+    email: string,
+  ) => Promise<Result<AccountSummary, InviteAccountError>>;
+  acknowledgeSignedOut: () => Promise<Result<void, never>>;
+  suspendAccount: (id: string) => Promise<Result<void, SuspendAccountError>>;
+  reactivateAccount: (
+    id: string,
+  ) => Promise<Result<void, ReactivateAccountError>>;
+  resendCredentials: (
+    id: string,
+  ) => Promise<Result<void, ResendCredentialsError>>;
+  deleteAccountAsAdmin: (
+    id: string,
+  ) => Promise<Result<void, DeleteAccountAsAdminError>>;
 };
 
 /** The name of one use case. */
@@ -188,7 +274,10 @@ export const createUseCases = (ports: {
   ids: IdGenerator;
   clock: Clock;
   syncServer: SyncServer;
+  accountServer: AccountServer;
+  adminServer: AdminServer;
   credentials: CredentialStore;
+  localDataEraser: LocalDataEraser;
   /** Accepts `http://` server addresses; development builds only. */
   allowInsecure?: boolean;
 }): UseCases => ({
@@ -211,14 +300,25 @@ export const createUseCases = (ports: {
   createList: createCreateList(ports),
   setCurrentList: createSetCurrentList(ports),
   createCategory: createCreateCategory(ports),
-  connectToServer: createConnectToServer(ports),
+  signIn: createSignIn(ports),
+  chooseInitialPassword: createChooseInitialPassword(ports),
+  requestPasswordReset: createRequestPasswordReset(ports),
   synchronize: createSynchronize(ports),
   releaseHeldChanges: createReleaseHeldChanges(ports),
   getSyncInfo: createGetSyncInfo(ports),
-  createPairingCode: createCreatePairingCode(ports),
   listDevices: createListDevices(ports),
   renameDevice: createRenameDevice(ports),
   revokeDevice: createRevokeDevice(ports),
-  disconnect: createDisconnect(ports),
+  signOut: createSignOut(ports),
+  changePassword: createChangePassword(ports),
+  deleteMyAccount: createDeleteMyAccount(ports),
   changeServerUrl: createChangeServerUrl(ports),
+  getAccountSettings: createGetAccountSettings(ports),
+  listAccounts: createListAccounts(ports),
+  inviteAccount: createInviteAccount(ports),
+  acknowledgeSignedOut: createAcknowledgeSignedOut(ports),
+  suspendAccount: createSuspendAccount(ports),
+  reactivateAccount: createReactivateAccount(ports),
+  resendCredentials: createResendCredentials(ports),
+  deleteAccountAsAdmin: createDeleteAccountAsAdmin(ports),
 });

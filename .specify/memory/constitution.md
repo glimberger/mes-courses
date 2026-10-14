@@ -4,7 +4,7 @@ Version change: 2.5.0 -> 2.6.0 (MINOR: materially expanded guidance on where Fre
 Modified principles: X (French Interface, No Internationalization): a message-delivering driven
   adapter, such as the server's email adapter, may hold the French text it sends
 Modified sections: none
-Migration note: no existing code changes; feature 004 puts its four French emails in the
+Migration note: no existing code changes; feature 004 puts its two French emails in the
   server's adapters/mail/ and relies on this clause
 Added/removed sections: none
 Deferred TODOs: none

@@ -10,31 +10,29 @@ export const systemRandom: Random = {
 
 /** No `0 O 1 I L`: they are confused when typed from a screen (research R11). */
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-const CODE_LENGTH = 8;
+const TEMPORARY_PASSWORD_LENGTH = 16;
 /** Bytes from this value up are skipped, so every character is equally likely. */
 const UNBIASED_LIMIT = 256 - (256 % ALPHABET.length);
 
-/** 8 characters from the alphabet, formatted `XXXX-XXXX`. */
-export const generatePairingCode = (random: Random): string => {
-  let code = '';
-  while (code.length < CODE_LENGTH) {
-    for (const byte of random.bytes(CODE_LENGTH - code.length)) {
-      if (byte < UNBIASED_LIMIT) code += ALPHABET[byte % ALPHABET.length];
+const randomCharacters = (random: Random, length: number): string => {
+  let text = '';
+  while (text.length < length) {
+    for (const byte of random.bytes(length - text.length)) {
+      if (byte < UNBIASED_LIMIT) text += ALPHABET[byte % ALPHABET.length];
     }
   }
-  return `${code.slice(0, 4)}-${code.slice(4)}`;
+  return text;
 };
 
 /**
- * Upper case, without spaces or dashes, then `XXXX-XXXX` when it has 8 characters. Any other
- * length is returned upper-cased and stripped but not dashed, so it can never match a stored code.
+ * A temporary password (004 research R3): 16 characters from the same unambiguous alphabet, about
+ * 79 bits, shown `XXXX-XXXX-XXXX-XXXX`. Typed back in any case, with or without dashes.
  */
-export const normalizeCode = (input: string): string => {
-  const compact = input.toUpperCase().replace(/[\s-]/g, '');
-  return compact.length === CODE_LENGTH
-    ? `${compact.slice(0, 4)}-${compact.slice(4)}`
-    : compact;
-};
+export const generateTemporaryPassword = (random: Random): string =>
+  randomCharacters(random, TEMPORARY_PASSWORD_LENGTH).replace(
+    /(.{4})(?=.)/g,
+    '$1-',
+  );
 
 /** A device credential: 32 random bytes (256 bits) in base64url. */
 export const generateCredential = (random: Random): string =>
@@ -46,8 +44,7 @@ export const sha256Hex = (input: string): string =>
 export const systemIdGenerator: IdGenerator = { next: () => randomUUID() };
 
 export const createPairingCrypto = (random: Random): PairingCrypto => ({
-  generateCode: () => generatePairingCode(random),
-  normalizeCode,
+  generateTemporaryPassword: () => generateTemporaryPassword(random),
   generateCredential: () => generateCredential(random),
   sha256Hex,
 });

@@ -362,6 +362,11 @@ export class InMemoryRepositories implements Repositories {
     },
   };
 
+  /** Forgets everything, as the SQLite eraser does: a first launch again. */
+  clear(): void {
+    this.state = emptyState();
+  }
+
   /** A copy of everything stored, to give back to `restore`. */
   snapshot(): State {
     return copyState(this.state);
@@ -396,7 +401,7 @@ const guarded = <R extends object>(repository: R, isOpen: () => boolean): R =>
 export class InMemoryUnitOfWork implements UnitOfWork {
   private queue: Promise<unknown> = Promise.resolve();
 
-  constructor(private readonly repositories: InMemoryRepositories) {}
+  constructor(readonly repositories: InMemoryRepositories) {}
 
   run<T>(work: (repos: Repositories) => Promise<T>): Promise<T> {
     const result = this.queue.then(() => this.runNow(work));

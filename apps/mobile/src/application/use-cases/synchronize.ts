@@ -16,12 +16,18 @@ import type { RemoteEffects } from '../ports/pulled-rows';
 import type { Connection, SyncServer } from '../ports/sync-server';
 import type { Repositories, UnitOfWork } from '../ports/unit-of-work';
 
+/** Why a device is signed out by the server (data-model.md, connection state). */
+export type SignedOutReason = 'revoked' | 'accountDeleted';
+
 /** How a cycle ended (research R9, R14). */
 export type SyncOutcome =
   | { type: 'saved' }
   | { type: 'waiting' }
   | { type: 'failed'; reason: 'ServerError' | 'UntrustedServer' }
-  | { type: 'disconnectedByServer' }
+  /** The server refuses this device for good; the data stays until `acknowledgeSignedOut`. */
+  | { type: 'signedOut'; reason: SignedOutReason }
+  /** The account is suspended: the data stays, the edits queue, the sync keeps trying slowly. */
+  | { type: 'suspended' }
   | { type: 'updateRequired' }
   | { type: 'notConnected' };
 
@@ -128,7 +134,10 @@ export const createSynchronize =
       return finish({ type: 'notConnected' });
     }
     const credential = await credentials.read();
-    if (credential === null) return finish({ type: 'disconnectedByServer' });
+    // A phone restored from a backup has the address but no credential (FR-018b).
+    if (credential === null) {
+      return finish({ type: 'signedOut', reason: 'revoked' });
+    }
     const conn: Connection = {
       url: first.serverUrl,
       deviceId: first.deviceId,
@@ -166,7 +175,11 @@ export const createSynchronize =
           case 'Offline':
             return finish({ type: 'waiting' });
           case 'DeviceNotAuthorized':
-            return finish({ type: 'disconnectedByServer' });
+            return finish({ type: 'signedOut', reason: 'revoked' });
+          case 'AccountDeleted':
+            return finish({ type: 'signedOut', reason: 'accountDeleted' });
+          case 'AccountSuspended':
+            return finish({ type: 'suspended' });
           case 'UpdateRequired':
             return finish({ type: 'updateRequired' });
           case 'UntrustedServer':
@@ -177,7 +190,7 @@ export const createSynchronize =
       }
       const response: SyncResponse = answer.value;
       if (state.serverId !== null && response.serverId !== state.serverId) {
-        return finish({ type: 'disconnectedByServer' });
+        return finish({ type: 'signedOut', reason: 'revoked' });
       }
 
       snapshot = snapshot.slice(fromSnapshot.length);
@@ -204,6 +217,8 @@ export const createSynchronize =
         }
         await repos.syncState.save({
           ...state,
+          // The first response that names the account teaches it to a device paired before 004.
+          accountId: state.accountId ?? response.accountId ?? null,
           lastSeq: response.seq,
           maxHlc: receiveHlc(
             { ...state.maxHlc, deviceId },

@@ -16,6 +16,7 @@ export const syncStateRepositoryContract = (
       serverUrl: 'https://courses.example.org',
       serverId: 'server-1',
       deviceId: 'device-1',
+      accountId: 'account-1',
       lastSeq: 42,
       maxHlc: { wallMs: 9_000, counter: 3, deviceId: 'device-1' },
       lastSyncAt: '2026-10-10T08:00:00.000Z',
@@ -30,12 +31,21 @@ export const syncStateRepositoryContract = (
         serverUrl: null,
         serverId: null,
         deviceId: null,
+        accountId: null,
         lastSeq: 0,
         lastSyncAt: null,
         snapshotDone: false,
       });
       expect(state.maxHlc.wallMs).toBe(minHlc('').wallMs);
       expect(state.maxHlc.counter).toBe(0);
+    });
+
+    it('004 keeps the account the replica belongs to, and null before any sign-in', async () => {
+      await repos.syncState.save(connected({ accountId: null }));
+      expect((await repos.syncState.get()).accountId).toBeNull();
+
+      await repos.syncState.save(connected({ accountId: 'account-9' }));
+      expect((await repos.syncState.get()).accountId).toBe('account-9');
     });
 
     it('gives back what was saved', async () => {

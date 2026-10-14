@@ -44,14 +44,14 @@ describe('getSyncInfo', () => {
     });
   });
 
-  it('FR-018b reports disconnectedByServer when the credential is gone', async () => {
+  it('FR-018b reports signedOut when the credential is gone', async () => {
     await connect();
 
     expect(await getSyncInfo()).toEqual({
       serverUrl: 'https://courses.example.fr',
       lastSyncAt: null,
       pendingCount: 0,
-      connection: 'disconnectedByServer',
+      connection: 'signedOut',
     });
   });
 });

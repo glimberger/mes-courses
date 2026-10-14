@@ -500,6 +500,42 @@ describe('createSentryErrorReporter', () => {
     expect(serialized).not.toContain('Marie');
   });
 
+  describe('004 R10 no email address leaves the app', () => {
+    it('removes an address from the error handed to the SDK: in the message, in a URL and in a nested cause', () => {
+      const { reporter } = start();
+      const error = new Error('GET https://x.fr/?e=marie@example.org failed', {
+        cause: new Error('for paul@example.org'),
+      });
+
+      reporter.report(error, { operation: 'signIn' });
+
+      const [sent] = captureException.mock.calls[0] ?? [];
+      const text = JSON.stringify([
+        (sent as Error).message,
+        ((sent as Error).cause as Error).message,
+      ]);
+      expect(text).not.toMatch(/@/);
+      expect(text).toContain('[email]');
+    });
+
+    it('removes an address from a tag value', () => {
+      const { beforeSend } = start();
+
+      const sent = beforeSend(
+        event({
+          tags: { operation: 'sign-in-marie@example.org', screen: 'SignIn' },
+        }),
+      );
+
+      expect(JSON.stringify(sent)).not.toContain('@');
+      expect(sent?.tags?.operation).toBe('[email]');
+    });
+
+    it('keeps sendDefaultPii off', () => {
+      expect(start().options.sendDefaultPii).toBe(false);
+    });
+  });
+
   it('crashNatively crashes in native code', () => {
     const { reporter } = start();
 

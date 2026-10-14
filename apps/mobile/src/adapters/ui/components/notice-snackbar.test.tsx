@@ -39,10 +39,8 @@ describe('NoticeSnackbar', () => {
       'Espace de stockage insuffisant. Libérez de la place sur votre téléphone.',
     ],
     [{ type: 'articleAdded', name: 'Lait' }, '« Lait » ajouté'],
-    [
-      { type: 'deviceConnected' },
-      'Appareil connecté. Synchronisation en cours…',
-    ],
+    [{ type: 'signedIn' }, 'Connecté. Synchronisation en cours…'],
+    [{ type: 'passwordChosen' }, 'Mot de passe enregistré. Bienvenue !'],
   ] as [Notice, string][])(
     'FR-038 shows the %o notice as "%s" and announces it as it appears',
     async (notice, text) => {

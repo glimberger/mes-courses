@@ -27,5 +27,20 @@ export const SyncAnnouncer = () => {
       wasFailed.current = false;
     }
   }, [connected, status]);
+  const connection = useAppStore((state) => state.sync.connection);
+  const reason = useAppStore((state) => state.sync.signedOutReason);
+  useEffect(() => {
+    if (connection === 'suspended') {
+      AccessibilityInfo.announceForAccessibility(
+        'Votre compte est suspendu. Vos listes restent sur cet appareil.',
+      );
+    } else if (connection === 'signedOut') {
+      AccessibilityInfo.announceForAccessibility(
+        reason === 'accountDeleted'
+          ? 'Ce compte a été supprimé.'
+          : "Cet appareil n'est plus autorisé.",
+      );
+    }
+  }, [connection, reason]);
   return null;
 };

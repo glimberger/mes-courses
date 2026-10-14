@@ -1,5 +1,9 @@
+import { seed } from '../seed';
+import { eraserOf } from '../../../application/testing/in-memory-local-data-eraser';
 import { InMemoryCredentialStore } from '../../../application/testing/in-memory-credential-store';
 import { OfflineSyncServer } from '../../../application/testing/offline-sync-server';
+import { OfflineAccountServer } from '../../../application/testing/offline-account-server';
+import { OfflineAdminServer } from '../../../application/testing/offline-admin-server';
 import { StorageFull } from '../../../application/ports/storage-full';
 import {
   InMemoryRepositories,
@@ -54,12 +58,16 @@ const offer: PendingUndo = {
 const buildStore = () => {
   const errorReporter = new RecordingErrorReporter();
   const unitOfWork = new InMemoryUnitOfWork(new InMemoryRepositories());
+  const ids = new SequentialIdGenerator();
   const useCases: UseCases = createUseCases({
     syncServer: new OfflineSyncServer(),
+    accountServer: new OfflineAccountServer(),
+    adminServer: new OfflineAdminServer(),
     credentials: new InMemoryCredentialStore(),
     unitOfWork,
-    ids: new SequentialIdGenerator(),
+    ids,
     clock: new FakeClock(),
+    localDataEraser: eraserOf(unitOfWork, ids, seed),
   });
   const getLists = jest.fn<Promise<ListSummary[]>, []>();
   const getCurrentList = jest.fn<Promise<CurrentListView>, []>();

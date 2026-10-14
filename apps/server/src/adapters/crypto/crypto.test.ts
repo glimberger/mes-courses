@@ -1,8 +1,7 @@
 import type { Random } from '../../application/ports/random';
 import {
   generateCredential,
-  generatePairingCode,
-  normalizeCode,
+  generateTemporaryPassword,
   sha256Hex,
   systemRandom,
 } from './crypto';
@@ -14,69 +13,6 @@ const fixedRandom = (...values: number[]): Random => {
     bytes: (length) => Uint8Array.from({ length }, () => values[index++] ?? 0),
   };
 };
-
-describe('generatePairingCode', () => {
-  it('is 8 characters formatted XXXX-XXXX', () => {
-    expect(generatePairingCode(systemRandom)).toMatch(
-      /^[A-Z2-9]{4}-[A-Z2-9]{4}$/,
-    );
-  });
-
-  it('never uses 0, O, 1, I or L, over many codes', () => {
-    for (let i = 0; i < 500; i++) {
-      expect(generatePairingCode(systemRandom)).not.toMatch(/[01OIL]/);
-    }
-  });
-
-  it('can produce every character of the alphabet', () => {
-    const seen = new Set<string>();
-    for (let i = 0; i < 2_000; i++) {
-      for (const char of generatePairingCode(systemRandom).replace('-', '')) {
-        seen.add(char);
-      }
-    }
-
-    expect(seen.size).toBe(31);
-  });
-
-  it('maps bytes to the alphabet in order', () => {
-    expect(generatePairingCode(fixedRandom(0, 1, 2, 3, 4, 5, 6, 7))).toBe(
-      'ABCD-EFGH',
-    );
-  });
-
-  it('skips bytes that would bias the choice', () => {
-    // 248 and above are rejected; 255 is skipped, 0 gives "A".
-    expect(
-      generatePairingCode(fixedRandom(255, 248, 0, 0, 0, 0, 0, 0, 0)),
-    ).toBe('AAAA-AAAA');
-  });
-});
-
-describe('normalizeCode', () => {
-  it('accepts lower case', () => {
-    expect(normalizeCode('abcd-ef23')).toBe('ABCD-EF23');
-  });
-
-  it('accepts a missing dash', () => {
-    expect(normalizeCode('ABCDEF23')).toBe('ABCD-EF23');
-  });
-
-  it('ignores spaces around and inside', () => {
-    expect(normalizeCode('  abcd ef23 ')).toBe('ABCD-EF23');
-  });
-
-  it('keeps a code of the wrong length as it is, without a dash added', () => {
-    expect(normalizeCode('abc')).toBe('ABC');
-    expect(normalizeCode('abcdef2345')).toBe('ABCDEF2345');
-  });
-
-  it('maps a generated code to itself', () => {
-    const code = generatePairingCode(systemRandom);
-
-    expect(normalizeCode(code)).toBe(code);
-  });
-});
 
 describe('generateCredential', () => {
   it('is 32 random bytes in base64url', () => {
@@ -105,5 +41,33 @@ describe('sha256Hex', () => {
     ['abc', 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'],
   ])('matches the known vector for %j', (input, expected) => {
     expect(sha256Hex(input)).toBe(expected);
+  });
+});
+
+describe('generateTemporaryPassword', () => {
+  it('004 R3 is 16 characters formatted XXXX-XXXX-XXXX-XXXX from the unambiguous alphabet', () => {
+    for (let i = 0; i < 200; i++) {
+      const password = generateTemporaryPassword(systemRandom);
+      expect(password).toMatch(/^[A-Z2-9]{4}(-[A-Z2-9]{4}){3}$/);
+      expect(password).not.toMatch(/[01OIL]/);
+    }
+  });
+
+  it('004 R3 never repeats over many passwords', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 1_000; i++) {
+      seen.add(generateTemporaryPassword(systemRandom));
+    }
+
+    expect(seen.size).toBe(1_000);
+  });
+
+  it('004 R3 skips the biased bytes, so each character is equally likely', () => {
+    const limit = 256 - (256 % 31);
+    const passwords = generateTemporaryPassword(
+      fixedRandom(limit, 255, ...Array.from({ length: 16 }, () => 0)),
+    );
+
+    expect(passwords).toBe('AAAA-AAAA-AAAA-AAAA');
   });
 });

@@ -1,3 +1,4 @@
+import type { PasswordProblem } from './account';
 import type { Hlc } from './hlc';
 
 export type EntityKind = 'category' | 'article' | 'list' | 'listItem';
@@ -60,6 +61,8 @@ export type ServerIdentity = {
   serverId: string;
   apiVersion: number;
   minAppVersion: string;
+  /** The caller's account, when authenticated or just signed in (004 research R9). */
+  accountId?: string;
 };
 
 export type HealthInfo = ServerIdentity;
@@ -99,8 +102,6 @@ export type DeviceSummary = {
   lastSyncAt: string | null;
 };
 
-export type PairingCode = { code: string; expiresAt: string };
-
 export const ERROR_CODES = {
   BadRequest: 400,
   DeviceNotAuthorized: 401,
@@ -108,10 +109,97 @@ export const ERROR_CODES = {
   UpdateRequired: 426,
   TooManyAttempts: 429,
   ServerError: 500,
-  /** Unknown, expired or used pairing code (claim route only). */
-  InvalidCode: 400,
+  InvalidCredentials: 401,
+  TemporaryPasswordExpired: 401,
+  AccountDeleted: 401,
+  AccountSuspended: 403,
+  Forbidden: 403,
+  InvalidEmail: 400,
+  InvalidPassword: 400,
+  InvalidDeviceName: 400,
+  AccountExists: 409,
+  LastAdministrator: 409,
+  NotInvited: 409,
+  MailFailed: 502,
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;
 
 export type ErrorBody = { error: ErrorCode };
+
+/** `InvalidPassword` says which rule the new password breaks. */
+export type InvalidPasswordBody = {
+  error: 'InvalidPassword';
+  problem: PasswordProblem;
+};
+
+// --- Accounts (feature 004) ---
+
+export type AccountRole = 'user' | 'administrator';
+
+/** Derived on the server, never stored. */
+export type AccountState = 'invited' | 'active' | 'suspended';
+
+/** One row of the administrator's list. */
+export type AccountSummary = {
+  id: string;
+  email: string;
+  role: AccountRole;
+  state: AccountState;
+  lastSyncAt: string | null;
+  /** State `invited` and the temporary password expired. */
+  invitationExpired: boolean;
+};
+
+/** What `GET /v1/account` and a sign-in return about the caller. */
+export type AccountInfo = { id: string; email: string; role: AccountRole };
+
+export type SignInRequest = {
+  email: string;
+  password: string;
+  deviceName: string;
+};
+
+export type SignedInResponse = Pairing & {
+  outcome: 'signedIn';
+  account: AccountInfo;
+  accountId: string;
+};
+
+export type PasswordChangeRequiredResponse = {
+  outcome: 'passwordChangeRequired';
+};
+
+export type SignInResponse = SignedInResponse | PasswordChangeRequiredResponse;
+
+export type ChoosePasswordRequest = {
+  email: string;
+  temporaryPassword: string;
+  newPassword: string;
+  deviceName: string;
+};
+
+export type ChoosePasswordResponse = SignedInResponse;
+
+export type PasswordResetRequest = { email: string };
+
+export type PasswordResetResponse = Record<string, never>;
+
+export type AccountResponse = ServerIdentity & { account: AccountInfo };
+
+export type ChangePasswordRequest = {
+  currentPassword: string;
+  newPassword: string;
+};
+
+export type DeleteAccountRequest = { password: string };
+
+export type AccountsListResponse = ServerIdentity & {
+  accounts: AccountSummary[];
+};
+
+export type InviteAccountRequest = { email: string };
+
+export type InviteAccountResponse = ServerIdentity & {
+  account: AccountSummary;
+};

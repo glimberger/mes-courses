@@ -20,7 +20,7 @@ const STORYBOOK_CONFIG = '^apps/mobile/\\.rnstorybook/';
 const TESTING_FOLDERS = `${MOBILE_SRC}/(adapters/ui|application)/testing/|^apps/mobile/test/`;
 const STORYBOOK_IMPORTERS = `${STORIES}|${STORYBOOK_CONFIG}|^apps/mobile/metro\\.config\\.js$|^apps/mobile/src/adapters/ui/stories\\.test\\.tsx$`;
 const TESTING_FILES = `${STORIES}|${TESTING_FOLDERS}`;
-const TESTING_IMPORTERS = `\\.test\\.tsx?$|${STORIES}|${STORYBOOK_CONFIG}|${TESTING_FOLDERS}`;
+const TESTING_IMPORTERS = `\\.test\\.tsx?$|${STORIES}|${STORYBOOK_CONFIG}|${TESTING_FOLDERS}|^tests/sync/src/testing/`;
 
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
@@ -119,6 +119,33 @@ module.exports = {
         pathNot: `${STORYBOOK_IMPORTERS}`,
       },
       to: { path: 'node_modules/(@storybook/|storybook/)' },
+    },
+    {
+      name: 'mail-libraries-only-in-the-mail-adapter',
+      severity: 'error',
+      comment:
+        'nodemailer and smtp-server are imported only under apps/server/src/adapters/mail/ and its tests (004 plan).',
+      from: { pathNot: `${SERVER_SRC}/adapters/mail/` },
+      to: { path: '(^|node_modules/)(nodemailer|smtp-server)(/|$)' },
+    },
+    {
+      name: 'server-domain-application-never-import-the-mail-adapter',
+      severity: 'error',
+      comment:
+        'The server domain and application layers reach mail through the Mailer port, never through adapters/mail.',
+      from: { path: `${SERVER_SRC}/(domain|application)/` },
+      to: { path: `${SERVER_SRC}/adapters/mail/` },
+    },
+    {
+      name: 'password-code-only-in-the-crypto-adapter',
+      severity: 'error',
+      comment:
+        'node:crypto (password hashing, tokens) is imported by the crypto adapter only; the sqlite migrations keep their existing randomUUID use.',
+      from: {
+        path: `${SERVER_SRC}/`,
+        pathNot: `${SERVER_SRC}/adapters/(crypto|sqlite)/`,
+      },
+      to: { path: '^(node:)?crypto$', dependencyTypes: ['core'] },
     },
     {
       name: 'testing-helpers-never-imported-by-production-code',

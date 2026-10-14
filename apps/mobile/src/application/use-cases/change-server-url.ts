@@ -5,7 +5,7 @@ import type {
   UntrustedServer,
 } from '../ports/sync-server';
 import type { UnitOfWork } from '../ports/unit-of-work';
-import type { InvalidUrl } from './connect-to-server';
+import type { InvalidUrl } from './store-signed-in-device';
 import { normalizeUrl } from './normalize-url';
 
 /** The server at the new address is not the one this device is paired with. */

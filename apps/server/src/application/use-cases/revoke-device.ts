@@ -7,12 +7,18 @@ import { NotFoundError } from './not-found';
  */
 export const revokeDevice = async (
   { store, clock }: DevicesDeps,
+  accountId: string,
   id: string,
 ): Promise<void> => {
   const at = new Date(clock.nowMs()).toISOString();
   await store.run(async ({ devices }) => {
-    const device = await devices.get(id);
-    if (device === null || device.revokedAt !== null) throw new NotFoundError();
+    // Only the caller's own devices: another account's id is an id that does not exist (R1).
+    const device = (await devices.forAccount(accountId)).find(
+      (candidate) => candidate.id === id,
+    );
+    if (device === undefined || device.revokedAt !== null) {
+      throw new NotFoundError();
+    }
     await devices.update({ ...device, revokedAt: at });
   });
 };

@@ -5,21 +5,57 @@ import { isBelow } from '../../domain/version';
 import { authenticate } from './auth';
 import type { AppDeps } from './deps';
 import { sendError } from './errors';
+import { registerAccountRoutes } from './routes/account';
+import { registerAdminRoutes } from './routes/admin';
+import { registerAuthRoutes } from './routes/auth';
 import { registerDeviceRoutes } from './routes/devices';
 import { registerHealthRoutes } from './routes/health';
-import { registerPairingRoutes } from './routes/pairing';
 import { registerSyncRoutes } from './routes/sync';
 
 const BODY_LIMIT = 1024 * 1024;
 
 export type { AppDeps } from './deps';
 
-export const buildApp = (deps: AppDeps): FastifyInstance => {
+export type AppOptions = {
+  /** Where Fastify's request log goes; tests give a sink to check what it holds (SC-008). */
+  logStream?: { write(line: string): void };
+};
+
+export const buildApp = (
+  deps: AppDeps,
+  { logStream }: AppOptions = {},
+): FastifyInstance => {
+  const logger = logStream
+    ? {
+        level: 'info',
+        stream: logStream,
+        // The method, the path and the status only: never the client address, host or headers.
+        serializers: {
+          req: (request: { method: string; url: string }) => ({
+            method: request.method,
+            url: request.url,
+          }),
+          res: (reply: { statusCode: number }) => ({
+            statusCode: reply.statusCode,
+          }),
+        },
+      }
+    : false;
   const app = Fastify({
     bodyLimit: BODY_LIMIT,
-    logger: false,
-    // Reject a wrong type or an unknown property instead of coercing or stripping it.
-    ajv: { customOptions: { coerceTypes: false, removeAdditional: false } },
+    logger,
+    // Only Caddy, on this machine, may name the client address (`X-Forwarded-For`); from anyone
+    // else the header is ignored, so the sign-in limits cannot be dodged by forging it.
+    trustProxy: '127.0.0.1',
+    // Reject a wrong type or an unknown property instead of coercing or stripping it. String
+    // lengths count UTF-16 units, as the contract says of the password fields.
+    ajv: {
+      customOptions: {
+        coerceTypes: false,
+        removeAdditional: false,
+        unicode: false,
+      },
+    },
   });
 
   let serverId: string | undefined;
@@ -33,10 +69,16 @@ export const buildApp = (deps: AppDeps): FastifyInstance => {
   };
 
   // Every JSON object body carries the server's identity (the app detects a reset server with it).
-  app.addHook('onSend', async (_request, _reply, payload) => {
+  app.addHook('onSend', async (request, _reply, payload) => {
     if (typeof payload !== 'string' || !payload.startsWith('{')) return payload;
     try {
-      return JSON.stringify({ ...JSON.parse(payload), ...(await identity()) });
+      // `accountId` for an authenticated caller (004 research R9); a sign-in body carries its own.
+      const accountId = request.device?.accountId;
+      return JSON.stringify({
+        ...(accountId === undefined ? {} : { accountId }),
+        ...JSON.parse(payload),
+        ...(await identity()),
+      });
     } catch (error) {
       // A failing lookup must not turn a clean error body into a broken response.
       deps.errorReporter.report(error, {
@@ -58,9 +100,25 @@ export const buildApp = (deps: AppDeps): FastifyInstance => {
       return sendError(reply, 'UpdateRequired');
     }
     if (request.routeOptions.config.public === true) return;
-    const device = await authenticate(deps, request.headers.authorization);
-    if (device === null) return sendError(reply, 'DeviceNotAuthorized');
-    request.device = device;
+    const result = await authenticate(deps, request.headers.authorization);
+    if (result.kind === 'notAuthorized') {
+      return sendError(reply, 'DeviceNotAuthorized');
+    }
+    if (result.kind === 'accountDeleted') {
+      return sendError(reply, 'AccountDeleted');
+    }
+    if (result.kind === 'suspended') {
+      return sendError(reply, 'AccountSuspended');
+    }
+    // The role is the server's to decide, before the route reads anything (US1-5).
+    if (
+      request.routeOptions.config.administrator === true &&
+      result.account.role !== 'administrator'
+    ) {
+      return sendError(reply, 'Forbidden');
+    }
+    request.device = result.device;
+    request.account = result.account;
   });
 
   app.setNotFoundHandler((_request, reply) => sendError(reply, 'NotFound'));
@@ -82,8 +140,10 @@ export const buildApp = (deps: AppDeps): FastifyInstance => {
   });
 
   registerHealthRoutes(app);
+  registerAccountRoutes(app, deps);
+  registerAdminRoutes(app, deps);
+  registerAuthRoutes(app, deps);
   registerDeviceRoutes(app, deps);
-  registerPairingRoutes(app, deps);
   registerSyncRoutes(app, deps);
 
   return app;

@@ -1,12 +1,45 @@
 import type { CategoryId } from '../../domain/category';
 import type { ListId } from '../../domain/shopping-list';
 import type { IdGenerator } from '../ports/id-generator';
-import type { UnitOfWork } from '../ports/unit-of-work';
+import type { Repositories, UnitOfWork } from '../ports/unit-of-work';
 
 /** The first launch's content; its French names come from the UI adapter (Principle X). */
 export type Seed = {
   categoryNames: readonly string[];
   firstListName: string;
+};
+
+/**
+ * Creates the categories in the given order when the store has none, then the first list, and
+ * makes it current, recording each as a seed change. Used on a first launch and again by the local
+ * data eraser (004 research R11).
+ */
+export const seedStore = async (
+  repos: Repositories,
+  ids: IdGenerator,
+  seed: Seed,
+): Promise<void> => {
+  if ((await repos.categories.nextPosition()) === 0) {
+    for (const [position, name] of seed.categoryNames.entries()) {
+      const id = ids.next() as CategoryId;
+      await repos.categories.add({ id, name, position });
+      await repos.changes.record(
+        'category',
+        id,
+        { name, position },
+        { seed: true },
+      );
+    }
+  }
+  const listId = ids.next() as ListId;
+  await repos.lists.add({ id: listId, name: seed.firstListName });
+  await repos.changes.record(
+    'list',
+    listId,
+    { name: seed.firstListName },
+    { seed: true },
+  );
+  await repos.appState.setCurrentListId(listId);
 };
 
 /**
@@ -22,26 +55,5 @@ export const createInitializeStore =
       // A deletion left held by a killed app becomes final (research R10).
       await repos.changes.releaseAll();
       if ((await repos.lists.count()) > 0) return;
-
-      if ((await repos.categories.nextPosition()) === 0) {
-        for (const [position, name] of seed.categoryNames.entries()) {
-          const id = ids.next() as CategoryId;
-          await repos.categories.add({ id, name, position });
-          await repos.changes.record(
-            'category',
-            id,
-            { name, position },
-            { seed: true },
-          );
-        }
-      }
-      const listId = ids.next() as ListId;
-      await repos.lists.add({ id: listId, name: seed.firstListName });
-      await repos.changes.record(
-        'list',
-        listId,
-        { name: seed.firstListName },
-        { seed: true },
-      );
-      await repos.appState.setCurrentListId(listId);
+      await seedStore(repos, ids, seed);
     });

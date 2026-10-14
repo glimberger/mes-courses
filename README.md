@@ -11,8 +11,10 @@ them all for next time. A removed item can be put back with "Annuler". The secon
 [002 manage articles](specs/002-manage-articles/spec.md), lets you rename an article, change its
 category or delete it from the catalog (it then leaves every list, and "Annuler" brings it back
 with its quantities). The third, [003 server synchronization](specs/003-server-sync/spec.md),
-keeps the data on a home server (a Raspberry Pi behind the Internet box) and on every paired
-phone and tablet, which converge on their own. Everything still works with no network: each
+keeps the data on a home server (a Raspberry Pi behind the Internet box) and on every phone and
+tablet signed in to the same account, which converge on their own. The fourth,
+[004 multi-user accounts](specs/004-multi-user/spec.md), gives each person an account on that
+server, with their own data and devices. Everything still works with no network: each
 change is saved on the device first and reaches the server when it can.
 Its governing principles are in [`.specify/memory/constitution.md`](.specify/memory/constitution.md),
 its lasting technical decisions are in [`docs/adr/`](docs/adr/README.md),
@@ -173,13 +175,16 @@ From the repository root:
 
 ```sh
 yarn workspace @mes-courses/server dev           # http://127.0.0.1:3000, database in apps/server/.data/
-yarn workspace @mes-courses/server pairing-code:dev  # a pairing code for that database, valid 10 minutes
+yarn workspace @mes-courses/server create-admin:dev you@example.org  # asks for the password twice
 ```
 
-`pairing-code` (without `:dev`) prints a code for the database at `MES_COURSES_DB`, or the Pi's
-default path. On the Pi, run the built script as the service's user, since only it can read the
-database:
-`sudo -u mes-courses /opt/mes-courses/runtime/bin/node --conditions=production /opt/mes-courses/apps/server/dist/composition/pairing-code.js`. In the app, Réglages › Connecter à un serveur takes the address and the code. A
+`create-admin` (without `:dev`) completes the first account, the one that owns the data already on
+the server, with an address and a password. On the Pi, run the built script as the service's user,
+since only it can read the database:
+`sudo -u mes-courses /opt/mes-courses/runtime/bin/node --conditions=production /opt/mes-courses/apps/server/dist/composition/create-admin.js you@example.org`.
+`set-password` resets any account's password the same way. Everyone else is invited from the app
+(Réglages › Gérer les comptes) and signs in with the address and the temporary password they
+receive by email (`MES_COURSES_SMTP_URL`, `MES_COURSES_MAIL_FROM`, `MES_COURSES_PUBLIC_URL`). A
 development build accepts `http://127.0.0.1:3000` (or the machine's LAN address) only when built
 with `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL=1`; release builds refuse `http://`.
 
@@ -193,14 +198,35 @@ In short: Nix and Caddy on the Pi, a `mes-courses` system user, the repository i
 `deploy/mes-courses.service` and `deploy/Caddyfile` installed and started. Deploying an update is
 `git pull`, the same build, and `systemctl restart mes-courses`; migrations run at startup.
 
+Upgrading a Pi that ran 003 (accounts arrive with migration 2, which rebuilds the data tables):
+stop the service and copy the database file first (it is the only rollback), set the three mail
+variables in `/etc/mes-courses.env`, deploy and start, run `create-admin` for the administrator
+(who owns the existing data), then update the phones, which keep syncing without signing in again.
+The full order is in [004 quickstart §3](specs/004-multi-user/quickstart.md#3-upgrade-the-pi).
+
+### Signing in
+
+The administrator invites an address from the app (Réglages › Gérer les comptes). The person
+receives a temporary password by email (valid 7 days), enters it with the server address on the
+sign-in screen, then chooses their own password. A forgotten password is reset from the sign-in
+screen, by email; with no mail relay, `set-password` on the Pi does it.
+
 ### Environment variables
 
 | Variable                              | Where                 | What it does                                                                                                   |
 | ------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `SENTRY_DSN`                          | server                | Sends server errors to the Sentry project `mes-courses-server` (EU region). Unset: they go to the journal only |
 | `MES_COURSES_DB`                      | server                | The SQLite database path. Default: `/var/lib/mes-courses/mes-courses.db`                                       |
+| `MES_COURSES_SMTP_URL`                | server                | The SMTP relay that sends invitations and resets, `smtp://user:password@host:587` (STARTTLS required)          |
+| `MES_COURSES_MAIL_FROM`               | server                | The sender of those emails, an address the relay allows                                                        |
+| `MES_COURSES_PUBLIC_URL`              | server                | The public address of the server, written in the emails                                                        |
 | `MES_COURSES_DOMAIN`                  | Caddy                 | The public domain Caddy serves and gets a certificate for                                                      |
-| `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL` | app, development only | `1` lets a development build pair with an `http://` server; ignored by release builds                          |
+| `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL` | app, development only | `1` lets a development build sign in to an `http://` server; ignored by release builds                         |
+
+**The relay sees every address and temporary password it sends.** Choose a provider whose logs and
+retention you accept; the app and the server never write an address or a password in their own
+logs or reports ([research R8](specs/004-multi-user/research.md)). The systemd unit refuses to start
+the server when one of the three mail variables is empty.
 
 On the Pi, the server's variables go in `/etc/mes-courses.env` (from
 `deploy/mes-courses.env.example`, mode 600, owned by `mes-courses`).

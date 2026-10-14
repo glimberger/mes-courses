@@ -1,8 +1,8 @@
 import type { Change, Hlc, SyncResponse } from '@mes-courses/sync-core';
 
 import type { Clock } from '../../application/ports/clock';
-import { createPairingCode } from '../../application/use-cases/create-pairing-code';
-import { buildTestApp } from '../../testing/start-test-server';
+import type { Repositories } from '../../application/ports/store';
+import { addTestDevice, buildTestApp } from '../../testing/start-test-server';
 
 const START = Date.parse('2026-10-01T10:00:00.000Z');
 
@@ -31,18 +31,16 @@ const createList = (changeId: string, id: string, name: string): Change => ({
   fields: { name },
 });
 
-const harness = () => {
+const harness = async () => {
   const clock = new FakeClock();
-  const { app, deps, store, db } = buildTestApp({ clock });
-  const pair = async () => {
-    const { code } = await createPairingCode(deps, null);
-    const claim = await app.inject({
-      method: 'POST',
-      url: '/v1/pairing/claim',
-      payload: { code, deviceName: 'Phone' },
-    });
-    return claim.json() as { deviceId: string; credential: string };
+  const { app, deps, store: directory, db } = buildTestApp({ clock });
+  // A fresh database holds the setup account, which the test devices join.
+  const [setup] = await directory.run(({ accounts }) => accounts.all());
+  const store = {
+    run: <T>(work: (repos: Repositories) => Promise<T>) =>
+      directory.runForAccount(setup?.id ?? '', work),
   };
+  const pair = () => addTestDevice(deps, setup?.id ?? '', 'Phone');
   const post = (credential: string, payload: unknown) =>
     app.inject({
       method: 'POST',
@@ -55,7 +53,7 @@ const harness = () => {
 
 describe('POST /v1/sync', () => {
   it('answers 401 without a credential and 401 for a revoked device', async () => {
-    const { app, store, pair, post } = harness();
+    const { app, store, pair, post } = await harness();
     const { deviceId, credential } = await pair();
     const body = { lastSeq: 0, hlc: hlc(START), changes: [] };
 
@@ -128,7 +126,7 @@ describe('POST /v1/sync', () => {
       },
     ],
   ])('answers 400 for %s and applies nothing', async (_label, body) => {
-    const { store, pair, post } = harness();
+    const { store, pair, post } = await harness();
     const { credential } = await pair();
 
     const response = await post(credential, body);
@@ -139,7 +137,7 @@ describe('POST /v1/sync', () => {
   });
 
   it('rejects the whole body when one change breaks the schema', async () => {
-    const { store, pair, post } = harness();
+    const { store, pair, post } = await harness();
     const { credential } = await pair();
 
     const response = await post(credential, {
@@ -156,7 +154,7 @@ describe('POST /v1/sync', () => {
   });
 
   it('round-trips: pushes a change and another device pulls it', async () => {
-    const { pair, post, clock } = harness();
+    const { pair, post, clock } = await harness();
     const first = await pair();
     const second = await pair();
 
@@ -179,7 +177,7 @@ describe('POST /v1/sync', () => {
       expect.objectContaining({
         serverId: expect.any(String),
         apiVersion: 1,
-        minAppVersion: '1.0.0',
+        minAppVersion: '1.1.0',
       }),
     );
     expect(pulled.statusCode).toBe(200);
@@ -198,7 +196,7 @@ describe('POST /v1/sync', () => {
   });
 
   it('answers a replay with the same acknowledgement and no second effect', async () => {
-    const { pair, post, store } = harness();
+    const { pair, post, store } = await harness();
     const { credential } = await pair();
     const body = {
       lastSeq: 0,
@@ -214,7 +212,7 @@ describe('POST /v1/sync', () => {
   });
 
   it('records the last sync time of the device', async () => {
-    const { pair, post, store, clock } = harness();
+    const { pair, post, store, clock } = await harness();
     const { deviceId, credential } = await pair();
     clock.ms = Date.parse('2026-10-01T11:00:00.000Z');
 

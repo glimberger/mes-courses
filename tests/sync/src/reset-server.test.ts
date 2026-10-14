@@ -1,3 +1,4 @@
+import { signInDevice } from './testing/onboard';
 import {
   FakeClock,
   buildTestAppStack,
@@ -16,12 +17,7 @@ describe('a server replaced by an empty one (003 FR-018a)', () => {
   const newDevice = () => buildTestAppStack({ serverUrl: server.url, clock });
 
   const pair = async (stack: TestAppStack, name: string) => {
-    const code = await server.createPairingCode();
-    const connected = await stack.useCases.connectToServer(
-      server.url,
-      code,
-      name,
-    );
+    const connected = await signInDevice(server, stack, name);
     expect(connected.ok).toBe(true);
   };
 
@@ -81,7 +77,7 @@ describe('a server replaced by an empty one (003 FR-018a)', () => {
     await server.close();
   });
 
-  it('both devices keep their data, pair again and end identical, with no duplicate', async () => {
+  it('both devices keep their data on screen until they sign in again, then end identical on the new server, with no duplicate', async () => {
     const a = await newDevice();
     const b = await newDevice();
     await pair(a, 'A');
@@ -104,8 +100,8 @@ describe('a server replaced by an empty one (003 FR-018a)', () => {
       port: Number(new URL(url).port),
     });
 
-    expect(await cycleAfterRestart(a)).toBe('disconnectedByServer');
-    expect(await cycleAfterRestart(b)).toBe('disconnectedByServer');
+    expect(await cycleAfterRestart(a)).toBe('signedOut');
+    expect(await cycleAfterRestart(b)).toBe('signedOut');
     expect(await pendingCount(a)).toBe(waiting);
     expect((await readModel(a)).items.map((item) => item.name)).toEqual([
       'Beurre',
@@ -122,14 +118,13 @@ describe('a server replaced by an empty one (003 FR-018a)', () => {
     await pair(b, 'B');
     await converge(a, b);
 
+    // The new server's account is another account: the local copy rule erases the old copy
+    // before the new sync (FR-017), so both devices end identical on the empty server.
     const model = await readModel(a);
-    expect(model.items.map((item) => item.name)).toEqual([
-      'Beurre',
-      'Lait',
-      'Pain',
-    ]);
+    expect(model.items).toEqual([]);
     expect(new Set(model.categories).size).toBe(model.categories.length);
     expect(model.lists).toEqual(['Ma liste']);
     expect(await readModel(b)).toEqual(model);
+    expect(await pendingCount(a)).toBe(0);
   });
 });

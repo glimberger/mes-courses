@@ -17,6 +17,8 @@ import {
 import { listItemRepositoryContract } from '../../application/testing/contracts/list-item-repository.contract';
 import { shoppingListRepositoryContract } from '../../application/testing/contracts/shopping-list-repository.contract';
 import { unitOfWorkContract } from '../../application/testing/contracts/unit-of-work.contract';
+import { localDataEraserContract } from '../../application/testing/contracts/local-data-eraser.contract';
+import { sqliteLocalDataEraser } from './local-data-eraser';
 import { StorageFull } from '../../application/ports/storage-full';
 import { NodeSqlDatabase } from '../../../test/sqlite/node-sql-database';
 import { migrate } from './migrations';
@@ -73,6 +75,15 @@ describe('SQLite repositories', () => {
   unitOfWorkContract(
     async () => new SqliteUnitOfWork(await migratedDatabase(), newDeps()),
   );
+  localDataEraserContract(async (seed) => {
+    const db = await migratedDatabase();
+    const deps = newDeps();
+    const unitOfWork = new SqliteUnitOfWork(db, deps);
+    return {
+      unitOfWork,
+      eraser: sqliteLocalDataEraser({ db, unitOfWork, ids: deps.ids, seed }),
+    };
+  });
   changeRecorderContract(async () => {
     const clock = new FakeClock();
     return {

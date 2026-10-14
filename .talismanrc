@@ -56,6 +56,32 @@ fileignoreconfig:
     ignore_detectors: [filecontent]
   - filename: .specify/scripts/bash/common.sh
     ignore_detectors: [filecontent]
+  # Feature 004 is about passwords, keys and sessions: its prose trips the pattern detector, and it
+  # holds no secret.
+  - filename: docs/adr/0005-accounts-and-authentication.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/checklists/requirements.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/checklists/security.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/contracts/app-ports.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/contracts/auth-api.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/contracts/ui-screens.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/data-model.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/plan.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/quickstart.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/research.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/spec.md
+    ignore_detectors: [filecontent]
+  - filename: specs/004-multi-user/tasks.md
+    ignore_detectors: [filecontent]
   - filename: .claude/skills/speckit-analyze/SKILL.md
     ignore_detectors: [filecontent]
   - filename: .claude/skills/speckit-checklist/SKILL.md
@@ -79,7 +105,7 @@ fileignoreconfig:
   - filename: apps/server/src/adapters/sqlite/sql-database.ts
     ignore_detectors: [filename]
   - filename: apps/server/src/adapters/sqlite/sqlite-store.ts
-    ignore_detectors: [filename]
+    ignore_detectors: [filename, filecontent]
   - filename: apps/server/src/adapters/sqlite/sqlite-store.test.ts
     ignore_detectors: [filename]
   # The crypto test asserts the published SHA-256 vectors, and the pairing-code alphabet is a
@@ -105,7 +131,234 @@ fileignoreconfig:
     ignore_detectors: [filecontent]
   - filename: apps/server/src/application/use-cases/apply-with-merge.ts
     ignore_detectors: [filecontent]
-  # The environment template for the Pi holds variable names only, no values.
+  # Feature 004 phase 2: account, password-hash and attempt-key code. Column and field names such
+  # as password_hash or keyHash trip the pattern detector; no file holds a secret.
+  - filename: .dependency-cruiser.cjs
+    ignore_detectors: [filecontent]
+  - filename: apps/server/package.json
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/crypto/password-hasher.test.ts
+    ignore_detectors: [filecontent, filename]
+  - filename: apps/server/src/adapters/crypto/password-hasher.ts
+    ignore_detectors: [filecontent, filename]
+  - filename: apps/server/src/adapters/sqlite/migrations.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/sqlite/migrations.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/ports/auth-attempt-repository.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/ports/pairing-crypto.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/ports/password-hasher.ts
+    ignore_detectors: [filecontent, filename]
+  - filename: apps/server/src/application/testing/contracts/account-repository.contract.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/testing/contracts/auth-attempt-repository.contract.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/testing/fake-pairing-crypto.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/testing/fake-password-hasher.ts
+    ignore_detectors: [filecontent, filename]
+  - filename: apps/server/src/application/use-cases/authenticate-device.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/composition/admin-prompt.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/composition/create-admin.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/composition/create-admin.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/composition/set-password.test.ts
+    ignore_detectors: [filecontent, filename]
+  - filename: apps/server/src/composition/set-password.ts
+    ignore_detectors: [filecontent, filename]
+  - filename: apps/server/src/domain/account.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/domain/account.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/domain/attempts.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/domain/attempts.ts
+    ignore_detectors: [filecontent]
+  - filename: packages/sync-core/src/account.test.ts
+    ignore_detectors: [filecontent]
+  - filename: packages/sync-core/src/account.ts
+    ignore_detectors: [filecontent]
+  - filename: packages/sync-core/src/protocol.ts
+    ignore_detectors: [filecontent]
+  # Feature 004 phase 3: invitation code, mail templates and the Accounts screen. Words such as
+  # temporaryPassword, keyExtractor and keyboardType trip the pattern detector; no file holds a secret.
+  - filename: apps/mobile/src/application/ports/account-server.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/use-cases/list-accounts.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/mail/console-mailer.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/use-cases/invite-account.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/testing/start-test-server.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/mail/smtp-mailer.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/use-cases/get-account.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/mail/templates.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/mail/templates.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/application/use-cases/invite-account.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/mobile/src/adapters/ui/screens/InviteAccountDialog.tsx
+    ignore_detectors: [filecontent]
+  - filename: apps/mobile/src/adapters/ui/screens/AccountsScreen.tsx
+    ignore_detectors: [filecontent]
+  - filename: apps/server/src/adapters/mail/smtp-mailer.test.ts
+    ignore_detectors: [filecontent]
+  - filename: apps/mobile/src/application/use-cases/choose-initial-password.test.ts
+    checksum: fc5a4fa24917ab3f18c77d19e12aac715385c81cdffa670a51d30da19d398c9c
+  - filename: apps/mobile/src/application/use-cases/choose-initial-password.ts
+    checksum: 37ba183e58155dc3daba8448abccc29443f008af1fd1132f7854c1a2c5382b0b
+  - filename: apps/server/src/application/use-cases/choose-password.test.ts
+    checksum: faa9f5873cfaf5c57f6b9c9cc8e71c9df5b9046f03f7b66d540e31550847c87b
+  - filename: apps/server/src/application/use-cases/choose-password.ts
+    checksum: 22a8133b6fd4f405a81689d53dfc95c4670ab99983269da66981edfbb45ee349
+  - filename: .github/scripts/server-smoke.sh
+    checksum: 7dc7407c82304c32f0f26261feb1def9994b2979372a545eb2413f78b146a9e9
+  - filename: apps/server/src/composition/report-context.test.ts
+    checksum: 7c99e0ccefadc3840f2ad96e2ac1f8b63f3dd1cf3696486d9fa4db7f9dcd7c64
+  - filename: tests/sync/src/performance.test.ts
+    checksum: 51e7aca1e7e465d4b8c7d682d48bfac87337c50b4b6ba90a15283e1028251d70
+  - filename: apps/server/src/application/use-cases/attempt-limits.ts
+    checksum: 51b22692eeafe28ced196fdc2d6b75c06b953876caac0098749584d053c2f9fe
+  - filename: apps/server/src/testing/start-test-server.test.ts
+    checksum: dbbbb0f8ecc80b26cb1a08b69f518376060e6e3478d7eef077cd32f77add1939
+  - filename: apps/server/src/application/use-cases/sign-in.ts
+    checksum: e6c6000e75f3ee798e108bc27603fe2c5258c3f1f149b694124790508af79afa
+  - filename: tests/sync/src/sign-in.scenario.test.ts
+    checksum: f03042a10dc765ce4663284ee72827d5cc245e87c3923c67fa677665905e3f31
+  - filename: apps/mobile/src/application/use-cases/sign-in.test.ts
+    checksum: df1f31521b63d4a050c765f8c622d15fe97d1c2dbd45309e1239a271b45f8455
+  - filename: apps/mobile/src/adapters/ui/components/PasswordField.test.tsx
+    checksum: 811c37f5871ec7eb4faa839f577a119e6de5db386ee3b34436d4fcc94185eb32
+  - filename: apps/mobile/src/adapters/ui/components/PasswordField.tsx
+    checksum: a981c6b18f98d53e1477045be3062ab5b1c923c4de06c28849dba461e82e7af4
+  - filename: apps/server/src/application/use-cases/sign-in.test.ts
+    checksum: e6a1f21d2cf1f64184add7f19bbff39487fba44b53c76062b778f4c5735a8198
+  - filename: apps/mobile/src/adapters/ui/screens/SignInScreen.stories.tsx
+    checksum: 3759bccad811eead4a8d2c99ef62435dc594cf9c3d683ab6efab4001577316cb
+  - filename: apps/mobile/src/adapters/ui/screens/ChoosePasswordScreen.stories.tsx
+    checksum: a0c0727f5dc8d700806ecf3cccf00eb131c19ae1826d0aa500838ab3e3f5a567
+  - filename: apps/mobile/src/adapters/ui/testing/story-store.test.ts
+    checksum: 0b791bdb9370aff39b1ff1f5219090ea3acf688828a79c392e46e10707a1db99
+  - filename: tests/sync/src/revocation.test.ts
+    checksum: 9dc969a1dc2d889e24e34c4fbd4049b23a71ec7fbbcfa297181cdf0bda9d03db
+  - filename: apps/mobile/src/adapters/ui/components/notice-snackbar.test.tsx
+    checksum: 997a9312a2f0960331fc48e07a81bbfef74d9a6bd9c35920b6a465ad5fcf7964
+  - filename: tests/sync/src/testing/onboard.ts
+    checksum: 5ecc2861fe952a511aedf7cec0a51eca7730080940c5614d1a380fecd66d9df4
+  - filename: tests/sync/src/sync-server-adapter.test.ts
+    checksum: b6a42160d2162435fe0665db597028e8aa40e0b08009a82cc2e568de19153434
+  - filename: apps/mobile/src/adapters/ui/state/sync-actions.ts
+    checksum: 693f399bc83d7ad0147c332bbbaa8fac67b40642f9263c909d1dd9d9e7a5842f
+  - filename: apps/server/src/adapters/http/routes/auth.ts
+    checksum: 20f0392e9fe17df24c1f7f0642950b5df24cf5783edc231e2d6d3cfda1776ad1
+  - filename: apps/mobile/src/adapters/ui/screens/ChoosePasswordScreen.tsx
+    checksum: a2292339e452d9b0c190d57307639d9a7ab6867c7ae30bff67637215c2ef777e
+  - filename: apps/mobile/src/application/use-cases/request-password-reset.test.ts
+    checksum: 885466a777445eb1b87206c582ff33237701a5e5334ceb0dee75e6d33c63f2c4
+  - filename: apps/mobile/src/application/use-cases/request-password-reset.ts
+    checksum: 4b0dfef70e196e2fcf0dadb65a46092b4f6a9906d226cd9ae543c902ab17da29
+  - filename: tests/sync/src/password-reset.scenario.test.ts
+    checksum: 447980ab3fcc9c5ed47053168ceb2f3d19ffb3a0534538602a2e3d6a9d957c46
+  - filename: apps/mobile/src/adapters/ui/screens/SignInScreen.tsx
+    checksum: 6480cb83c2773492b274bfaba32243a1106c5d264033329e63007fb8d8e9b682
+  - filename: apps/mobile/src/adapters/ui/screens/ForgotPasswordDialog.tsx
+    checksum: 40b486f1d484e7ad0918404aa87941bd63c2f7ad8f649a2c2bd8c6231918f36e
+  - filename: apps/mobile/src/adapters/ui/screens/sign-in-screen.test.tsx
+    checksum: 4af34211c68a229429bed4304f2dc507ffe3e416257b0ef9590ddd9d42939d2d
+  - filename: apps/server/src/adapters/http/routes/auth.test.ts
+    checksum: 37f662d2652fd7011e6325ccae73fe98a369d4e8b7e7eda14e0eea2ef061e276
+  - filename: apps/server/src/application/use-cases/resend-credentials.ts
+    checksum: 0c68e46fb8386fd634c2ee9c12fa4153562ed5a1afd6e28a571450485eb0d7df
+  - filename: apps/server/src/application/use-cases/delete-account.test.ts
+    checksum: 7aecc1134fdcdd813cbda0eba3213171012168b6348b23c8ec8ed172dab58382
+  - filename: apps/server/src/application/use-cases/suspend-account.test.ts
+    checksum: 7ce0a39d86a3b6c7dc1b44b3e4aaba74638bc4c2624660d4b38f3d734697f871
+  - filename: apps/server/src/application/use-cases/resend-credentials.test.ts
+    checksum: be8a35d9c77b9df76557b5246e81710de306ce383287a9b3e1f2609db1bd4720
+  - filename: apps/server/src/application/use-cases/reactivate-account.test.ts
+    checksum: c1666ade610b8ea09e5a011106b9be1499062c82717aca51d6fd7709c8c06faa
+  - filename: apps/server/src/adapters/http/routes/admin.test.ts
+    checksum: 7d23e2c3781df281d5190b65785aada42d21f828f25b73a875b12612a07bae49
+  - filename: tests/sync/src/administration.scenario.test.ts
+    checksum: 24e365bc54545b1e51ccc3853ff9d4c6cfb9d9cb8caad64a49011ac21bf3372c
+  - filename: apps/mobile/src/application/use-cases/change-password.test.ts
+    checksum: 2885c84ea43fdc23423cfd9f35b614c9e13d3b9c5fc3465463b9bd4a427d86cc
+  - filename: apps/mobile/src/application/use-cases/change-password.ts
+    checksum: 165af0cb702c4a8cc9aaba805ebcd7b0fe42c4a7beb014c9501449c1ca231df9
+  - filename: apps/server/src/application/use-cases/change-password.test.ts
+    checksum: 23bdb11dbd852417d0fb69cf8778dd794674da3368c36feaacdb09c6bac42990
+  - filename: apps/server/src/application/use-cases/change-password.ts
+    checksum: 6397ba762b7c2ff74d4ee942bb1e2e98c2d7c94502f07a4367c5db5e90eea5b8
+  - filename: apps/mobile/src/adapters/ui/components/NoticeSnackbar.stories.tsx
+    checksum: 502cf8a3662004dffd2607d875ecb67367fe3204b32badc5e67c09ef474b99d1
+  - filename: apps/mobile/src/adapters/ui/screens/SettingsScreen.tsx
+    checksum: fafd47d14dbb287e72620e051602f53e98081de2f6f02a192e533caf71023a5b
+  - filename: apps/mobile/src/application/use-cases/delete-my-account.test.ts
+    checksum: 4be95e43d74cba9e23a0bd3fb89612bdfdfcaba76b13965eefef354cb5c347bd
+  - filename: apps/mobile/src/adapters/ui/screens/accessibility.test.tsx
+    checksum: 502f342810f6c0d1c08790a11547bbe027747000001903575479c641cf974a34
+  - filename: apps/mobile/src/application/use-cases/delete-my-account.ts
+    checksum: 8f5f8624ef2fd8f34f44e6063ffe29bda02694712da7ff0349714abd901a7838
+  - filename: apps/mobile/src/application/testing/offline-account-server.ts
+    checksum: 919102fbde0d91c4b40e63ff3cf1ffff4c81f612136c6cfc8ed624775be1d4b7
+  - filename: apps/mobile/src/adapters/ui/screens/ChangePasswordDialog.stories.tsx
+    checksum: e724562542ead0bf307a56d4931651e593ec30f17b146a0c82078bdbde951cb7
+  - filename: apps/server/src/adapters/http/routes/account.ts
+    checksum: 0821cd7364b8b82330cfaec06e8324f94d9b6a7a900cd8d65cc50353b0e23389
+  - filename: apps/mobile/src/adapters/ui/screens/settings-own-account.test.tsx
+    checksum: d009d18d8f450bf75ae6552dbb502c8d39b3ba20268a4937d70f897f0b10de6e
+  - filename: apps/mobile/src/adapters/ui/screens/DeleteMyAccountDialog.stories.tsx
+    checksum: e3e0092ac8cb5f328a9a87f330499b7b764b02bec17109a5c416502563b35d65
+  - filename: apps/server/src/application/use-cases/delete-own-account.ts
+    checksum: 0ddb84312c73586d9b8b104f8229c5b2dd297c24b5e6e1c02ba47f4b702150b6
+  - filename: apps/mobile/src/adapters/ui/screens/ChangePasswordDialog.tsx
+    checksum: 142549baafcd1dcd5250953d1c2cacd7ac2b7114fed23a152f593a2ddb58a7d6
+  - filename: apps/mobile/src/adapters/ui/screens/DeleteMyAccountDialog.tsx
+    checksum: 6de58bf893d03615006f681e2f128da55179a196a692635541a7464b094d36b4
+  - filename: tests/sync/src/own-account.scenario.test.ts
+    checksum: f3067ba9ea757f26630f2dacbc083058a08ae5df87b37fcf160418470d356d7f
+  - filename: apps/server/src/adapters/http/routes/account.test.ts
+    checksum: 3ccac86e0d3c98cdccbcf8744c545a25130e7dcd958392a104963661402a7649
+  - filename: apps/mobile/src/adapters/ui/state/error-context.test.ts
+    checksum: f85e307e77b3f884274693df30b9349deeba764854769db84ddecf8e0fd68ae2
+  - filename: apps/server/src/adapters/http/schemas.ts
+    checksum: 58e33f2b8fa53d13549945e9f384014f1275326e43294d2bf7c10cce3fcd01a8
+  - filename: apps/mobile/src/adapters/ui/state/device-actions.ts
+    checksum: fd31cbbcb72c665532c2a8b14234c1773dad0caac2f73b3f549d72cfe2b89370
+  - filename: apps/server/src/application/use-cases/delete-own-account.test.ts
+    checksum: 52ae1c497a6237e34e9307b968a574d2ad9d7e15c46cdd639b08c456a656c29f
+  - filename: apps/server/src/application/use-cases/delete-account.ts
+    checksum: 5fc338ae4ba8018a0d18306a7f6c8b8c069d76c8f325eec28d29d9fd24cb8ad6
+  - filename: apps/mobile/src/adapters/ui/state/accounts-actions.ts
+    checksum: c81135adb8384931808d0c977bf596ee77debbb81bc0b3a077f00ed871aaea19
+  - filename: apps/mobile/src/adapters/ui/use-cases.ts
+    checksum: ce5c391c233741dbfc44a7ae5de03786ff3d32bca4e7389c00eb73429d58ed04
+  - filename: apps/mobile/src/adapters/sync-http/account-server.ts
+    checksum: 1965eb7a90d0e0e3ffc67e2ac391a6fa5f544234f8fd1ced4b5c1cbfa030bae2
+  - filename: apps/mobile/src/application/testing/in-memory-account-server.ts
+    checksum: 1cc2506154bfc338f0b71857578219a1945d3d745a15121753b857967077db3f
+  - filename: tests/sync/src/account-adapter.test.ts
+    checksum: f015ad123cca82b0dfb7adee404eef6a0d15380b5dea275e15443f66f6f65713
   - filename: deploy/mes-courses.env.example
-    ignore_detectors: [filename]
+    checksum: 4d13ce5ef90a4d2175b8eebba254a6beae6f42e20a28990a997c146da1902815
+  - filename: tests/e2e/journeys/sync-unreachable.e2e.ts
+    checksum: 2bfab9ee5e07cbe6e79986843ec546022739e0a1c14696f987f2e61a80b8170c
+  - filename: README.md
+    checksum: daaf6e3dae992c31b6da57b5ba0728c96f3c7777f2c4cee3da3841b164e7e4b6
+  - filename: tests/sync/src/no-personal-data.test.ts
+    checksum: e9b76bfbdbb35fce31ffcabc5e6682527766c121088aacd77f7116f0c8a4a9a4
+  - filename: apps/server/src/application/use-cases/request-password-reset.test.ts
+    checksum: 85965a29876b8ed8fb381acbaeb9567cda28ed96fa59e38b431d9806261dfe98
+  - filename: apps/server/src/application/use-cases/request-password-reset.ts
+    checksum: 8ab46abc8ee34a840f3adeac569f898dbc0966788ab02d2c02a39f1b764d48a4
 version: "1.0"

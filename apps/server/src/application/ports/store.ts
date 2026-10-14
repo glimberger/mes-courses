@@ -4,9 +4,13 @@ import type {
   ListItemRecord,
   ListRecord,
 } from '../../domain/records';
+import type { AccountRepository } from './account-repository';
+import type { AuthAttemptRepository } from './auth-attempt-repository';
+import type { EndedCredentialRepository } from './ended-credential-repository';
 
-/** Every instant is an ISO 8601 string, which sorts like the time it names. */
-export type Instant = string;
+import type { Instant } from './instant';
+
+export type { Instant } from './instant';
 
 export type {
   ArticleRecord,
@@ -17,21 +21,14 @@ export type {
 
 export type DeviceRecord = {
   id: string;
+  /** The account the device belongs to (data-model.md, migration 2). */
+  accountId: string;
   name: string;
   /** SHA-256 of the device credential (research R11). */
   credentialHash: string;
   createdAt: Instant;
   lastSyncAt: Instant | null;
   revokedAt: Instant | null;
-};
-
-export type PairingCodeRecord = {
-  /** SHA-256 of the normalized 8-character code. */
-  codeHash: string;
-  /** `null` when the code was created on the Pi itself. */
-  createdBy: string | null;
-  expiresAt: Instant;
-  usedAt: Instant | null;
 };
 
 export type AppliedChangeRecord = {
@@ -92,44 +89,50 @@ export interface DeviceRepository {
   add(record: DeviceRecord): Promise<void>;
   get(id: string): Promise<DeviceRecord | null>;
   findByCredentialHash(credentialHash: string): Promise<DeviceRecord | null>;
-  /** By creation time, then id. */
-  all(): Promise<DeviceRecord[]>;
+  /** The devices of one account, by creation time, then id. */
+  forAccount(accountId: string): Promise<DeviceRecord[]>;
   /** Replaces the row with the same id. */
   update(record: DeviceRecord): Promise<void>;
 }
 
-export interface PairingCodeRepository {
-  add(record: PairingCodeRecord): Promise<void>;
-  findByHash(codeHash: string): Promise<PairingCodeRecord | null>;
-  markUsed(codeHash: string, at: Instant): Promise<void>;
-}
-
-export interface PairingFailureRepository {
-  add(at: Instant): Promise<void>;
-  /** Failures recorded at or after `since`. */
-  countSince(since: Instant): Promise<number>;
-  /** The earliest failure recorded at or after `since`, if any. */
-  earliestSince(since: Instant): Promise<Instant | null>;
-  /** Forgets the failures recorded before `before`, which no rate-limit window reads any more. */
-  pruneBefore(before: Instant): Promise<void>;
-}
-
-export type Repositories = {
+/** Not about one account's data: the same for every account. */
+export type DirectoryRepositories = {
   meta: MetaRepository;
+  accounts: AccountRepository;
+  devices: DeviceRepository;
+  endedCredentials: EndedCredentialRepository;
+  authAttempts: AuthAttemptRepository;
+};
+
+/** One account's data. Every statement is bound to the account given to `runForAccount`. */
+export type DataRepositories = {
   categories: CategoryRepository;
   articles: ArticleRepository;
   lists: ListRepository;
   items: ListItemRepository;
   appliedChanges: AppliedChangeRepository;
-  devices: DeviceRepository;
-  pairingCodes: PairingCodeRepository;
-  pairingFailures: PairingFailureRepository;
 };
+
+export type Repositories = DirectoryRepositories & DataRepositories;
 
 export interface ServerStore {
   /**
-   * Runs the work as one transaction: everything it wrote is kept when it resolves, nothing is
-   * when it throws (the error is rethrown). Runs never overlap.
+   * Directory work (accounts, devices, ended credentials, attempts): no access to user data.
+   * Runs as one transaction: everything it wrote is kept when it resolves, nothing is when it
+   * throws (the error is rethrown). Runs never overlap.
    */
-  run<T>(work: (repos: Repositories) => Promise<T>): Promise<T>;
+  run<T>(work: (repos: DirectoryRepositories) => Promise<T>): Promise<T>;
+  /**
+   * As `run`, plus the user data of one account. Every data statement carries the account, so
+   * what `work` reads, writes, counts or deletes can only be that account's (research R1).
+   */
+  runForAccount<T>(
+    accountId: string,
+    work: (repos: Repositories) => Promise<T>,
+  ): Promise<T>;
 }
+
+/** What `runForAccount` offers once bound to an account (used by test helpers). */
+export type DataRepositoriesRun = <T>(
+  work: (repos: Repositories) => Promise<T>,
+) => Promise<T>;

@@ -86,16 +86,44 @@ describe('SyncStatusBar', () => {
     ).toBeOnTheScreen();
   });
 
-  it('US4-10 says the device is disconnected, with "Se reconnecter"', async () => {
+  it('004 US5-4 says the device is no longer authorized, with "Se reconnecter"', async () => {
     const { show } = await renderBar();
-    await show({ connection: 'disconnectedByServer' });
+    await show({ connection: 'signedOut', signedOutReason: 'revoked' });
 
     expect(
-      screen.getByText("Cet appareil n'est plus connecté au serveur."),
+      screen.getByText("Cet appareil n'est plus autorisé. Reconnectez-vous."),
     ).toBeOnTheScreen();
     expect(
       screen.getByRole('button', { name: 'Se reconnecter' }),
     ).toBeOnTheScreen();
+  });
+
+  it('004 US6-5 says the account was deleted, with "Se connecter"', async () => {
+    const { show } = await renderBar();
+    await show({ connection: 'signedOut', signedOutReason: 'accountDeleted' });
+
+    expect(screen.getByText('Ce compte a été supprimé.')).toBeOnTheScreen();
+    expect(
+      screen.getByRole('button', { name: 'Se connecter' }),
+    ).toBeOnTheScreen();
+  });
+
+  it('004 US5-2 says the account is suspended, with no button and no error color', async () => {
+    const { show } = await renderBar();
+    await show({ connection: 'suspended' });
+
+    expect(
+      screen.getByText(
+        'Votre compte est suspendu. Vos listes restent sur cet appareil.',
+      ),
+    ).toBeOnTheScreen();
+    expect(
+      screen.queryByRole('button', { name: /Se (re)?connecter|Réessayer/ }),
+    ).not.toBeOnTheScreen();
+    const { backgroundColor } = StyleSheet.flatten(
+      screen.getByTestId('sync-status-bar').props.style,
+    ) as { backgroundColor?: string };
+    expect(backgroundColor).not.toMatch(/error/i);
   });
 
   it('says only "En attente de synchronisation" when nothing is waiting', async () => {
@@ -105,7 +133,7 @@ describe('SyncStatusBar', () => {
     expect(screen.getByText('En attente de synchronisation')).toBeOnTheScreen();
   });
 
-  it('FR-018b says disconnected for a server address with no credential', async () => {
+  it('FR-018b says no longer authorized for a server address with no credential', async () => {
     await renderWithStore(<SyncStatusBar />, {
       connected: {
         serverUrl: 'https://courses.example.fr',
@@ -115,7 +143,9 @@ describe('SyncStatusBar', () => {
     });
 
     expect(
-      await screen.findByText("Cet appareil n'est plus connecté au serveur."),
+      await screen.findByText(
+        "Cet appareil n'est plus autorisé. Reconnectez-vous.",
+      ),
     ).toBeOnTheScreen();
   });
 

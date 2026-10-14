@@ -20,7 +20,7 @@ describe('openDatabase', () => {
     // 2 = FULL
     expect(db.get('PRAGMA synchronous')).toEqual({ synchronous: 2 });
     expect(db.get('PRAGMA foreign_keys')).toEqual({ foreign_keys: 1 });
-    expect(db.get('PRAGMA user_version')).toEqual({ user_version: 1 });
+    expect(db.get('PRAGMA user_version')).toEqual({ user_version: 2 });
     db.close();
   });
 

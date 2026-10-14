@@ -64,8 +64,6 @@ const connected: StoryScenario = {
           lastSyncAt: '2026-09-30T08:00:00.000Z',
         },
       ]),
-    createPairingCode: async () =>
-      ok({ code: 'ABCD-EF23', expiresAt: '2026-10-06T12:05:00.000Z' }),
   },
 };
 
@@ -79,6 +77,18 @@ const openSettings = async (scenario: StoryScenario = connected) => {
 const openDevices = async () => {
   await openSettings();
   await screen.findByText('iPhone de Marc', {}, slow);
+};
+
+/** Settings of a signed-in account, whose address the server tells. */
+const openSignedIn = async () => {
+  await openSettings({
+    ...connected,
+    accountServer: {
+      getAccount: async () =>
+        ok({ id: 'account-1', email: 'lea@example.org', role: 'user' }),
+    },
+  });
+  await screen.findByText('lea@example.org', {}, slow);
 };
 
 /** Opens the menu of a device row and, when `shown` is another text, chooses `action`. */
@@ -221,33 +231,33 @@ const views: Record<string, () => Promise<void>> = {
   },
   '003 Settings, never connected': async () => {
     await openSettings({});
-    await screen.findByRole('button', { name: 'Connecter à un serveur' });
+    await screen.findByRole('button', { name: 'Se connecter' });
   },
   '003 Settings, connected': openDevices,
-  '003 ConnectServer': async () => {
+  '004 SignIn': async () => {
     await openSettings({});
-    await press('Connecter à un serveur');
-    await header('Connecter à un serveur');
+    await press('Se connecter');
+    await header('Se connecter');
   },
   '003 device row menu': () => chooseDeviceAction('Renommer', 'Renommer'),
   '003 RenameDeviceDialog': () =>
     chooseDeviceAction('Renommer', "Renommer l'appareil"),
   '003 RevokeDeviceDialog': () =>
     chooseDeviceAction('Révoquer', 'Révoquer « iPhone de Marc » ?'),
-  '003 PairingCodeDialog': async () => {
-    await openDevices();
-    await press('Ajouter un appareil');
-    await screen.findByText('ABCD-EF23', {}, slow);
+  '004 ChangePasswordDialog': async () => {
+    await openSignedIn();
+    await press('Changer de mot de passe');
+    await screen.findByLabelText('Mot de passe actuel', {}, slow);
   },
-  '003 DisconnectDialog': async () => {
-    await openDevices();
-    await press('Déconnecter cet appareil');
-    await screen.findByText('Déconnecter cet appareil ?', {}, slow);
+  '004 SignOutDialog': async () => {
+    await openSignedIn();
+    await press('Se déconnecter de cet appareil');
+    await screen.findByText('Se déconnecter de cet appareil ?', {}, slow);
   },
-  '003 ChangeServerUrlDialog': async () => {
-    await openDevices();
-    await press("Modifier l'adresse");
-    await screen.findByText("Modifier l'adresse du serveur", {}, slow);
+  '004 DeleteMyAccountDialog': async () => {
+    await openSignedIn();
+    await press('Supprimer mon compte');
+    await screen.findByText('Supprimer votre compte ?', {}, slow);
   },
   CreateCategoryDialog: async () => {
     await openApp();

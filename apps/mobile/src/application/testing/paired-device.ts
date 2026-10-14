@@ -32,10 +32,6 @@ export const pairedDevice = async (overrides: Partial<SyncServer> = {}) => {
       return result;
     };
   const syncServer = {
-    createPairingCode: record(
-      'createPairingCode',
-      ok({ code: 'ABCD-EF23', expiresAt: '2026-10-01T10:10:00.000Z' }),
-    ),
     listDevices: record('listDevices', ok([])),
     renameDevice: record('renameDevice', ok(undefined)),
     revokeDevice: record('revokeDevice', ok(undefined)),

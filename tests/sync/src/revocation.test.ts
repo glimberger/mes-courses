@@ -1,3 +1,4 @@
+import { signInDevice } from './testing/onboard';
 import {
   FakeClock,
   buildTestAppStack,
@@ -19,27 +20,17 @@ describe('device management against a real server (003 US4)', () => {
   };
 
   const pairWithPiCode = async (stack: TestAppStack, name: string) => {
-    const connected = await stack.useCases.connectToServer(
-      server.url,
-      await server.createPairingCode(),
-      name,
-    );
+    const connected = await signInDevice(server, stack, name);
     expect(connected.ok).toBe(true);
   };
 
-  /** A creates a code in the app and B claims it (US4-3, US4-4). */
+  /** A second device signs in with the account's password (US4-3 no longer needs a code). */
   const pairWithDeviceCode = async (
-    from: TestAppStack,
+    _from: TestAppStack,
     stack: TestAppStack,
     name: string,
   ) => {
-    const code = await from.useCases.createPairingCode();
-    if (!code.ok) throw new Error('no code');
-    const connected = await stack.useCases.connectToServer(
-      server.url,
-      code.value.code,
-      name,
-    );
+    const connected = await signInDevice(server, stack, name);
     expect(connected.ok).toBe(true);
   };
 
@@ -114,7 +105,7 @@ describe('device management against a real server (003 US4)', () => {
     });
     await addArticle(b, 'Houmous');
 
-    expect(await cycle(b)).toBe('disconnectedByServer');
+    expect(await cycle(b)).toBe('signedOut');
     expect(await itemNames(b)).toContain('Houmous');
     expect(await pendingCount(b)).toBeGreaterThan(0);
     expect((await b.useCases.getSyncInfo()).connection).toBe('connected');
@@ -126,7 +117,7 @@ describe('device management against a real server (003 US4)', () => {
     expect(await itemNames(a)).toContain('Houmous');
   });
 
-  it('003 US4-11 a device disconnects itself and the server data is untouched', async () => {
+  it('004 US6-4 a device signs itself out: its copy is erased and the server data is untouched', async () => {
     const a = await newDevice();
     const b = await newDevice();
     await pairWithPiCode(a, 'Pixel de A');
@@ -136,14 +127,12 @@ describe('device management against a real server (003 US4)', () => {
     expect(await cycle(b)).toBe('saved');
     await addArticle(b, 'Lait');
 
-    await b.useCases.disconnect();
+    await b.useCases.signOut();
 
     expect((await b.useCases.getSyncInfo()).connection).toBe('notConnected');
     expect(await b.credentials.read()).toBeNull();
-    expect(await itemNames(b)).toEqual(
-      expect.arrayContaining(['Pain', 'Lait']),
-    );
-    expect(await pendingCount(b)).toBeGreaterThan(0);
+    // First-launch defaults only: neither Pain nor Lait.
+    expect(await itemNames(b)).toEqual([]);
     expect(await cycle(b)).toBe('notConnected');
     const devices = await a.useCases.listDevices();
     expect(devices.ok && devices.value.map((d) => d.name)).toEqual([
@@ -153,16 +142,16 @@ describe('device management against a real server (003 US4)', () => {
     expect(await itemNames(a)).toEqual(['Pain']);
   });
 
-  it('003 US4-12 the sixth wrong code is answered TooManyAttempts', async () => {
+  it('004 FR-006 the sixth wrong password is answered TooManyAttempts', async () => {
     const stack = await newDevice();
     const attempt = () =>
-      stack.useCases.connectToServer(server.url, 'WRONG-CODE', 'Pixel');
+      stack.useCases.signIn(server.url, 'marie@example.org', 'wrong', 'Pixel');
 
     const results = [];
     for (let i = 0; i < 6; i += 1) results.push(await attempt());
 
     expect(results.slice(0, 5)).toEqual(
-      Array(5).fill({ ok: false, error: { type: 'InvalidCode' } }),
+      Array(5).fill({ ok: false, error: { type: 'InvalidCredentials' } }),
     );
     expect(results[5]).toEqual({
       ok: false,

@@ -1,16 +1,10 @@
-import { createPairingCode } from '../../application/use-cases/create-pairing-code';
-import { buildTestApp } from '../../testing/start-test-server';
+import { addTestDevice, buildTestApp } from '../../testing/start-test-server';
 
 const harness = () => {
   const { app, deps, db } = buildTestApp();
   const pair = async (deviceName: string) => {
-    const { code } = await createPairingCode(deps, null);
-    const claim = await app.inject({
-      method: 'POST',
-      url: '/v1/pairing/claim',
-      payload: { code, deviceName },
-    });
-    return claim.json() as { deviceId: string; credential: string };
+    const [setup] = await deps.store.run(({ accounts }) => accounts.all());
+    return addTestDevice(deps, setup?.id ?? '', deviceName);
   };
   const as = (credential: string) => ({
     authorization: `Bearer ${credential}`,

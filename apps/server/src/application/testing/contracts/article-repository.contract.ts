@@ -1,9 +1,9 @@
-import type { ServerStore } from '../../ports/store';
+import type { ScopedStore } from './scoped-store';
 import { article, category, hlc } from './entities';
 import { entityRepositoryContract } from './entity-repository.contract';
 
 export const articleRepositoryContract = (
-  createStore: () => Promise<ServerStore>,
+  createStore: () => Promise<ScopedStore>,
 ) =>
   entityRepositoryContract(
     'Article',
@@ -18,7 +18,7 @@ export const articleRepositoryContract = (
   );
 
 export const articleInCategoryContract = (
-  createStore: () => Promise<ServerStore>,
+  createStore: () => Promise<ScopedStore>,
 ) => {
   describe('ArticleRepository.inCategory contract', () => {
     it('lists the articles of a category, live ones and tombstones, by id', async () => {

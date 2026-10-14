@@ -1,5 +1,9 @@
 # Quickstart: Validate Server Synchronization
 
+> **Changed by 004**: pairing codes no longer exist. Devices sign in with an account; for the
+> first account and the administration, follow the
+> [004 quickstart](../004-multi-user/quickstart.md). The pairing steps below are kept as history.
+
 How to check this feature, from the automated suite to a real Pi behind the Freebox and two
 devices. Behavior is in [spec.md](spec.md); the API in
 [contracts/sync-api.md](contracts/sync-api.md); the screens in

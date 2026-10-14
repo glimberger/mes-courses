@@ -1,9 +1,9 @@
-import type { ServerStore } from '../../ports/store';
+import type { ScopedStore } from './scoped-store';
 import { category } from './entities';
 import { entityRepositoryContract } from './entity-repository.contract';
 
 export const categoryRepositoryContract = (
-  createStore: () => Promise<ServerStore>,
+  createStore: () => Promise<ScopedStore>,
 ) =>
   entityRepositoryContract(
     'Category',

@@ -210,7 +210,7 @@ describe('createStoryStore', () => {
         syncServer: { sync: async () => err({ type: 'DeviceNotAuthorized' }) },
       });
 
-      expect(store.getState().sync.connection).toBe('disconnectedByServer');
+      expect(store.getState().sync.connection).toBe('signedOut');
     });
 
     it('drives the server fake: an update required', async () => {
@@ -222,51 +222,62 @@ describe('createStoryStore', () => {
       expect(store.getState().sync.connection).toBe('updateRequired');
     });
 
-    it('drives the server fake: a reachable server pairs the device', async () => {
+    it('drives the server fake: a reachable server signs the device in', async () => {
       const { store } = await buildStoryStore({
         syncServer: {
           health: async () =>
-            ok({ serverId: 's1', apiVersion: 1, minAppVersion: '1.0.0' }),
-          claim: async () =>
             ok({
-              serverId: 's1',
+              serverId: 'account-server',
               apiVersion: 1,
-              minAppVersion: '1.0.0',
-              deviceId: 'd1',
-              credential: 'secret',
+              minAppVersion: '1.1.0',
+            }),
+        },
+        accountServer: {
+          signIn: async () =>
+            ok({
+              type: 'signedIn' as const,
+              pairing: {
+                serverId: 's1',
+                apiVersion: 1,
+                minAppVersion: '1.1.0',
+                deviceId: 'd1',
+                credential: 'secret',
+                accountId: 'a1',
+              },
+              account: { id: 'a1', email: 'a@b.co', role: 'user' as const },
             }),
         },
       });
 
       const outcome = await store
         .getState()
-        .connectToServer('courses.example.fr', 'ABCD-EF23', 'Pixel');
+        .signIn('courses.example.fr', 'a@b.co', 'secret', 'Pixel');
 
       expect(outcome.ok).toBe(true);
       expect(store.getState().sync.connection).toBe('connected');
-      expect(store.getState().notice).toEqual({ type: 'deviceConnected' });
+      expect(store.getState().notice).toEqual({ type: 'signedIn' });
     });
 
-    it('holds synchronize and connectToServer pending', async () => {
+    it('holds synchronize and signIn pending', async () => {
       const { store } = await buildStoryStore({
-        pending: ['connectToServer', 'synchronize'],
+        pending: ['signIn', 'synchronize'],
       });
 
-      expect(
-        await isPending(store.getState().connectToServer('a', 'b', 'c')),
-      ).toBe(true);
+      expect(await isPending(store.getState().signIn('a', 'b', 'c', 'd'))).toBe(
+        true,
+      );
       expect(await isPending(store.getState().syncNow())).toBe(true);
     });
 
-    it('makes synchronize and connectToServer fail', async () => {
+    it('makes synchronize and signIn fail', async () => {
       const { store, errorReporter } = await buildStoryStore({
-        failing: ['connectToServer', 'synchronize'],
+        failing: ['signIn', 'synchronize'],
       });
 
-      const connect = await store.getState().connectToServer('a', 'b', 'c');
+      const signIn = await store.getState().signIn('a', 'b', 'c', 'd');
       const cycle = await store.getState().syncNow();
 
-      expect(connect).toEqual(err({ type: 'WriteFailed' }));
+      expect(signIn).toEqual(err({ type: 'WriteFailed' }));
       expect(cycle).toEqual({ failed: true });
       expect(errorReporter.reports).toHaveLength(2);
     });

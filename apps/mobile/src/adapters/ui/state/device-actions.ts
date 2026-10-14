@@ -1,20 +1,18 @@
-import type { PairingCode } from '@mes-courses/sync-core';
-
 import type {
   DeviceNotFound,
   SyncFailure,
 } from '../../../application/ports/sync-server';
+import type { DeleteMyAccountError } from '../../../application/use-cases/delete-my-account';
 import type { ChangeServerUrlError } from '../../../application/use-cases/change-server-url';
 import type { DeviceInfo } from '../../../application/use-cases/list-devices';
 import type { NameError } from '../../../domain/name';
 import { err, ok, type Result } from '../../../domain/result';
+import { reactToFailure } from './failure-reactions';
 import type { StoreKit, SyncSlice, WriteFailed } from './store-kit';
 import { UnexpectedResult } from './unexpected-result';
 
 /** The actions of the device management of Settings (US4-3, US4-8, US4-9, US4-11, FR-016). */
 export type DeviceActions = {
-  /** "Ajouter un appareil": a code for another device. */
-  createPairingCode: () => Promise<Result<PairingCode, SyncFailure>>;
   listDevices: () => Promise<Result<DeviceInfo[], SyncFailure>>;
   renameDevice: (
     id: string,
@@ -23,8 +21,12 @@ export type DeviceActions = {
   revokeDevice: (
     id: string,
   ) => Promise<Result<void, SyncFailure | DeviceNotFound>>;
-  /** Leaves the server; the lists stay on this device (US4-11). */
-  disconnect: () => Promise<Result<void, WriteFailed>>;
+  /** Signs this device out; its copy of the lists is erased (US6-4). */
+  signOut: () => Promise<Result<void, WriteFailed>>;
+  /** Deletes the account after checking the password, then leaves as `signOut` does (US6-6). */
+  deleteMyAccount: (
+    password: string,
+  ) => Promise<Result<void, DeleteMyAccountError | WriteFailed>>;
   /** Moves the connection to a new address of the same server (FR-016). */
   changeServerUrl: (
     url: string,
@@ -44,9 +46,10 @@ type Helpers = {
 const SCREEN = 'Settings';
 
 export const createDeviceActions = (
-  { set, useCases, report, onLocalWrite }: StoreKit,
+  kit: StoreKit,
   { loadSyncInfo, waitForCycle, setSync, resetFailures }: Helpers,
 ): DeviceActions => {
+  const { set, useCases, report, onLocalWrite } = kit;
   /**
    * Runs a use case. A throw is reported and answered as a server error, since the request may
    * have failed in any way; a failure result changes the connection or is reported as the tag
@@ -63,46 +66,59 @@ export const createDeviceActions = (
       report(error, operation, SCREEN);
       return err({ type: 'ServerError' });
     }
-    if (outcome.ok) return outcome;
-    switch (outcome.error.type) {
-      case 'DeviceNotAuthorized':
-      case 'UpdateRequired':
-        setSync({
-          connection:
-            outcome.error.type === 'UpdateRequired'
-              ? 'updateRequired'
-              : 'disconnectedByServer',
-        });
-        break;
-      case 'ServerError':
-      case 'UntrustedServer':
-        report(new UnexpectedResult(outcome.error.type), operation, SCREEN);
-        break;
-    }
+    if (!outcome.ok) reactToFailure(kit, operation, SCREEN, outcome.error);
     return outcome;
   };
 
+  /** The copy is erased and the credential gone: the device reads as a first launch. */
+  const returnToFirstLaunch = async () => {
+    resetFailures();
+    set({ pendingUndo: null });
+    setSync({
+      connection: 'notConnected',
+      signedOutReason: null,
+      status: 'saved',
+    });
+    await loadSyncInfo();
+    await kit.get().refresh();
+  };
+
   return {
-    createPairingCode: () =>
-      call('createPairingCode', () => useCases.createPairingCode()),
     listDevices: () => call('listDevices', () => useCases.listDevices()),
     renameDevice: (id, name) =>
       call('renameDevice', () => useCases.renameDevice(id, name)),
     revokeDevice: (id) => call('revokeDevice', () => useCases.revokeDevice(id)),
 
-    disconnect: async () => {
-      // A cycle saving its state after the disconnection would restore the old server fields.
+    signOut: async () => {
+      // A cycle saving its state after the erasure would restore the old server fields.
       await waitForCycle();
       try {
-        await useCases.disconnect();
+        await useCases.signOut();
       } catch (error) {
         set({ notice: { type: 'writeFailed' } });
-        report(error, 'disconnect', SCREEN);
+        report(error, 'signOut', SCREEN);
         return err({ type: 'WriteFailed' });
       }
-      resetFailures();
-      await loadSyncInfo();
-      setSync({ status: 'saved' });
+      await returnToFirstLaunch();
+      return ok(undefined);
+    },
+
+    deleteMyAccount: async (password) => {
+      await waitForCycle();
+      let outcome: Awaited<ReturnType<typeof useCases.deleteMyAccount>>;
+      try {
+        outcome = await useCases.deleteMyAccount(password);
+      } catch (error) {
+        // The request may have failed in any way: nothing is known to have changed.
+        set({ notice: { type: 'writeFailed' } });
+        report(error, 'deleteMyAccount', SCREEN);
+        return err({ type: 'WriteFailed' });
+      }
+      if (!outcome.ok) {
+        reactToFailure(kit, 'deleteMyAccount', SCREEN, outcome.error);
+        return outcome;
+      }
+      await returnToFirstLaunch();
       return ok(undefined);
     },
 

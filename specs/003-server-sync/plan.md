@@ -282,3 +282,7 @@ on the Pi, never by CI.
 ## Complexity Tracking
 
 No constitution violation to justify.
+
+> **Superseded in part by 004**: pairing codes are replaced by accounts and sign-in with a
+> temporary password (see [004 plan](../004-multi-user/plan.md) and
+> [ADR-0005](../../docs/adr/0005-accounts-and-authentication.md)).

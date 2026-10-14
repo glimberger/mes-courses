@@ -1,17 +1,17 @@
-import type { DeviceRecord } from '../../application/ports/store';
+import {
+  authenticateDevice,
+  type AuthResult,
+} from '../../application/use-cases/authenticate-device';
 import type { AppDeps } from './deps';
 
-/** The authorized device for an `Authorization: Bearer <credential>` header, or `null`. */
-export const authenticate = async (
-  { store, crypto }: Pick<AppDeps, 'store' | 'crypto'>,
-  header: string | undefined,
-): Promise<DeviceRecord | null> => {
+/** The Bearer credential of an `Authorization` header, or `null`. */
+export const bearerCredential = (header: string | undefined): string | null => {
   const match = /^Bearer (\S+)$/.exec(header ?? '');
-  const credential = match?.[1];
-  if (credential === undefined) return null;
-  const credentialHash = crypto.sha256Hex(credential);
-  const device = await store.run(({ devices }) =>
-    devices.findByCredentialHash(credentialHash),
-  );
-  return device !== null && device.revokedAt === null ? device : null;
+  return match?.[1] ?? null;
 };
+
+/** The device and account for an `Authorization: Bearer <credential>` header, or why not. */
+export const authenticate = (
+  deps: Pick<AppDeps, 'store' | 'crypto'>,
+  header: string | undefined,
+): Promise<AuthResult> => authenticateDevice(deps, bearerCredential(header));

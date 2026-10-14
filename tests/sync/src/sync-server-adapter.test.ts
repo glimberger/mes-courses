@@ -1,7 +1,11 @@
-import { createSyncServer } from '@mes-courses/mobile/testing';
+import {
+  createAccountServer,
+  createSyncServer,
+} from '@mes-courses/mobile/testing';
 import { startTestServer, type TestServer } from '@mes-courses/server/testing';
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
+const PASSWORD = 'a long enough password';
 
 type FetchFn = typeof fetch;
 
@@ -26,8 +30,33 @@ describe('SyncServer HTTP adapter', () => {
   });
   afterEach(async () => {
     jest.useRealTimers();
+    known.clear();
     await server.close();
   });
+
+  let accounts = 0;
+  /** A device signed in through the real adapter; an address already used joins its account. */
+  const known = new Set<string>();
+  const pairDevice = async ({
+    email = `user${++accounts}@example.org`,
+    name = 'A',
+  }: { email?: string; name?: string } = {}) => {
+    if (!known.has(email)) {
+      known.add(email);
+      await server.createAccount({ email });
+    }
+    const signedIn = await createAccountServer({
+      appVersion: APP_VERSION,
+    }).signIn(server.url, email, PASSWORD, name);
+    if (!signedIn.ok || signedIn.value.type !== 'signedIn') {
+      throw new Error('sign-in failed');
+    }
+    return {
+      url: server.url,
+      deviceId: signedIn.value.pairing.deviceId,
+      credential: signedIn.value.pairing.credential,
+    };
+  };
 
   describe('health', () => {
     it('returns the HealthInfo of the server', async () => {
@@ -59,28 +88,6 @@ describe('SyncServer HTTP adapter', () => {
       expect(requests[0]?.headers.get('X-App-Version')).toBe(APP_VERSION);
       expect(requests[0]?.headers.has('Authorization')).toBe(false);
     });
-
-    it.each([['Wed, 21 Oct 2026 07:28:00 GMT'], [null]])(
-      'waits 1 minute when Retry-After is %s',
-      async (header) => {
-        const limited: FetchFn = async () =>
-          new Response('{}', {
-            status: 429,
-            headers: header === null ? {} : { 'Retry-After': header },
-          });
-        const syncServer = createSyncServer({
-          appVersion: APP_VERSION,
-          fetch: limited,
-        });
-
-        const result = await syncServer.claim(server.url, 'ABCD-EF23', 'A');
-
-        expect(result).toEqual({
-          ok: false,
-          error: { type: 'TooManyAttempts', minutesToWait: 1 },
-        });
-      },
-    );
 
     it('rejects a health answer that is not the server identity', async () => {
       const portal: FetchFn = async () =>
@@ -178,118 +185,6 @@ describe('SyncServer HTTP adapter', () => {
     });
   });
 
-  describe('claim', () => {
-    it('returns the Pairing for a valid code', async () => {
-      const syncServer = createSyncServer({ appVersion: APP_VERSION });
-      const code = await server.createPairingCode();
-
-      const result = await syncServer.claim(server.url, code, 'Pixel de Léa');
-
-      expect(result).toEqual({
-        ok: true,
-        value: {
-          serverId: expect.any(String),
-          apiVersion: 1,
-          minAppVersion: expect.any(String),
-          deviceId: expect.any(String),
-          credential: expect.any(String),
-        },
-      });
-    });
-
-    it('sends X-App-Version and no Authorization', async () => {
-      const { requests, fetchFn } = recording();
-      const syncServer = createSyncServer({
-        appVersion: APP_VERSION,
-        fetch: fetchFn,
-      });
-
-      await syncServer.claim(server.url, await server.createPairingCode(), 'A');
-
-      expect(requests[0]?.headers.get('X-App-Version')).toBe(APP_VERSION);
-      expect(requests[0]?.headers.has('Authorization')).toBe(false);
-    });
-
-    it('maps 400 to InvalidCode', async () => {
-      const syncServer = createSyncServer({ appVersion: APP_VERSION });
-
-      const result = await syncServer.claim(server.url, 'ABCD-EF23', 'A');
-
-      expect(result).toEqual({ ok: false, error: { type: 'InvalidCode' } });
-    });
-
-    it('maps 429 to TooManyAttempts with the minutes to wait', async () => {
-      const limited: FetchFn = async () =>
-        new Response(JSON.stringify({ error: 'TooManyAttempts' }), {
-          status: 429,
-          headers: { 'Retry-After': '600' },
-        });
-      const syncServer = createSyncServer({
-        appVersion: APP_VERSION,
-        fetch: limited,
-      });
-
-      const result = await syncServer.claim(server.url, 'ABCD-EF23', 'A');
-
-      expect(result).toEqual({
-        ok: false,
-        error: { type: 'TooManyAttempts', minutesToWait: 10 },
-      });
-    });
-
-    it('rounds the minutes to wait up', async () => {
-      const limited: FetchFn = async () =>
-        new Response('{}', { status: 429, headers: { 'Retry-After': '61' } });
-      const syncServer = createSyncServer({
-        appVersion: APP_VERSION,
-        fetch: limited,
-      });
-
-      const result = await syncServer.claim(server.url, 'ABCD-EF23', 'A');
-
-      expect(result).toEqual({
-        ok: false,
-        error: { type: 'TooManyAttempts', minutesToWait: 2 },
-      });
-    });
-
-    it('reports ServerUnreachable when the connection is refused', async () => {
-      const syncServer = createSyncServer({ appVersion: APP_VERSION });
-
-      const result = await syncServer.claim(
-        'http://127.0.0.1:9',
-        'ABCD-EF23',
-        'A',
-      );
-
-      expect(result).toEqual({
-        ok: false,
-        error: { type: 'ServerUnreachable' },
-      });
-    });
-
-    it('reports UntrustedServer on a TLS error, never retrying over http', async () => {
-      const calls: string[] = [];
-      const failing: FetchFn = async (input) => {
-        calls.push(String(input));
-        throw new TypeError('SSL error: certificate verify failed');
-      };
-      const syncServer = createSyncServer({
-        appVersion: APP_VERSION,
-        fetch: failing,
-      });
-
-      const result = await syncServer.claim(
-        'https://courses.example.fr',
-        'ABCD-EF23',
-        'A',
-      );
-
-      expect(result).toEqual({ ok: false, error: { type: 'UntrustedServer' } });
-      expect(calls).toEqual(['https://courses.example.fr/v1/pairing/claim']);
-    });
-  });
-
   describe('authenticated requests', () => {
     const conn = {
       url: 'https://courses.example.fr',
@@ -297,33 +192,20 @@ describe('SyncServer HTTP adapter', () => {
       credential: 'secret-credential',
     };
 
-    it('sends X-App-Version and Authorization: Bearer, and returns the code', async () => {
-      const plain = createSyncServer({ appVersion: APP_VERSION });
-      const pairing = await plain.claim(
-        server.url,
-        await server.createPairingCode(),
-        'A',
-      );
-      if (!pairing.ok) throw new Error('claim failed');
+    it('sends X-App-Version and Authorization: Bearer, and returns the devices', async () => {
+      const paired = await pairDevice();
       const { requests, fetchFn } = recording();
       const syncServer = createSyncServer({
         appVersion: APP_VERSION,
         fetch: fetchFn,
       });
 
-      const result = await syncServer.createPairingCode({
-        url: server.url,
-        deviceId: pairing.value.deviceId,
-        credential: pairing.value.credential,
-      });
+      const result = await syncServer.listDevices(paired);
 
-      expect(result).toEqual({
-        ok: true,
-        value: { code: expect.any(String), expiresAt: expect.any(String) },
-      });
+      expect(result.ok).toBe(true);
       expect(requests[0]?.headers.get('X-App-Version')).toBe(APP_VERSION);
       expect(requests[0]?.headers.get('Authorization')).toBe(
-        `Bearer ${pairing.value.credential}`,
+        `Bearer ${paired.credential}`,
       );
     });
 
@@ -338,7 +220,7 @@ describe('SyncServer HTTP adapter', () => {
         fetch: async () => new Response('{}', { status }),
       });
 
-      const result = await syncServer.createPairingCode(conn);
+      const result = await syncServer.listDevices(conn);
 
       expect(result).toEqual({ ok: false, error });
     });
@@ -346,7 +228,7 @@ describe('SyncServer HTTP adapter', () => {
     it('maps a refused connection to Offline', async () => {
       const syncServer = createSyncServer({ appVersion: APP_VERSION });
 
-      const result = await syncServer.createPairingCode({
+      const result = await syncServer.listDevices({
         ...conn,
         url: 'http://127.0.0.1:9',
       });
@@ -362,7 +244,7 @@ describe('SyncServer HTTP adapter', () => {
         },
       });
 
-      const result = await syncServer.createPairingCode(conn);
+      const result = await syncServer.listDevices(conn);
 
       expect(result).toEqual({ ok: false, error: { type: 'UntrustedServer' } });
     });
@@ -382,20 +264,7 @@ describe('SyncServer HTTP adapter', () => {
       ],
     };
 
-    const paired = async () => {
-      const plain = createSyncServer({ appVersion: APP_VERSION });
-      const pairing = await plain.claim(
-        server.url,
-        await server.createPairingCode(),
-        'A',
-      );
-      if (!pairing.ok) throw new Error('claim failed');
-      return {
-        url: server.url,
-        deviceId: pairing.value.deviceId,
-        credential: pairing.value.credential,
-      };
-    };
+    const paired = pairDevice;
 
     it('round-trips a change with the real server', async () => {
       const conn = await paired();
@@ -513,35 +382,27 @@ describe('SyncServer HTTP adapter', () => {
     });
   });
   describe('device management', () => {
-    const pairDevice = async (
-      syncServer: ReturnType<typeof createSyncServer>,
-    ) => {
-      const pairing = await syncServer.claim(
-        server.url,
-        await server.createPairingCode(),
-        'Pixel',
-      );
-      if (!pairing.ok) throw new Error('claim failed');
-      return {
-        url: server.url,
-        deviceId: pairing.value.deviceId,
-        credential: pairing.value.credential,
-      };
-    };
-
     it('003 US4-8 listDevices returns the authorized devices', async () => {
       const syncServer = createSyncServer({ appVersion: APP_VERSION });
-      const conn = await pairDevice(syncServer);
-      const other = await pairDevice(syncServer);
+      const conn = await pairDevice({
+        email: 'shared@example.org',
+        name: 'Pixel',
+      });
+      const other = await pairDevice({
+        email: 'shared@example.org',
+        name: 'Pixel',
+      });
 
       const result = await syncServer.listDevices(conn);
 
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.value.map((d) => d.id).sort()).toEqual(
+      // The account was made with a device of its own, "Test phone".
+      const pixels = result.value.filter((d) => d.name === 'Pixel');
+      expect(pixels.map((d) => d.id).sort()).toEqual(
         [conn.deviceId, other.deviceId].sort(),
       );
-      expect(result.value[0]).toEqual({
+      expect(pixels[0]).toEqual({
         id: expect.any(String),
         name: 'Pixel',
         createdAt: expect.any(String),
@@ -551,7 +412,10 @@ describe('SyncServer HTTP adapter', () => {
 
     it('renameDevice renames, and maps an unknown id to NotFound', async () => {
       const syncServer = createSyncServer({ appVersion: APP_VERSION });
-      const conn = await pairDevice(syncServer);
+      const conn = await pairDevice({
+        email: 'shared@example.org',
+        name: 'Pixel',
+      });
 
       const renamed = await syncServer.renameDevice(
         conn,
@@ -562,14 +426,22 @@ describe('SyncServer HTTP adapter', () => {
       const missing = await syncServer.renameDevice(conn, 'unknown', 'X');
 
       expect(renamed).toEqual({ ok: true, value: undefined });
-      expect(listed.ok && listed.value[0]?.name).toBe('Pixel de Marie');
+      expect(
+        listed.ok && listed.value.find((d) => d.id === conn.deviceId)?.name,
+      ).toBe('Pixel de Marie');
       expect(missing).toEqual({ ok: false, error: { type: 'NotFound' } });
     });
 
     it('003 US4-9 revokeDevice revokes: the device gets DeviceNotAuthorized', async () => {
       const syncServer = createSyncServer({ appVersion: APP_VERSION });
-      const conn = await pairDevice(syncServer);
-      const other = await pairDevice(syncServer);
+      const conn = await pairDevice({
+        email: 'shared@example.org',
+        name: 'Pixel',
+      });
+      const other = await pairDevice({
+        email: 'shared@example.org',
+        name: 'Pixel',
+      });
 
       const revoked = await syncServer.revokeDevice(conn, other.deviceId);
       const again = await syncServer.revokeDevice(conn, other.deviceId);

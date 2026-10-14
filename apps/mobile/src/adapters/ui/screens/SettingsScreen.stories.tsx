@@ -13,8 +13,8 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-/** A device that never was connected: the explanation and "Connecter à un serveur" (US4-1). */
-export const NotConnected: Story = {
+/** A device that never was connected: the explanation and "Se connecter" (US4-1). */
+export const NotSignedIn: Story = {
   parameters: { scenario: { seed: fixture } },
 };
 
@@ -67,4 +67,59 @@ export const DevicesError: Story = {
 /** The server cannot be reached: said without error colors. */
 export const DevicesOffline: Story = {
   parameters: { scenario: { seed: fixture, connected } },
+};
+
+const signedIn = {
+  seed: fixture,
+  connected,
+  syncServer: { listDevices: async () => ok([]) },
+};
+
+/** Signed in: the address under "Compte", no administration. */
+export const SignedIn: Story = {
+  parameters: {
+    scenario: {
+      ...signedIn,
+      accountServer: {
+        getAccount: async () =>
+          ok({ id: 'account-1', email: 'lea@example.org', role: 'user' }),
+      },
+    },
+  },
+};
+
+/** An administrator: "Administrateur" and "Gérer les comptes". */
+export const SignedInAdministrator: Story = {
+  parameters: {
+    scenario: {
+      ...signedIn,
+      accountServer: {
+        getAccount: async () =>
+          ok({
+            id: 'account-1',
+            email: 'admin@example.org',
+            role: 'administrator',
+          }),
+      },
+    },
+  },
+};
+
+/** The account is loading: the address is the server's to tell on every opening. */
+export const AccountLoading: Story = {
+  parameters: {
+    scenario: { ...signedIn, pending: ['getAccountSettings'] },
+  },
+};
+
+/** The account failed to load: "Réessayer". */
+export const AccountError: Story = {
+  parameters: {
+    scenario: { ...signedIn, failing: ['getAccountSettings'] },
+  },
+};
+
+/** Offline: the address is not shown and nothing is in the error color (US6-1). */
+export const AccountOffline: Story = {
+  parameters: { scenario: signedIn },
 };

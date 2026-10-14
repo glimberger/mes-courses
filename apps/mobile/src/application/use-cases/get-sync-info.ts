@@ -7,7 +7,7 @@ export type SyncInfo = {
   lastSyncAt: string | null;
   /** The changes waiting to be sent, held ones excluded. */
   pendingCount: number;
-  connection: 'notConnected' | 'connected' | 'disconnectedByServer';
+  connection: 'notConnected' | 'connected' | 'signedOut';
 };
 
 /**
@@ -42,6 +42,6 @@ export const createGetSyncInfo =
       serverUrl,
       lastSyncAt,
       pendingCount,
-      connection: credential === null ? 'disconnectedByServer' : 'connected',
+      connection: credential === null ? 'signedOut' : 'connected',
     };
   };

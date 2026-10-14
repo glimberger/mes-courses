@@ -1,4 +1,5 @@
-import type { Repositories, ServerStore } from '../../ports/store';
+import type { Repositories } from '../../ports/store';
+import type { ScopedStore } from './scoped-store';
 import { article, category, hlc, item, list } from './entities';
 
 const prepare = async ({ categories, articles, lists }: Repositories) => {
@@ -9,10 +10,10 @@ const prepare = async ({ categories, articles, lists }: Repositories) => {
 };
 
 export const listItemRepositoryContract = (
-  createStore: () => Promise<ServerStore>,
+  createStore: () => Promise<ScopedStore>,
 ) => {
   describe('ListItemRepository contract', () => {
-    let store: ServerStore;
+    let store: ScopedStore;
 
     beforeEach(async () => {
       store = await createStore();

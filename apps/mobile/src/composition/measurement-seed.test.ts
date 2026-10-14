@@ -1,6 +1,9 @@
 /** @jest-environment node */
+import { eraserOf } from '../application/testing/in-memory-local-data-eraser';
 import { InMemoryCredentialStore } from '../application/testing/in-memory-credential-store';
 import { OfflineSyncServer } from '../application/testing/offline-sync-server';
+import { OfflineAccountServer } from '../application/testing/offline-account-server';
+import { OfflineAdminServer } from '../application/testing/offline-admin-server';
 import {
   InMemoryRepositories,
   InMemoryUnitOfWork,
@@ -17,12 +20,16 @@ import { seedForMeasurement } from './measurement-seed';
 /** A first launch's store, as `composeApp` leaves it before the measurement seed. */
 const freshStore = async () => {
   const unitOfWork = new InMemoryUnitOfWork(new InMemoryRepositories());
+  const ids = new SequentialIdGenerator();
   const useCases = createUseCases({
     syncServer: new OfflineSyncServer(),
+    accountServer: new OfflineAccountServer(),
+    adminServer: new OfflineAdminServer(),
     credentials: new InMemoryCredentialStore(),
     unitOfWork,
-    ids: new SequentialIdGenerator(),
+    ids,
     clock: new FakeClock(),
+    localDataEraser: eraserOf(unitOfWork, ids, seed),
   });
   await useCases.initializeStore(seed);
   return { unitOfWork, useCases };

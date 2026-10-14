@@ -8,6 +8,8 @@ import { categoryRepositoryContract } from './contracts/category-repository.cont
 import { listItemRepositoryContract } from './contracts/list-item-repository.contract';
 import { shoppingListRepositoryContract } from './contracts/shopping-list-repository.contract';
 import { unitOfWorkContract } from './contracts/unit-of-work.contract';
+import { localDataEraserContract } from './contracts/local-data-eraser.contract';
+import { inMemoryLocalDataEraser } from './in-memory-local-data-eraser';
 import {
   InMemoryRepositories,
   InMemoryUnitOfWork,
@@ -32,6 +34,15 @@ describe('in-memory fakes', () => {
       unitOfWork: new InMemoryUnitOfWork(
         new InMemoryRepositories({ clock, ids: new SequentialIdGenerator() }),
       ),
+    };
+  });
+  localDataEraserContract(async (seed) => {
+    const ids = new SequentialIdGenerator();
+    const repositories = new InMemoryRepositories({ ids });
+    const unitOfWork = new InMemoryUnitOfWork(repositories);
+    return {
+      unitOfWork,
+      eraser: inMemoryLocalDataEraser({ repositories, unitOfWork, ids, seed }),
     };
   });
 });

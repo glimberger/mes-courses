@@ -14,12 +14,12 @@ import { SyncStatusBar } from '../components/SyncStatusBar';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
-import { ChangeServerUrlDialog } from './ChangeServerUrlDialog';
+import { ChangePasswordDialog } from './ChangePasswordDialog';
+import { DeleteMyAccountDialog } from './DeleteMyAccountDialog';
 import { DeviceRow } from './DeviceRow';
-import { DisconnectDialog } from './DisconnectDialog';
-import { PairingCodeDialog } from './PairingCodeDialog';
 import { RenameDeviceDialog } from './RenameDeviceDialog';
 import { RevokeDeviceDialog } from './RevokeDeviceDialog';
+import { SignOutDialog } from './SignOutDialog';
 
 /** The address as people say it: without the scheme. */
 const withoutScheme = (url: string) => url.replace(/^https?:\/\//, '');
@@ -33,16 +33,28 @@ export type DevicesState =
   | { type: 'unavailable' }
   | { type: 'success'; devices: DeviceInfo[] };
 
+/** What the Compte section shows (contracts/ui-screens.md, Settings). */
+export type AccountState =
+  | { type: 'loading' }
+  | { type: 'error' }
+  | { type: 'offline' }
+  // Revoked or outdated: the connection state says why, and retrying cannot help.
+  | { type: 'unavailable' }
+  | { type: 'success'; email: string; administrator: boolean };
+
 type Dialog =
   | { type: 'rename'; device: DeviceInfo }
   | { type: 'revoke'; device: DeviceInfo }
-  | { type: 'pairingCode' }
-  | { type: 'changeUrl' }
-  | { type: 'disconnect' };
+  | { type: 'changePassword' }
+  | { type: 'signOut' }
+  | { type: 'deleteAccount' };
+
+/** Said when an action that needs the server is chosen offline (contracts/ui-screens.md). */
+const CONNECTION_NEEDED = 'Connexion au serveur nécessaire.';
 
 /**
- * Settings (US4-1, US4-8): offers to connect a device that never was, and shows the server, the
- * devices and their management for one that is.
+ * Settings (US4-1, US4-8, US6-1 to US6-7): offers to sign in on a device that never was, and
+ * shows the account, the server, the devices and their management for one that is.
  */
 export const SettingsScreen = () => {
   const navigation =
@@ -52,8 +64,12 @@ export const SettingsScreen = () => {
   );
   const syncNow = useAppStore((state) => state.syncNow);
   const listDevices = useAppStore((state) => state.listDevices);
+  const getAccountSettings = useAppStore((state) => state.getAccountSettings);
   const [devices, setDevices] = useState<DevicesState>({ type: 'loading' });
+  const [account, setAccount] = useState<AccountState>({ type: 'loading' });
   const [dialog, setDialog] = useState<Dialog | null>(null);
+  // An action needing the server was chosen while the account could not be read.
+  const [connectionNeeded, setConnectionNeeded] = useState(false);
   // Bumped to load the list again; the effect below loads it.
   const [reload, setReload] = useState(0);
 
@@ -62,7 +78,10 @@ export const SettingsScreen = () => {
   const [wasConnected, setWasConnected] = useState(isConnected);
   if (wasConnected !== isConnected) {
     setWasConnected(isConnected);
-    if (!isConnected) setDevices({ type: 'loading' });
+    if (!isConnected) {
+      setDevices({ type: 'loading' });
+      setAccount({ type: 'loading' });
+    }
   }
   useEffect(() => {
     if (!isConnected) return;
@@ -88,9 +107,49 @@ export const SettingsScreen = () => {
       current = false;
     };
   }, [isConnected, listDevices, reload]);
+  // The address and the role are the server's to tell on every opening, never read from storage.
+  useEffect(() => {
+    if (!isConnected) return;
+    let current = true;
+    void getAccountSettings().then(({ account: outcome }) => {
+      if (!current || outcome === null) return;
+      if (outcome.ok) {
+        setAccount({
+          type: 'success',
+          email: outcome.value.email,
+          administrator: outcome.value.role === 'administrator',
+        });
+      } else {
+        const { type } = outcome.error;
+        setAccount({
+          type:
+            type === 'Offline'
+              ? 'offline'
+              : type === 'DeviceNotAuthorized' || type === 'UpdateRequired'
+                ? 'unavailable'
+                : 'error',
+        });
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [isConnected, getAccountSettings, reload]);
   const loadDevices = () => {
+    setConnectionNeeded(false);
     setDevices({ type: 'loading' });
+    setAccount({ type: 'loading' });
     setReload((count) => count + 1);
+  };
+
+  /** Opens a dialog that needs the server, or says so when the account is out of reach. */
+  const openOnline = (opened: Dialog) => {
+    if (account.type === 'offline') {
+      setConnectionNeeded(true);
+      return;
+    }
+    setConnectionNeeded(false);
+    setDialog(opened);
   };
 
   const closeDialog = () => {
@@ -106,7 +165,7 @@ export const SettingsScreen = () => {
     <>
       <SettingsView
         onBack={navigation.canGoBack() ? () => navigation.goBack() : null}
-        onConnect={() => navigation.navigate('ConnectServer')}
+        onConnect={() => navigation.navigate('SignIn')}
         onSyncNow={() => void syncNow()}
         server={
           !isConnected
@@ -118,13 +177,16 @@ export const SettingsScreen = () => {
                 canSyncNow: connection === 'connected' && status !== 'sending',
               }
         }
+        account={account}
+        onManageAccounts={() => navigation.navigate('Accounts')}
         devices={devices}
         onRetryDevices={loadDevices}
         onRenameDevice={(device) => setDialog({ type: 'rename', device })}
         onRevokeDevice={(device) => setDialog({ type: 'revoke', device })}
-        onChangeUrl={() => setDialog({ type: 'changeUrl' })}
-        onAddDevice={() => setDialog({ type: 'pairingCode' })}
-        onDisconnect={() => setDialog({ type: 'disconnect' })}
+        onChangePassword={() => openOnline({ type: 'changePassword' })}
+        onSignOut={() => setDialog({ type: 'signOut' })}
+        onDeleteAccount={() => openOnline({ type: 'deleteAccount' })}
+        connectionNeeded={connectionNeeded}
       />
       {dialog?.type === 'rename' && (
         <RenameDeviceDialog device={dialog.device} onClose={closeDialog} />
@@ -132,14 +194,20 @@ export const SettingsScreen = () => {
       {dialog?.type === 'revoke' && (
         <RevokeDeviceDialog device={dialog.device} onClose={closeDialog} />
       )}
-      {dialog?.type === 'pairingCode' && (
-        <PairingCodeDialog onClose={closeDialog} />
+      {dialog?.type === 'changePassword' && (
+        <ChangePasswordDialog onClose={closeDialog} />
       )}
-      {dialog?.type === 'changeUrl' && serverUrl !== null && (
-        <ChangeServerUrlDialog currentUrl={serverUrl} onClose={closeDialog} />
+      {dialog?.type === 'signOut' && (
+        <SignOutDialog
+          onClose={closeDialog}
+          onSignedOut={() => navigation.navigate('SignIn')}
+        />
       )}
-      {dialog?.type === 'disconnect' && (
-        <DisconnectDialog onClose={closeDialog} />
+      {dialog?.type === 'deleteAccount' && (
+        <DeleteMyAccountDialog
+          onClose={closeDialog}
+          onDeleted={() => navigation.navigate('SignIn')}
+        />
       )}
     </>
   );
@@ -156,13 +224,18 @@ export type SettingsViewProps = {
     lastSyncAt: string | null;
     canSyncNow: boolean;
   } | null;
+  account: AccountState;
+  /** "Gérer les comptes" (administrators only). */
+  onManageAccounts: () => void;
   devices: DevicesState;
   onRetryDevices: () => void;
   onRenameDevice: (device: DeviceInfo) => void;
   onRevokeDevice: (device: DeviceInfo) => void;
-  onChangeUrl: () => void;
-  onAddDevice: () => void;
-  onDisconnect: () => void;
+  onChangePassword: () => void;
+  onSignOut: () => void;
+  onDeleteAccount: () => void;
+  /** "Connexion au serveur nécessaire." under the actions (offline). */
+  connectionNeeded: boolean;
 };
 
 /** The content of Settings, its data given as props so a story can show each state. */
@@ -171,13 +244,16 @@ export const SettingsView = ({
   onConnect,
   onSyncNow,
   server,
+  account,
+  onManageAccounts,
   devices,
   onRetryDevices,
   onRenameDevice,
   onRevokeDevice,
-  onChangeUrl,
-  onAddDevice,
-  onDisconnect,
+  onChangePassword,
+  onSignOut,
+  onDeleteAccount,
+  connectionNeeded,
 }: SettingsViewProps) => (
   <View style={styles.screen}>
     <Appbar.Header>
@@ -189,15 +265,22 @@ export const SettingsView = ({
       {server === null ? (
         <>
           <Text variant="bodyLarge">
-            Synchronisez vos listes avec votre serveur pour les retrouver sur
-            vos autres appareils.
+            Connectez-vous pour retrouver vos listes sur vos autres appareils.
           </Text>
           <Button mode="contained" onPress={onConnect}>
-            Connecter à un serveur
+            Se connecter
           </Button>
         </>
       ) : (
         <>
+          <List.Subheader accessibilityRole="header">Compte</List.Subheader>
+          <AccountSection
+            account={account}
+            onRetry={onRetryDevices}
+            onManageAccounts={onManageAccounts}
+            onChangePassword={onChangePassword}
+          />
+
           <List.Subheader accessibilityRole="header">Serveur</List.Subheader>
           <List.Item
             title={withoutScheme(server.url)}
@@ -215,9 +298,6 @@ export const SettingsView = ({
           >
             Synchroniser maintenant
           </Button>
-          <Button mode="outlined" onPress={onChangeUrl}>
-            {"Modifier l'adresse"}
-          </Button>
 
           <List.Subheader accessibilityRole="header">Appareils</List.Subheader>
           <DevicesSection
@@ -228,17 +308,81 @@ export const SettingsView = ({
           />
 
           <List.Subheader accessibilityRole="header">Actions</List.Subheader>
-          <Button mode="outlined" onPress={onAddDevice}>
-            Ajouter un appareil
+          <Button mode="outlined" onPress={onSignOut}>
+            Se déconnecter de cet appareil
           </Button>
-          <Button mode="outlined" onPress={onDisconnect}>
-            Déconnecter cet appareil
+          <Button mode="outlined" onPress={onDeleteAccount}>
+            Supprimer mon compte
           </Button>
+          {connectionNeeded && (
+            <Text variant="bodyMedium" style={styles.offline}>
+              {CONNECTION_NEEDED}
+            </Text>
+          )}
         </>
       )}
     </ScrollView>
   </View>
 );
+
+const AccountSection = ({
+  account,
+  onRetry,
+  onManageAccounts,
+  onChangePassword,
+}: {
+  account: AccountState;
+  onRetry: () => void;
+  onManageAccounts: () => void;
+  onChangePassword: () => void;
+}) => {
+  switch (account.type) {
+    case 'loading':
+      return <LoadingState />;
+    case 'error':
+      return (
+        <ErrorState
+          message="Impossible de charger le compte."
+          onRetry={onRetry}
+        />
+      );
+    case 'offline':
+      // Being offline is normal: no error color.
+      return (
+        <>
+          <Text variant="bodyMedium" style={styles.offline}>
+            Compte indisponible hors connexion.
+          </Text>
+          <Button mode="outlined" onPress={onChangePassword}>
+            Changer de mot de passe
+          </Button>
+        </>
+      );
+    case 'unavailable':
+      return (
+        <Text variant="bodyMedium" style={styles.offline}>
+          Compte indisponible pour le moment.
+        </Text>
+      );
+    case 'success':
+      return (
+        <>
+          <List.Item
+            title={account.email}
+            description={account.administrator ? 'Administrateur' : undefined}
+          />
+          <Button mode="outlined" onPress={onChangePassword}>
+            Changer de mot de passe
+          </Button>
+          {account.administrator && (
+            <Button mode="outlined" onPress={onManageAccounts}>
+              Gérer les comptes
+            </Button>
+          )}
+        </>
+      );
+  }
+};
 
 const DevicesSection = ({
   devices,

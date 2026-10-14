@@ -4,7 +4,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { prepareDatabase } from '../src/adapters/sqlite/prepare-database';
+import { sqliteLocalDataEraser } from '../src/adapters/sqlite/local-data-eraser';
 import { SqliteUnitOfWork } from '../src/adapters/sqlite/unit-of-work';
+import { createAccountServer } from '../src/adapters/sync-http/account-server';
+import { createAdminServer } from '../src/adapters/sync-http/admin-server';
 import { createSyncServer } from '../src/adapters/sync-http/sync-server';
 import { seed } from '../src/adapters/ui/seed';
 import { createUseCases, type UseCases } from '../src/adapters/ui/use-cases';
@@ -64,15 +67,24 @@ export const buildTestAppStack = async ({
   await prepareDatabase(database);
   const ids = { next: () => randomUUID() };
   const unitOfWork = new SqliteUnitOfWork(database, { clock, ids });
+  const transport = {
+    appVersion: '1.1.0',
+    ...(fetchFn ? { fetch: fetchFn } : {}),
+  };
   const useCases = createUseCases({
     unitOfWork,
     ids,
     clock,
-    syncServer: createSyncServer({
-      appVersion: '1.0.0',
-      ...(fetchFn ? { fetch: fetchFn } : {}),
-    }),
+    syncServer: createSyncServer(transport),
+    accountServer: createAccountServer(transport),
+    adminServer: createAdminServer(transport),
     credentials,
+    localDataEraser: sqliteLocalDataEraser({
+      db: database,
+      unitOfWork,
+      ids,
+      seed,
+    }),
     // The test server listens on 127.0.0.1 without TLS.
     allowInsecure: serverUrl.startsWith('http://'),
   });

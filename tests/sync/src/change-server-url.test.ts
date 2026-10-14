@@ -1,3 +1,4 @@
+import { signInDevice } from './testing/onboard';
 import { FakeClock, buildTestAppStack } from '@mes-courses/mobile/testing';
 import { startTestServer, type TestServer } from '@mes-courses/server/testing';
 
@@ -19,11 +20,7 @@ describe('a server that changes address (003 spec edge case "domain name changes
 
   const pairedDevice = async () => {
     const stack = await buildTestAppStack({ serverUrl: server.url, clock });
-    const connected = await stack.useCases.connectToServer(
-      server.url,
-      await server.createPairingCode(),
-      'Pixel',
-    );
+    const connected = await signInDevice(server, stack, 'Pixel');
     expect(connected.ok).toBe(true);
     clock.advance(1_000);
     expect((await stack.useCases.synchronize()).outcome.type).toBe('saved');

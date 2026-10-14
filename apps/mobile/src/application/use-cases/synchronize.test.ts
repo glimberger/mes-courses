@@ -121,7 +121,7 @@ describe('synchronize', () => {
       expect(requests).toEqual([]);
     });
 
-    it('FR-018b answers disconnectedByServer, with no request, when the credential is gone', async () => {
+    it('FR-018b answers signedOut (revoked), with no request, when the credential is gone', async () => {
       await connect();
       await credentials.clear();
       await record('list', 'l-1', { name: 'Ma liste' });
@@ -129,7 +129,7 @@ describe('synchronize', () => {
 
       const result = await synchronize();
 
-      expect(result.outcome).toEqual({ type: 'disconnectedByServer' });
+      expect(result.outcome).toEqual({ type: 'signedOut', reason: 'revoked' });
       expect(requests).toEqual([]);
       expect(await pendingCount()).toBe(1);
       expect(await state()).toEqual(before);
@@ -397,6 +397,37 @@ describe('synchronize', () => {
     });
   });
 
+  describe('the account (004)', () => {
+    it('004 US3-5 learns the account from the first response that names it, on a device paired before accounts', async () => {
+      await connect();
+      expect((await state()).accountId).toBeNull();
+      handler = (request) => ok(respond(request, { accountId: 'account-1' }));
+
+      await synchronize();
+
+      expect((await state()).accountId).toBe('account-1');
+    });
+
+    it('004 keeps the account it knows when a later response names another', async () => {
+      await connect();
+      handler = (request) => ok(respond(request, { accountId: 'account-1' }));
+      await synchronize();
+      handler = (request) => ok(respond(request, { accountId: 'account-2' }));
+
+      await synchronize();
+
+      expect((await state()).accountId).toBe('account-1');
+    });
+
+    it('004 stays null while no response names an account', async () => {
+      await connect();
+
+      await synchronize();
+
+      expect((await state()).accountId).toBeNull();
+    });
+  });
+
   describe('failures', () => {
     beforeEach(async () => {
       await connect();
@@ -418,7 +449,7 @@ describe('synchronize', () => {
       expect(await state()).toEqual(before);
     });
 
-    it('FR-018a answers disconnectedByServer on DeviceNotAuthorized, keeping every row and pending change', async () => {
+    it('FR-018a answers signedOut (revoked) on DeviceNotAuthorized, keeping every row and pending change', async () => {
       await unitOfWork.run((repos) =>
         repos.lists.add({ id: 'l-1' as ListId, name: 'Locale' }),
       );
@@ -426,14 +457,14 @@ describe('synchronize', () => {
 
       const result = await synchronize();
 
-      expect(result.outcome).toEqual({ type: 'disconnectedByServer' });
+      expect(result.outcome).toEqual({ type: 'signedOut', reason: 'revoked' });
       expect(await pendingCount()).toBe(1);
       expect(await unitOfWork.run((repos) => repos.lists.all())).toHaveLength(
         1,
       );
     });
 
-    it('FR-018a answers disconnectedByServer when the serverId is not the one paired with', async () => {
+    it('FR-018a answers signedOut (revoked) when the serverId is not the one paired with', async () => {
       handler = (request) =>
         ok(
           respond(request, {
@@ -447,10 +478,68 @@ describe('synchronize', () => {
 
       const result = await synchronize();
 
-      expect(result.outcome).toEqual({ type: 'disconnectedByServer' });
+      expect(result.outcome).toEqual({ type: 'signedOut', reason: 'revoked' });
       expect(apply).not.toHaveBeenCalled();
       expect(await pendingCount()).toBe(1);
       expect(await state()).toEqual(before);
+    });
+
+    it('004 US5-4 answers signedOut(accountDeleted) on AccountDeleted, keeping every row and pending change', async () => {
+      await unitOfWork.run((repos) =>
+        repos.lists.add({ id: 'l-1' as ListId, name: 'Locale' }),
+      );
+      handler = () => err({ type: 'AccountDeleted' });
+
+      const result = await synchronize();
+
+      expect(result.outcome).toEqual({
+        type: 'signedOut',
+        reason: 'accountDeleted',
+      });
+      expect(await pendingCount()).toBe(1);
+      expect(await unitOfWork.run((repos) => repos.lists.all())).toHaveLength(
+        1,
+      );
+    });
+
+    it('004 US5-2 answers suspended on AccountSuspended, keeping every row and pending change', async () => {
+      await unitOfWork.run((repos) =>
+        repos.lists.add({ id: 'l-1' as ListId, name: 'Locale' }),
+      );
+      handler = () => err({ type: 'AccountSuspended' });
+      const before = await state();
+
+      const result = await synchronize();
+
+      expect(result.outcome).toEqual({ type: 'suspended' });
+      expect(await pendingCount()).toBe(1);
+      expect(await state()).toEqual(before);
+      expect(await credentials.read()).toBe('secret-credential');
+    });
+
+    it('004 US5-3 syncs again with no sign-in once the account is reactivated, sending what was queued', async () => {
+      await unitOfWork.run((repos) =>
+        repos.lists.add({ id: 'l-1' as ListId, name: 'Locale' }),
+      );
+      handler = () => err({ type: 'AccountSuspended' });
+      await synchronize();
+      handler = (request) => ok(respond(request));
+
+      const result = await synchronize();
+
+      expect(result.outcome).toEqual({ type: 'saved' });
+      expect(await pendingCount()).toBe(0);
+    });
+
+    it('004 US6-5 a suspended account then deleted ends as signedOut(accountDeleted)', async () => {
+      handler = () => err({ type: 'AccountSuspended' });
+      expect((await synchronize()).outcome).toEqual({ type: 'suspended' });
+      handler = () => err({ type: 'AccountDeleted' });
+
+      expect((await synchronize()).outcome).toEqual({
+        type: 'signedOut',
+        reason: 'accountDeleted',
+      });
     });
 
     it('answers updateRequired on UpdateRequired', async () => {

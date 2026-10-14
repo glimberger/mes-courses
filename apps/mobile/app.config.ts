@@ -18,7 +18,7 @@ const config: ExpoConfig = {
   slug: 'mes-courses',
   // Semantic versioning, set by hand in the pull request that leads to a release (research R24);
   // the build number is EAS's, remote and incremented on every build.
-  version: '1.0.0',
+  version: '1.1.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',

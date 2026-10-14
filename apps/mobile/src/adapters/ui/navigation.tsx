@@ -8,13 +8,16 @@ import type { ErrorReporter } from '../../application/ports/error-reporter';
 import { ScreenErrorBoundary } from './components/app-error-boundary';
 import { NoticeSnackbar } from './components/NoticeSnackbar';
 import { UndoSnackbar } from './components/UndoSnackbar';
+import { AccountsScreen } from './screens/AccountsScreen';
 import { AddArticlesScreen } from './screens/AddArticlesScreen';
+import { ChoosePasswordScreen } from './screens/ChoosePasswordScreen';
 import { CreateArticleScreen } from './screens/CreateArticleScreen';
 import { CurrentListScreen } from './screens/CurrentListScreen';
 import { EditArticleScreen } from './screens/EditArticleScreen';
-import { ConnectServerScreen } from './screens/ConnectServerScreen';
 import { ListsScreen } from './screens/ListsScreen';
+import { SignedOutNotice } from './screens/SignedOutNoticeDialog';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { SignInScreen } from './screens/SignInScreen';
 import type { RootStackParamList } from './routes';
 import { SyncAnnouncer } from './components/SyncAnnouncer';
 import { useNavigationTheme } from './theme/navigation-theme';
@@ -63,12 +66,18 @@ export const Navigation = ({
           <Stack.Screen name="CreateArticle" component={CreateArticleScreen} />
           <Stack.Screen name="EditArticle" component={EditArticleScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
-          <Stack.Screen name="ConnectServer" component={ConnectServerScreen} />
+          <Stack.Screen name="SignIn" component={SignInScreen} />
+          <Stack.Screen
+            name="ChoosePassword"
+            component={ChoosePasswordScreen}
+          />
+          <Stack.Screen name="Accounts" component={AccountsScreen} />
         </Stack.Navigator>
       </NavigationContainer>
       <SyncAnnouncer />
       <UndoSnackbar />
       <NoticeSnackbar />
+      <SignedOutNotice />
     </>
   );
 };
