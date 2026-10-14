@@ -21,7 +21,9 @@
     "test:hooks": "bash .claude/hooks/test.sh",
     "build": "yarn workspaces foreach --all --exclude mes-courses run build",
     "test:e2e:android": "yarn workspace @mes-courses/e2e-tests e2e:build:android && yarn workspace @mes-courses/e2e-tests e2e:test:android",
-    "test:e2e:ios": "yarn workspace @mes-courses/e2e-tests e2e:build:ios && yarn workspace @mes-courses/e2e-tests e2e:test:ios"
+    "test:e2e:ios": "yarn workspace @mes-courses/e2e-tests e2e:build:ios && yarn workspace @mes-courses/e2e-tests e2e:test:ios",
+    "screenshots:ios": "yarn workspace @mes-courses/e2e-tests e2e:build:ios:shots && yarn workspace @mes-courses/e2e-tests e2e:shots:ios",
+    "screenshots:android": "yarn workspace @mes-courses/e2e-tests e2e:build:android:shots && yarn workspace @mes-courses/e2e-tests e2e:shots:android"
   },
   "devDependencies": {
     "@eslint/js": "^9",

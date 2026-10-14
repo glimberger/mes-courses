@@ -272,6 +272,23 @@ same device). The Android journeys need an emulator of API 35 or lower: Detox 20
 API 37. iOS 27 has no "iPhone 16" simulator: there, run
 `DETOX_IOS_DEVICE="iPhone 17" DETOX_IOS_OS="iOS 27.0" yarn test:e2e:ios`.
 
+## Story screenshots
+
+`yarn screenshots:ios` and `yarn screenshots:android` build the app in a screenshot mode (every
+story full screen, one at a time, `STORYBOOK_ENABLED=true STORY_SHOTS=true`) and capture each
+story in the light and the dark scheme with Detox, into `tests/e2e/artifacts/shots/`
+(`<platform>-<scheme>/<Story-id with / as ->.png`). They replace the release build at the same
+paths, so `yarn test:e2e:*` builds again before it runs. Run them one platform at a time.
+
+| Variable        | Default           | What it does                                                    |
+| --------------- | ----------------- | --------------------------------------------------------------- |
+| `SHOTS_OUT`     | `artifacts/shots` | The output folder                                               |
+| `SHOTS_STORIES` | every story       | A file with one story id per line (blank lines and `#` ignored) |
+| `SHOTS_SCHEMES` | `light,dark`      | `light`, `dark`, or both                                        |
+
+The screenshot mode is a build of its own: a normal build has none of its code. They serve the
+review of a pull request that changes screens or dialogs.
+
 ## Build-time flags
 
 Two flags turn on test-only code at build time. Builds for users never set them: a `production`
