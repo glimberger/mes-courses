@@ -425,6 +425,28 @@ describe('runAgent', () => {
       });
     });
 
+    it('is published on a later pass when the server could not be checked in the first', async () => {
+      const { deps, publish, health, recorder, stateStore } = setup();
+      publish('staging', withFdroid());
+      // Validation and opening are healthy; the check before the swap is not.
+      health.results.push('healthy', 'healthy', 'unavailable');
+
+      await runAgent(deps, { only: 'staging' });
+
+      expect(stateStore.states.get('staging')?.fdroid).toBeNull();
+      expect(stateStore.states.get('staging')?.manifestSequence).toBeNull();
+
+      await runAgent(deps, { only: 'staging' });
+
+      expect(
+        recorder.calls.some((c) => c.startsWith('FdroidSite.publish')),
+      ).toBe(true);
+      expect(stateStore.states.get('staging')?.fdroid).toEqual({
+        commit: commit('e'),
+        versionCode: 30,
+      });
+    });
+
     it('is not published when the server deployment failed', async () => {
       const { deps, publish, recorder } = setup();
       publish('staging', withFdroid());

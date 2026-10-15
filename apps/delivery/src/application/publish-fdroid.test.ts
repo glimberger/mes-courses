@@ -82,6 +82,7 @@ describe('publishFdroid', () => {
       succeeded,
     );
     expect(result.published).toBe(false);
+    expect(result.pending).toBe(false);
     expect(recorder.calls).toEqual([]);
   });
 
@@ -160,6 +161,7 @@ describe('publishFdroid', () => {
       succeeded,
     );
     expect(result.published).toBe(false);
+    expect(result.pending).toBe(true);
     expect(recorder.calls.some((c) => c.includes('FdroidSite'))).toBe(false);
   });
 
@@ -173,6 +175,7 @@ describe('publishFdroid', () => {
       { kind: 'skipped', reason: 'not-newer' },
     );
     expect(result.published).toBe(false);
+    expect(result.pending).toBe(true);
   });
 
   it('reports an error and keeps the old repository when the download fails', async () => {
