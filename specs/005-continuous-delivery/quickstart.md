@@ -53,7 +53,7 @@ key, password or token for the Pi.
      and `chown -R mes-courses-production: /var/lib/mes-courses/production`;
    - move `/etc/mes-courses.env` to `/etc/mes-courses/production.env` and add
      `MES_COURSES_ENV=production` and `MES_COURSES_PORT=3000`. Then create `staging.env` from
-     `deploy/mes-courses.env.example` with `MES_COURSES_ENV=staging`, `MES_COURSES_PORT=3001`
+     `deploy/mes-courses.env.example` with `MES_COURSES_ENV=staging`, `MES_COURSES_PORT=3002`
      and the staging public URL. Set each file to mode 600, owned by its instance's user;
    - install `deploy/mes-courses@.service`, `deploy/mes-courses-agent.{service,timer}`,
      `deploy/allowed_signers` and `deploy/Caddyfile`, with both domains given to Caddy's drop-in;

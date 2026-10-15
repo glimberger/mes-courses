@@ -21,7 +21,7 @@ paths are part of the contract: the agent's adapters and the unit files must agr
 ```text
 /etc/mes-courses/
 ├── production.env          # MES_COURSES_ENV=production, MES_COURSES_PORT=3000, mail, Sentry …
-├── staging.env             # MES_COURSES_ENV=staging,    MES_COURSES_PORT=3001, …
+├── staging.env             # MES_COURSES_ENV=staging,    MES_COURSES_PORT=3002, …
 ├── agent.env               # GITHUB_REPOSITORY, GITHUB_TOKEN (read-only), SENTRY_DSN
 └── allowed_signers
 /opt/mes-courses/<env>/
@@ -108,7 +108,7 @@ CI-side commands of the same workspace, run with `yarn workspace @mes-courses/de
 		root * /srv/fdroid/staging/current
 		file_server
 	}
-	reverse_proxy 127.0.0.1:3001
+	reverse_proxy 127.0.0.1:3002
 }
 ```
 

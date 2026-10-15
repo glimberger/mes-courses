@@ -13,7 +13,7 @@ A value, not a record: `'staging' | 'production'`.
 | -------------------- | ------------------------------------ | ---------------------------------- |
 | Channel release tag  | `channel-staging`                    | `channel-production`               |
 | systemd instance     | `mes-courses@staging`                | `mes-courses@production`           |
-| Local port           | 3001                                 | 3000                               |
+| Local port           | 3002                                 | 3000                               |
 | Validation port      | 3101                                 | 3100                               |
 | Android application  | `com.glimberger.mescourses.staging`  | `com.glimberger.mescourses`        |
 | Sentry environment   | `staging`                            | `production`                       |

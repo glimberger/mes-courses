@@ -61,7 +61,7 @@ describe('publishFdroid', () => {
 
     expect(result.published).toBe(true);
     expect(recorder.calls).toEqual([
-      `HealthProbe.waitForCommit 3001 ${SERVER} 10000`,
+      `HealthProbe.waitForCommit 3002 ${SERVER} 10000`,
       `ChannelSource.downloadAsset staging ${entry.asset} /dl/${entry.asset}`,
       `FdroidSite.publish staging ${APP} /dl/${entry.asset} ${SHA}`,
       'StateStore.save staging',

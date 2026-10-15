@@ -254,7 +254,7 @@ environment: `mes-courses@production` and `mes-courses@staging`.
 | Database                  | `StateDirectory=mes-courses/%i` → `/var/lib/mes-courses/%i/mes-courses.db`        |
 | Code                      | `/opt/mes-courses/%i/current` → `/opt/mes-courses/%i/releases/<sha>`               |
 | Node                      | `/opt/mes-courses/%i/current/runtime/bin/node` (the release's own runtime, R3)    |
-| Port                      | 3000 for production, 3001 for staging (`127.0.0.1` only)                           |
+| Port                      | 3000 for production, 3002 for staging (`127.0.0.1` only)                           |
 | Public address            | `courses.<domain>` and `staging.courses.<domain>`, both through the existing Caddy |
 
 The template's `ExecStartPre` lines are unchanged. The mail check applies to both instances.
@@ -293,7 +293,7 @@ Too little space fails the deployment before anything is stopped (a failed versi
 the free space found).
 
 **Validation port** (FR-019a). Each instance has two ports on `127.0.0.1`: the public one that
-Caddy proxies (3000 production, 3001 staging) and a validation one (3100 production, 3101
+Caddy proxies (3000 production, 3002 staging) and a validation one (3100 production, 3101
 staging). The unit reads `EnvironmentFile=/etc/mes-courses/%i.env`, then
 `EnvironmentFile=-/run/mes-courses/%i.env`. Before it starts the new version, the agent writes
 `MES_COURSES_PORT=<validation port>` into the second file, so Caddy has nothing to reach and the
