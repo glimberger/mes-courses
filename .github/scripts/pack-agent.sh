@@ -36,22 +36,28 @@ if [ "$actual" != "$version" ]; then
   echo "apps/delivery is at version '$actual', not '$version'" >&2
   exit 1
 fi
-if [ ! -f apps/delivery/dist/composition/main.js ]; then
-  echo "apps/delivery/dist/composition/main.js does not exist: run yarn build first" >&2
+if [ ! -d apps/delivery/dist ]; then
+  echo "apps/delivery/dist does not exist: run yarn build first" >&2
   exit 1
 fi
-# The agent unit starts the entry point from the root of the bundle. A build that does not produce
-# it would only fail on the Pi, with status 203.
-entry=$(sed -n 's|^ExecStart=.*/opt/mes-courses/agent/current/\([^ ]*\).*|\1|p' \
-  deploy/mes-courses-agent.service 2>/dev/null | head -1)
-if [ -z "$entry" ]; then
-  echo "deploy/mes-courses-agent.service has no ExecStart under /opt/mes-courses/agent/current" >&2
+# The agent unit starts its entry points from the root of the bundle. A build that does not produce
+# one of them would only fail on the Pi, with status 203.
+unit=deploy/mes-courses-agent.service
+if [ ! -f "$unit" ]; then
+  echo "$unit does not exist" >&2
   exit 1
 fi
-if [ ! -f "$entry" ]; then
-  echo "deploy/mes-courses-agent.service starts '$entry', which yarn build does not produce" >&2
+entries=$(sed -n 's|^ExecStart=.*/opt/mes-courses/agent/current/\([^ ]*\).*|\1|p' "$unit")
+if [ -z "$entries" ]; then
+  echo "$unit has no ExecStart under /opt/mes-courses/agent/current" >&2
   exit 1
 fi
+for entry in $entries; do
+  if [ ! -f "$entry" ]; then
+    echo "$unit starts '$entry', which yarn build does not produce" >&2
+    exit 1
+  fi
+done
 
 rev=$(jq -r '.nodes.nixpkgs.locked.rev // empty' flake.lock)
 case "$rev" in
