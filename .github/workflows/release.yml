@@ -1,8 +1,8 @@
 name: Release
 
 # Pushing a tag vX.Y.Z on a validated commit of main releases to production (research R15,
-# contracts/workflows.md): the server through the Pi's agent, the Android build through the
-# production F-Droid repository, the iOS build through EAS. The workflow holds no logic of its
+# contracts/workflows.md): the server through the Pi's agent, and the Android build through the
+# production F-Droid repository. The workflow holds no logic of its
 # own: it calls scripts and the delivery workspace. Re-running the failed jobs of a run completes
 # a partial release on the same commit; no new tag is needed.
 on:
@@ -206,22 +206,3 @@ jobs:
         env:
           PRODUCTION_SERVER_URL: ${{ vars.PRODUCTION_SERVER_URL }}
         run: nix develop --command yarn workspace @mes-courses/delivery ci wait-health --url "$PRODUCTION_SERVER_URL" --commit "$SHA" --timeout 1200
-
-  ios:
-    needs: wait-production-health
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: DeterminateSystems/determinate-nix-action@v3
-      - run: nix develop --command yarn install --immutable
-      - name: Queue the iOS production build on EAS and submit it
-        working-directory: apps/mobile
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          set -eu
-          out=$(nix develop --command npx eas-cli build --profile production --platform ios --non-interactive --no-wait --auto-submit --json)
-          url=$(printf '%s' "$out" | jq -r '.[0].url // .[0].buildDetailsPageUrl // empty')
-          echo "### iOS production" >> "$GITHUB_STEP_SUMMARY"
-          echo "Queued on EAS: ${url:-see the EAS dashboard}" >> "$GITHUB_STEP_SUMMARY"

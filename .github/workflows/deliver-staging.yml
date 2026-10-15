@@ -143,30 +143,7 @@ jobs:
           name: fdroid-staging
           path: ${{ runner.temp }}/out/fdroid-staging-${{ env.SHA }}.tar.gz
           retention-days: 1
-          if-no-files-found: error
-
-  # Independent of `publish`: an EAS failure does not stop the server and Android delivery.
-  ios:
-    needs: plan
-    if: needs.plan.outputs.app == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ env.SHA }}
-      - uses: DeterminateSystems/determinate-nix-action@v3
-      - run: nix develop --command yarn install --immutable
-      - name: Queue the iOS staging build on EAS
-        working-directory: apps/mobile
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          set -eu
-          out=$(nix develop --command npx eas-cli build --profile staging --platform ios --non-interactive --no-wait --json)
-          url=$(printf '%s' "$out" | jq -r '.[0].url // .[0].buildDetailsPageUrl // empty')
-          echo "### iOS staging" >> "$GITHUB_STEP_SUMMARY"
-          echo "Queued on EAS: ${url:-see the EAS dashboard}" >> "$GITHUB_STEP_SUMMARY"
+          if-no-files-found: errors
 
   publish:
     needs: [plan, server-artifact, fdroid-repo]
