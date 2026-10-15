@@ -28,9 +28,9 @@ description: "Task list for the startup splash screen feature"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T003 [P] Document the existing `Startup` state transitions and `composeApp()` readiness gate in `apps/mobile/App.tsx` without introducing a second state machine, timer, navigation route, or network gate
-- [ ] T004 [P] Confirm `apps/mobile/src/adapters/ui/screens/FullScreen.tsx` and `apps/mobile/src/adapters/ui/theme/theme-provider.tsx` expose the safe-area and Material 3 theme conventions required by the splash
-- [ ] T005 [P] Confirm the existing startup error, retry, too-old-data, and ready-screen behavior remains covered by `apps/mobile/App.test.tsx` before replacing only the `starting` presentation
+- [X] T003 [P] Document the existing `Startup` state transitions and `composeApp()` readiness gate in `apps/mobile/App.tsx` without introducing a second state machine, timer, navigation route, or network gate
+- [X] T004 [P] Confirm `apps/mobile/src/adapters/ui/screens/FullScreen.tsx` and `apps/mobile/src/adapters/ui/theme/theme-provider.tsx` expose the safe-area and Material 3 theme conventions required by the splash
+- [X] T005 [P] Confirm the existing startup error, retry, too-old-data, and ready-screen behavior remains covered by `apps/mobile/App.test.tsx` before replacing only the `starting` presentation
 
 **Checkpoint**: Existing startup lifecycle and shared UI conventions are understood; story implementation can proceed.
 

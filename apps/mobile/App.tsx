@@ -28,6 +28,14 @@ type Startup =
   | { status: 'tooOld' };
 
 /**
+ * The composition root is the only readiness gate: starting lasts until
+ * composeApp() settles, then the app is ready or one of the two existing
+ * failure presentations is selected. Retry returns to starting and runs the
+ * same composition flow again; there is no timer, navigation route, or
+ * network readiness check in this state machine.
+ */
+
+/**
  * Starts the app and shows where it is (contracts/ui-screens.md#app-startup-fr-039): loading,
  * the app, or a full-screen error. "Réessayer" runs the composition root again from the start,
  * after closing the database; nothing is deleted or reset (research R18a, R13a). Each start
@@ -93,6 +101,9 @@ const renderStartup = (
   reporter: ScreenTrackingReporter,
   restart: () => void,
 ) => {
+  // Keep these branches mutually exclusive so the startup lifecycle remains
+  // starting -> ready, failed, or tooOld without changing the existing retry
+  // and update-required behavior.
   switch (startup.status) {
     case 'starting':
       return (
