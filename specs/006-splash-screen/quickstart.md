@@ -14,6 +14,8 @@ From the repository root:
 yarn workspace @mes-courses/mobile test --runInBand App.test.tsx
 yarn workspace @mes-courses/mobile test --runInBand src/adapters/ui/screens/StartupSplash.test.tsx
 yarn workspace @mes-courses/mobile typecheck
+yarn eslint apps/mobile/App.tsx apps/mobile/src/adapters/ui/screens/StartupSplash.tsx
+yarn format:check
 ```
 
 Expected results:
@@ -23,6 +25,8 @@ Expected results:
 - Startup failure still shows the French retryable error; retry returns to the branded splash.
 - The component exposes the French accessible identity, uses contain scaling, follows light/dark
   themes and exposes the fallback text behavior.
+- The source files under `apps/mobile/src/adapters/ui/screens/` include the `StartupSplash` tests
+  and light/dark Storybook review stories.
 
 ## Visual validation
 
@@ -35,6 +39,9 @@ yarn workspace @mes-courses/mobile storybook
 Review the startup story on a narrow phone, a larger display, light mode and dark mode. Confirm the
 complete basket and `Mes Courses` wordmark remain visible, with no clipping or stretching and no
 content behind system insets.
+
+The story source is `apps/mobile/src/adapters/ui/screens/StartupSplash.stories.tsx`; use the
+`Light` and `Dark` entries with the simulator's corresponding system color scheme.
 
 ## Cold-launch validation
 

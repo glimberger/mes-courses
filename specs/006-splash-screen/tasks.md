@@ -62,10 +62,10 @@ description: "Task list for the startup splash screen feature"
 
 ### Implementation for User Story 2
 
-- [ ] T011 [P] [US2] Write failing light-theme, dark-theme, safe-area, aspect-ratio, proportional-containment, and French accessibility tests in `apps/mobile/src/adapters/ui/screens/StartupSplash.test.tsx`, then implement the layout with existing Material 3 tokens and `FullScreen` conventions rather than hard-coded palette values
-- [ ] T012 [US2] Test the image component's `onError` event in `apps/mobile/src/adapters/ui/screens/StartupSplash.test.tsx`, then implement the visible French `Mes Courses` fallback in `apps/mobile/src/adapters/ui/screens/StartupSplash.tsx` without changing the parent startup lifecycle
-- [ ] T013 [P] [US2] Add light and dark visual-review stories for the complete, contained splash presentation in `apps/mobile/src/adapters/ui/screens/StartupSplash.stories.tsx`, using the existing Storybook decorator and theme setup
-- [ ] T014 [US2] Update `specs/006-splash-screen/quickstart.md` to use the implemented source paths and validation commands, keeping the cold-launch, offline, safe-area, theme, accessibility, fallback, and timing checks executable
+- [X] T011 [P] [US2] Write failing light-theme, dark-theme, safe-area, aspect-ratio, proportional-containment, and French accessibility tests in `apps/mobile/src/adapters/ui/screens/StartupSplash.test.tsx`, then implement the layout with existing Material 3 tokens and `FullScreen` conventions rather than hard-coded palette values
+- [X] T012 [US2] Test the image component's `onError` event in `apps/mobile/src/adapters/ui/screens/StartupSplash.test.tsx`, then implement the visible French `Mes Courses` fallback in `apps/mobile/src/adapters/ui/screens/StartupSplash.tsx` without changing the parent startup lifecycle
+- [X] T013 [P] [US2] Add light and dark visual-review stories for the complete, contained splash presentation in `apps/mobile/src/adapters/ui/screens/StartupSplash.stories.tsx`, using the existing Storybook decorator and theme setup
+- [X] T014 [US2] Update `specs/006-splash-screen/quickstart.md` to use the implemented source paths and validation commands, keeping the cold-launch, offline, safe-area, theme, accessibility, fallback, and timing checks executable
 
 **Checkpoint**: User Story 2 is independently functional: the visual identity remains complete and legible under supported themes, dimensions, insets, and asset failure.
 

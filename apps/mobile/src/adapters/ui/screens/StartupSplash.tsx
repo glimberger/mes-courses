@@ -11,7 +11,7 @@ export const StartupSplash = () => {
 
   return (
     <FullScreen>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView testID="startup-splash-container" style={styles.container}>
         {assetFailed ? (
           <Text accessibilityRole="header" variant="headlineLarge">
             Mes Courses
