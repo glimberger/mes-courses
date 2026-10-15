@@ -1,7 +1,7 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-import { createHttpHealthProbe } from './health-probe';
+import { createHttpHealthProbe, waitForHealthyCommit } from './health-probe';
 
 let server: Server;
 let port: number;
@@ -63,5 +63,59 @@ describe('http health probe', () => {
     await expect(probe.waitForCommit(port, 'abc', 100)).resolves.toBe(
       'unavailable',
     );
+  });
+});
+
+describe('waitForHealthyCommit', () => {
+  it('polls a public address until the commit shows up, with an injected clock', async () => {
+    let calls = 0;
+    const local = createServer((_request, response) => {
+      calls += 1;
+      response.setHeader('content-type', 'application/json');
+      response.end(
+        JSON.stringify({
+          release: { commit: calls < 3 ? 'old' : 'new', version: '1' },
+        }),
+      );
+    });
+    await new Promise<void>((done) => local.listen(0, '127.0.0.1', done));
+    const { port: localPort } = local.address() as AddressInfo;
+    let clock = 0;
+    const sleeps: number[] = [];
+    try {
+      expect(
+        await waitForHealthyCommit(
+          `http://127.0.0.1:${localPort}`,
+          'new',
+          100_000,
+          {
+            pollMs: 20_000,
+            now: () => clock,
+            sleep: async (ms) => {
+              sleeps.push(ms);
+              clock += ms;
+            },
+          },
+        ),
+      ).toBe('healthy');
+      expect(sleeps).toEqual([20_000, 20_000]);
+    } finally {
+      local.close();
+    }
+  });
+
+  it('gives up at the timeout and says why', async () => {
+    let clock = 0;
+    expect(
+      await waitForHealthyCommit('http://127.0.0.1:1', 'new', 50_000, {
+        pollMs: 20_000,
+        requestTimeoutMs: 200,
+        now: () => clock,
+        sleep: async (ms) => {
+          clock += ms;
+        },
+      }),
+    ).toBe('unavailable');
+    expect(clock).toBeLessThanOrEqual(50_000);
   });
 });

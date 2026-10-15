@@ -101,3 +101,79 @@ describe('parseCiArgs write-manifest', () => {
     ).toThrow(/--bogus/);
   });
 });
+
+describe('parseCiArgs release-gate', () => {
+  it('reads the tag and the commit', () => {
+    expect(
+      parseCiArgs(
+        ['release-gate', '--tag', 'v1.2.0', '--commit', COMMIT],
+        () => true,
+      ),
+    ).toEqual({ command: 'release-gate', tag: 'v1.2.0', commit: COMMIT });
+  });
+
+  it('needs a tag and a well-formed commit', () => {
+    expect(() =>
+      parseCiArgs(['release-gate', '--commit', COMMIT], () => true),
+    ).toThrow('--tag is required');
+    expect(() =>
+      parseCiArgs(['release-gate', '--tag', 'v1.2.0'], () => true),
+    ).toThrow('--commit is required');
+    expect(() =>
+      parseCiArgs(
+        ['release-gate', '--tag', 'v1.2.0', '--commit', 'main'],
+        () => true,
+      ),
+    ).toThrow('40 lowercase hex');
+  });
+
+  it('refuses an option it does not know', () => {
+    expect(() =>
+      parseCiArgs(['release-gate', '--env', 'staging'], () => true),
+    ).toThrow('Unknown option: --env');
+  });
+});
+
+describe('parseCiArgs wait-health', () => {
+  const args = [
+    'wait-health',
+    '--url',
+    'https://courses.example.org/',
+    '--commit',
+    COMMIT,
+    '--timeout',
+    '1200',
+  ];
+
+  it('reads the options and drops the trailing slash', () => {
+    expect(parseCiArgs(args, () => true)).toEqual({
+      command: 'wait-health',
+      url: 'https://courses.example.org',
+      commit: COMMIT,
+      timeoutSeconds: 1200,
+    });
+  });
+
+  it('refuses an address that is not http, and a bad timeout', () => {
+    expect(() =>
+      parseCiArgs(
+        [
+          'wait-health',
+          '--url',
+          'courses',
+          '--commit',
+          COMMIT,
+          '--timeout',
+          '5',
+        ],
+        () => true,
+      ),
+    ).toThrow('--url must start with');
+    expect(() =>
+      parseCiArgs(args.slice(0, -1).concat('0'), () => true),
+    ).toThrow('--timeout must be a positive');
+    expect(() => parseCiArgs(args.slice(0, -2), () => true)).toThrow(
+      '--timeout is required',
+    );
+  });
+});

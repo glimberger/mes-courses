@@ -88,6 +88,21 @@ describe('assertNoTestOptionsInProduction', () => {
     ).not.toThrow();
   });
 
+  it('stops a production build that carries the staging variant, naming APP_VARIANT', () => {
+    expect(() =>
+      assertNoTestOptionsInProduction(production({ APP_VARIANT: 'staging' })),
+    ).toThrow(/APP_VARIANT=staging/);
+  });
+
+  it('lets a staging build with the staging variant through', () => {
+    expect(() =>
+      assertNoTestOptionsInProduction({
+        EXPO_PUBLIC_APP_ENVIRONMENT: 'staging',
+        APP_VARIANT: 'staging',
+      }),
+    ).not.toThrow();
+  });
+
   it.each(['preview', 'development', undefined])(
     'lets a %p build through with every test-only option set',
     (environment) => {

@@ -8,21 +8,32 @@ export type HttpHealthProbeOptions = {
   pollMs?: number;
   /** Limit for one request. */
   requestTimeoutMs?: number;
+  /** Injected by tests. */
+  now?: () => number;
+  sleep?: (ms: number) => Promise<void>;
 };
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const realSleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-/** `GET http://127.0.0.1:<port>/v1/health`, until `release.commit` is the expected one. */
-export const createHttpHealthProbe = ({
-  pollMs = 1000,
-  requestTimeoutMs = 2000,
-}: HttpHealthProbeOptions = {}): HealthProbe => {
-  const attempt = async (
-    port: number,
-    commit: string,
-  ): Promise<HealthResult> => {
+/**
+ * Polls `GET <baseUrl>/v1/health` until `release.commit` is the expected one or `timeoutMs` has
+ * passed; the result of the last attempt tells why it did not succeed.
+ */
+export const waitForHealthyCommit = async (
+  baseUrl: string,
+  commit: string,
+  timeoutMs: number,
+  {
+    pollMs = 1000,
+    requestTimeoutMs = 2000,
+    now = Date.now,
+    sleep = realSleep,
+  }: HttpHealthProbeOptions = {},
+): Promise<HealthResult> => {
+  const attempt = async (): Promise<HealthResult> => {
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/v1/health`, {
+      const response = await fetch(`${baseUrl}/v1/health`, {
         signal: AbortSignal.timeout(requestTimeoutMs),
       });
       if (!response.ok) return 'unavailable';
@@ -37,17 +48,23 @@ export const createHttpHealthProbe = ({
     }
   };
 
-  return {
-    async waitForCommit(port, commit, timeoutMs) {
-      const deadline = Date.now() + timeoutMs;
-      let result: HealthResult = 'unavailable';
-      for (;;) {
-        result = await attempt(port, commit);
-        if (result === 'healthy' || Date.now() + pollMs >= deadline) {
-          return result;
-        }
-        await sleep(pollMs);
-      }
-    },
-  };
+  const deadline = now() + timeoutMs;
+  for (;;) {
+    const result = await attempt();
+    if (result === 'healthy' || now() + pollMs >= deadline) return result;
+    await sleep(pollMs);
+  }
 };
+
+/** The agent's probe: the instance on this machine, by its port. */
+export const createHttpHealthProbe = (
+  options: HttpHealthProbeOptions = {},
+): HealthProbe => ({
+  waitForCommit: (port, commit, timeoutMs) =>
+    waitForHealthyCommit(
+      `http://127.0.0.1:${port}`,
+      commit,
+      timeoutMs,
+      options,
+    ),
+});

@@ -34,7 +34,7 @@ const dsnProblem = (dsn) => {
 
 /**
  * Stops a `production` build, while its configuration is read, when it would carry a test-only
- * option or send reports outside Sentry's EU region; the error names each option to unset or the
+ * option carry the staging variant, or send reports outside Sentry's EU region; the error names each option to unset or the
  * address to replace (research R24, R25). Other builds pass whatever they set.
  *
  * @param {Record<string, string | undefined>} env
@@ -44,6 +44,11 @@ const assertNoTestOptionsInProduction = (env) => {
   const problems = TEST_ONLY_OPTIONS.filter((option) => env[option]).map(
     (option) => `${option} is a test-only option`,
   );
+  if (env.APP_VARIANT === 'staging') {
+    problems.push(
+      'APP_VARIANT=staging gives the test identity (name, package, icons), which a production build must not carry',
+    );
+  }
   const dsn = dsnProblem(env.EXPO_PUBLIC_SENTRY_DSN);
   if (dsn) problems.push(dsn);
   if (problems.length > 0) {
