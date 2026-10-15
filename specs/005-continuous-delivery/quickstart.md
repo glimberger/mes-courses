@@ -31,9 +31,7 @@ Expected: everything green. `actionlint` reports no error on the five workflows.
    Set `DEPLOY_SIGNING_KEY` from the private file, and commit the public key as
    `deploy/allowed_signers` (`mes-courses-deploy <type> <key>`). Then delete the private file
    from the disk; the password manager keeps a copy.
-4. **Expo robot**: in the Expo account, create a robot user with the *Developer* role, then set
-   its token as `EXPO_TOKEN`. Run `eas env:create` for the `staging` EAS environment with the
-   variables `preview` had (README), plus `EXPO_PUBLIC_DEFAULT_SERVER_URL`.
+4. *(Dropped: iOS is out of scope, so there is no Expo robot and no `EXPO_TOKEN`.)*
 5. **Variables**: `gh variable set` for `SENTRY_ORG`, `SENTRY_PROJECT`, `EXPO_PUBLIC_SENTRY_DSN`,
    `PRODUCTION_SERVER_URL` and `STAGING_SERVER_URL`.
 
@@ -93,25 +91,21 @@ key, password or token for the Pi.
 
 1. Merge a pull request that changes a server response and a visible label.
 2. Expected: once `CI` is green, `Deliver staging` runs on the merge commit. Its summary lists
-   `server`, `android` and `ios` with their outcomes.
+   `server` and `android` with their outcomes.
 3. Within 15 minutes of CI turning green,
    `curl https://staging.courses.<domain>/v1/health` reports the commit (SC-001).
 4. Within 30 minutes, the F-Droid client on the maintainer's Android phone (with the staging
    repository added from its QR code, §6) offers "Mes courses (test)" with the new label
    (SC-002).
-5. The iPhone receives EAS's email. Install from the link, then check the label.
-6. Both "Mes courses" and "Mes courses (test)" are installed side by side, each with its own data
+5. Both "Mes courses" and "Mes courses (test)" are installed side by side, each with its own data
    (US1 scenario 6).
-7. Merge a documentation-only pull request. `Deliver staging` runs, builds nothing and succeeds.
+6. Merge a documentation-only pull request. `Deliver staging` runs, builds nothing and succeeds.
    Nothing changes on the Pi (US1 scenario 3).
-8. Merge a server-only change. Only `server-artifact` and `publish` run (US1 scenario 4).
+7. Merge a server-only change. Only `server-artifact` and `publish` run (US1 scenario 4).
 
-## 5. iOS staging devices (once)
+## 5. iOS (dropped)
 
-`eas device:create` on each iPhone that should receive staging builds. Then trigger a staging
-build, by hand from EAS or with the next app change, so the provisioning profile includes the
-device. If the monthly iOS build allowance of the EAS plan runs out, the `ios` job fails and the
-other targets complete (spec edge case).
+iOS is out of scope (2026-10-15): the Apple Developer Program is paid. Nothing to set up here.
 
 ## 6. F-Droid repositories (US2 scenario 6, US4 scenario 2)
 
@@ -156,13 +150,13 @@ runtime: `nix build github:NixOS/nixpkgs/<rev>#nodejs_24 --out-link /opt/mes-cou
 ## 9. Release to production (US2, SC-003)
 
 1. Merge the pull request that sets `version` in `apps/mobile/app.config.ts` (README "Releases",
-   with its manual checks and the iOS device suite).
+   with its manual checks).
 2. Wait for `CI`, `E2E Android` and `Deliver staging` to be green on its squash commit, and try
    the change on staging.
 3. `git tag v1.2.0 <sha> && git push origin v1.2.0`. This is the only action (SC-003).
 4. Expected: `release.yml` passes `gate`, publishes `v1.2.0` and `channel-production`, and the
    production health reports the commit (`wait-production-health` turns green). Then the F-Droid
-   client offers 1.2.0, and TestFlight shows the new build after EAS's processing.
+   client offers 1.2.0.
 5. Production unavailability during the deployment, measured with
    `while true; do curl -so /dev/null -w '%{http_code} %{time_total}\n' https://courses.<domain>/v1/health; sleep 1; done`:
    under 30 seconds of failures (SC-005).
@@ -178,7 +172,7 @@ runtime: `nix build github:NixOS/nixpkgs/<rev>#nodejs_24 --out-link /opt/mes-cou
 **Partial release (edge case)**: on a scratch production setup, stop the agent timer before a
 release so `wait-production-health` times out, then start it. Expected: the run is failed, the
 Pi deploys and swaps the repository, and *Re-run failed jobs* on the same run makes the health
-poll succeed and `ios` start on the tag's commit, with no new tag.
+poll succeed on the tag's commit, with no new tag.
 
 
 ## 10. Failed deployment and rollback (US3, SC-004)

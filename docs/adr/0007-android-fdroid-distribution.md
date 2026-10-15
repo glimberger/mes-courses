@@ -3,7 +3,7 @@
 - **Status**: Proposed
 - **Date**: 2026-10-14
 - **Decided by**: maintainer
-- **Supersedes**: none (amends how [ADR-0001](0001-react-native-expo.md) uses EAS Build: iOS only)
+- **Supersedes**: none (ends the use of EAS Build for delivery, see [ADR-0001](0001-react-native-expo.md))
 - **Related**: [005 research](../../specs/005-continuous-delivery/research.md) R7, R11, R12, R13,
   R14; [ADR-0006](0006-pull-based-continuous-delivery.md)
 
@@ -12,8 +12,8 @@
 Android builds were made by EAS Build and reached users through Google Play's internal testing
 track. The users are a few invited people. Google Play adds a review step, a developer account
 and its policies. EAS Build counts toward the plan's monthly build allowance. The maintainer
-wants Android delivered on every change, outside both. iOS has no comparable alternative to
-TestFlight and keeps EAS.
+wants Android delivered on every change, outside both. iOS delivery is dropped: it needs the
+paid Apple Developer Program, which the maintainer declined (2026-10-15).
 
 ## Decision
 
@@ -26,11 +26,10 @@ Pi's Caddy. CI generates them with `fdroidserver` and signs their index with a s
 repository key. Phones follow them with F-Droid or Droid-ify, which pin the repository
 fingerprint and notify updates.
 
-**iOS keeps EAS Build and EAS Submit**: TestFlight for production, EAS internal (ad hoc)
-distribution for staging. GitHub Actions starts these builds with an Expo robot token.
+**iOS is out of scope**: no iOS build, submit or Expo token (research R13).
 
 A staging variant of the app (`com.glimberger.mescourses.staging`, "Mes courses (test)")
-installs next to the production app on both platforms.
+installs next to the production app.
 
 ## Consequences
 

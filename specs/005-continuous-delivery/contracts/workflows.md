@@ -16,11 +16,9 @@ commands; the YAML holds no logic of its own (research R17).
 | `server-artifact` | `plan`               | `server == true` | builds `server-<sha>.tar.gz` (R3), runs the native-module check (R14)                            |
 | `android-apk`     | `plan`               | `app == true`    | calls `android-apk.yml` with `variant: staging`                                                  |
 | `fdroid-repo`     | `android-apk`        | `app == true`    | runs `fdroid update` for `deploy/fdroid/staging`, archives `fdroid-staging-<sha>.tar.gz`          |
-| `ios`             | `plan`               | `app == true`    | `eas build --profile staging --platform ios --no-wait`; writes the EAS URL to the job summary     |
 | `publish`         | `server-artifact`, `fdroid-repo` | at least one ran and none failed | uploads the assets, writes and signs the manifest, uploads it last, prunes old assets |
 
-`ios` is independent of `publish`: an EAS failure (or exhausted allowance) does not stop the
-server and Android delivery (spec edge case). Every job writes its outcome to the run summary
+Every job writes its outcome to the run summary
 (FR-030).
 
 ## `release.yml`
@@ -36,20 +34,15 @@ server and Android delivery (spec edge case). Every job writes its outcome to th
 | `fdroid-repo`            | `android-apk`                 | for `deploy/fdroid/production`                                                                |
 | `publish`                | `server-artifact`, `fdroid-repo` | creates release `vX.Y.Z` with the assets, the APK (attached for history) and the agent bundle `delivery-<agent version>.tar.gz` (research R6), then updates `channel-production` |
 | `wait-production-health` | `publish`                     | polls `PRODUCTION_SERVER_URL/v1/health` every 20 s, for up to 20 min, until `release.commit` is the tag's commit |
-| `ios`                    | `wait-production-health`      | `eas build --profile production --platform ios --auto-submit --no-wait`                       |
 
 If `wait-production-health` times out, the release run fails, and the Pi's own report
 (rollback, R10) says why. The F-Droid repository is not swapped, because the agent swaps it only
 after a healthy server.
 
 **Partial release**: if the server turns healthy only after the wait expired, the Pi swaps the
-F-Droid repository but `ios` never ran. The maintainer completes the release with *Re-run failed
-jobs* on the same run: `wait-production-health` polls again, then `ios` starts, all on the tag's
+F-Droid repository but the run is failed. The maintainer completes the release with *Re-run failed
+jobs* on the same run: `wait-production-health` polls again, on the tag's
 commit. Jobs that succeeded (`publish`) are not run again and no new tag is needed.
-
-**iOS outcome in the run** (FR-030): `ios` records "queued on EAS" with the build URL in the run
-summary. A refusal at queue time (exhausted allowance, bad credential) fails the job. The result
-of the build is followed in EAS, which emails it.
 
 ## `android-apk.yml` (reusable)
 

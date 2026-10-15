@@ -233,8 +233,6 @@ Staging has no release version, so it reports the app configuration's version su
 `-staging.<sequence>`. The Sentry release of the server becomes
 `mes-courses-server@<that version>`.
 
-iOS build numbers stay EAS's remote, auto-incremented ones (`appVersionSource: remote`).
-
 **Rationale**: one integer source, derived from git, with no counter to store.
 `github.run_number` differs between the two workflows and resets if a workflow is renamed.
 
@@ -441,44 +439,27 @@ signer.
 - Serving the APK as a plain download: no update notifications, no fingerprint pinning.
 - Obtainium pointed at GitHub Releases: the repository is private.
 
-## R13. iOS through EAS from GitHub Actions (FR-008, FR-027, FR-028)
+## R13. iOS is out of scope (was: iOS through EAS from GitHub Actions)
 
-**Decision**:
+**Decision (2026-10-15)**: this feature delivers no iOS build. App Store Connect, EAS iOS builds,
+ad hoc distribution and TestFlight all need the paid Apple Developer Program (99 USD a year), and
+the maintainer declined it. There is no `EXPO_TOKEN`, no `ios` job and no `ascAppId`. FR-008,
+FR-027 and FR-028 are dropped, and their numbers kept.
 
-- The EAS profile `preview` becomes `staging`: `distribution: internal`, `environment: staging`
-  (an EAS environment of that name, holding the same variables as `preview` did), env
-  `APP_VARIANT=staging` and `EXPO_PUBLIC_APP_ENVIRONMENT=staging`. The seeded measurement build
-  of the README uses this profile from now on.
-- The EAS environment and the Sentry environment are both called `staging`. The app's
-  `sentry-error-reporter.ts` allows `production` and `staging`, which replaces `preview`
-  (FR-004). The README's alert rules are unchanged: they filter on `production`.
-- Staging: `npx eas-cli build --profile staging --platform ios --non-interactive --no-wait`. The job summary records that the build was **queued** on EAS, with its URL (FR-030).
-  A refusal at queue time, such as an exhausted allowance, fails the `ios` job. EAS emails the build result, and the maintainer
-  installs from EAS's internal distribution link.
-- Production: once the production server reports the release commit (R15),
-  `npx eas-cli build --profile production --platform ios --non-interactive --no-wait --auto-submit`.
-  `submit.production.ios.ascAppId` is set in `eas.json`, and the App Store Connect API key stays
-  in EAS (FR-028).
+What stays from the former decision:
+
+- The EAS profile `preview` becomes `staging`: `distribution: internal`, `environment: staging`,
+  env `APP_VARIANT=staging` and `EXPO_PUBLIC_APP_ENVIRONMENT=staging`. It is no longer started by
+  a workflow; the README's seeded measurement build uses it.
+- The Sentry environment is called `staging`. The app's `sentry-error-reporter.ts` allows
+  `production` and `staging`, which replaces `preview` (FR-004). The README's alert rules are
+  unchanged: they filter on `production`.
 - `submit.production.android` is removed. EAS no longer builds or submits Android.
-- GitHub holds one Expo credential, `EXPO_TOKEN`: the access token of an Expo **robot user** with the *Developer* role on the account. It can build and submit, but cannot change billing or
-  members. Its scope is the Expo account, which holds only this project (FR-028).
-- The ad hoc device list is managed with `eas device:create` on the maintainer's devices, a
-  one-time step ([quickstart.md](quickstart.md) §5).
-- `--no-wait` keeps runner minutes low on a private repository, since an iOS build takes 15 to
-  25 minutes on EAS. The trade-off: the GitHub run records that the build was **queued**, with
-  its URL, and EAS reports the result.
+- The `production` profile has no iOS submit section.
 
-**EAS allowance**: on the Free plan, iOS builds are limited per month. Every app change merged to
-`main` uses one. If the allowance runs out, the iOS step fails while the server and Android steps
-complete, because the jobs are independent (spec edge case). The quickstart notes this. Moving to
-a paid EAS plan, or batching iOS staging builds, can come later without changing the design.
-
-**Staging app identity on iOS**: bundle identifier `com.glimberger.mescourses.staging`. EAS
-creates its provisioning profile on the first ad hoc build.
-
-**Alternatives considered**: waiting for EAS in the runner (`--wait`) costs 15 to 25 runner
-minutes per build. Expo's own EAS Workflows would move the trigger out of GitHub, while the
-spec keeps GitHub Actions as the orchestrator.
+**Alternatives considered**: waiting for the program to be paid for later. If iOS comes back, a
+new feature adds the `ios` jobs after `wait-production-health`, as the design of R15 left room
+for.
 
 ## R14. App variants in `app.config.ts` (FR-003)
 
@@ -533,13 +514,13 @@ The order of the jobs after `gate` gives FR-011:
 ```text
 gate ─┬─ server-artifact ─┐
       └─ android-apk ── fdroid-repo ─┴─ publish (vX.Y.Z release + channel-production manifest)
-                                         └─ wait-production-health (≤ 20 min) ─ ios (EAS build + auto-submit)
+                                         └─ wait-production-health (≤ 20 min)
 ```
 
 The Pi itself deploys the server before it swaps the F-Droid repository (R6, step 4).
 `wait-production-health` polls the public `https://courses.<domain>/v1/health` until
 `release.commit` is the tagged commit. That address is already public, and the request is
-outbound from the runner. iOS starts only after the poll succeeds.
+outbound from the runner.
 
 **Rationale**: all the gates are checks of facts GitHub already has. No new state is introduced.
 
@@ -557,7 +538,6 @@ private repository's plan (R15).
 | `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | `android-apk.yml` | The APK upload key (R11) |
 | `FDROID_KEYSTORE_BASE64`, `FDROID_KEYSTORE_PASSWORD`, `FDROID_KEY_PASSWORD` | F-Droid step | The repository index key (R12) |
 | `DEPLOY_SIGNING_KEY`                               | publish jobs           | The Ed25519 manifest signing key (R5)    |
-| `EXPO_TOKEN`                                       | iOS jobs               | The Expo robot user's token (R13)        |
 | `SENTRY_AUTH_TOKEN`                                | `android-apk.yml`      | Uploads source maps (R11)                |
 
 Plain repository **variables** (not secrets): `SENTRY_ORG`, `SENTRY_PROJECT`,
@@ -590,7 +570,7 @@ The workflows' YAML stays thin: each step calls a script or a workspace command.
 
 New dependencies: none in `package.json`. `fdroidserver`, `actionlint` and `qrencode` come from
 nixpkgs. `fdroidserver` and `qrencode` are used only in a workflow step or a one-time setup
-command, and `actionlint` joins the dev shell. `eas-cli` is already used through `npx`.
+command, and `actionlint` joins the dev shell. No new runtime dependency.
 
 New workspace: `apps/delivery` ([ADR-0006](../../docs/adr/0006-pull-based-continuous-delivery.md)).
 
@@ -601,5 +581,5 @@ Not built:
 - canary or partial rollouts: there are a few users;
 - automatic rollback of the app;
 - a dashboard: the health endpoints, the channel releases and Sentry answer US5;
-- iOS outside EAS (out of scope by the spec);
+- iOS in any form (out of scope, R13);
 - closing the Google Play listing (spec assumption).

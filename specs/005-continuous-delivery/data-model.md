@@ -16,7 +16,6 @@ A value, not a record: `'staging' | 'production'`.
 | Local port           | 3001                                 | 3000                               |
 | Validation port      | 3101                                 | 3100                               |
 | Android application  | `com.glimberger.mescourses.staging`  | `com.glimberger.mescourses`        |
-| iOS channel          | EAS internal (ad hoc)                | TestFlight                         |
 | Sentry environment   | `staging`                            | `production`                       |
 
 The agent's configuration maps each environment to its port and paths

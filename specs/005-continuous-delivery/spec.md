@@ -11,14 +11,14 @@
 ## Context
 
 Today every delivery is manual (README "Releases", "On the Pi"): the maintainer runs
-`eas build` and `eas submit` from their machine for both platforms, and deploys the server by
+`eas build` from their machine, and deploys the server by
 logging in to the Pi, pulling, building and restarting the service. There is a single server
 instance, which serves real users, so nothing can be tried against a server before it reaches
 them. Android builds go to users through Google Play's internal testing track.
 
 This feature makes delivery automatic and adds a staging environment that every change to the
 default branch reaches first. Production is reached only by an explicit release decision of the
-maintainer. Delivery spans the mobile app (Android and iOS) and the sync server.
+maintainer. Delivery spans the Android app and the sync server.
 
 The constraints the maintainer set are part of the requirement, not implementation choices:
 
@@ -28,8 +28,10 @@ The constraints the maintainer set are part of the requirement, not implementati
 - Android leaves EAS and Google Play: the APK is built and signed in GitHub Actions and
   distributed by a self-hosted F-Droid repository on the Pi, which the phones follow with an
   F-Droid client (F-Droid or Droid-ify);
-- iOS keeps EAS Build and EAS Submit: TestFlight for production, EAS internal (ad hoc)
-  distribution for staging.
+- iOS is out of scope (decision of 2026-10-15): the Apple Developer Program, which App Store
+  Connect, EAS iOS builds and TestFlight all require, costs 99 USD a year and the maintainer
+  declined it. The app is delivered on Android only; nothing in this feature builds, signs,
+  submits or distributes an iOS build.
 
 ## Clarifications
 
@@ -51,11 +53,8 @@ The constraints the maintainer set are part of the requirement, not implementati
   FR-017? → A: Yes, as a documented exception: only a local deployment started by hand by root
   on the Pi skips the verification.
 - Q: What happens to a release whose production server turns healthy only after the release run
-  stopped waiting? → A: The release is partial (Android published, iOS not submitted); the
+  stopped waiting? → A: The release is partial (the Android build is published, but the run failed); the
   maintainer completes it by re-running the failed jobs of the same run, on the same commit.
-- Q: How is an iOS build started with `--no-wait` recorded, given GitHub only knows it was
-  queued? → A: The run records "queued on EAS" with the EAS link; the build's own result is
-  followed in EAS (its email), and a refusal at queue time fails the iOS target of the run.
 - Q: How does the maintainer ship the fix after a production rollback? → A: By a new pull
   request, a higher version and a new tag; a tag whose release failed is never reused.
 - Q: Does an app-only release publish the F-Droid repository when its carried-over server commit
@@ -76,12 +75,9 @@ The constraints the maintainer set are part of the requirement, not implementati
   working and syncing. The maintainer tells every Android user directly when the guide is
   published, and does not raise `minAppVersion` above the last Google Play build before the
   migration is done.
-- Q: What happens when the EAS build allowance runs out? → A: The iOS staging build fails when
-  queued and is never replaced silently (no batching, no fallback); the run shows it (FR-030).
-  The expected load is one iOS staging build per merged app change.
-- Q: How do production iOS users receive the TestFlight build? → A: As TestFlight internal
-  testers (invited in App Store Connect), who get the build without a beta review; external
-  testing is out of scope while the app reaches only the maintainer's circle.
+- Q: Does this feature deliver iOS builds? → A: No (2026-10-15). The Apple Developer Program is
+  paid and the maintainer declined it, so iOS is out of scope; the questions about `--no-wait`
+  builds, the EAS allowance and TestFlight testers no longer apply.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -92,16 +88,15 @@ and the **users**, the invited people (004) who use the app on their phones.
 
 The maintainer merges a pull request that changes the app, the server or a shared package. Without
 any further action, the staging server on the Pi runs the new version, and a new staging build of
-the app becomes available on the maintainer's Android phone (through the F-Droid client) and on
-their iPhone (through EAS internal distribution). The maintainer tries the change against the
+the app becomes available on the maintainer's Android phone (through the F-Droid client). The maintainer tries the change against the
 staging server, with staging data, before any user sees it.
 
 **Why this priority**: staging is the base every other story builds on, and it removes the
 manual server deployment and manual builds after every merge.
 
 **Independent Test**: merge a change that alters a visible label and a server response; within
-the target delay, the staging server answers with the new version, and the F-Droid client and the
-iPhone offer the new staging build, which shows the new label.
+the target delay, the staging server answers with the new version, and the F-Droid client offers the
+new staging build, which shows the new label.
 
 **Acceptance Scenarios**:
 
@@ -110,8 +105,7 @@ iPhone offer the new staging build, which shows the new label.
    reports that commit as its version.
 2. **Given** a pull request changing the app is merged, **When** CI is green on the merge commit,
    **Then** a signed Android staging build of that commit is published in the staging F-Droid
-   repository, and an iOS staging build of that commit is available for installation on the
-   registered iPhone.
+   repository.
 3. **Given** a documentation-only pull request is merged (per `.github/scripts/app-changed.sh`),
    **When** it lands on the default branch, **Then** no staging build or deployment starts.
 4. **Given** a pull request changing only the server is merged, **When** it lands, **Then** the
@@ -129,21 +123,20 @@ iPhone offer the new staging build, which shows the new label.
 
 Once a version is validated on staging, the maintainer takes one explicit release action. The
 production server on the Pi is updated, the Android production build is published in the
-production F-Droid repository, from which the users' phones are offered the update, and the iOS
-production build is submitted to TestFlight.
+production F-Droid repository, from which the users' phones are offered the update.
 
 **Why this priority**: it is the delivery users actually receive; it replaces the manual
-`eas build`, `eas submit` and Pi deployment of the README's release steps.
+`eas build` and Pi deployment of the README's release steps.
 
 **Independent Test**: take the release action on a validated commit; the production server
 reports the new version, a phone following the production F-Droid repository is offered the new
-version, and TestFlight shows the new build.
+version.
 
 **Acceptance Scenarios**:
 
 1. **Given** a commit of the default branch is validated on staging, **When** the maintainer
-   pushes the version tag on it, **Then** the production server, the production Android
-   build and the production iOS build are all made from that same commit.
+   pushes the version tag on it, **Then** the production server and the production Android
+   build are both made from that same commit.
 2. **Given** a release is triggered, **When** it runs, **Then** the production server is
    updated before the new app builds are offered to users, so an updated app never meets an
    older server.
@@ -219,7 +212,7 @@ once signed in.
 ### User Story 5 - The maintainer sees what runs where (Priority: P3)
 
 The maintainer can tell at a glance which version runs on each server instance, which build is
-the latest in each F-Droid repository and on each iOS channel, and the outcome of the latest
+the latest in each F-Droid repository, and the outcome of the latest
 deployment of each.
 
 **Why this priority**: useful for confidence and diagnosis, but delivery works without it.
@@ -233,7 +226,7 @@ each environment and compare them with the commits that were delivered.
    answers with its release version (if any) and the commit it was built from.
 2. **Given** a staging or production delivery ends, successful or not, **When** the maintainer
    looks at the repository's delivery runs, **Then** each run shows the commit, the environment,
-   each target (server, Android, iOS) and its outcome.
+   each target (server, Android) and its outcome.
 
 ### Edge Cases
 
@@ -255,8 +248,7 @@ each environment and compare them with the commits that were delivered.
   taken before the deployment is what the previous version runs on (US3).
 - A version tag is pushed on a commit outside the default branch: the release is refused.
 - The production server turns healthy only after the release run stopped waiting for it: the
-  release run is failed and the release is partial (the Android build is published, the iOS
-  build is not submitted). Re-running the failed jobs of the same run completes it on the same
+  release run is failed and the release is partial (the Android build is published). Re-running the failed jobs of the same run completes it on the same
   commit; no new tag is needed.
 - A production release is rolled back by the Pi: the tag stays recorded as a failed release and
   is never reused; the fix is a new pull request with a higher version and a new tag.
@@ -269,12 +261,6 @@ each environment and compare them with the commits that were delivered.
   or after a compromise, a new key is made and every Android user reinstalls after a sync; the
   maintainer tells them directly (FR-022). The F-Droid repository key is handled the same way
   (FR-023): a new key means a new link, and users add the repository again.
-- The iPhone that receives staging builds is not registered for internal distribution: the
-  build cannot be installed on it; registering a device is a documented one-time step.
-- The EAS build allowance is exhausted: the iOS staging build is refused when it is queued, so
-  the run shows the iOS target failed, while the Android staging build and the server
-  deployment still complete; nothing retries or batches it (Clarifications). A build that fails later, inside EAS, is reported by EAS (its
-  email), not by the run.
 - The same commit is delivered to staging twice (for example, a re-run): the second delivery is
   harmless and changes nothing.
 - The staging app is pointed at the production server, or the reverse: it works as any app with
@@ -302,10 +288,9 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
   MUST NOT affect the other.
 - **FR-003**: The staging app MUST be installable next to the production app on the same phone,
   with a distinct app identity, a name and icon that mark it as staging, and separate local data.
-  Concretely, on both platforms: the name is "Mes courses (test)" (production: "Mes courses");
-  the icon carries a staging badge on the production art; the Android package and the iOS bundle
-  identifier end in `.staging`; and, since the identity differs, no local storage or keychain
-  group is shared.
+  Concretely: the name is "Mes courses (test)" (production: "Mes courses"); the icon carries a
+  staging badge on the production art; the Android package ends in `.staging`; and, since the
+  identity differs, no local storage is shared.
 - **FR-004**: Error reports MUST carry the environment they come from (staging or production),
   for the app and the server, so production alerts ignore staging (README "Sentry alerts").
 
@@ -318,8 +303,8 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
   package it depends on or its build configuration changed.
 - **FR-007**: The staging delivery MUST produce a signed Android APK of that commit and publish it
   in a staging F-Droid repository hosted on the Pi.
-- **FR-008**: The staging delivery MUST produce an iOS build of that commit through EAS Build,
-  distributed by EAS internal (ad hoc) distribution to the maintainer's registered devices.
+- **FR-008**: *Dropped (2026-10-15): iOS is out of scope.* The number is kept so references stay
+  valid.
 
 **Production delivery**
 
@@ -330,10 +315,10 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
   CI and the Android device suite are green on it, its version matches the app configuration,
   and it is newer than the version in production.
 - **FR-011**: A release MUST deploy the production server first, and MUST publish the Android
-  build in the production F-Droid repository and submit the iOS build to TestFlight only after
-  the production server answers its health check on the new version.
-- **FR-012**: The production server, Android and iOS builds of a release MUST all come from the
-  same commit.
+  build in the production F-Droid repository only after the production server answers its
+  health check on the new version.
+- **FR-012**: The production server and Android build of a release MUST come from the same
+  commit.
 - **FR-013**: Every build of a release MUST be a `production` build, so the existing release
   guard (`apps/mobile/build-config/release-guard.cjs`) applies to it.
 
@@ -419,21 +404,17 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
 
 **iOS distribution**
 
-- **FR-027**: iOS builds MUST keep going through EAS Build; production builds MUST be submitted to
-  TestFlight through EAS Submit, started from the delivery workflow rather than from the
-  maintainer's machine. Production users are TestFlight internal testers; a submitted build
-  reaches them without a beta review.
-- **FR-028**: The only Expo credential GitHub holds MUST be one that can start builds and
-  submissions, and cannot change billing or members; App Store credentials stay in EAS. Its
-  scope is the Expo account, which holds only this project.
+- **FR-027**: *Dropped (2026-10-15): iOS is out of scope.* The number is kept so references stay
+  valid.
+- **FR-028**: *Dropped (2026-10-15): no Expo credential is held by GitHub.* The number is kept so
+  references stay valid.
 
 **Traceability**
 
 - **FR-029**: Each server instance MUST expose its version and the commit it runs, without
   authentication and without revealing anything else.
 - **FR-030**: Each delivery run MUST record its commit, its environment, and the outcome of each
-  target (server, Android, iOS). For iOS, the outcome the run records is that the build was
-  queued on EAS (with its link); the result of the build itself is followed in EAS.
+  target (server, Android).
 - **FR-031**: The README's release and Pi deployment procedures MUST be replaced by the new
   workflow, including the one-time set-up of the staging instance, the F-Droid repositories, the
   signing key and the device registration.
@@ -445,7 +426,7 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
 ### Key Entities
 
 - **Environment**: staging or production. Has a server instance, a public server address, an
-  Android app identity with its F-Droid repository, an iOS distribution channel, and an error
+  Android app identity with its F-Droid repository, and an error
   tracking environment name.
 - **Server release artifact**: the built server for one commit, ready to install on the Pi.
   Identified by its commit (and, for production, its version); carries proof of the workflow that
@@ -453,10 +434,10 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
 - **Deployment**: the installation of one server release artifact on one instance. Has a state
   (pending, installing, health-checking, succeeded, rolled back), a database copy, a start and
   end time, and an outcome reported to the maintainer.
-- **App build**: one Android APK or iOS build for one commit and one environment, with its
+- **App build**: one Android APK for one commit and one environment, with its
   version and build number.
 - **Release**: the maintainer's decision to deliver one commit as one version to production;
-  groups one deployment and one app build per platform.
+  groups one deployment and one Android app build.
 
 ## Success Criteria *(mandatory)*
 
@@ -503,10 +484,7 @@ signed in to. Concurrent changes are reconciled as before (003, 004).
 - The F-Droid clients check for updates on their own schedule (Droid-ify in the background,
   F-Droid periodically), so the time between publication and the offer on the phone is theirs
   and is not a requirement of this feature.
-- Only the maintainer's devices receive staging builds; on iOS, staging devices are registered
-  once for ad hoc distribution.
-- The iOS staging build uses its own bundle identifier, so it installs next to the production app
-  (FR-003); this needs a one-time provisioning step in the Apple developer account.
+- Only the maintainer's devices receive staging builds.
 - The app version (semantic versioning) is still set by hand in the pull request that leads to a
   release (README "Releases"); build numbers are set by the delivery workflow.
 - Rollback applies to the server only. A faulty app release is fixed forward, as today, since an

@@ -29,9 +29,9 @@ Technically:
   Actions, `apksigner` signs it with an upload key held in secrets, and `fdroidserver`
   generates one signed F-Droid repository per environment. The Pi's Caddy serves them under
   `/fdroid/repo`. `versionCode` is the commit's position on `main`.
-- **iOS stays on EAS** (R13). GitHub Actions starts the builds with an Expo robot token. The
-  `preview` profile becomes `staging` (ad hoc, internal). Production builds go to TestFlight with
-  `--auto-submit`, but only once the production server reports the release commit.
+- **iOS is out of scope** (R13, decision of 2026-10-15: the Apple Developer Program is paid). No
+  iOS build, submit or Expo token. The EAS profile `preview` is still renamed `staging`, for the
+  seeded measurement build and the Sentry environment name.
 - **Staging app variant** (R14). `APP_VARIANT=staging` gives a separate identity,
   "Mes courses (test)", with its own icon, installable next to production. Both variants
   pre-fill their server address.
@@ -52,7 +52,7 @@ the `apps/delivery` workspace. POSIX `sh` for the CI path scripts. GitHub Action
   For development: Jest, ts-jest and tsx, as the server uses them.
 - CI tools from nixpkgs, not npm: `fdroidserver` (the F-Droid step), `actionlint` (added to the
   dev shell) and `qrencode` (a one-time setup command). Android build-tools (`zipalign`,
-  `apksigner`) come from the runner's SDK. `eas-cli` is run with `npx`, as today.
+  `apksigner`) come from the runner's SDK.
 - App and server: no new dependency.
 
 The justification is in [research.md R18](research.md#r18-sizing-and-what-is-not-built-principle-iv).
@@ -75,8 +75,7 @@ keeps 5 database copies and 3 server releases per instance on the Pi.
 - The scenarios of [quickstart.md](quickstart.md), run on the real Pi before merging (R17).
 
 **Target Platform**: GitHub-hosted `ubuntu-latest` runners. The Raspberry Pi (Raspberry Pi OS Lite
-64-bit, aarch64, systemd, Nix, Caddy). EAS Build for iOS. Android phones with F-Droid or
-Droid-ify.
+64-bit, aarch64, systemd, Nix, Caddy). Android phones with F-Droid or Droid-ify.
 
 **Project Type**: delivery tooling for the existing monorepo (mobile app and sync server), plus a
 small agent application on the Pi.
@@ -87,8 +86,7 @@ under 30 seconds per deployment (SC-005).
 
 **Constraints**: no inbound port beyond the existing 80 and 443, and no GitHub credential that
 reaches the Pi (FR-014, FR-015). The Pi's token is read-only (FR-016). The repository is private
-on a plan with no environments and no branch protection (R15, R16). Runner minutes are limited
-(R13: EAS runs with `--no-wait`). The EAS Free plan has a monthly iOS build allowance (R13).
+on a plan with no environments and no branch protection (R15, R16). Runner minutes are limited.
 
 **Scale/Scope**: one Pi, two instances, about ten users, a few merges a week. Five workflows (two
 new, one reusable new, two changed), one new workspace, and about ten files in `deploy/`.
@@ -128,8 +126,8 @@ like the others. No new dependency: `captureCheckIn` is in `@sentry/node`. Still
 - Creates [ADR-0006](../../docs/adr/0006-pull-based-continuous-delivery.md): continuous delivery
   is built in GitHub Actions and pulled by the Pi (Proposed).
 - Creates [ADR-0007](../../docs/adr/0007-android-fdroid-distribution.md): Android leaves EAS and
-  Google Play for a self-hosted F-Droid repository (Proposed). It narrows
-  [ADR-0001](../../docs/adr/0001-react-native-expo.md)'s use of EAS Build to iOS.
+  Google Play for a self-hosted F-Droid repository (Proposed). It ends
+  [ADR-0001](../../docs/adr/0001-react-native-expo.md)'s use of EAS Build for the app's delivery.
 - Creates [ADR-0008](../../docs/adr/0008-signed-delivery-manifests.md) (SSH-signed manifests),
   [ADR-0009](../../docs/adr/0009-version-identity-from-git.md) (version identity from the git
   commit count), [ADR-0010](../../docs/adr/0010-two-instances-on-one-pi.md) (two instances of one
@@ -204,7 +202,7 @@ apps/mobile/
 ├── build-config/app-variant.cjs        # NEW, tested
 ├── build-config/release-guard.cjs      # + refuses a staging identity in production
 ├── assets/staging/                     # NEW staging icons
-├── eas.json                            # preview → staging; Android submit removed; iOS ascAppId
+├── eas.json                            # preview → staging; Android submit removed
 └── src/…/sentry-error-reporter.ts      # allowed environments: production, staging
     src/…/SignInScreen.tsx              # pre-fills EXPO_PUBLIC_DEFAULT_SERVER_URL when no last address
 
