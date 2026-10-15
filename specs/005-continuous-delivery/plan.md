@@ -111,7 +111,7 @@ new, one reusable new, two changed), one new workspace, and about ten files in `
 | X. French interface | The new user-facing text is the app name "Mes courses (test)" and the F-Droid metadata (summary and description in French). The agent and the workflows have no user-facing text. | Pass |
 | XI. Monorepo | `apps/delivery` is a workspace with its own `package.json`, under the shared toolchain and CI. It depends on neither `apps/server` nor `apps/mobile`, and they do not depend on it. The server reads `build-info.json` with its own type. | Pass |
 | Quality Gates | CI keeps running on every PR and push. The new delivery workflows never run on `pull_request`. The `E2E Android` gate before merging is unchanged, and it also becomes a gate before production (R15). The iOS device suite stays a manual precondition of releases (README). | Pass |
-| Development Workflow | Two ADRs (0006, 0007). The README's "Releases" and "On the Pi" sections are rewritten (FR-031). | Pass |
+| Development Workflow | Six ADRs (0006 to 0011). The README's "Releases" and "On the Pi" sections are rewritten (FR-031). | Pass |
 
 **Post-design re-check (after Phase 1)**: the contracts add no dependency and no layer violation.
 `deploy-file` (contracts/pi-layout.md) deploys without a signature. It is root-only and uses the
@@ -130,6 +130,11 @@ like the others. No new dependency: `captureCheckIn` is in `@sentry/node`. Still
 - Creates [ADR-0007](../../docs/adr/0007-android-fdroid-distribution.md): Android leaves EAS and
   Google Play for a self-hosted F-Droid repository (Proposed). It narrows
   [ADR-0001](../../docs/adr/0001-react-native-expo.md)'s use of EAS Build to iOS.
+- Creates [ADR-0008](../../docs/adr/0008-signed-delivery-manifests.md) (SSH-signed manifests),
+  [ADR-0009](../../docs/adr/0009-version-identity-from-git.md) (version identity from the git
+  commit count), [ADR-0010](../../docs/adr/0010-two-instances-on-one-pi.md) (two instances of one
+  systemd template) and [ADR-0011](../../docs/adr/0011-stop-copy-validate-rollback.md) (stop,
+  copy, validate, then open; rollback). All Proposed.
 - Relies on [ADR-0002](../../docs/adr/0002-yarn-workspaces-monorepo.md) (the new workspace) and
   [ADR-0004](../../docs/adr/0004-detox-end-to-end-tests.md) (the device suite becomes a release
   gate).

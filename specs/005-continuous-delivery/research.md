@@ -119,6 +119,8 @@ the same read access; this replaces it.
 
 ## R5. Proving where an artifact comes from (FR-017)
 
+Decision record: [ADR-0008](../../docs/adr/0008-signed-delivery-manifests.md).
+
 **Decision**: CI signs each channel manifest with an Ed25519 SSH key using
 `ssh-keygen -Y sign -n mes-courses-deploy`. The Pi verifies the signature with
 `ssh-keygen -Y verify` against an `allowed_signers` file holding the public key, then checks the
@@ -210,6 +212,8 @@ code. A shell script would be untested or need a new test framework.
 
 ## R7. Version identity: sequence, version code, build-info (FR-018, FR-024, FR-029)
 
+Decision record: [ADR-0009](../../docs/adr/0009-version-identity-from-git.md).
+
 **Decision**: the **sequence** of a commit is `git rev-list --count <sha>` on `main`. The
 history is linear (squash merges only), so it increases with every commit and is the same for
 everyone. It is used as:
@@ -239,6 +243,8 @@ decades if seconds are used, and two commits in the same minute would collide if
 used. EAS remote versions are gone with EAS Build for Android.
 
 ## R8. Two instances on one Pi (FR-001, FR-002)
+
+Decision record: [ADR-0010](../../docs/adr/0010-two-instances-on-one-pi.md).
 
 **Decision**: the unit becomes a template, `deploy/mes-courses@.service`, with one instance per
 environment: `mes-courses@production` and `mes-courses@staging`.
@@ -274,6 +280,8 @@ isolation FR-002 asks for at no extra cost.
 `DynamicUser=` would change the database owner unpredictably across releases.
 
 ## R9. Database copy and rollback (FR-019)
+
+Decision record: [ADR-0011](../../docs/adr/0011-stop-copy-validate-rollback.md).
 
 **Decision**: the service is stopped before the copy. With the server stopped, SQLite's WAL is
 checkpointed and the files are quiescent, so a plain copy of `mes-courses.db` (plus `-wal` and

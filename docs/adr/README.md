@@ -42,3 +42,7 @@ plan creates, supersedes or relies on.
 | [0005](0005-accounts-and-authentication.md)    | Accounts in one database; scrypt passwords       | Accepted |
 | [0006](0006-pull-based-continuous-delivery.md) | Delivery built in Actions, pulled by the Pi      | Proposed |
 | [0007](0007-android-fdroid-distribution.md)    | Android through a self-hosted F-Droid repository | Proposed |
+| [0008](0008-signed-delivery-manifests.md)      | Deliveries proven by an SSH-signed manifest      | Proposed |
+| [0009](0009-version-identity-from-git.md)      | Version identity is the commit count on `main`   | Proposed |
+| [0010](0010-two-instances-on-one-pi.md)        | Two instances of one systemd template unit       | Proposed |
+| [0011](0011-stop-copy-validate-rollback.md)    | Stop, copy, validate, then open; rollback        | Proposed |
