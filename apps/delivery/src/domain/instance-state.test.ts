@@ -1,6 +1,10 @@
 import {
   clearInFlight,
+  clearSignatureMismatches,
   emptyInstanceState,
+  handledManifest,
+  recordFetch,
+  recordSignatureMismatch,
   markFailed,
   recordSuccess,
   setInFlight,
@@ -17,6 +21,7 @@ describe('emptyInstanceState', () => {
       failedCommits: [],
       fdroid: null,
       lastFetchSuccessAt: null,
+      signatureMismatches: 0,
       inFlight: null,
     });
   });
@@ -78,5 +83,24 @@ describe('inFlight', () => {
       previousCommit: commit(1),
     });
     expect(clearInFlight(set).inFlight).toBeNull();
+  });
+});
+
+describe('signature mismatches and fetches', () => {
+  it('counts mismatches in a row until a verified manifest ends the run', () => {
+    let state = recordSignatureMismatch(
+      recordSignatureMismatch(emptyInstanceState()),
+    );
+    expect(state.signatureMismatches).toBe(2);
+    state = recordFetch(state, '2026-10-20T08:00:00.000Z');
+    expect(state.signatureMismatches).toBe(2);
+    expect(state.lastFetchSuccessAt).toBe('2026-10-20T08:00:00.000Z');
+    expect(clearSignatureMismatches(state).signatureMismatches).toBe(0);
+  });
+
+  it('keeps the last manifest handled', () => {
+    expect(handledManifest(emptyInstanceState(), 412).manifestSequence).toBe(
+      412,
+    );
   });
 });

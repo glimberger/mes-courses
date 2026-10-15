@@ -1,0 +1,14 @@
+# F-Droid repository of the staging environment (research R12). No secret here: the passwords come
+# from the environment, the keystore is decoded by .github/scripts/build-fdroid-repo.sh, and the
+# address is filled in by that script from the SERVER_URL variable of the workflow.
+repo_url: __REPO_URL__
+repo_name: Mes courses (test)
+repo_description: >-
+  Dépôt de l'application Mes courses (test), pour les mises à jour automatiques sur Android.
+repo_keyalias: repo
+keystore: keystore.jks
+keystorepass: { env: FDROID_KEYSTORE_PASSWORD }
+keypass: { env: FDROID_KEY_PASSWORD }
+keydname: CN=Mes courses, O=glimberger
+# Only the latest APK is kept: fix forward, so nobody installs an older version.
+archive_older: 0

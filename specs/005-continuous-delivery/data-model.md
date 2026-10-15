@@ -86,6 +86,7 @@ is written atomically (a temporary file, then a rename).
 | `failedCommits`     | string[] (≤ 10, newest first)          | Server commits that failed here and are never retried      |
 | `fdroid`            | `{ commit, versionCode } \| null`      | The repository being served                                |
 | `lastFetchSuccessAt`| ISO 8601 \| `null`                     | For the "fetch failing for over an hour" report (R10)      |
+| `signatureMismatches` | integer                             | Passes in a row whose manifest signature did not verify; reported from the third, so an upload in progress is not (contract "Upload order") |
 | `inFlight`          | `{ commit, previousCommit } \| null`   | Set before the service is stopped, cleared at the outcome. A pass that finds it set rolls that deployment back (R6) |
 
 A missing file means a fresh instance: everything is `null`. If the instance already has a

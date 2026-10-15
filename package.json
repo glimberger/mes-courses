@@ -19,6 +19,7 @@
     "typecheck": "yarn workspaces foreach --all --exclude mes-courses run typecheck",
     "test:architecture": "depcruise apps packages tests --config .dependency-cruiser.cjs",
     "test:hooks": "bash .claude/hooks/test.sh",
+    "test:scripts": "sh .github/scripts/delivery-targets.test.sh && sh .github/scripts/server-native-check.test.sh && sh .github/scripts/build-fdroid-repo.test.sh",
     "build": "yarn workspaces foreach --all --exclude mes-courses run build",
     "test:e2e:android": "yarn workspace @mes-courses/e2e-tests e2e:build:android && yarn workspace @mes-courses/e2e-tests e2e:test:android",
     "test:e2e:ios": "yarn workspace @mes-courses/e2e-tests e2e:build:ios && yarn workspace @mes-courses/e2e-tests e2e:test:ios",

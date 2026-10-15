@@ -1,0 +1,31 @@
+# One pass of the delivery agent (research R6): fetches the signed manifests of the staging and
+# production channels and deploys what is new. Started by mes-courses-agent.timer;
+# `systemctl start mes-courses-agent` runs a pass at once.
+#
+# Copy to /etc/systemd/system/mes-courses-agent.service. /etc/mes-courses/agent.env comes from
+# deploy/agent.env.example (mode 600, owned by root). The agent runs as root, because it stops
+# and starts both instances and copies databases owned by two users; the sandbox below limits
+# where it can write.
+[Unit]
+Description=Mes courses delivery agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=/etc/mes-courses/agent.env
+# nix and systemctl are found through PATH; nix keeps its cache under HOME.
+Environment=HOME=/var/lib/mes-courses-agent
+Environment=PATH=/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/opt/mes-courses/agent/runtime/bin/node /opt/mes-courses/agent/current/dist/composition/main.js run
+
+# /run/mes-courses holds the port override of a validation; it is kept between passes.
+RuntimeDirectory=mes-courses
+RuntimeDirectoryPreserve=yes
+StateDirectory=mes-courses-agent
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/mes-courses /var/lib/mes-courses /var/lib/mes-courses-agent /run/mes-courses /srv/fdroid

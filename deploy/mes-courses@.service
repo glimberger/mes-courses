@@ -1,0 +1,43 @@
+# systemd template unit of the Mes courses server on the Pi: one instance per environment,
+# `mes-courses@production` and `mes-courses@staging` (research R8, ADR-0010).
+#
+# Copy to /etc/systemd/system/mes-courses@.service. The delivery agent installs the releases and
+# starts the instances; this file is installed once, by hand (quickstart §3). Each instance reads
+# /etc/mes-courses/<env>.env (from deploy/mes-courses.env.example, mode 600, owned by
+# mes-courses-<env>). While the agent validates a new version it also writes
+# /run/mes-courses/<env>.env, which moves the service to the validation port (FR-019a).
+[Unit]
+Description=Mes courses sync server (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mes-courses-%i
+Group=mes-courses-%i
+WorkingDirectory=/opt/mes-courses/%i/current/apps/server
+Environment=NODE_ENV=production
+Environment=MES_COURSES_DB=/var/lib/mes-courses/%i/mes-courses.db
+EnvironmentFile=/etc/mes-courses/%i.env
+EnvironmentFile=-/run/mes-courses/%i.env
+# Fails with a clear message in the journal when no release is in place, instead of looping.
+# --conditions=production makes @mes-courses/sync-core resolve to its compiled dist/ instead of
+# its TypeScript source (see its package.json "exports").
+ExecStartPre=/usr/bin/test -f /opt/mes-courses/%i/current/apps/server/dist/composition/main.js
+# Refuses to start, naming the variable, when a mail variable of the environment file is empty.
+ExecStartPre=/bin/sh -c 'for v in MES_COURSES_SMTP_URL MES_COURSES_MAIL_FROM MES_COURSES_PUBLIC_URL; do [ -n "$$(printenv $$v)" ] || { echo "$$v is empty in /etc/mes-courses/%i.env" >&2; exit 1; }; done'
+# The runtime is the Node the release was built for: an out-link the agent made in the release.
+ExecStart=/opt/mes-courses/%i/current/runtime/bin/node --conditions=production /opt/mes-courses/%i/current/apps/server/dist/composition/main.js
+Restart=always
+RestartSec=5
+
+# The database lives in /var/lib/mes-courses/<env>/.
+StateDirectory=mes-courses/%i
+StateDirectoryMode=0700
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

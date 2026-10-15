@@ -231,7 +231,7 @@ On the Pi, the server's variables go in `/etc/mes-courses.env` (from
 ## EAS builds and error tracking
 
 `apps/mobile/eas.json` has three build profiles. `production` makes the store builds and
-`preview` the internal builds installed on a phone; each sets `EXPO_PUBLIC_APP_ENVIRONMENT` to its
+`staging` the internal builds installed on a phone; each sets `EXPO_PUBLIC_APP_ENVIRONMENT` to its
 name, which Sentry reports as the environment, and gets a new build number on every build
 (`appVersionSource: remote`, `autoIncrement`). `development` sets neither. Every profile builds
 with the Node version of the flake. `submit.production` sends Android builds to Google Play's
@@ -239,7 +239,7 @@ internal testing track; add the App Store Connect app id (`ios.ascAppId`) once t
 there (`eas submit` asks for it until then).
 
 The maintainer sets these EAS environment variables (`eas env:create`) for the `production` and
-`preview` EAS environments, never committed:
+`staging` EAS environments, never committed:
 
 | Variable                 | What it is                                                     |
 | ------------------------ | -------------------------------------------------------------- |
@@ -267,7 +267,7 @@ Set once in the Sentry project, and checked once by quickstart §6 step 7:
 - the default alert rule Sentry created with the project, deleted;
 - the maintainer's personal workflow notifications, turned off, so no other email arrives.
 
-`preview` builds match no rule.
+`staging` builds match no rule.
 
 ### Store privacy details
 
@@ -328,7 +328,7 @@ build that sets either one stops while reading its configuration and names it, a
 | `EXPO_PUBLIC_SENTRY_SMOKE_TEST=1`      | Reports one test error at startup, on `CurrentList`                                                                                                                                                                      |
 | `EXPO_PUBLIC_SENTRY_SMOKE_TEST=native` | Crashes the app in native code 10 seconds after startup                                                                                                                                                                  |
 
-For example, `EXPO_PUBLIC_SEED_ITEMS=200 eas build --profile preview` makes the measurement build.
+For example, `EXPO_PUBLIC_SEED_ITEMS=200 eas build --profile staging` makes the measurement build.
 
 ## Device checks
 
@@ -340,7 +340,7 @@ request that leads to it.
 
 The performance targets (SC-001 start time, SC-002 tick latency, SC-008 frame rate, SC-011 add
 screen) are measured on the two reference phones, an entry-level Android phone about five years
-old and the maintainer's iPhone, with the seeded `preview` build (`EXPO_PUBLIC_SEED_ITEMS=200`)
+old and the maintainer's iPhone, with the seeded `staging` build (`EXPO_PUBLIC_SEED_ITEMS=200`)
 and the setup of [research R11](specs/001-shopping-lists/research.md): screen at 60 Hz, airplane
 mode on, battery saver off, screen reader off, default text size, light theme, other apps closed.
 A target missed on either phone blocks the release until a fix meets it; the pull request records
@@ -348,7 +348,7 @@ the miss, its cause and the new measurement.
 
 ## Releases
 
-A release is a `production` build, the only kind meant for users; `preview` and `development`
+A release is a `production` build, the only kind meant for users; `staging` and `development`
 builds are not releases ([quickstart §8](specs/001-shopping-lists/quickstart.md#8-release-spec-success-criteria-researchmd-r24)).
 
 1. A pull request sets `version` in `apps/mobile/app.config.ts` (semantic versioning: MINOR for a

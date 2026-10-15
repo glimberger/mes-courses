@@ -1,5 +1,6 @@
 import type { ExpoConfig } from 'expo/config';
 
+import { androidVersionCode, appVariant } from './build-config/app-variant.cjs';
 import { withAndroidAnrOff } from './build-config/android-anr-off.cjs';
 import { withAndroidNoMinify } from './build-config/android-no-minify.cjs';
 import { withNoUrlSchemes } from './build-config/no-url-schemes.cjs';
@@ -13,18 +14,22 @@ assertNoTestOptionsInProduction(process.env);
 // builds made for the end-to-end tests (research R23, R25).
 const detoxBuild = process.env.DETOX_BUILD === '1';
 
+// `APP_VARIANT=staging` gives the "test" identity, installable next to production (research R14).
+const variant = appVariant(process.env);
+const versionCode = androidVersionCode(process.env);
+
 const config: ExpoConfig = {
-  name: 'Mes courses',
+  name: variant.name,
   slug: 'mes-courses',
   // Semantic versioning, set by hand in the pull request that leads to a release (research R24);
   // the build number is EAS's, remote and incremented on every build.
   version: '1.1.0',
   orientation: 'portrait',
-  icon: './assets/icon.png',
+  icon: variant.icon,
   userInterfaceStyle: 'automatic',
   ios: {
     // Store identity: permanent once the app is first uploaded to a store.
-    bundleIdentifier: 'com.glimberger.mescourses',
+    bundleIdentifier: variant.package,
     supportsTablet: true,
   },
   plugins: [
@@ -43,7 +48,9 @@ const config: ExpoConfig = {
     ...(detoxBuild ? ['expo-detox-config-plugin'] : []),
   ],
   android: {
-    package: 'com.glimberger.mescourses',
+    package: variant.package,
+    // CI sets the commit's position on main (research R7); EAS-free builds have no other source.
+    ...(versionCode === undefined ? {} : { versionCode }),
     // The system backup keeps the data (research R18b): no backup rule excludes the database.
     allowBackup: true,
     // FR-041: no permission of its own; INTERNET stays because React Native declares it.
@@ -56,9 +63,9 @@ const config: ExpoConfig = {
     ],
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
-      foregroundImage: './assets/android-icon-foreground.png',
+      foregroundImage: variant.adaptiveForeground,
       backgroundImage: './assets/android-icon-background.png',
-      monochromeImage: './assets/android-icon-monochrome.png',
+      monochromeImage: variant.adaptiveMonochrome,
     },
   },
 };

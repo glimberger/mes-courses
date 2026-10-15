@@ -12,6 +12,8 @@ export type InstanceState = {
   /** The repository being served. */
   fdroid: { commit: string; versionCode: number } | null;
   lastFetchSuccessAt: string | null;
+  /** Passes in a row whose manifest signature did not verify; reported from the third (R5). */
+  signatureMismatches: number;
   /** Set before the service is stopped, cleared at the outcome. */
   inFlight: { commit: string; previousCommit: string | null } | null;
 };
@@ -25,6 +27,7 @@ export const emptyInstanceState = (): InstanceState => ({
   failedCommits: [],
   fdroid: null,
   lastFetchSuccessAt: null,
+  signatureMismatches: 0,
   inFlight: null,
 });
 
@@ -57,3 +60,26 @@ export const clearInFlight = (state: InstanceState): InstanceState => ({
   ...state,
   inFlight: null,
 });
+
+/** A good fetch of the channel, whatever it held. */
+export const recordFetch = (
+  state: InstanceState,
+  at: string,
+): InstanceState => ({ ...state, lastFetchSuccessAt: at });
+
+/** A manifest whose signature verified ends a run of mismatches. */
+export const clearSignatureMismatches = (
+  state: InstanceState,
+): InstanceState => ({ ...state, signatureMismatches: 0 });
+
+export const recordSignatureMismatch = (
+  state: InstanceState,
+): InstanceState => ({
+  ...state,
+  signatureMismatches: state.signatureMismatches + 1,
+});
+
+export const handledManifest = (
+  state: InstanceState,
+  sequence: number,
+): InstanceState => ({ ...state, manifestSequence: sequence });

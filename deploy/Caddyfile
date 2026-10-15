@@ -1,13 +1,29 @@
-# Public entry of the Mes courses server on the Pi (research R4, R17).
+# Public entry of the Mes courses servers on the Pi (research R4, R8, R12, R17).
 #
-# Copy to /etc/caddy/Caddyfile. Caddy reads `{$MES_COURSES_DOMAIN}` from its own environment:
-# either replace it with the domain (for example `courses.example.org`), or give the Debian
-# `caddy.service` that variable through a drop-in (`systemctl edit caddy`, then
+# Copy to /etc/caddy/Caddyfile. Caddy reads `{$MES_COURSES_DOMAIN}` (production) and
+# `{$MES_COURSES_STAGING_DOMAIN}` (staging) from its own environment: either replace them with the
+# domains (for example `courses.example.org` and `staging.courses.example.org`), or give the
+# Debian `caddy.service` those variables through a drop-in (`systemctl edit caddy`, then
 # `Environment=MES_COURSES_DOMAIN=courses.example.org`).
 #
 # Naming a domain turns on automatic HTTPS: Caddy gets a Let's Encrypt certificate (ports 80 and
-# 443 must reach the Pi) and redirects HTTP to HTTPS. The server listens on 127.0.0.1 only.
+# 443 must reach the Pi) and redirects HTTP to HTTPS. The servers listen on 127.0.0.1 only. Each
+# site also serves its F-Droid repository, generated in CI and unpacked by the agent, under
+# /fdroid/repo.
 {$MES_COURSES_DOMAIN} {
 	encode gzip
+	handle_path /fdroid/* {
+		root * /srv/fdroid/production/current
+		file_server
+	}
 	reverse_proxy 127.0.0.1:3000
+}
+
+{$MES_COURSES_STAGING_DOMAIN} {
+	encode gzip
+	handle_path /fdroid/* {
+		root * /srv/fdroid/staging/current
+		file_server
+	}
+	reverse_proxy 127.0.0.1:3001
 }

@@ -89,7 +89,7 @@ describe('createSentryErrorReporter', () => {
     expect(options).not.toHaveProperty('dist');
   });
 
-  it.each(['production', 'preview'])(
+  it.each(['production', 'staging'])(
     'FR-030 hands the %s environment to Sentry',
     (environment) => {
       const { options } = start(environment);
@@ -98,7 +98,7 @@ describe('createSentryErrorReporter', () => {
     },
   );
 
-  it.each([['development'], ['test'], [''], [undefined]])(
+  it.each([['development'], ['preview'], ['test'], [''], [undefined]])(
     'FR-030 with the environment %p, does not start Sentry and reports to the console',
     (environment) => {
       const reporter = createSentryErrorReporter({ dsn, environment });
