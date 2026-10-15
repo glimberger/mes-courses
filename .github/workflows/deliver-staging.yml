@@ -150,13 +150,13 @@ jobs:
           name: fdroid-staging
           path: ${{ runner.temp }}/out/fdroid-staging-${{ env.SHA }}.tar.gz
           retention-days: 1
-          if-no-files-found: errors
+          if-no-files-found: error
       - name: Summarize this job
         if: always()
         run: sh .github/scripts/delivery-summary.sh fdroid-repo "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
   publish:
-    needs: [plan, server-artifact, fdroid-repo]
+    needs: [plan, server-artifact, android-apk, fdroid-repo]
     if: >-
       always() && !cancelled() && !contains(needs.*.result, 'failure') &&
       (needs.server-artifact.result == 'success' || needs.fdroid-repo.result == 'success')
