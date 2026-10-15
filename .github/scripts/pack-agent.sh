@@ -40,24 +40,28 @@ if [ ! -d apps/delivery/dist ]; then
   echo "apps/delivery/dist does not exist: run yarn build first" >&2
   exit 1
 fi
-# The agent unit starts its entry points from the root of the bundle. A build that does not produce
-# one of them would only fail on the Pi, with status 203.
+# The agent unit runs files of the bundle from its root (every Exec* line: ExecStart, ExecStartPre,
+# ...). A build that does not produce one of them would only fail on the Pi, with status 203.
 unit=deploy/mes-courses-agent.service
+bundle=/opt/mes-courses/agent/current/
 if [ ! -f "$unit" ]; then
   echo "$unit does not exist" >&2
   exit 1
 fi
-entries=$(sed -n 's|^ExecStart=.*/opt/mes-courses/agent/current/\([^ ]*\).*|\1|p' "$unit")
+entries=$(grep '^Exec[A-Za-z]*=' "$unit" | grep -o "$bundle[^ ]*" || true)
 if [ -z "$entries" ]; then
-  echo "$unit has no ExecStart under /opt/mes-courses/agent/current" >&2
+  echo "$unit has no Exec line under $bundle" >&2
   exit 1
 fi
-for entry in $entries; do
+while IFS= read -r entry; do
+  entry=${entry#"$bundle"}
   if [ ! -f "$entry" ]; then
-    echo "$unit starts '$entry', which yarn build does not produce" >&2
+    echo "$unit runs '$entry', which yarn build does not produce" >&2
     exit 1
   fi
-done
+done <<EOF
+$entries
+EOF
 
 rev=$(jq -r '.nodes.nixpkgs.locked.rev // empty' flake.lock)
 case "$rev" in

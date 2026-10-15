@@ -1,5 +1,6 @@
 #!/bin/sh
-# Tests of the argument and precondition checks of pack-agent.sh. They all fail before `yarn` runs.
+# Tests of the argument and precondition checks of pack-agent.sh. All of them fail before `yarn`
+# runs, except the last one, which passes the checks and stops at a stub `yarn`.
 dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -40,6 +41,17 @@ expect_failure "unit starts a file the build does not produce" "does not produce
 printf '[Service]\nExecStart=%s %s/apps/delivery/dist/composition/main.js run\nExecStart=%s %s/apps/delivery/dist/main.js run\n' \
   "$node" "$bundle" "$node" "$bundle" >"$unit"
 expect_failure "second ExecStart starts a file the build does not produce" "does not produce" sh "$dir/pack-agent.sh" 1.0.0
+
+printf '[Service]\nExecStart=%s %s/apps/delivery/dist/composition/main.js --cfg %s/apps/delivery/dist/missing.json run\n' \
+  "$node" "$bundle" "$bundle" >"$unit"
+expect_failure "a later path on the same ExecStart line is checked" "does not produce" sh "$dir/pack-agent.sh" 1.0.0
+
+printf '[Service]\nExecStart=%s %s/apps/delivery/dist/composition/*.js run\n' "$node" "$bundle" >"$unit"
+expect_failure "a glob is not taken as a file of the build" "does not produce" sh "$dir/pack-agent.sh" 1.0.0
+
+printf '[Service]\nExecStartPre=/bin/true %s/apps/delivery/dist/gone.js\nExecStart=%s %s/apps/delivery/dist/composition/main.js run\n' \
+  "$bundle" "$node" "$bundle" >"$unit"
+expect_failure "ExecStartPre is checked too" "does not produce" sh "$dir/pack-agent.sh" 1.0.0
 
 # A stub yarn stops the script right after the checks: reaching it means they all passed.
 echo '{"nodes":{"nixpkgs":{"locked":{"rev":"0123abcd"}}}}' >"$work/flake.lock"
