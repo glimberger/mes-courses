@@ -6,6 +6,7 @@ import { createFileDiskSpace } from '../adapters/filesystem/disk-space';
 import { createFileFdroidSite } from '../adapters/filesystem/fdroid-site';
 import { createFilePortOverride } from '../adapters/filesystem/port-override';
 import { createFileReleaseStore } from '../adapters/filesystem/release-store';
+import { createFileAgentLock } from '../adapters/filesystem/agent-lock';
 import { createFileStateStore } from '../adapters/filesystem/state-store';
 import { createGithubChannelSource } from '../adapters/github/channel-source';
 import { createHttpHealthProbe } from '../adapters/http-health/health-probe';
@@ -20,6 +21,7 @@ import {
 } from '../adapters/error-reporting/sentry-reporter';
 import { createSystemdServiceManager } from '../adapters/systemd/service-manager';
 import { createSystemClock } from '../adapters/system/clock';
+import { runExclusively } from '../application/run-exclusively';
 import { deployFile } from '../application/deploy-file';
 import { forgetFailure } from '../application/forget-failure';
 import { showStatus } from '../application/show-status';
@@ -126,50 +128,59 @@ const run = async (args: AgentCommand): Promise<number> => {
     return forgotten ? 0 : 1;
   }
 
-  const { version } = JSON.parse(
-    await readFile(resolve(__dirname, '../../package.json'), 'utf8'),
-  ) as { version: string };
-  const downloadDir = await mkdtemp(join(PATHS.state, 'download-'));
-  const shared = {
-    releases: createFileReleaseStore(PATHS.releases, runner),
-    service: createSystemdServiceManager(runner),
-    ports: createFilePortOverride(PATHS.run),
-    health: createHttpHealthProbe(),
-    snapshots: createSqliteFileSnapshots(PATHS.data),
-    disk: createFileDiskSpace(PATHS.releases, PATHS.data),
-    stateStore,
-    reporter,
-    downloadDir,
-  };
-  try {
-    if (args.command === 'deploy-file') {
-      const outcome = await deployFile(
-        { ...shared, hashFile: sha256Of },
-        args.environment,
-        resolve(args.file),
+  const lock = createFileAgentLock(join(PATHS.state, 'agent.lock'));
+  const exclusive = await runExclusively(lock, async () => {
+    const { version } = JSON.parse(
+      await readFile(resolve(__dirname, '../../package.json'), 'utf8'),
+    ) as { version: string };
+    const downloadDir = await mkdtemp(join(PATHS.state, 'download-'));
+    const shared = {
+      releases: createFileReleaseStore(PATHS.releases, runner),
+      service: createSystemdServiceManager(runner),
+      ports: createFilePortOverride(PATHS.run),
+      health: createHttpHealthProbe(),
+      snapshots: createSqliteFileSnapshots(PATHS.data),
+      disk: createFileDiskSpace(PATHS.releases, PATHS.data),
+      stateStore,
+      reporter,
+      downloadDir,
+    };
+    try {
+      if (args.command === 'deploy-file') {
+        const outcome = await deployFile(
+          { ...shared, hashFile: sha256Of },
+          args.environment,
+          resolve(args.file),
+        );
+        console.error(`deploy-file ${outcome.kind}`);
+        return outcome.kind === 'succeeded' ? 0 : 1;
+      }
+      const result = await runAgent(
+        {
+          ...shared,
+          source: createGithubChannelSource({
+            repository: required('GITHUB_REPOSITORY'),
+            token: required('GITHUB_TOKEN'),
+          }),
+          verifier: createSshVerifier(PATHS.allowedSigners),
+          site: createFileFdroidSite(PATHS.fdroid),
+          clock: createSystemClock(),
+          agentVersion: version,
+        },
+        args.only === undefined ? {} : { only: args.only },
       );
-      console.error(`deploy-file ${outcome.kind}`);
-      return outcome.kind === 'succeeded' ? 0 : 1;
+      return exitCodeOf(result);
+    } finally {
+      await rm(downloadDir, { recursive: true, force: true });
+      await reporter.flush();
     }
-    const result = await runAgent(
-      {
-        ...shared,
-        source: createGithubChannelSource({
-          repository: required('GITHUB_REPOSITORY'),
-          token: required('GITHUB_TOKEN'),
-        }),
-        verifier: createSshVerifier(PATHS.allowedSigners),
-        site: createFileFdroidSite(PATHS.fdroid),
-        clock: createSystemClock(),
-        agentVersion: version,
-      },
-      args.only === undefined ? {} : { only: args.only },
-    );
-    return exitCodeOf(result);
-  } finally {
-    await rm(downloadDir, { recursive: true, force: true });
-    await reporter.flush();
+  });
+  if (exclusive.busy) {
+    // A timer pass that finds a manual deployment running just waits for the next tick.
+    console.error('Another agent operation is running; nothing done');
+    return args.command === 'deploy-file' ? 1 : 0;
   }
+  return exclusive.value;
 };
 
 if (require.main === module) {
