@@ -190,7 +190,8 @@ const handleEnvironment = async (
     kind !== 'failed' &&
     kind !== 'rolled-back' &&
     kind !== 'degraded' &&
-    !fdroid.failed;
+    !fdroid.failed &&
+    !fdroid.pending;
   if (clean) state = handledManifest(state, manifest.sequence);
   await deps.stateStore.save(environment, state);
   if (kind === 'degraded') return done('failed', true);

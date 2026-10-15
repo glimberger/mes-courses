@@ -21,6 +21,11 @@ export type PublishFdroidResult = {
   published: boolean;
   /** True when the swap was attempted and went wrong (the manifest then stays unhandled). */
   failed: boolean;
+  /**
+   * A newer repository is waiting for the server to be in service and healthy: the manifest must
+   * not count as handled, or the repository would never be swapped in.
+   */
+  pending: boolean;
   state: InstanceState;
 };
 
@@ -39,7 +44,7 @@ export const publishFdroid = async (
   state: InstanceState,
   serverOutcome: DeployOutcome,
 ): Promise<PublishFdroidResult> => {
-  const nothing = { published: false, failed: false, state };
+  const nothing = { published: false, failed: false, pending: false, state };
   if (entry === null) return nothing;
   if (state.fdroid !== null && state.fdroid.versionCode >= entry.versionCode) {
     return nothing;
@@ -51,14 +56,14 @@ export const publishFdroid = async (
   ) {
     return nothing;
   }
-  if (state.server === null) return nothing;
+  if (state.server === null) return { ...nothing, pending: true };
 
   const serving = await deps.health.waitForCommit(
     ENVIRONMENT_SETTINGS[environment].port,
     state.server.commit,
     SERVING_CHECK_MS,
   );
-  if (serving !== 'healthy') return nothing;
+  if (serving !== 'healthy') return { ...nothing, pending: true };
 
   const context = { environment, commit: entry.commit };
   try {
@@ -71,7 +76,7 @@ export const publishFdroid = async (
       `Publishing the F-Droid repository failed: ${error instanceof Error ? error.message : String(error)}`,
       context,
     );
-    return { published: false, failed: true, state };
+    return { published: false, failed: true, pending: false, state };
   }
   const next = {
     ...state,
@@ -83,5 +88,5 @@ export const publishFdroid = async (
     `Published the F-Droid repository ${entry.commit}`,
     context,
   );
-  return { published: true, failed: false, state: next };
+  return { published: true, failed: false, pending: false, state: next };
 };
