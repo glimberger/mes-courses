@@ -18,6 +18,10 @@ root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd "$root"
 
 yarn workspaces focus --production @mes-courses/server
+# @sentry/node pulls in oxc-parser through @sentry/bundler-plugins. Only the bundler entry points
+# (@sentry/node/bundler-plugin/*) load it, never the server, and its platform binaries are
+# native: left out of the artifact, so the native check below stays strict for everything else.
+rm -rf node_modules/oxc-parser node_modules/@oxc-parser
 sh .github/scripts/server-native-check.sh node_modules
 
 printf '{\n  "version": "%s",\n  "commit": "%s",\n  "sequence": %s\n}\n' \
