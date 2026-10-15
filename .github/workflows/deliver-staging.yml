@@ -155,11 +155,11 @@ jobs:
         if: always()
         run: sh .github/scripts/delivery-summary.sh fdroid-repo "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
-  publish:
-    needs: [plan, server-artifact, android-apk, fdroid-repo]
-    if: >-
-      always() && !cancelled() && !contains(needs.*.result, 'failure') &&
-      (needs.server-artifact.result == 'success' || needs.fdroid-repo.result == 'success')
+  # The server is delivered as soon as its archive is ready, without waiting for the Android
+  # build (SC-001): the manifest is written in two steps, the server first, then the repository.
+  publish-server:
+    needs: [plan, server-artifact]
+    if: needs.server-artifact.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -175,6 +175,7 @@ jobs:
       - run: nix develop --command yarn install --immutable
       - uses: actions/download-artifact@v8
         with:
+          name: server-staging
           path: ${{ runner.temp }}/artifacts
       - name: Write, sign and upload the manifest
         env:
@@ -183,21 +184,66 @@ jobs:
           DEPLOY_SIGNING_KEY: ${{ secrets.DEPLOY_SIGNING_KEY }}
         run: |
           set -eu
-          args="--env staging --commit $SHA"
           server=$(find "$RUNNER_TEMP/artifacts" -name "server-$SHA.tar.gz" | head -1)
-          fdroid=$(find "$RUNNER_TEMP/artifacts" -name "fdroid-staging-$SHA.tar.gz" | head -1)
-          [ -n "$server" ] && args="$args --server $server"
-          [ -n "$fdroid" ] && args="$args --fdroid $fdroid"
-          # shellcheck disable=SC2086
-          nix develop --command yarn workspace @mes-courses/delivery ci write-manifest $args
-          echo "### Published to the staging channel" >> "$GITHUB_STEP_SUMMARY"
+          [ -n "$server" ]
+          nix develop --command yarn workspace @mes-courses/delivery ci write-manifest \
+            --env staging --commit "$SHA" --server "$server"
+          echo "### Published the server to the staging channel" >> "$GITHUB_STEP_SUMMARY"
       - name: Summarize this job
         if: always()
-        run: sh .github/scripts/delivery-summary.sh publish "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        run: sh .github/scripts/delivery-summary.sh publish-server "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  # Runs after publish-server when the server was built, so the two writes never overlap: the
+  # manifest then keeps the server entry and replaces only the repository.
+  publish-app:
+    needs: [plan, publish-server, android-apk, fdroid-repo]
+    if: >-
+      always() && !cancelled() && !contains(needs.*.result, 'failure') &&
+      needs.fdroid-repo.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SHA }}
+          fetch-depth: 0
+      - uses: DeterminateSystems/determinate-nix-action@v3
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+      - run: nix develop --command yarn install --immutable
+      - uses: actions/download-artifact@v8
+        with:
+          name: fdroid-staging
+          path: ${{ runner.temp }}/artifacts
+      - name: Write, sign and upload the manifest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_SIGNING_KEY: ${{ secrets.DEPLOY_SIGNING_KEY }}
+        run: |
+          set -eu
+          fdroid=$(find "$RUNNER_TEMP/artifacts" -name "fdroid-staging-$SHA.tar.gz" | head -1)
+          [ -n "$fdroid" ]
+          nix develop --command yarn workspace @mes-courses/delivery ci write-manifest \
+            --env staging --commit "$SHA" --fdroid "$fdroid"
+          echo "### Published the Android repository to the staging channel" >> "$GITHUB_STEP_SUMMARY"
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh publish-app "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
   # One line per job, skipped and failed ones included (FR-030).
   summary:
-    needs: [plan, server-artifact, android-apk, fdroid-repo, publish]
+    needs:
+      [
+        plan,
+        server-artifact,
+        android-apk,
+        fdroid-repo,
+        publish-server,
+        publish-app,
+      ]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
