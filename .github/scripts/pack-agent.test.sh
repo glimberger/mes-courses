@@ -68,8 +68,13 @@ rm -rf node_modules/pruned
 exit "${STUB_YARN_STATUS:-1}"
 EOF
 chmod +x "$work/bin/yarn"
-printf '[Service]\nWorkingDirectory=%s/\nExecStart=%s "%s/apps/delivery/dist/composition/main.js" run\n' "$bundle" "$node" "$bundle" >"$unit"
-expect_failure "quoted path of a built file passes the checks" "reached yarn" PATH="$work/bin:$PATH" sh "$dir/pack-agent.sh" 1.0.0
+# A comment may name a missing path, and WorkingDirectory= may name a directory of the build.
+printf '[Service]\n# Old entry: %s/apps/delivery/dist/gone.js\nWorkingDirectory=%s/apps/delivery\nExecStart=%s "%s/apps/delivery/dist/composition/main.js" run\n' \
+  "$bundle" "$bundle" "$node" "$bundle" >"$unit"
+expect_failure "comments and directories of the build pass the checks" "reached yarn" PATH="$work/bin:$PATH" sh "$dir/pack-agent.sh" 1.0.0
+
+printf '[Service]\nWorkingDirectory=%s/\n' "$bundle" >"$unit"
+expect_failure "a bare bundle root names no path" "names no path under" sh "$dir/pack-agent.sh" 1.0.0
 
 # The prune removes node_modules/pruned, which the unit names: the archive check must catch it.
 mkdir -p "$work/node_modules/pruned" "$work/node_modules/kept"

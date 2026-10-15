@@ -40,28 +40,39 @@ if [ ! -d apps/delivery/dist ]; then
   echo "apps/delivery/dist does not exist: run yarn build first" >&2
   exit 1
 fi
-# The agent unit names paths of the bundle, from its root, on any line. Each of them must be built
-# before packing, and must still be in the archive after the production prune. Otherwise the Pi
-# fails with status 203, or runs a file that is not there.
+# The agent unit names paths of the bundle, from its root. The executables of Exec* lines must be
+# files; the other lines (WorkingDirectory=...) may name directories. Comment lines are skipped.
+# Each path must be built before packing, and must still be in the archive after the production
+# prune. Otherwise the Pi fails with status 203, or runs a file that is not there.
 unit=deploy/mes-courses-agent.service
 bundle=/opt/mes-courses/agent/current/
 if [ ! -f "$unit" ]; then
   echo "$unit does not exist" >&2
   exit 1
 fi
-paths=$(grep -oE "$bundle[^[:space:]\"']+" "$unit" | sed "s|^$bundle||" || true)
+uncommented=$(grep -vE '^[[:space:]]*[#;]' "$unit" || true)
+execs=$(printf '%s\n' "$uncommented" | grep -E '^[[:space:]]*Exec[A-Za-z]*=' |
+  grep -oE "$bundle[^[:space:]\"']+" | sed "s|^$bundle||" || true)
+others=$(printf '%s\n' "$uncommented" | grep -vE '^[[:space:]]*Exec[A-Za-z]*=' |
+  grep -oE "$bundle[^[:space:]\"']+" | sed "s|^$bundle||" || true)
+paths=$(printf '%s\n%s\n' "$execs" "$others" | sed '/^$/d')
 if [ -z "$paths" ]; then
   echo "$unit names no path under $bundle" >&2
   exit 1
 fi
-while IFS= read -r path; do
-  if [ ! -f "$path" ]; then
-    echo "$unit names '$path', which yarn build does not produce" >&2
-    exit 1
-  fi
-done <<EOF
-$paths
+check_built() {
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    if [ ! "$1" "$path" ]; then
+      echo "$unit names '$path', which the build does not produce" >&2
+      exit 1
+    fi
+  done <<EOF
+$2
 EOF
+}
+check_built -f "$execs"
+check_built -e "$others"
 
 rev=$(jq -r '.nodes.nixpkgs.locked.rev // empty' flake.lock)
 case "$rev" in
@@ -90,7 +101,8 @@ tar -czf "$archive" \
 # The prune above may have removed a path the unit names: check the archive itself.
 listing=$(tar -tzf "$archive")
 while IFS= read -r path; do
-  if ! printf '%s\n' "$listing" | grep -qxF "$path"; then
+  # tar does not list the parents of a directory, so a directory is found by one entry under it.
+  if ! printf '%s\n' "$listing" | awk -v p="$path" '$0 == p || index($0, p "/") == 1 { f = 1 } END { exit !f }'; then
     rm -f "$archive"
     echo "$unit names '$path', which is not in the archive" >&2
     exit 1
