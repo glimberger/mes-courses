@@ -59,8 +59,13 @@ key, password or token for the Pi.
      `deploy/allowed_signers` and `deploy/Caddyfile`, with both domains given to Caddy's drop-in;
    - create `/etc/mes-courses/agent.env` (mode 600, root) from `deploy/agent.env.example`, with
      the token and the server's Sentry DSN.
-5. **Install the agent** from the latest production release (§7). Before the first release, use
-   the agent bundle of this feature's pull request run.
+5. **Install the agent** from the latest production release (§7). Before the first release
+   there is none, and CI only builds the bundle on a tag (`release.yml`): build it on the
+   maintainer's machine, in a throwaway copy of the repository, for the Pi's architecture. Add
+   `supportedArchitectures: {os: [linux], cpu: [arm64], libc: [glibc]}` to that copy's
+   `.yarnrc.yml`, then `yarn install --immutable`, `yarn workspace @mes-courses/delivery build`
+   and `sh .github/scripts/pack-agent.sh <version of apps/delivery> <folder>`. Copy
+   `delivery-<version>.tar.gz` to the Pi and continue as in §7 from the unpacking.
 6. **Sentry alert** (research R10, once): add an issue alert rule on the tag
    `component:delivery-agent`, in every environment, for new issues and monitor issues, emailing
    the maintainer. Production errors keep the two existing rules.
