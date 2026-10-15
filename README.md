@@ -54,12 +54,13 @@ This is a Yarn workspaces monorepo ([research R20](specs/001-shopping-lists/rese
 | `apps/server/`            | The sync server (`@mes-courses/server`)                                        |
 | `packages/sync-core/`     | The protocol types and merge rules shared by the app and the server            |
 | `tests/sync/`             | The tests that run the app and the server together (`@mes-courses/sync-tests`) |
-| `deploy/`                 | The Pi files: systemd unit, Caddyfile, environment template                    |
+| `apps/delivery/`          | The Pi's delivery agent (`@mes-courses/delivery`) and the CI manifest command  |
+| `deploy/`                 | The Pi files: systemd units and timer, Caddyfile, environment templates, keys  |
 | `specs/`, `.specify/`     | Feature specifications and the Spec Kit configuration                          |
 | `docs/adr/`               | The [architecture decision records](docs/adr/README.md)                        |
 | `design/`                 | The Material 3 theme export                                                    |
 | `flake.nix`, `flake.lock` | The Nix dev shell                                                              |
-| `.github/`                | The CI workflow and its helper script                                          |
+| `.github/`                | The workflows (`ci`, `e2e`, `deliver-staging`, `release`) and their scripts    |
 
 ## Prerequisites
 
@@ -187,19 +188,87 @@ with `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL=1`; release builds refuse `http://`.
 
 ### On the Pi
 
-The Freebox, DNS and Pi setup is in [003 quickstart §3](specs/003-server-sync/quickstart.md#3-set-up-the-pi-behind-the-freebox-once).
-In short: Nix and Caddy on the Pi, a `mes-courses` system user, the repository in
-`/opt/mes-courses`, the server built inside the flake's dev shell, Node from
-`nix build .#node --out-link /opt/mes-courses/runtime` (a fixed path for systemd, pinned by
-`flake.lock` and kept by Nix's garbage collector), then
-`deploy/mes-courses.service` and `deploy/Caddyfile` installed and started. Deploying an update is
-`git pull`, the same build, and `systemctl restart mes-courses`; migrations run at startup.
+The Pi runs two instances of one systemd template unit, `mes-courses@staging` and
+`mes-courses@production`, behind Caddy, plus a delivery agent that deploys what GitHub Actions
+built ([ADR-0006](docs/adr/0006-pull-based-continuous-delivery.md),
+[ADR-0010](docs/adr/0010-two-instances-on-one-pi.md)). Nothing is pushed to the Pi and no
+secret of the Pi lives in GitHub. The paths, units and ports are in
+[the Pi layout](specs/005-continuous-delivery/contracts/pi-layout.md).
 
-Upgrading a Pi that ran 003 (accounts arrive with migration 2, which rebuilds the data tables):
-stop the service and copy the database file first (it is the only rollback), set the three mail
-variables in `/etc/mes-courses.env`, deploy and start, run `create-admin` for the administrator
-(who owns the existing data), then update the phones, which keep syncing without signing in again.
-The full order is in [004 quickstart §3](specs/004-multi-user/quickstart.md#3-upgrade-the-pi).
+#### One-time set-up
+
+The full steps, with their checks, are in [005 quickstart](specs/005-continuous-delivery/quickstart.md).
+
+1. **Keys and secrets** (quickstart §2): the APK upload key, the F-Droid repository key and the
+   manifest signing key, each stored in the password manager and set with `gh secret set`
+   (`ANDROID_KEYSTORE_*`, `FDROID_KEYSTORE_*`, `DEPLOY_SIGNING_KEY`). The public part of the
+   signing key is committed as `deploy/allowed_signers`. The variables `SENTRY_ORG`,
+   `SENTRY_PROJECT`, `EXPO_PUBLIC_SENTRY_DSN`, `ANDROID_CERT_SHA256`, `PRODUCTION_SERVER_URL` and
+   `STAGING_SERVER_URL` are set with `gh variable set`.
+2. **DNS**: `staging.courses.<domain>` points to the same address as `courses.<domain>`.
+3. **Read-only token**: a fine-grained personal access token on this repository only, with
+   _Contents: read_ and nothing else, expiring after one year. It goes in
+   `/etc/mes-courses/agent.env`. **Renew it every year**: when it expires the agent gets a `401`,
+   reports it to Sentry, and both instances keep running on their current release.
+4. **The Pi** (quickstart §3): one system user per instance, `/etc/mes-courses/<env>.env`
+   (from `deploy/mes-courses.env.example`, mode 600), `deploy/mes-courses@.service`,
+   `deploy/mes-courses-agent.{service,timer}`, `deploy/allowed_signers` and `deploy/Caddyfile`.
+   An existing single-instance Pi is migrated by the steps of §3, which include the back-out.
+5. **Sentry**: the alert rule on the tag `component:delivery-agent` (see "Sentry alerts").
+6. **The agent** is installed from a release (§7 of the quickstart, and "Updating the agent"
+   below).
+
+#### Delivery to staging
+
+Every merge to `main` whose `CI` run is green starts `Deliver staging`. It builds only what the
+merge changed (the server, the Android app), signs a manifest, and publishes it to the `channel-staging`
+release. The agent checks that channel every few minutes, verifies the signature, and deploys:
+it stops the instance, copies the database, switches to the new release, starts it on a private
+validation port, checks that `/v1/health` reports the expected commit, and only then opens the
+public port. The Android build appears in the staging F-Droid repository as "Mes courses (test)".
+The run summary lists every job and its outcome, and `main.js status` on the Pi shows what each
+instance runs.
+
+#### Rollback and failed deployments
+
+A deployment that fails after the instance was stopped is rolled back by the agent: the previous
+release runs again on the copy of the database taken before the switch, the failure is reported
+to Sentry with the commit, and that commit is marked failed so the next passes do not retry it.
+If the previous version also fails, the instance is left up under systemd and a critical error is
+reported ([ADR-0011](docs/adr/0011-stop-copy-validate-rollback.md)).
+
+The agent is `/opt/mes-courses/agent/runtime/bin/node /opt/mes-courses/agent/current/dist/main.js`
+(called `main.js` below), run as root:
+
+| Command                              | What it does                                                          |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| `main.js status`                     | Shows the commit each instance runs, the failed commits, the last run |
+| `main.js forget-failure <env> <sha>` | Clears the failed mark of a commit so it can be delivered again       |
+| `main.js deploy-file <env> <tar>`    | Deploys a server tarball from the disk, for the rollback tests        |
+
+A failed commit is not retried: fix it forward with a new commit, or run `forget-failure` when the
+cause was the Pi and not the code. The five latest database copies are in
+`/var/lib/mes-courses/<env>/backups/`.
+
+#### Updating the agent
+
+The agent updates through the release, never by itself. Download the asset
+`delivery-<version>.tar.gz` of the release with the read-only token, unpack it into
+`/opt/mes-courses/agent/releases/<version>/`, point `current` at it, rebuild the runtime with the
+revision in the bundle's `nixpkgs-rev`, and check with `main.js status` (quickstart §7).
+
+#### Upgrading a Pi that ran 004
+
+Before 005 the Pi ran `mes-courses` from a git checkout and deployed with `git pull`. That
+workflow, and the Pi's deploy key, are gone. Migrate with quickstart §3 step 4, which moves the
+database and the environment file under the `production` instance and has its own back-out:
+
+- **Back-out**: the old unit `mes-courses` and a copy of the database (`~/pre-005.db`) stay untouched
+  until the new instance has passed its health check and a phone has synced. If it does not answer,
+  stop `mes-courses@production` and the agent timer, move the database and the environment file back,
+  start `mes-courses` and check `/v1/health` (FR-034).
+- **Cleanup**, only after that: disable the old unit, remove `/etc/mes-courses.env` and the git
+  checkout, and delete the deploy key with `gh repo deploy-key delete`.
 
 ### Signing in
 
@@ -213,7 +282,7 @@ screen, by email; with no mail relay, `set-password` on the Pi does it.
 | Variable                              | Where                 | What it does                                                                                                   |
 | ------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `SENTRY_DSN`                          | server                | Sends server errors to the Sentry project `mes-courses-server` (EU region). Unset: they go to the journal only |
-| `MES_COURSES_DB`                      | server                | The SQLite database path. Default: `/var/lib/mes-courses/mes-courses.db`                                       |
+| `MES_COURSES_DB`                      | server                | The SQLite database path. Default: `/var/lib/mes-courses/<env>/mes-courses.db`                                 |
 | `MES_COURSES_SMTP_URL`                | server                | The SMTP relay that sends invitations and resets, `smtp://user:password@host:587` (STARTTLS required)          |
 | `MES_COURSES_MAIL_FROM`               | server                | The sender of those emails, an address the relay allows                                                        |
 | `MES_COURSES_PUBLIC_URL`              | server                | The public address of the server, written in the emails                                                        |
@@ -225,8 +294,9 @@ retention you accept; the app and the server never write an address or a passwor
 logs or reports ([research R8](specs/004-multi-user/research.md)). The systemd unit refuses to start
 the server when one of the three mail variables is empty.
 
-On the Pi, the server's variables go in `/etc/mes-courses.env` (from
-`deploy/mes-courses.env.example`, mode 600, owned by `mes-courses`).
+On the Pi, each instance's variables go in `/etc/mes-courses/<env>.env` (from
+`deploy/mes-courses.env.example`, mode 600, owned by the instance's user). The agent's are in
+`/etc/mes-courses/agent.env` (from `deploy/agent.env.example`, mode 600, root).
 
 ## EAS builds and error tracking
 
@@ -268,6 +338,11 @@ Set once in the Sentry project, and checked once by quickstart §6 step 7:
 - the maintainer's personal workflow notifications, turned off, so no other email arrives.
 
 `staging` builds match no rule.
+
+A third rule covers the delivery agent (quickstart §3 step 6): an issue alert on the tag
+`component:delivery-agent`, in every environment, for new issues and monitor issues, emailing the
+maintainer. It is how a failed staging deployment, a degraded instance, a revoked token and a
+silent agent (the missed check-in of the monitor `mes-courses-agent`) reach the maintainer.
 
 ### Store privacy details
 
@@ -348,21 +423,59 @@ the miss, its cause and the new measurement.
 
 ## Releases
 
-A release is a `production` build, the only kind meant for users; `staging` and `development`
-builds are not releases ([quickstart §8](specs/001-shopping-lists/quickstart.md#8-release-spec-success-criteria-researchmd-r24)).
+A release is a version tag. Android users get it from the production F-Droid repository on the
+Pi. `staging` and `development` builds are not releases. iOS is not delivered: it needs the paid
+Apple Developer Program.
 
 1. A pull request sets `version` in `apps/mobile/app.config.ts` (semantic versioning: MINOR for a
    new feature, PATCH for fixes only) and records in its test plan every manual check of
-   quickstart §5 and §6 and the iOS device suite, on its last commit.
-2. Once it is merged, from `main` at its squash commit with nothing merged after it:
-   `eas build --profile production --platform all`.
-3. `eas submit --profile production --platform all` sends the Android build to Google Play's
-   internal testing track and the iOS build to TestFlight. The very first Android upload is made
-   once by hand in the Play Console.
-4. Install the update on both phones and check the lists are still there.
+   quickstart §6 and the device checks below, on its last commit. These checks are a precondition
+   of a release: the pipeline does not run them.
+2. Once it is merged, wait for `CI`, `E2E Android` and `Deliver staging` to be green on its squash
+   commit, and try the change on staging.
+3. Tag the squash commit and push the tag, which is the only action:
+   `git tag vX.Y.Z <sha> && git push origin vX.Y.Z`.
+4. `Release` checks the rules (the tag matches `version` in `app.config.ts`, the commit is on
+   `main` with a green `E2E Android` run, the version is new), builds the production server, the
+   APK, the F-Droid repository and the agent bundle, and publishes the release and the
+   `channel-production` manifest. The agent deploys it like a staging delivery, and the run waits
+   for the production health to report the commit.
+5. Install the update on the phones from the F-Droid client and check the lists are still there.
 
-A faulty release is fixed forward, never rolled back: a new pull request with the fix, then these
-steps again. An older version does not open data saved by a newer one (FR-040).
+If the health check times out (for example the agent was stopped), the run fails but the delivery
+is not lost: once the agent is back, _Re-run failed jobs_ on the same run, with no new tag.
+
+A faulty release is fixed forward, never rolled back by hand: a new pull request with the fix, then
+these steps again with the next version. The agent already rolls back a deployment that fails to
+start (see "Rollback and failed deployments"). An older version does not open data saved by a
+newer one (FR-040).
+
+### Losing or exposing a signing key
+
+Each key has an offline backup, kept with its passwords in the password manager, and a procedure.
+
+**APK upload key** (FR-022). Android refuses to update an app signed with another key, so the key
+is the identity of the app.
+
+- _Lost_, with the backup intact: restore it from the backup and set the four `ANDROID_*` secrets
+  again. Nothing else changes.
+- _Lost with no backup, or compromised_: the installed apps cannot be updated by a build signed
+  with a new key. Create a new key, set the secrets and `ANDROID_CERT_SHA256`, release, and every
+  Android user uninstalls and reinstalls as in "Passer de Google Play à F-Droid" below (their
+  data is on the server, after a last sync). If it was compromised, delete the old key's secrets
+  from GitHub first and check the releases for builds you did not make.
+
+**F-Droid repository key** (FR-023). The clients pin the repository by the fingerprint of this key.
+
+- _Lost_, with the backup intact: restore it and set the three `FDROID_*` secrets again.
+- _Lost with no backup, or compromised_: create a new key, set the secrets, release, and send
+  every user the new address with its new fingerprint from `.github/scripts/repo-address.sh`.
+  Users remove the old repository and add the new one. Apps already installed keep working and
+  update from the new repository, since the APK key did not change.
+
+**Manifest signing key**. Replace the public key in `deploy/allowed_signers`, set
+`DEPLOY_SIGNING_KEY`, release, and update the agent on the Pi **before** relying on the new
+key: an agent holding the old public key rejects the new manifests.
 
 ### Android: from Google Play to F-Droid
 
@@ -408,9 +521,8 @@ Les réglages enregistrés uniquement sur l'appareil ne sont pas conservés : il
   sign-in.
 - Dependabot security alerts are turned on in the repository settings, with no update bot and no
   automatic pull request; an alert is fixed like any defect.
-- A lost or exposed Android upload identity is reset through Google Play support (Google Play App
-  Signing keeps the app's own signing identity); an iOS certificate is revoked and made again with
-  `eas credentials`. Neither affects the data on the phones.
+- A lost or exposed APK key, F-Droid repository key or manifest signing key has its own
+  procedure under "Losing or exposing a signing key"; none affects the data on the phones.
 - While the app reaches only the maintainer's own phones, sending error reports is personal use.
   It must not reach anyone else (other testers or a store listing) before a privacy notice and a
   lawful basis for sending reports exist (spec Assumptions).

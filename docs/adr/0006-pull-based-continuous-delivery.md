@@ -1,6 +1,6 @@
 # ADR-0006: Continuous delivery is built in GitHub Actions and pulled by the Pi
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-10-14
 - **Decided by**: maintainer (constraints), proposed by the agent (design)
 - **Supersedes**: none

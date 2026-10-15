@@ -1,6 +1,6 @@
 # ADR-0008: Deliveries are proven by an SSH-signed manifest
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-10-15
 - **Decided by**: proposed by the agent, approved by the maintainer
 - **Supersedes**: none

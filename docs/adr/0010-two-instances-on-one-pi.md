@@ -1,6 +1,6 @@
 # ADR-0010: Staging and production run as two instances of one systemd template
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-10-15
 - **Decided by**: maintainer (two instances on one Pi), proposed by the agent (layout)
 - **Supersedes**: none

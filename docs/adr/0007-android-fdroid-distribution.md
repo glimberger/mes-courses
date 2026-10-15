@@ -1,6 +1,6 @@
 # ADR-0007: Android leaves EAS and Google Play for a self-hosted F-Droid repository
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-10-14
 - **Decided by**: maintainer
 - **Supersedes**: none (ends the use of EAS Build for delivery, see [ADR-0001](0001-react-native-expo.md))

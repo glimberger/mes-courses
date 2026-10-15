@@ -1,6 +1,6 @@
 # ADR-0009: Version identity is the commit count on `main`
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-10-15
 - **Decided by**: proposed by the agent, approved by the maintainer
 - **Supersedes**: none

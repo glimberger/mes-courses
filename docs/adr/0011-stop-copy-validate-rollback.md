@@ -1,6 +1,6 @@
 # ADR-0011: A deployment stops the server, copies the database and validates before opening
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-10-15
 - **Decided by**: maintainer (clarification 2026-10-14), proposed by the agent (mechanism)
 - **Supersedes**: none
