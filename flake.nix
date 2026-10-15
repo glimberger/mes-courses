@@ -28,6 +28,7 @@
             pkgs.corepack_24
             pkgs.watchman
             pkgs.jq
+            pkgs.actionlint
           ];
         };
       });

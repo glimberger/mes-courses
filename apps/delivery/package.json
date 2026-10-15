@@ -1,0 +1,21 @@
+{
+  "name": "@mes-courses/delivery",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "jest --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sentry/node": "^11.5.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30",
+    "@types/node": "^24",
+    "jest": "^30",
+    "ts-jest": "^29",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
+  }
+}
