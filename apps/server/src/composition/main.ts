@@ -12,7 +12,7 @@ import {
   publicUrl,
 } from './config';
 import { installCrashHandlers, type ProcessLike } from './crash-handlers';
-import { serverRelease } from './release';
+import { readBuildInfo } from './release';
 import { installShutdownHandlers } from './shutdown';
 import { appDeps, createMailer, pruneAuthAttempts } from './wiring';
 
@@ -29,10 +29,11 @@ export const main = async (
   proc: ProcessLike,
   exit: (code: number) => void,
 ): Promise<RunningServer> => {
+  const buildInfo = readBuildInfo();
   const errorReporter: ErrorReporter = env.SENTRY_DSN
     ? createSentryErrorReporter({
         dsn: env.SENTRY_DSN,
-        release: serverRelease(),
+        release: `mes-courses-server@${buildInfo.version}`,
         environment: env.MES_COURSES_ENV ?? 'production',
       })
     : new ConsoleErrorReporter();
@@ -53,6 +54,7 @@ export const main = async (
       errorReporter,
       mailer: createMailer(mail),
       publicUrl: publicUrl(env),
+      release: { version: buildInfo.version, commit: buildInfo.commit },
     }),
   );
   try {

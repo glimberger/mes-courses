@@ -43,6 +43,7 @@ const harness = async (overrides: Partial<AppDeps> = {}): Promise<Harness> => {
     ids: { next: () => `device-${++id}` },
     errorReporter: reporter,
     minAppVersion: '1.2.0',
+    release: { version: '1.2.0-staging.7', commit: 'c'.repeat(40) },
     ...overrides,
   };
   const app = buildApp(deps);
@@ -67,7 +68,47 @@ describe('HTTP app', () => {
         serverId,
         apiVersion: 1,
         minAppVersion: '1.2.0',
+        release: { version: '1.2.0-staging.7', commit: 'c'.repeat(40) },
       });
+    });
+
+    it('FR-029 reports the release the server was given, and nothing else about it', async () => {
+      const { app } = await harness({
+        release: { version: '1.3.0', commit: 'd'.repeat(40) },
+      });
+
+      const { release } = (
+        await app.inject({ method: 'GET', url: '/v1/health' })
+      ).json();
+
+      expect(release).toEqual({ version: '1.3.0', commit: 'd'.repeat(40) });
+      expect(Object.keys(release).sort()).toEqual(['commit', 'version']);
+    });
+
+    it('FR-029 reports a development build as "dev"', async () => {
+      const { app } = await harness({
+        release: { version: '0.1.0', commit: 'dev' },
+      });
+
+      const body = (
+        await app.inject({ method: 'GET', url: '/v1/health' })
+      ).json();
+
+      expect(body.release).toEqual({ version: '0.1.0', commit: 'dev' });
+    });
+
+    it('adds no release to the body of another route', async () => {
+      const { app, pair } = await harness();
+      const { credential } = await pair();
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/devices',
+        headers: bearer(credential),
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('release');
     });
   });
 

@@ -139,7 +139,7 @@ export const buildApp = (
     return sendError(reply, 'ServerError');
   });
 
-  registerHealthRoutes(app);
+  registerHealthRoutes(app, deps);
   registerAccountRoutes(app, deps);
   registerAdminRoutes(app, deps);
   registerAuthRoutes(app, deps);

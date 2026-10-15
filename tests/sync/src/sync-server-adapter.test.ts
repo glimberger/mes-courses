@@ -70,6 +70,8 @@ describe('SyncServer HTTP adapter', () => {
           serverId: expect.any(String),
           apiVersion: 1,
           minAppVersion: expect.any(String),
+          // FR-029: the server also reports its release; the app ignores it.
+          release: { version: expect.any(String), commit: expect.any(String) },
         },
       });
     });
