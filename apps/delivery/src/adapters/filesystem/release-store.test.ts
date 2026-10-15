@@ -7,6 +7,7 @@ import {
   readlinkSync,
   rmSync,
   utimesSync,
+  writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -112,6 +113,41 @@ describe('file release store', () => {
     await store().buildRuntime('production', 'abc', 'e'.repeat(40));
     expect(recorder.calls[0]).toContain(
       `--out-link ${join(root, 'production/releases/abc/runtime')}`,
+    );
+  });
+
+  describe('currentRelease', () => {
+    const release = (commit: string, info?: string) => {
+      const folder = join(root, 'staging/releases', commit);
+      mkdirSync(join(folder, 'apps/server'), { recursive: true });
+      if (info !== undefined) {
+        writeFileSync(join(folder, 'apps/server/build-info.json'), info);
+      }
+    };
+
+    it('is null when nothing is installed', async () => {
+      await expect(store().currentRelease('staging')).resolves.toBeNull();
+    });
+
+    it('reads the commit and the sequence of the release current points to', async () => {
+      release('abc', '{"version":"1.0.0","commit":"abc","sequence":12}');
+      await store().activate('staging', 'abc');
+      await expect(store().currentRelease('staging')).resolves.toEqual({
+        commit: 'abc',
+        sequence: 12,
+      });
+    });
+
+    it.each([undefined, 'not json', '{"version":"1.0.0"}'])(
+      'keeps the commit and gives no sequence when build-info is %p',
+      async (info) => {
+        release('abc', info);
+        await store().activate('staging', 'abc');
+        await expect(store().currentRelease('staging')).resolves.toEqual({
+          commit: 'abc',
+          sequence: null,
+        });
+      },
     );
   });
 });

@@ -5,6 +5,7 @@ import { deployServer, type DeployServerDeps } from './deploy-server';
 import {
   InMemoryChannelSource,
   InMemoryDatabaseSnapshots,
+  InMemoryDiskSpace,
   InMemoryPortOverride,
   InMemoryReleaseStore,
   InMemoryReporter,
@@ -39,6 +40,7 @@ const setup = (state: InstanceState = running) => {
   stateStore.states.set('staging', state);
   const reporter = new InMemoryReporter();
   const health = new ScriptedHealthProbe(recorder);
+  const disk = new InMemoryDiskSpace(recorder);
   const deps: DeployServerDeps = {
     source: new InMemoryChannelSource(recorder),
     releases: new InMemoryReleaseStore(recorder),
@@ -46,11 +48,12 @@ const setup = (state: InstanceState = running) => {
     ports: new InMemoryPortOverride(recorder),
     health,
     snapshots: new InMemoryDatabaseSnapshots(recorder),
+    disk,
     stateStore,
     reporter,
     downloadDir: '/dl',
   };
-  return { recorder, stateStore, reporter, health, deps };
+  return { recorder, stateStore, reporter, health, disk, deps };
 };
 
 describe('deployServer', () => {
@@ -61,12 +64,15 @@ describe('deployServer', () => {
 
     expect(result.outcome).toEqual({ kind: 'succeeded' });
     expect(recorder.calls).toEqual([
+      'DiskSpace.freeBytes',
+      'DiskSpace.databaseBytes staging',
       `ChannelSource.downloadAsset staging ${entry.asset} /dl/${entry.asset}`,
       `ReleaseStore.install staging ${NEW} /dl/${entry.asset} ${SHA}`,
       `ReleaseStore.buildRuntime staging ${NEW} ${NIXPKGS}`,
       'StateStore.save staging',
       'ServiceManager.stop staging',
       `DatabaseSnapshots.take staging ${OLD}`,
+      'StateStore.save staging',
       `ReleaseStore.activate staging ${NEW}`,
       'PortOverride.useValidationPort staging',
       'ServiceManager.start staging',
@@ -93,6 +99,7 @@ describe('deployServer', () => {
     expect(seenBeforeStop?.inFlight).toEqual({
       commit: NEW,
       previousCommit: OLD,
+      snapshot: null,
     });
   });
 
@@ -172,40 +179,174 @@ describe('deployServer', () => {
     },
   );
 
-  it('reports a critical error when the new version is not healthy after the stop', async () => {
-    const { deps, health, reporter, stateStore } = setup();
-    health.results.push('unavailable');
+  it('records the database copy in the in-flight record once it is taken', async () => {
+    const { deps, stateStore } = setup();
+    let seenAtActivation: InstanceState | undefined;
+    const activate = deps.releases.activate.bind(deps.releases);
+    deps.releases.activate = async (environment, commit) => {
+      seenAtActivation = stateStore.states.get('staging');
+      return activate(environment, commit);
+    };
 
-    const result = await deployServer(deps, 'staging', entry, running);
+    await deployServer(deps, 'staging', entry, running);
 
-    expect(result.outcome).toMatchObject({
-      kind: 'unhandled',
-      stage: 'validating',
-    });
-    expect(reporter.reports).toHaveLength(1);
-    expect(reporter.reports[0]).toMatchObject({ level: 'critical' });
-    const saved = stateStore.states.get('staging');
-    expect(saved?.failedCommits).toEqual([NEW]);
-    expect(saved?.inFlight).not.toBeNull();
+    expect(seenAtActivation?.inFlight?.snapshot).toBe(`copy-${OLD}`);
   });
 
-  it('is unhandled in the opening step when the public port does not answer', async () => {
-    const { deps, health } = setup();
-    health.results.push('healthy', 'wrong-commit');
-    const result = await deployServer(deps, 'staging', entry, running);
-    expect(result.outcome).toMatchObject({
-      kind: 'unhandled',
-      stage: 'opening',
+  describe('rollback', () => {
+    const rollbackCalls = (calls: string[]) =>
+      calls.slice(calls.indexOf(`HealthProbe.waitForCommit 3101 ${NEW} 60000`));
+
+    it('puts the previous release and database back when validation fails', async () => {
+      const { deps, health, reporter, stateStore, recorder } = setup();
+      health.results.push('unavailable');
+
+      const result = await deployServer(deps, 'staging', entry, running);
+
+      expect(result.outcome).toMatchObject({
+        kind: 'rolled-back',
+        stage: 'validating',
+      });
+      expect(rollbackCalls(recorder.calls)).toEqual([
+        `HealthProbe.waitForCommit 3101 ${NEW} 60000`,
+        'ServiceManager.stop staging',
+        `DatabaseSnapshots.restore staging copy-${OLD}`,
+        `ReleaseStore.activate staging ${OLD}`,
+        'PortOverride.usePublicPort staging',
+        'ServiceManager.start staging',
+        `HealthProbe.waitForCommit 3001 ${OLD} 60000`,
+        'StateStore.save staging',
+      ]);
+      const saved = stateStore.states.get('staging') as InstanceState;
+      expect(saved).toEqual(result.state);
+      expect(saved.failedCommits).toEqual([NEW]);
+      expect(saved.server).toEqual({ commit: OLD, sequence: 10 });
+      expect(saved.inFlight).toBeNull();
+      expect(reporter.reports).toHaveLength(1);
+      expect(reporter.reports[0]).toMatchObject({ level: 'error' });
+      expect(reporter.reports[0]?.message).toContain('rolled back');
+    });
+
+    it('rolls back from the opening step too', async () => {
+      const { deps, health } = setup();
+      health.results.push('healthy', 'wrong-commit');
+      const result = await deployServer(deps, 'staging', entry, running);
+      expect(result.outcome).toMatchObject({
+        kind: 'rolled-back',
+        stage: 'opening',
+      });
+    });
+
+    it('rolls back when the service cannot be started', async () => {
+      const { deps, recorder } = setup();
+      recorder.failNext('ServiceManager.start', new Error('exit 1'));
+      const result = await deployServer(deps, 'staging', entry, running);
+      expect(result.outcome).toMatchObject({
+        kind: 'rolled-back',
+        stage: 'switching',
+      });
+    });
+
+    it('is degraded, critical, and keeps the previous server when the previous version is unhealthy too', async () => {
+      const { deps, health, reporter, stateStore } = setup();
+      health.results.push('unavailable', 'unavailable');
+
+      const result = await deployServer(deps, 'staging', entry, running);
+
+      expect(result.outcome).toMatchObject({ kind: 'degraded' });
+      expect(reporter.reports).toHaveLength(1);
+      expect(reporter.reports[0]).toMatchObject({ level: 'critical' });
+      const saved = stateStore.states.get('staging') as InstanceState;
+      expect(saved.server).toEqual({ commit: OLD, sequence: 10 });
+      expect(saved.failedCommits).toEqual([NEW]);
+      expect(saved.inFlight).toBeNull();
+    });
+
+    it('does not leave the service stopped when the rollback fails after the switch back', async () => {
+      const { deps, health, recorder } = setup();
+      health.results.push('unavailable', 'unavailable');
+      await deployServer(deps, 'staging', entry, running);
+      const calls = recorder.calls;
+      expect(calls[calls.length - 2]).toBe('ServiceManager.start staging');
+    });
+
+    it('is degraded without stopping anything when the rollback itself throws before the switch back', async () => {
+      const { deps, health, recorder } = setup();
+      health.results.push('unavailable');
+      recorder.failNext('DatabaseSnapshots.restore', new Error('no space'));
+
+      const result = await deployServer(deps, 'staging', entry, running);
+
+      expect(result.outcome).toMatchObject({ kind: 'degraded' });
+      expect(
+        recorder.calls.filter((c) => c === 'ServiceManager.start staging'),
+      ).toHaveLength(1);
+    });
+
+    it('is degraded on a fresh instance, which has nothing to go back to', async () => {
+      const { deps, health, recorder, reporter } = setup(emptyInstanceState());
+      health.results.push('unavailable');
+
+      const result = await deployServer(
+        deps,
+        'staging',
+        entry,
+        emptyInstanceState(),
+      );
+
+      expect(result.outcome).toMatchObject({ kind: 'degraded' });
+      expect(reporter.reports[0]).toMatchObject({ level: 'critical' });
+      expect(
+        recorder.calls.filter((c) => c.startsWith('DatabaseSnapshots.restore')),
+      ).toEqual([]);
+    });
+
+    it('restores no copy when there was no database to copy', async () => {
+      const { deps, health, recorder } = setup(emptyInstanceState());
+      (deps.snapshots as InMemoryDatabaseSnapshots).hasDatabase = false;
+      health.results.push('unavailable');
+      await deployServer(deps, 'staging', entry, running);
+      expect(
+        recorder.calls.filter((c) => c.startsWith('DatabaseSnapshots.restore')),
+      ).toEqual([]);
     });
   });
 
-  it('is unhandled in the switching step when the service cannot be started', async () => {
-    const { deps, recorder } = setup();
-    recorder.failNext('ServiceManager.start', new Error('exit 1'));
-    const result = await deployServer(deps, 'staging', entry, running);
-    expect(result.outcome).toMatchObject({
-      kind: 'unhandled',
-      stage: 'switching',
+  describe('disk check', () => {
+    const GIB = 1024 ** 3;
+
+    it('fails the version before anything is downloaded or stopped when the disk is too small', async () => {
+      const { deps, disk, recorder, reporter, stateStore } = setup();
+      disk.free = GIB;
+
+      const result = await deployServer(deps, 'staging', entry, running);
+
+      expect(result.outcome).toMatchObject({ kind: 'failed' });
+      expect(
+        recorder.calls.filter(
+          (c) =>
+            c.startsWith('ChannelSource') ||
+            c.startsWith('ServiceManager') ||
+            c.startsWith('ReleaseStore'),
+        ),
+      ).toEqual([]);
+      expect(stateStore.states.get('staging')?.failedCommits).toEqual([NEW]);
+      expect(reporter.reports[0]).toMatchObject({ level: 'error' });
+      expect(reporter.reports[0]?.message).toMatch(/1024 MiB free/);
+    });
+
+    it('counts the database size and a 1 GiB margin in what is needed', async () => {
+      const { deps, disk } = setup();
+      disk.database = 10 * GIB;
+      disk.free = 11 * GIB;
+      const tooSmall = await deployServer(deps, 'staging', entry, running);
+      expect(tooSmall.outcome).toMatchObject({ kind: 'failed' });
+
+      const again = setup();
+      again.disk.database = 10 * GIB;
+      again.disk.free = 13 * GIB;
+      const enough = await deployServer(again.deps, 'staging', entry, running);
+      expect(enough.outcome).toEqual({ kind: 'succeeded' });
     });
   });
 

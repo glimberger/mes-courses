@@ -1,4 +1,12 @@
-import { readdir, readlink, rename, rm, stat, symlink } from 'node:fs/promises';
+import {
+  readFile,
+  readdir,
+  readlink,
+  rename,
+  rm,
+  stat,
+  symlink,
+} from 'node:fs/promises';
 import { join } from 'node:path';
 
 import type { CommandRunner } from '../../application/ports/command-runner';
@@ -32,6 +40,37 @@ export const createFileReleaseStore = (
       await rm(next, { force: true });
       await symlink(join('releases', commit), next);
       await rename(next, current);
+    },
+
+    async currentRelease(environment) {
+      let commit: string | undefined;
+      try {
+        commit = (await readlink(join(base(environment), 'current')))
+          .split('/')
+          .pop();
+      } catch {
+        return null;
+      }
+      if (!commit) return null;
+      try {
+        const info = JSON.parse(
+          await readFile(
+            join(
+              releasePath(environment, commit),
+              'apps/server/build-info.json',
+            ),
+            'utf8',
+          ),
+        ) as { sequence?: unknown };
+        return {
+          commit,
+          sequence: Number.isInteger(info.sequence)
+            ? (info.sequence as number)
+            : null,
+        };
+      } catch {
+        return { commit, sequence: null };
+      }
     },
 
     async prune(environment) {

@@ -15,6 +15,13 @@ export interface ReleaseStore {
   path(environment: Environment, commit: string): string;
   /** Points `current` at the release, atomically. */
   activate(environment: Environment, commit: string): Promise<void>;
+  /**
+   * The release `current` points to: its commit and, when its `build-info.json` has one, its
+   * sequence. `null` when nothing is installed.
+   */
+  currentRelease(
+    environment: Environment,
+  ): Promise<{ commit: string; sequence: number | null } | null>;
   /** Keeps the current release and the two before it. */
   prune(environment: Environment): Promise<void>;
   /** Builds the Node runtime of the release (`<release>/runtime`). */

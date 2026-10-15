@@ -8,6 +8,7 @@ import {
   FakeSigner,
   InMemoryChannelSource,
   InMemoryDatabaseSnapshots,
+  InMemoryDiskSpace,
   InMemoryFdroidSite,
   InMemoryPortOverride,
   InMemoryReleaseStore,
@@ -60,6 +61,7 @@ const setup = (agentVersion = '1.0.0') => {
     ports: new InMemoryPortOverride(recorder),
     health,
     snapshots: new InMemoryDatabaseSnapshots(recorder),
+    disk: new InMemoryDiskSpace(recorder),
     site: new InMemoryFdroidSite(recorder),
     stateStore,
     reporter,
@@ -75,6 +77,11 @@ const setup = (agentVersion = '1.0.0') => {
     });
   };
   return { recorder, source, stateStore, reporter, health, deps, publish };
+};
+
+const running: InstanceState = {
+  ...emptyInstanceState(),
+  server: { commit: commit('1'), sequence: 10 },
 };
 
 const deployedCalls = (recorder: Recorder, environment: Environment) =>
@@ -296,14 +303,68 @@ describe('runAgent', () => {
       expect(state.failedCommits).toEqual([commit('e')]);
     });
 
-    it('reports degraded when a deployment failed after the stop', async () => {
-      const { deps, publish, health } = setup();
+    it('reports degraded when the previous version is not healthy after the rollback', async () => {
+      const { deps, publish, health, stateStore } = setup();
+      stateStore.states.set('staging', running);
+      publish('staging', manifestFor('staging'));
+      health.results.push('unavailable', 'unavailable');
+
+      const result = await runAgent(deps, { only: 'staging' });
+
+      expect(result.degraded).toBe(true);
+      expect(result.environments.staging).toMatchObject({ status: 'failed' });
+    });
+
+    it('rolls back to the previous version without calling it degraded', async () => {
+      const { deps, publish, health, stateStore, recorder, reporter } = setup();
+      stateStore.states.set('staging', running);
       publish('staging', manifestFor('staging'));
       health.results.push('unavailable');
 
       const result = await runAgent(deps, { only: 'staging' });
 
-      expect(result.degraded).toBe(true);
+      expect(result.degraded).toBe(false);
+      expect(result.environments.staging).toMatchObject({ status: 'failed' });
+      expect(recorder.calls).toContain(
+        `ReleaseStore.activate staging ${commit('1')}`,
+      );
+      expect(reporter.reports.map((r) => r.level)).toEqual(['error']);
+      const state = stateStore.states.get('staging') as InstanceState;
+      expect(state.server?.commit).toBe(commit('1'));
+      expect(state.manifestSequence).toBeNull();
+    });
+
+    it('skips the F-Droid step after a rollback', async () => {
+      const { deps, publish, health, stateStore, recorder } = setup();
+      stateStore.states.set('staging', running);
+      publish(
+        'staging',
+        manifestFor('staging', {
+          fdroid: {
+            commit: commit('e'),
+            versionCode: 30,
+            asset: 'fdroid.tar.gz',
+            sha256: 'a'.repeat(64),
+          },
+        }),
+      );
+      health.results.push('unavailable');
+
+      await runAgent(deps, { only: 'staging' });
+
+      expect(recorder.calls.some((c) => c.startsWith('FdroidSite'))).toBe(
+        false,
+      );
+    });
+
+    it('ends every pass with a check-in, error when an instance is degraded', async () => {
+      const { deps, publish, health, stateStore, reporter } = setup();
+      await runAgent(deps, { only: 'staging' });
+      stateStore.states.set('staging', running);
+      publish('staging', manifestFor('staging'));
+      health.results.push('unavailable', 'unavailable');
+      await runAgent(deps, { only: 'staging' });
+      expect(reporter.checkIns).toEqual(['ok', 'error']);
     });
 
     it('does not retry a failed commit but handles the next manifest', async () => {
@@ -374,6 +435,168 @@ describe('runAgent', () => {
       expect(
         recorder.calls.some((c) => c.startsWith('FdroidSite.publish')),
       ).toBe(false);
+    });
+  });
+
+  describe('recovery of a deployment found in flight', () => {
+    const inFlight = (snapshot: string | null): InstanceState => ({
+      ...running,
+      inFlight: { commit: commit('e'), previousCommit: commit('1'), snapshot },
+    });
+
+    it.each([null, 'copy-1'])(
+      'rolls back to the previous release before anything else (snapshot %p)',
+      async (snapshot) => {
+        const { deps, recorder, stateStore } = setup();
+        stateStore.states.set('staging', inFlight(snapshot));
+
+        await runAgent(deps, { only: 'staging' });
+
+        const expected = [
+          'ServiceManager.stop staging',
+          ...(snapshot === null
+            ? []
+            : [`DatabaseSnapshots.restore staging ${snapshot}`]),
+          `ReleaseStore.activate staging ${commit('1')}`,
+          'PortOverride.usePublicPort staging',
+          'ServiceManager.start staging',
+          `HealthProbe.waitForCommit 3001 ${commit('1')} 60000`,
+        ];
+        const calls = recorder.calls.filter(
+          (c) => !c.startsWith('StateStore') && !c.startsWith('ChannelSource'),
+        );
+        expect(calls.slice(0, expected.length)).toEqual(expected);
+        const state = stateStore.states.get('staging') as InstanceState;
+        expect(state.inFlight).toBeNull();
+        expect(state.failedCommits).toEqual([commit('e')]);
+      },
+    );
+
+    it('does not restore a database copy that was never taken', async () => {
+      const { deps, recorder, stateStore } = setup();
+      stateStore.states.set('staging', inFlight(null));
+      await runAgent(deps, { only: 'staging' });
+      expect(recorder.calls.some((c) => c.includes('restore'))).toBe(false);
+    });
+
+    it('never retries the failed commit afterwards', async () => {
+      const { deps, publish, recorder, stateStore } = setup();
+      stateStore.states.set('staging', inFlight('copy-1'));
+      publish('staging', manifestFor('staging'));
+
+      await runAgent(deps, { only: 'staging' });
+
+      expect(
+        recorder.calls.filter((c) => c.startsWith('ReleaseStore.install')),
+      ).toEqual([]);
+    });
+
+    it('deploys a newer commit once the old one is rolled back', async () => {
+      const { deps, publish, recorder, stateStore } = setup();
+      stateStore.states.set('staging', inFlight('copy-1'));
+      const next = commit('9');
+      publish(
+        'staging',
+        manifestFor('staging', {
+          sequence: 31,
+          commit: next,
+          version: '1.2.0-staging.31',
+          server: {
+            ...manifestFor('staging').server,
+            commit: next,
+            sequence: 31,
+            version: '1.2.0-staging.31',
+            asset: `server-${next}.tar.gz`,
+          },
+        }),
+      );
+
+      const result = await runAgent(deps, { only: 'staging' });
+
+      expect(result.environments.staging).toMatchObject({ status: 'deployed' });
+      expect(
+        recorder.calls.filter((c) => c.startsWith('ReleaseStore.install')),
+      ).toHaveLength(1);
+      expect(
+        (stateStore.states.get('staging') as InstanceState).server?.commit,
+      ).toBe(next);
+    });
+
+    it('stops the pass as degraded when the previous version is unhealthy', async () => {
+      const { deps, publish, health, stateStore, recorder } = setup();
+      stateStore.states.set('staging', inFlight('copy-1'));
+      publish('staging', manifestFor('staging'));
+      health.results.push('unavailable');
+
+      const result = await runAgent(deps, { only: 'staging' });
+
+      expect(result.degraded).toBe(true);
+      expect(
+        recorder.calls.filter((c) => c.startsWith('ChannelSource')),
+      ).toEqual([]);
+    });
+  });
+
+  describe('a missing or unreadable state file (FR-033)', () => {
+    const installed = (sequence: number | null) => ({
+      commit: commit('1'),
+      sequence,
+    });
+
+    it('rebuilds the server from the installed release without touching the service', async () => {
+      const { deps, stateStore, reporter, recorder } = setup();
+      (deps.releases as InMemoryReleaseStore).current.set(
+        'production',
+        installed(12),
+      );
+
+      await runAgent(deps, { only: 'production' });
+
+      const state = stateStore.states.get('production') as InstanceState;
+      expect(state.server).toEqual({ commit: commit('1'), sequence: 12 });
+      expect(state.failedCommits).toEqual([]);
+      expect(reporter.reports.map((r) => r.level)).toEqual(['error']);
+      expect(recorder.calls.some((c) => c.startsWith('ServiceManager'))).toBe(
+        false,
+      );
+    });
+
+    it('moves an unreadable file aside, then rebuilds from the release', async () => {
+      const { deps, stateStore, reporter, recorder } = setup();
+      stateStore.corrupt.add('production');
+      (deps.releases as InMemoryReleaseStore).current.set(
+        'production',
+        installed(null),
+      );
+
+      await runAgent(deps, { only: 'production' });
+
+      expect(recorder.calls).toContain('StateStore.setAside production');
+      const state = stateStore.states.get('production') as InstanceState;
+      expect(state.server).toEqual({ commit: commit('1'), sequence: 0 });
+      expect(reporter.reports).toHaveLength(2);
+      expect(recorder.calls.some((c) => c.startsWith('ServiceManager'))).toBe(
+        false,
+      );
+    });
+
+    it('does not redeploy the installed commit when the manifest names it', async () => {
+      const { deps, publish, recorder } = setup();
+      (deps.releases as InMemoryReleaseStore).current.set('staging', {
+        commit: commit('e'),
+        sequence: null,
+      });
+      publish('staging', manifestFor('staging'));
+
+      await runAgent(deps, { only: 'staging' });
+
+      expect(deployedCalls(recorder, 'staging')).toEqual([]);
+    });
+
+    it('reports nothing on a fresh instance, with no state and no release', async () => {
+      const { deps, reporter } = setup();
+      await runAgent(deps, { only: 'staging' });
+      expect(reporter.reports).toEqual([]);
     });
   });
 });

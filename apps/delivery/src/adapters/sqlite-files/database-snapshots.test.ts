@@ -87,9 +87,62 @@ describe('sqlite file snapshots', () => {
     ).toBe(0o600);
   });
 
+  it('returns the name of the copy, or null when there was nothing to copy', async () => {
+    const snapshots = createSqliteFileSnapshots(
+      dir,
+      at('2026-10-20T08:00:00Z'),
+    );
+    expect(await snapshots.take('staging', 'abc')).toBe(
+      '20261020T080000Z-abc.db',
+    );
+    rmSync(join(folder, 'mes-courses.db'));
+    expect(await snapshots.take('staging', 'abc')).toBeNull();
+  });
+
   it('copies nothing for a fresh instance that has no database yet', async () => {
     rmSync(join(folder, 'mes-courses.db'));
     await createSqliteFileSnapshots(dir).take('staging', 'abc');
     expect(existsSync(join(folder, 'backups'))).toBe(false);
+  });
+
+  describe('restore', () => {
+    it('puts the copy back, including the -wal and -shm files', async () => {
+      writeFileSync(join(folder, 'mes-courses.db-wal'), 'WAL');
+      writeFileSync(join(folder, 'mes-courses.db-shm'), 'SHM');
+      const snapshots = createSqliteFileSnapshots(dir);
+      const copy = (await snapshots.take('staging', 'abc')) as string;
+      writeFileSync(join(folder, 'mes-courses.db'), 'NEW');
+      writeFileSync(join(folder, 'mes-courses.db-wal'), 'NEWWAL');
+      writeFileSync(join(folder, 'mes-courses.db-shm'), 'NEWSHM');
+
+      await snapshots.restore('staging', copy);
+
+      expect(readFileSync(join(folder, 'mes-courses.db'), 'utf8')).toBe('DB');
+      expect(readFileSync(join(folder, 'mes-courses.db-wal'), 'utf8')).toBe(
+        'WAL',
+      );
+      expect(readFileSync(join(folder, 'mes-courses.db-shm'), 'utf8')).toBe(
+        'SHM',
+      );
+    });
+
+    it('removes the side files that the copy did not have', async () => {
+      const snapshots = createSqliteFileSnapshots(dir);
+      const copy = (await snapshots.take('staging', 'abc')) as string;
+      writeFileSync(join(folder, 'mes-courses.db'), 'NEW');
+      writeFileSync(join(folder, 'mes-courses.db-wal'), 'NEWWAL');
+
+      await snapshots.restore('staging', copy);
+
+      expect(readFileSync(join(folder, 'mes-courses.db'), 'utf8')).toBe('DB');
+      expect(existsSync(join(folder, 'mes-courses.db-wal'))).toBe(false);
+    });
+
+    it('fails, touching nothing, when the copy is gone', async () => {
+      await expect(
+        createSqliteFileSnapshots(dir).restore('staging', 'missing.db'),
+      ).rejects.toThrow();
+      expect(readFileSync(join(folder, 'mes-courses.db'), 'utf8')).toBe('DB');
+    });
   });
 });

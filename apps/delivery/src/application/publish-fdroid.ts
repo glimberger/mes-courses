@@ -29,7 +29,7 @@ const SERVING_CHECK_MS = 10_000;
 
 /**
  * The F-Droid step of a pass (FR-011): a newer repository is swapped in only once the server in
- * service is healthy. A failed server step skips it; a skipped server entry (unchanged, or a
+ * service is healthy. A failed, rolled-back or degraded server step skips it; a skipped server entry (unchanged, or a
  * commit that failed here) does not.
  */
 export const publishFdroid = async (
@@ -44,7 +44,11 @@ export const publishFdroid = async (
   if (state.fdroid !== null && state.fdroid.versionCode >= entry.versionCode) {
     return nothing;
   }
-  if (serverOutcome.kind === 'failed' || serverOutcome.kind === 'unhandled') {
+  if (
+    serverOutcome.kind === 'failed' ||
+    serverOutcome.kind === 'rolled-back' ||
+    serverOutcome.kind === 'degraded'
+  ) {
     return nothing;
   }
   if (state.server === null) return nothing;

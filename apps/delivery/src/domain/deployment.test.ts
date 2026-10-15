@@ -20,6 +20,28 @@ describe('advance', () => {
     expect(advance(status, 'succeeded')).toBe('succeeded');
   });
 
+  it.each(['switching', 'validating', 'opening'] as const)(
+    'rolls back from %s, then ends rolled-back or degraded',
+    (from) => {
+      const rolling = advance(from, 'rolling-back');
+      expect(advance(rolling, 'rolled-back')).toBe('rolled-back');
+      expect(advance(rolling, 'degraded')).toBe('degraded');
+    },
+  );
+
+  it('starts at rolling-back when a pass finds a deployment in flight', () => {
+    expect(advance('idle', 'rolling-back')).toBe('rolling-back');
+  });
+
+  it.each([
+    ['installing', 'rolling-back'],
+    ['rolling-back', 'succeeded'],
+    ['rolled-back', 'installing'],
+    ['degraded', 'rolling-back'],
+  ] as const)('refuses %s to %s', (from, to) => {
+    expect(() => advance(from, to)).toThrow(/cannot go/);
+  });
+
   it('ends failed when the install fails', () => {
     expect(advance('installing', 'failed')).toBe('failed');
   });
@@ -69,6 +91,19 @@ describe('decideDeployment', () => {
     expect(decideDeployment(state, entry('a', 9))).toEqual({
       deploy: false,
       reason: 'failed-before',
+    });
+  });
+});
+
+describe('decideDeployment with the commit already in service', () => {
+  it('skips the commit in service, whatever its sequence', () => {
+    const state = {
+      ...emptyInstanceState(),
+      server: { commit: 'cur', sequence: 0 },
+    };
+    expect(decideDeployment(state, entry('cur', 9))).toEqual({
+      deploy: false,
+      reason: 'not-newer',
     });
   });
 });

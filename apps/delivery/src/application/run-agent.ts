@@ -1,6 +1,7 @@
 import { ENVIRONMENTS_IN_ORDER } from '../domain/environments';
 import {
   clearSignatureMismatches,
+  emptyInstanceState,
   handledManifest,
   recordFetch,
   recordSignatureMismatch,
@@ -10,9 +11,11 @@ import { parseManifest, type Environment } from '../domain/manifest';
 import { compareSemver } from '../domain/semver';
 import { deployServer, type DeployServerDeps } from './deploy-server';
 import { ChannelSourceError } from './ports/channel-source';
+import { StateCorruptError } from './ports/state-store';
 import type { Clock } from './ports/clock';
 import type { SignatureVerifier } from './ports/signature-verifier';
 import { publishFdroid, type PublishFdroidDeps } from './publish-fdroid';
+import { messageOf, rollBackServer } from './rollback-server';
 
 export type RunAgentDeps = Omit<DeployServerDeps, 'downloadDir'> &
   Omit<PublishFdroidDeps, 'downloadDir'> & {
@@ -41,9 +44,6 @@ export type RunResult = {
 /** Signature mismatches are reported from this pass on (contract "Upload order"). */
 const MISMATCHES_BEFORE_REPORT = 3;
 
-const messageOf = (error: unknown) =>
-  error instanceof Error ? error.message : String(error);
-
 /**
  * One pass over an environment (research R6): read the channel, verify, and bring the instance to
  * the manifest. Returns the status of the pass and whether the instance was left degraded.
@@ -57,7 +57,56 @@ const handleEnvironment = async (
     degraded,
   });
   const context = { environment };
-  let state: InstanceState = await deps.stateStore.load(environment);
+  let state: InstanceState;
+  try {
+    state = await deps.stateStore.load(environment);
+  } catch (error) {
+    if (!(error instanceof StateCorruptError)) throw error;
+    await deps.stateStore.setAside(environment);
+    state = emptyInstanceState();
+    deps.reporter.report(
+      'error',
+      `The ${environment} state file was unreadable and was moved aside as ${environment}.json.corrupt`,
+      context,
+    );
+  }
+
+  // FR-033: an instance that already runs a release keeps running it without its state file.
+  if (state.server === null) {
+    const current = await deps.releases.currentRelease(environment);
+    if (current !== null) {
+      state = {
+        ...state,
+        server: { commit: current.commit, sequence: current.sequence ?? 0 },
+      };
+      await deps.stateStore.save(environment, state);
+      deps.reporter.report(
+        'error',
+        `The ${environment} state had no server release; rebuilt it from the installed release ${current.commit}`,
+        { ...context, commit: current.commit },
+      );
+    }
+  }
+
+  // The agent or the Pi died during a deployment: put the previous version back first (R6).
+  if (state.inFlight !== null) {
+    const { commit, previousCommit, snapshot } = state.inFlight;
+    const recovered = await rollBackServer(
+      deps,
+      environment,
+      {
+        failedCommit: commit,
+        label: commit,
+        previousCommit,
+        snapshot,
+        stage: 'recovery',
+        error: 'The agent or the Pi stopped during the deployment',
+      },
+      state,
+    );
+    state = recovered.state;
+    if (recovered.outcome.kind === 'degraded') return done('failed', true);
+  }
 
   let files;
   try {
@@ -137,10 +186,14 @@ const handleEnvironment = async (
   state = fdroid.state;
 
   const kind = server.outcome.kind;
-  const clean = kind !== 'failed' && kind !== 'unhandled' && !fdroid.failed;
+  const clean =
+    kind !== 'failed' &&
+    kind !== 'rolled-back' &&
+    kind !== 'degraded' &&
+    !fdroid.failed;
   if (clean) state = handledManifest(state, manifest.sequence);
   await deps.stateStore.save(environment, state);
-  if (kind === 'unhandled') return done('failed', true);
+  if (kind === 'degraded') return done('failed', true);
   if (!clean) return done('failed');
   return done(
     kind === 'succeeded' || fdroid.published ? 'deployed' : 'unchanged',
@@ -171,5 +224,6 @@ export const runAgent = async (
       result.environments[environment] = { status: 'error' };
     }
   }
+  deps.reporter.checkIn(result.degraded ? 'error' : 'ok');
   return result;
 };

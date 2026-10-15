@@ -5,6 +5,7 @@ import {
 import type { Environment } from '../../domain/manifest';
 import type { ChannelFiles, ChannelSource } from '../ports/channel-source';
 import type { ChannelPublisher } from '../ports/channel-publisher';
+import type { DiskSpace } from '../ports/disk-space';
 import type { Clock } from '../ports/clock';
 import type { CommandResult, CommandRunner } from '../ports/command-runner';
 import type { DatabaseSnapshots } from '../ports/database-snapshots';
@@ -13,12 +14,12 @@ import type { GitFacts } from '../ports/git-facts';
 import type { HealthProbe, HealthResult } from '../ports/health-probe';
 import type { PortOverride } from '../ports/port-override';
 import type { ReleaseStore } from '../ports/release-store';
-import type { ReportLevel, Reporter } from '../ports/reporter';
+import type { CheckInStatus, ReportLevel, Reporter } from '../ports/reporter';
 import type { RunHistory } from '../ports/run-history';
 import type { ServiceManager } from '../ports/service-manager';
 import type { SignatureVerifier } from '../ports/signature-verifier';
 import type { Signer } from '../ports/signer';
-import type { StateStore } from '../ports/state-store';
+import { StateCorruptError, type StateStore } from '../ports/state-store';
 import { Recorder } from './recorder';
 
 /** Each double records `Port.method args` in the shared recorder and can be scripted to fail. */
@@ -86,6 +87,11 @@ export class FakeSigner implements Signer, SignatureVerifier {
 }
 
 export class InMemoryReleaseStore implements ReleaseStore {
+  /** What `current` points to, per environment. */
+  readonly current = new Map<
+    Environment,
+    { commit: string; sequence: number | null }
+  >();
   constructor(private readonly recorder = new Recorder()) {}
   async install(
     environment: Environment,
@@ -107,6 +113,10 @@ export class InMemoryReleaseStore implements ReleaseStore {
   }
   async activate(environment: Environment, commit: string) {
     this.recorder.record('ReleaseStore.activate', environment, commit);
+  }
+  async currentRelease(environment: Environment) {
+    this.recorder.record('ReleaseStore.currentRelease', environment);
+    return this.current.get(environment) ?? null;
   }
   async prune(environment: Environment) {
     this.recorder.record('ReleaseStore.prune', environment);
@@ -169,11 +179,28 @@ export class ScriptedHealthProbe implements HealthProbe {
 
 export class InMemoryDatabaseSnapshots implements DatabaseSnapshots {
   constructor(private readonly recorder = new Recorder()) {}
+  /** A fresh instance has no database to copy. */
+  hasDatabase = true;
   async take(environment: Environment, previousCommit: string | null) {
     this.recorder.record('DatabaseSnapshots.take', environment, previousCommit);
+    return this.hasDatabase ? `copy-${previousCommit ?? 'none'}` : null;
   }
-  async restoreLatest(environment: Environment) {
-    this.recorder.record('DatabaseSnapshots.restoreLatest', environment);
+  async restore(environment: Environment, copy: string) {
+    this.recorder.record('DatabaseSnapshots.restore', environment, copy);
+  }
+}
+
+export class InMemoryDiskSpace implements DiskSpace {
+  free = 100 * 1024 ** 3;
+  database = 0;
+  constructor(private readonly recorder = new Recorder()) {}
+  async freeBytes() {
+    this.recorder.record('DiskSpace.freeBytes');
+    return this.free;
+  }
+  async databaseBytes(environment: Environment) {
+    this.recorder.record('DiskSpace.databaseBytes', environment);
+    return this.database;
   }
 }
 
@@ -197,10 +224,17 @@ export class InMemoryFdroidSite implements FdroidSite {
 
 export class InMemoryStateStore implements StateStore {
   readonly states = new Map<Environment, InstanceState>();
+  /** Environments whose file cannot be read until it is set aside. */
+  readonly corrupt = new Set<Environment>();
   constructor(private readonly recorder = new Recorder()) {}
   async load(environment: Environment) {
     this.recorder.record('StateStore.load', environment);
+    if (this.corrupt.has(environment)) throw new StateCorruptError('bad json');
     return this.states.get(environment) ?? emptyInstanceState();
+  }
+  async setAside(environment: Environment) {
+    this.recorder.record('StateStore.setAside', environment);
+    this.corrupt.delete(environment);
   }
   async save(environment: Environment, state: InstanceState) {
     this.recorder.record('StateStore.save', environment);
@@ -216,6 +250,10 @@ export type RecordedReport = {
 
 export class InMemoryReporter implements Reporter {
   readonly reports: RecordedReport[] = [];
+  readonly checkIns: CheckInStatus[] = [];
+  checkIn(status: CheckInStatus) {
+    this.checkIns.push(status);
+  }
   report(
     level: ReportLevel,
     message: string,

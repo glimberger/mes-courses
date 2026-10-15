@@ -14,8 +14,15 @@ export type InstanceState = {
   lastFetchSuccessAt: string | null;
   /** Passes in a row whose manifest signature did not verify; reported from the third (R5). */
   signatureMismatches: number;
-  /** Set before the service is stopped, cleared at the outcome. */
-  inFlight: { commit: string; previousCommit: string | null } | null;
+  /**
+   * Set before the service is stopped, cleared at the outcome. `snapshot` names the database copy
+   * taken for this deployment, `null` until it is taken (and when there was no database).
+   */
+  inFlight: {
+    commit: string;
+    previousCommit: string | null;
+    snapshot: string | null;
+  } | null;
 };
 
 const MAX_FAILED_COMMITS = 10;

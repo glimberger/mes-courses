@@ -10,6 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { emptyInstanceState, markFailed } from '../../domain/instance-state';
+import { StateCorruptError } from '../../application/ports/state-store';
 import { createFileStateStore } from './state-store';
 
 let dir: string;
@@ -17,6 +18,26 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'mes-courses-state-'));
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+describe('file state store, unreadable file', () => {
+  it.each(['{broken', 'null', ''])(
+    'throws StateCorruptError for %p and sets the file aside on request',
+    async (content) => {
+      writeFileSync(join(dir, 'staging.json'), content);
+      const store = createFileStateStore(dir);
+      await expect(store.load('staging')).rejects.toBeInstanceOf(
+        StateCorruptError,
+      );
+
+      await store.setAside('staging');
+
+      expect(readdirSync(dir)).toEqual(['staging.json.corrupt']);
+      await expect(store.load('staging')).resolves.toEqual(
+        emptyInstanceState(),
+      );
+    },
+  );
+});
 
 describe('file state store', () => {
   it('gives an empty state when there is no file', async () => {

@@ -8,17 +8,25 @@ export type DeploymentStatus =
   | 'switching'
   | 'validating'
   | 'opening'
+  | 'rolling-back'
   | 'succeeded'
+  | 'rolled-back'
+  | 'degraded'
   | 'failed';
 
 const FORWARD: Record<DeploymentStatus, DeploymentStatus[]> = {
-  idle: ['installing'],
+  idle: ['installing', 'rolling-back'],
   // An install error ends `failed` with nothing stopped.
   installing: ['switching', 'failed'],
-  switching: ['validating'],
-  validating: ['opening'],
-  opening: ['succeeded'],
+  // A failure after the stop (here, in `validating` or in `opening`) rolls back. A pass that
+  // finds an in-flight record starts at `rolling-back` from `idle`.
+  switching: ['validating', 'rolling-back'],
+  validating: ['opening', 'rolling-back'],
+  opening: ['succeeded', 'rolling-back'],
+  'rolling-back': ['rolled-back', 'degraded'],
   succeeded: [],
+  'rolled-back': [],
+  degraded: [],
   failed: [],
 };
 
@@ -43,7 +51,11 @@ export const decideDeployment = (
   if (state.failedCommits.includes(entry.commit)) {
     return { deploy: false, reason: 'failed-before' };
   }
-  if (state.server !== null && entry.sequence <= state.server.sequence) {
+  if (
+    state.server !== null &&
+    (entry.sequence <= state.server.sequence ||
+      entry.commit === state.server.commit)
+  ) {
     return { deploy: false, reason: 'not-newer' };
   }
   return { deploy: true };

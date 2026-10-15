@@ -17,6 +17,8 @@ export const formatReportLine = (
 export const createConsoleReporter = (
   write: (line: string) => void = (line) => console.error(line),
 ): Reporter => ({
+  // The journal needs no liveness monitor: only Sentry has one.
+  checkIn: () => undefined,
   report: (level, message, context) =>
     write(formatReportLine(level, message, context)),
 });

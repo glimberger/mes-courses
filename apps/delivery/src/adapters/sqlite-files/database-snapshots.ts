@@ -28,13 +28,11 @@ export const createSqliteFileSnapshots = (
       await stat(source);
     } catch {
       // A fresh instance has not created its database yet: nothing to keep.
-      return;
+      return null;
     }
     await mkdir(backups, { recursive: true });
-    const target = join(
-      backups,
-      `${stamp(now())}-${previousCommit ?? 'none'}.db`,
-    );
+    const name = `${stamp(now())}-${previousCommit ?? 'none'}.db`;
+    const target = join(backups, name);
     await copyFile(source, target);
     for (const suffix of SIDE_FILES) {
       try {
@@ -54,9 +52,23 @@ export const createSqliteFileSnapshots = (
         await rm(join(backups, old + suffix), { force: true });
       }
     }
+    return name;
   },
 
-  async restoreLatest() {
-    throw new Error('Restoring a database copy comes with the rollback (US3)');
+  async restore(environment, copy) {
+    const folder = join(dataDirectory, environment);
+    const source = join(folder, 'backups', copy);
+    const target = join(folder, 'mes-courses.db');
+    await stat(source);
+    await copyFile(source, target);
+    for (const suffix of SIDE_FILES) {
+      try {
+        await stat(source + suffix);
+      } catch {
+        await rm(target + suffix, { force: true });
+        continue;
+      }
+      await copyFile(source + suffix, target + suffix);
+    }
   },
 });

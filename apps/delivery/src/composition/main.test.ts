@@ -29,6 +29,32 @@ describe('parseAgentArgs', () => {
   });
 });
 
+describe('parseAgentArgs, delivery commands', () => {
+  it('parses forget-failure and deploy-file', () => {
+    expect(parseAgentArgs(['forget-failure', 'staging', 'abc'])).toEqual({
+      command: 'forget-failure',
+      environment: 'staging',
+      sha: 'abc',
+    });
+    expect(
+      parseAgentArgs(['deploy-file', 'production', 'server-x.tar.gz']),
+    ).toEqual({
+      command: 'deploy-file',
+      environment: 'production',
+      file: 'server-x.tar.gz',
+    });
+  });
+
+  it.each([
+    ['forget-failure', 'staging'],
+    ['forget-failure', 'qa', 'abc'],
+    ['deploy-file', 'staging', 'a', 'b'],
+    ['deploy-file'],
+  ])('rejects %j', (...argv) => {
+    expect(() => parseAgentArgs(argv)).toThrow();
+  });
+});
+
 describe('exitCodeOf', () => {
   it('is 0 unless an instance is degraded', () => {
     expect(exitCodeOf({ environments: {}, degraded: false })).toBe(0);

@@ -101,7 +101,8 @@ describe('publishFdroid', () => {
 
   it.each<DeployOutcome>([
     { kind: 'failed', error: 'x' },
-    { kind: 'unhandled', stage: 'validating', error: 'x' },
+    { kind: 'rolled-back', stage: 'validating', error: 'x' },
+    { kind: 'degraded', stage: 'opening', error: 'x' },
   ])('skips the swap when the server step ended %j', async (outcome) => {
     const { deps, recorder } = setup();
     const result = await publishFdroid(

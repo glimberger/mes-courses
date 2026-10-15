@@ -10,23 +10,18 @@ import {
 } from '../domain/instance-state';
 import type { Environment, ServerEntry } from '../domain/manifest';
 import type { ChannelSource } from './ports/channel-source';
-import type { DatabaseSnapshots } from './ports/database-snapshots';
-import type { HealthProbe } from './ports/health-probe';
-import type { PortOverride } from './ports/port-override';
-import type { ReleaseStore } from './ports/release-store';
-import type { Reporter } from './ports/reporter';
-import type { ServiceManager } from './ports/service-manager';
-import type { StateStore } from './ports/state-store';
+import type { DiskSpace } from './ports/disk-space';
+import {
+  HEALTH_TIMEOUT_MS,
+  messageOf,
+  rollBackServer,
+  type RollbackDeps,
+  type RollbackOutcome,
+} from './rollback-server';
 
-export type DeployServerDeps = {
+export type DeployServerDeps = RollbackDeps & {
   source: ChannelSource;
-  releases: ReleaseStore;
-  service: ServiceManager;
-  ports: PortOverride;
-  health: HealthProbe;
-  snapshots: DatabaseSnapshots;
-  stateStore: StateStore;
-  reporter: Reporter;
+  disk: DiskSpace;
   /** A writable folder for the archive being downloaded. */
   downloadDir: string;
 };
@@ -36,23 +31,19 @@ export type DeployOutcome =
   | { kind: 'skipped'; reason: SkipReason }
   /** An error before anything was stopped: the service is untouched (FR-019). */
   | { kind: 'failed'; error: string }
-  /**
-   * An error after the service was stopped. The rollback is not built yet: the caller reports a
-   * critical error and the in-flight record stays in the state for the rollback to find.
-   */
-  | {
-      kind: 'unhandled';
-      stage: 'switching' | 'validating' | 'opening';
-      error: string;
-    };
+  /** A failure after the service was stopped: the previous release and database are back. */
+  | Extract<RollbackOutcome, { kind: 'rolled-back' }>
+  /** The rollback failed too: the previous version is left under `Restart=always`. */
+  | Extract<RollbackOutcome, { kind: 'degraded' }>;
 
 export type DeployResult = { outcome: DeployOutcome; state: InstanceState };
 
-/** Each health check waits at most this long (research R9). */
-export const HEALTH_TIMEOUT_MS = 60_000;
+/** The unpacked release and its runtime build, estimated: the archive's size is not in the manifest. */
+const RELEASE_ESTIMATE_BYTES = 1024 ** 3;
+/** Kept free on top of the release and the database copy (FR-032). */
+const FREE_MARGIN_BYTES = 1024 ** 3;
 
-const messageOf = (error: unknown) =>
-  error instanceof Error ? error.message : String(error);
+const mebibytes = (bytes: number) => `${Math.floor(bytes / 1024 ** 2)} MiB`;
 
 /**
  * Deploys one server release on one instance (data-model "Deployment"): install, then stop,
@@ -63,6 +54,8 @@ export const deployServer = async (
   environment: Environment,
   entry: ServerEntry,
   initial: InstanceState,
+  /** `deploy-file`: an archive already on the disk, so nothing is downloaded. */
+  options: { localArchive?: string } = {},
 ): Promise<DeployResult> => {
   const decision = decideDeployment(initial, entry);
   if (!decision.deploy) {
@@ -78,8 +71,21 @@ export const deployServer = async (
   let status: DeploymentStatus = advance('idle', 'installing');
 
   try {
-    const archive = `${deps.downloadDir}/${entry.asset}`;
-    await deps.source.downloadAsset(environment, entry.asset, archive);
+    const [free, database] = await Promise.all([
+      deps.disk.freeBytes(),
+      deps.disk.databaseBytes(environment),
+    ]);
+    const needed = RELEASE_ESTIMATE_BYTES + database + FREE_MARGIN_BYTES;
+    if (free < needed) {
+      throw new Error(
+        `Not enough free disk space: ${mebibytes(free)} free, ${mebibytes(needed)} needed`,
+      );
+    }
+    const archive =
+      options.localArchive ?? `${deps.downloadDir}/${entry.asset}`;
+    if (options.localArchive === undefined) {
+      await deps.source.downloadAsset(environment, entry.asset, archive);
+    }
     await deps.releases.install(
       environment,
       entry.commit,
@@ -104,15 +110,24 @@ export const deployServer = async (
   }
 
   status = advance(status, 'switching');
+  const inFlight = {
+    commit: entry.commit,
+    previousCommit: initial.server?.commit ?? null,
+    snapshot: null,
+  };
   let stage: 'switching' | 'validating' | 'opening' = 'switching';
   try {
-    state = setInFlight(state, {
-      commit: entry.commit,
-      previousCommit: initial.server?.commit ?? null,
-    });
+    state = setInFlight(state, inFlight);
     await deps.stateStore.save(environment, state);
     await deps.service.stop(environment);
-    await deps.snapshots.take(environment, initial.server?.commit ?? null);
+    const snapshot = await deps.snapshots.take(
+      environment,
+      initial.server?.commit ?? null,
+    );
+    if (snapshot !== null) {
+      state = setInFlight(state, { ...inFlight, snapshot });
+      await deps.stateStore.save(environment, state);
+    }
     await deps.releases.activate(environment, entry.commit);
     await deps.ports.useValidationPort(environment);
     await deps.service.start(environment);
@@ -145,17 +160,20 @@ export const deployServer = async (
       );
     }
   } catch (error) {
-    state = markFailed(state, entry.commit);
-    await deps.stateStore.save(environment, state);
-    deps.reporter.report(
-      'critical',
-      `Deployment of ${entry.version} failed while ${stage}, after the service was stopped: ${messageOf(error)}`,
-      context,
-    );
-    return {
-      outcome: { kind: 'unhandled', stage, error: messageOf(error) },
+    advance(status, 'rolling-back');
+    return rollBackServer(
+      deps,
+      environment,
+      {
+        failedCommit: entry.commit,
+        label: entry.version,
+        previousCommit: inFlight.previousCommit,
+        snapshot: state.inFlight?.snapshot ?? null,
+        stage,
+        error: messageOf(error),
+      },
       state,
-    };
+    );
   }
 
   advance(status, 'succeeded');
