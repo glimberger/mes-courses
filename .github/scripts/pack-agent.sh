@@ -40,27 +40,27 @@ if [ ! -d apps/delivery/dist ]; then
   echo "apps/delivery/dist does not exist: run yarn build first" >&2
   exit 1
 fi
-# The agent unit runs files of the bundle from its root (every Exec* line: ExecStart, ExecStartPre,
-# ...). A build that does not produce one of them would only fail on the Pi, with status 203.
+# The agent unit names paths of the bundle, from its root, on any line. Each of them must be built
+# before packing, and must still be in the archive after the production prune. Otherwise the Pi
+# fails with status 203, or runs a file that is not there.
 unit=deploy/mes-courses-agent.service
 bundle=/opt/mes-courses/agent/current/
 if [ ! -f "$unit" ]; then
   echo "$unit does not exist" >&2
   exit 1
 fi
-entries=$(grep '^Exec[A-Za-z]*=' "$unit" | grep -o "$bundle[^ ]*" || true)
-if [ -z "$entries" ]; then
-  echo "$unit has no Exec line under $bundle" >&2
+paths=$(grep -o "$bundle[^[:space:]\"']*" "$unit" | sed "s|^$bundle||" || true)
+if [ -z "$paths" ]; then
+  echo "$unit names no path under $bundle" >&2
   exit 1
 fi
-while IFS= read -r entry; do
-  entry=${entry#"$bundle"}
-  if [ ! -f "$entry" ]; then
-    echo "$unit runs '$entry', which yarn build does not produce" >&2
+while IFS= read -r path; do
+  if [ ! -e "$path" ]; then
+    echo "$unit names '$path', which yarn build does not produce" >&2
     exit 1
   fi
 done <<EOF
-$entries
+$paths
 EOF
 
 rev=$(jq -r '.nodes.nixpkgs.locked.rev // empty' flake.lock)
@@ -86,4 +86,17 @@ archive="$output/delivery-$version.tar.gz"
 tar -czf "$archive" \
   -C "$root" apps/delivery/dist apps/delivery/package.json package.json node_modules \
   -C "$staging" nixpkgs-rev
+
+# The prune above may have removed a path the unit names: check the archive itself. A directory
+# is listed with a trailing slash.
+listing=$(tar -tzf "$archive")
+while IFS= read -r path; do
+  if ! printf '%s\n' "$listing" | grep -qxF -e "$path" -e "$path/"; then
+    rm -f "$archive"
+    echo "$unit names '$path', which is not in the archive" >&2
+    exit 1
+  fi
+done <<EOF
+$paths
+EOF
 echo "$archive"

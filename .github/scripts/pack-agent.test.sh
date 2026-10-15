@@ -53,12 +53,27 @@ printf '[Service]\nExecStartPre=/bin/true %s/apps/delivery/dist/gone.js\nExecSta
   "$bundle" "$node" "$bundle" >"$unit"
 expect_failure "ExecStartPre is checked too" "does not produce" sh "$dir/pack-agent.sh" 1.0.0
 
-# A stub yarn stops the script right after the checks: reaching it means they all passed.
+# A stub yarn stands for the production install: it prunes node_modules/pruned, then exits with
+# STUB_YARN_STATUS (1 by default, which stops the script at yarn: reaching it means the checks passed).
 echo '{"nodes":{"nixpkgs":{"locked":{"rev":"0123abcd"}}}}' >"$work/flake.lock"
 mkdir -p "$work/bin"
-printf '#!/bin/sh\necho "reached yarn" >&2\nexit 1\n' >"$work/bin/yarn"
+cat >"$work/bin/yarn" <<'EOF'
+#!/bin/sh
+echo "reached yarn" >&2
+rm -rf node_modules/pruned
+exit "${STUB_YARN_STATUS:-1}"
+EOF
 chmod +x "$work/bin/yarn"
-printf '[Service]\nExecStart=%s %s/apps/delivery/dist/composition/main.js run\n' "$node" "$bundle" >"$unit"
-expect_failure "unit starts only files the build produces" "reached yarn" PATH="$work/bin:$PATH" sh "$dir/pack-agent.sh" 1.0.0
+printf '[Service]\nExecStart=%s "%s/apps/delivery/dist/composition/main.js" run\n' "$node" "$bundle" >"$unit"
+expect_failure "quoted path of a built file passes the checks" "reached yarn" PATH="$work/bin:$PATH" sh "$dir/pack-agent.sh" 1.0.0
+
+# The prune removes node_modules/pruned, which the unit names: the archive check must catch it.
+mkdir -p "$work/node_modules/pruned" "$work/node_modules/kept"
+echo x >"$work/node_modules/pruned/index.js"
+echo x >"$work/node_modules/kept/index.js"
+echo '{}' >"$work/package.json"
+printf '[Service]\nExecStart=%s %s/node_modules/pruned/index.js run\n' "$node" "$bundle" >"$unit"
+expect_failure "a path pruned before packing is caught in the archive" "not in the archive" \
+  STUB_YARN_STATUS=0 PATH="$work/bin:$PATH" sh "$dir/pack-agent.sh" 1.0.0
 
 [ "$failures" -eq 0 ] || exit 1
