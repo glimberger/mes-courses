@@ -460,7 +460,7 @@ describe('runAgent', () => {
           `ReleaseStore.activate staging ${commit('1')}`,
           'PortOverride.usePublicPort staging',
           'ServiceManager.start staging',
-          `HealthProbe.waitForCommit 3001 ${commit('1')} 60000`,
+          `HealthProbe.waitForCommit 3002 ${commit('1')} 60000`,
         ];
         const calls = recorder.calls.filter(
           (c) => !c.startsWith('StateStore') && !c.startsWith('ChannelSource'),

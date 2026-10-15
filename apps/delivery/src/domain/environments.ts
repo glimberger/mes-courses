@@ -10,7 +10,7 @@ export type EnvironmentSettings = {
 
 export const ENVIRONMENT_SETTINGS: Record<Environment, EnvironmentSettings> = {
   production: { port: 3000, validationPort: 3100 },
-  staging: { port: 3001, validationPort: 3101 },
+  staging: { port: 3002, validationPort: 3101 },
 };
 
 /** Staging first: a release never waits behind a staging deployment's failure, but never overtakes it. */

@@ -65,7 +65,7 @@ describe('showStatus', () => {
     const text = await showStatus({ stateStore, health: probe });
 
     expect(calls).toEqual([
-      [3001, 'aaa111', 0],
+      [3002, 'aaa111', 0],
       [3000, 'bbb222', 0],
     ]);
     expect(text).toContain('health: wrong-commit');

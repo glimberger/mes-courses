@@ -79,7 +79,7 @@ describe('deployServer', () => {
       `HealthProbe.waitForCommit 3101 ${NEW} 60000`,
       'PortOverride.usePublicPort staging',
       'ServiceManager.restart staging',
-      `HealthProbe.waitForCommit 3001 ${NEW} 60000`,
+      `HealthProbe.waitForCommit 3002 ${NEW} 60000`,
       'StateStore.save staging',
       'ReleaseStore.prune staging',
     ]);
@@ -214,7 +214,7 @@ describe('deployServer', () => {
         `ReleaseStore.activate staging ${OLD}`,
         'PortOverride.usePublicPort staging',
         'ServiceManager.start staging',
-        `HealthProbe.waitForCommit 3001 ${OLD} 60000`,
+        `HealthProbe.waitForCommit 3002 ${OLD} 60000`,
         'StateStore.save staging',
       ]);
       const saved = stateStore.states.get('staging') as InstanceState;

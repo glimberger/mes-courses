@@ -19,7 +19,7 @@ We run one systemd template unit, `deploy/mes-courses@.service`, with an instanc
 environment: `mes-courses@production` and `mes-courses@staging`. Each instance has its own
 system user (`mes-courses-%i`), environment file (`/etc/mes-courses/%i.env`), database
 (`/var/lib/mes-courses/%i/`), code (`/opt/mes-courses/%i/current`, a symlink to a release
-directory), loopback port (3000 production, 3001 staging) and public address, both through the
+directory), loopback port (3000 production, 3002 staging) and public address, both through the
 existing Caddy. Each release carries its own Node runtime. The agent keeps the current release
 and the two before it.
 
