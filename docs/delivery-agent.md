@@ -126,6 +126,22 @@ release (the channel is empty until the first tag) and for the rollback tests. I
 sequence in service plus one so the deployment counts as newer, then puts the old sequence back,
 so the next real delivery is not skipped.
 
+## Creating the administrator of an instance
+
+The agent does not touch accounts. After the first delivery of an instance, complete its first
+account (the one migration 2 created without an address or a password) with the server's own
+script, run as the instance's user. `<env>` is `staging` or `production`; it asks for the password
+twice, so it needs a terminal:
+
+```sh
+sudo -u mes-courses-<env> env MES_COURSES_DB=/var/lib/mes-courses/<env>/mes-courses.db \
+  /opt/mes-courses/<env>/current/runtime/bin/node --conditions=production \
+  /opt/mes-courses/<env>/current/apps/server/dist/composition/create-admin.js you@example.org
+```
+
+It refuses, and changes nothing, when that account already has an address. The service can keep
+running. `set-password.js`, next to it, resets any account's password the same way.
+
 ## Updating the agent
 
 The agent never updates itself. The bundle `delivery-<version>.tar.gz` is attached to each release

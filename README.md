@@ -177,10 +177,17 @@ yarn workspace @mes-courses/server create-admin:dev you@example.org  # asks for 
 ```
 
 `create-admin` (without `:dev`) completes the first account, the one that owns the data already on
-the server, with an address and a password. On the Pi, run the built script as the service's user,
-since only it can read the database:
-`sudo -u mes-courses /opt/mes-courses/runtime/bin/node --conditions=production /opt/mes-courses/apps/server/dist/composition/create-admin.js you@example.org`.
-`set-password` resets any account's password the same way. Everyone else is invited from the app
+the server, with an address and a password. On the Pi, run the built script as the user of the
+instance, since only it can read the database (`<env>` is `staging` or `production`; it needs a
+terminal for the password):
+
+```sh
+sudo -u mes-courses-<env> env MES_COURSES_DB=/var/lib/mes-courses/<env>/mes-courses.db \
+  /opt/mes-courses/<env>/current/runtime/bin/node --conditions=production \
+  /opt/mes-courses/<env>/current/apps/server/dist/composition/create-admin.js you@example.org
+```
+
+It refuses, and changes nothing, when the first account already has an address. `set-password` resets any account's password the same way. Everyone else is invited from the app
 (Réglages › Gérer les comptes) and signs in with the address and the temporary password they
 receive by email (`MES_COURSES_SMTP_URL`, `MES_COURSES_MAIL_FROM`, `MES_COURSES_PUBLIC_URL`). A
 development build accepts `http://127.0.0.1:3000` (or the machine's LAN address) only when built
