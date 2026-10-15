@@ -50,6 +50,10 @@ case "$rev" in
 esac
 
 yarn workspaces focus --production @mes-courses/delivery
+# @sentry/node pulls in oxc-parser through @sentry/bundler-plugins. Only the bundler entry points
+# (@sentry/node/bundler-plugin/*) load it, never the agent, and its platform binaries are native:
+# left out of the artifact, as in pack-server.sh.
+rm -rf node_modules/oxc-parser node_modules/@oxc-parser
 
 staging=$(mktemp -d)
 trap 'rm -rf "$staging"' EXIT
