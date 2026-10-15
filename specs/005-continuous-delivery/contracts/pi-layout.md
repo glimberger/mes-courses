@@ -68,7 +68,7 @@ The mail check, `Restart=always` and the hardening lines are kept as they are.
 ## `mes-courses-agent.service` / `.timer`
 
 - The service is `Type=oneshot`, runs `/opt/mes-courses/agent/runtime/bin/node
-  /opt/mes-courses/agent/current/dist/main.js run`, and uses `EnvironmentFile=/etc/mes-courses/agent.env`
+  /opt/mes-courses/agent/current/apps/delivery/dist/composition/main.js run`, and uses `EnvironmentFile=/etc/mes-courses/agent.env`
   and the sandbox of research R6.
 - The timer uses `OnBootSec=2min`, `OnUnitActiveSec=2min` and `Persistent=true`.
 - `systemctl start mes-courses-agent` runs one pass at once; it is the manual "deploy now".
