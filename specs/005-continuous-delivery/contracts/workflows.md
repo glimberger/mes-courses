@@ -16,7 +16,8 @@ commands; the YAML holds no logic of its own (research R17).
 | `server-artifact` | `plan`               | `server == true` | builds `server-<sha>.tar.gz` (R3), runs the native-module check (R14)                            |
 | `android-apk`     | `plan`               | `app == true`    | calls `android-apk.yml` with `variant: staging`                                                  |
 | `fdroid-repo`     | `android-apk`        | `app == true`    | runs `fdroid update` for `deploy/fdroid/staging`, archives `fdroid-staging-<sha>.tar.gz`          |
-| `publish`         | `server-artifact`, `fdroid-repo` | at least one ran and none failed | uploads the assets, writes and signs the manifest, uploads it last, prunes old assets |
+| `publish-server`  | `server-artifact`    | `server-artifact` succeeded | uploads the server asset, writes and signs the manifest with the server entry, uploads it last, prunes old assets. It does not wait for the Android build (SC-001) |
+| `publish-app`     | `publish-server`, `fdroid-repo` | `fdroid-repo` succeeded and none failed | does the same for the repository: the manifest keeps the server entry and replaces the repository's |
 
 Every job writes its outcome to the run summary
 (FR-030).
