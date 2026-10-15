@@ -184,10 +184,10 @@ jobs:
         run: |
           set -eu
           args="--env staging --commit $SHA"
-          server="$RUNNER_TEMP/artifacts/server-staging/server-$SHA.tar.gz"
-          fdroid="$RUNNER_TEMP/artifacts/fdroid-staging/fdroid-staging-$SHA.tar.gz"
-          [ -f "$server" ] && args="$args --server $server"
-          [ -f "$fdroid" ] && args="$args --fdroid $fdroid"
+          server=$(find "$RUNNER_TEMP/artifacts" -name "server-$SHA.tar.gz" | head -1)
+          fdroid=$(find "$RUNNER_TEMP/artifacts" -name "fdroid-staging-$SHA.tar.gz" | head -1)
+          [ -n "$server" ] && args="$args --server $server"
+          [ -n "$fdroid" ] && args="$args --fdroid $fdroid"
           # shellcheck disable=SC2086
           nix develop --command yarn workspace @mes-courses/delivery ci write-manifest $args
           echo "### Published to the staging channel" >> "$GITHUB_STEP_SUMMARY"
