@@ -41,6 +41,18 @@ describe('file agent lock', () => {
     expect(await createFileAgentLock(file).tryAcquire()).not.toBeNull();
   });
 
+  it('lets only one of several contenders take over a stale lock', async () => {
+    const dead = spawnSync(process.execPath, ['-e', '']);
+    writeFileSync(file, String(dead.pid));
+    const lock = createFileAgentLock(file);
+
+    const results = await Promise.all(
+      Array.from({ length: 8 }, () => lock.tryAcquire()),
+    );
+
+    expect(results.filter((release) => release !== null)).toHaveLength(1);
+  });
+
   it('keeps a lock held by a live process', async () => {
     writeFileSync(file, String(process.pid));
 
