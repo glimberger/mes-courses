@@ -90,6 +90,15 @@ A fresh instance with no previous release has nothing to go back to: it is repor
 The agent is run as root with the Node runtime it ships with (`main.js` below stands for
 `/opt/mes-courses/agent/runtime/bin/node /opt/mes-courses/agent/current/apps/delivery/dist/composition/main.js`).
 
+On the Pi, `~/.zshrc` of the maintainer defines a function so that `main.js` is typed as `agent`
+(`agent status`, `agent deploy-file staging server-<sha>.tar.gz`). It must be a function, not a
+variable: zsh does not word-split a variable holding a command. Nix is put on the `PATH` because
+`sudo` resets it, and `HOME` is set to root's for the Nix tools.
+
+```sh
+agent() { sudo env PATH="/nix/var/nix/profiles/default/bin:$PATH" HOME=/root /opt/mes-courses/agent/runtime/bin/node /opt/mes-courses/agent/current/apps/delivery/dist/composition/main.js "$@"; }
+```
+
 | Command                               | What it does                                                                               |
 | ------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `main.js run [--only <env>]`          | One pass, as the timer does                                                                |

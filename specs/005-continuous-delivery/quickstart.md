@@ -162,6 +162,10 @@ Unpack it into `/opt/mes-courses/agent/releases/<version>/`, point `current` at 
 runtime: `nix build github:NixOS/nixpkgs/<rev>#nodejs_24 --out-link /opt/mes-courses/agent/runtime`
 (the revision is in the bundle's `nixpkgs-rev`). Check with `…/main.js status`.
 
+The maintainer's `~/.zshrc` on the Pi defines `agent` for `…/main.js`
+(see [the agent's commands](../../docs/delivery-agent.md#commands)); the scenarios below write
+`main.js`, which `agent` stands for.
+
 ## 8. Move an Android user from Google Play (US4, SC-007)
 
 0. Order for the maintainer: first production F-Droid release, then the guide (in French, in the
