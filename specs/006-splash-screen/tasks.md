@@ -77,7 +77,7 @@ description: "Task list for the startup splash screen feature"
 
 - [X] T015 [P] Run the focused mobile tests for `apps/mobile/App.test.tsx` and `apps/mobile/src/adapters/ui/screens/StartupSplash.test.tsx`, fixing only implementation or test issues in the feature paths
 - [X] T016 [P] Run `yarn workspace @mes-courses/mobile typecheck` and `yarn workspace @mes-courses/mobile lint` against `apps/mobile/App.tsx`, `apps/mobile/app.config.ts`, and `apps/mobile/src/adapters/ui/screens/StartupSplash.tsx`
-- [ ] T017 Run `yarn format:check` and the repository fast suite (`yarn test` and `yarn test:architecture`) after all feature changes, recording any required fixes in the affected feature files
+- [X] T017 Run `yarn format:check` and the repository fast suite (`yarn test` and `yarn test:architecture`) after all feature changes, recording any required fixes in the affected feature files
 - [ ] T018 Run the Storybook visual review from `apps/mobile/` on narrow and large displays in light and dark themes, then run the required cold-launch/offline device validation for the native configuration change and record results in the pull request test plan
 
 ---
