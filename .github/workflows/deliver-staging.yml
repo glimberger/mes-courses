@@ -1,8 +1,8 @@
 name: Deliver staging
 
 # Every green CI run on main delivers to staging (research R1, contracts/workflows.md): the
-# server artifact, the signed Android build in the staging F-Droid repository, and an iOS build
-# queued on EAS. The workflow holds no logic of its own: it calls scripts and the delivery
+# server artifact and the signed Android build in the staging F-Droid repository. The workflow
+# holds no logic of its own: it calls scripts and the delivery
 # workspace. It never runs on a pull request, so pull request code cannot reach its secrets.
 on:
   workflow_run:
