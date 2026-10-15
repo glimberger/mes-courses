@@ -65,8 +65,8 @@ export const rollBackServer = async (
     rollback;
   const context = { environment, commit: failedCommit };
   let status: DeploymentStatus = 'idle';
-  // Only a stopped service is started again, and only with the previous release behind it.
-  let activated = false;
+  // A service this rollback stopped is always started again (FR-019b), whatever failed after.
+  let stopped = false;
 
   // Whatever the outcome, the failed commit is never retried and nothing stays in flight.
   const settle = async () => {
@@ -81,9 +81,9 @@ export const rollBackServer = async (
     }
     status = advance(status, 'rolling-back');
     await deps.service.stop(environment);
+    stopped = true;
     if (snapshot !== null) await deps.snapshots.restore(environment, snapshot);
     await deps.releases.activate(environment, previousCommit);
-    activated = true;
     await deps.ports.usePublicPort(environment);
     await deps.service.start(environment);
     const health = await deps.health.waitForCommit(
@@ -97,8 +97,12 @@ export const rollBackServer = async (
       );
     }
   } catch (rollbackError) {
-    if (activated) {
+    if (stopped) {
       try {
+        // The switch back may not have happened (the copy could not be restored): put the
+        // previous release behind the public port anyway, so the instance does not stay down.
+        await deps.releases.activate(environment, previousCommit as string);
+        await deps.ports.usePublicPort(environment);
         await deps.service.start(environment);
       } catch {
         // Restart=always keeps trying; the critical report below tells the maintainer.

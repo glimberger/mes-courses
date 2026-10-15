@@ -48,7 +48,9 @@ cp -R "$root/deploy/fdroid/$variant/." "$work/"
 mkdir -p "$work/repo"
 cp "$apk" "$work/repo/"
 repo_url="${SERVER_URL%/}/fdroid/repo"
-sed "s|__REPO_URL__|$repo_url|" "$work/config.yml" >"$work/config.yml.new"
+# Escape what sed reads in a replacement: the delimiter, `&` and the backslash.
+escaped_url=$(printf '%s' "$repo_url" | sed 's/[\\|&]/\\&/g')
+sed "s|__REPO_URL__|$escaped_url|" "$work/config.yml" >"$work/config.yml.new"
 mv "$work/config.yml.new" "$work/config.yml"
 (umask 077 && printf '%s' "$FDROID_KEYSTORE_BASE64" | base64 -d >"$work/keystore.jks")
 chmod 600 "$work/config.yml"

@@ -38,6 +38,14 @@ check "yarn.lock" "$BOTH" "yarn.lock
 "
 check ".yarnrc.yml" "$BOTH" ".yarnrc.yml
 "
+check "pack-server.sh" "$SERVER" ".github/scripts/pack-server.sh
+"
+check "server-native-check.sh" "$SERVER" ".github/scripts/server-native-check.sh
+"
+check "build-fdroid-repo.sh" "$APP" ".github/scripts/build-fdroid-repo.sh
+"
+check "android-apk.yml" "$APP" ".github/workflows/android-apk.yml
+"
 check ".yarn folder" "$BOTH" ".yarn/releases/yarn.cjs
 "
 check "flake.nix" "$BOTH" "flake.nix

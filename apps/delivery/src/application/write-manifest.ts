@@ -68,6 +68,16 @@ export const writeManifest = async (
     );
   }
 
+  if (
+    current &&
+    (sequence < current.sequence ||
+      (sequence === current.sequence && commit !== current.commit))
+  ) {
+    throw new Error(
+      `The ${environment} channel is already at sequence ${current.sequence} (${current.commit}): ${commit} at ${sequence} is older`,
+    );
+  }
+
   const versionOf = (at: number) =>
     environment === 'production'
       ? input.version

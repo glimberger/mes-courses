@@ -270,7 +270,7 @@ describe('deployServer', () => {
       expect(calls[calls.length - 2]).toBe('ServiceManager.start staging');
     });
 
-    it('is degraded without stopping anything when the rollback itself throws before the switch back', async () => {
+    it('starts the previous release again when the rollback cannot restore the database copy', async () => {
       const { deps, health, recorder } = setup();
       health.results.push('unavailable');
       recorder.failNext('DatabaseSnapshots.restore', new Error('no space'));
@@ -280,7 +280,14 @@ describe('deployServer', () => {
       expect(result.outcome).toMatchObject({ kind: 'degraded' });
       expect(
         recorder.calls.filter((c) => c === 'ServiceManager.start staging'),
-      ).toHaveLength(1);
+      ).toHaveLength(2);
+      expect(
+        recorder.calls.lastIndexOf(`ReleaseStore.activate staging ${OLD}`),
+      ).toBeGreaterThan(
+        recorder.calls.findIndex((c) =>
+          c.startsWith('DatabaseSnapshots.restore staging'),
+        ),
+      );
     });
 
     it('is degraded on a fresh instance, which has nothing to go back to', async () => {

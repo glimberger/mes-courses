@@ -124,6 +124,22 @@ describe('writeManifest', () => {
     );
   });
 
+  it('refuses to overwrite a newer manifest with an older run', async () => {
+    const { deps, source, recorder } = setup();
+    source.channels.set('staging', channel(existing()));
+    await expect(writeManifest(deps, input({ sequence: 400 }))).rejects.toThrow(
+      'is older',
+    );
+    expect(published(recorder)).toBeUndefined();
+  });
+
+  it('accepts a re-run of the commit the channel is already at', async () => {
+    const { deps, source, recorder } = setup();
+    source.channels.set('staging', channel(existing()));
+    await writeManifest(deps, input({ commit: OLD, sequence: 409 }));
+    expect(manifestOf(recorder).sequence).toBe(409);
+  });
+
   it('replaces only the app entry and carries the server over', async () => {
     const { deps, source, recorder } = setup();
     source.channels.set('staging', channel(existing()));

@@ -24,7 +24,8 @@ const ARCHIVE_NAME = /^server-([0-9a-f]{40})\.tar\.gz$/;
  * Deploys a server archive from the disk through the same install, validation and rollback path
  * as a delivery, without a manifest or a signature: the one documented exception to FR-017.
  * Only root on the Pi can run it. The sequence is the one in service plus one, so the deployment
- * counts as newer.
+ * counts as newer, but it is not kept: the next real delivery, whose sequence counts the commits
+ * of `main`, must not be skipped as "not newer" because of it.
  */
 export const deployFile = async (
   deps: DeployFileDeps,
@@ -58,5 +59,14 @@ export const deployFile = async (
     state,
     { localArchive: file },
   );
+  if (outcome.kind === 'succeeded' && state.server !== null) {
+    const deployed = await deps.stateStore.load(environment);
+    if (deployed.server !== null) {
+      await deps.stateStore.save(environment, {
+        ...deployed,
+        server: { ...deployed.server, sequence: state.server.sequence },
+      });
+    }
+  }
   return outcome;
 };

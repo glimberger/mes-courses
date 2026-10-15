@@ -53,7 +53,7 @@ describe('deployFile', () => {
     );
     expect(stateStore.states.get('staging')?.server).toEqual({
       commit: NEW,
-      sequence: 11,
+      sequence: 10,
     });
   });
 

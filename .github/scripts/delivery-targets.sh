@@ -20,6 +20,8 @@ while IFS= read -r path || [ -n "$path" ]; do
       server=true
       app=true
       ;;
+    .github/scripts/pack-server.sh | .github/scripts/server-native-check.sh) server=true ;;
+    .github/scripts/build-fdroid-repo.sh | .github/workflows/android-apk.yml) app=true ;;
     *) ;;
   esac
 done
