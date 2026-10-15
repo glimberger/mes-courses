@@ -27,4 +27,11 @@ expect_failure "path in the version" "X.Y.Z" sh "$dir/pack-agent.sh" 1.0.0/../x
 expect_failure "version differs from the workspace" "not '1.2.0'" sh "$dir/pack-agent.sh" 1.2.0
 expect_failure "nothing built" "yarn build" sh "$dir/pack-agent.sh" 1.0.0
 
+# The build produces dist/composition/main.js, but the unit still starts the old dist/main.js.
+mkdir -p "$work/apps/delivery/dist/composition" "$work/deploy"
+: >"$work/apps/delivery/dist/composition/main.js"
+printf '[Service]\nExecStart=/opt/mes-courses/agent/runtime/bin/node /opt/mes-courses/agent/current/apps/delivery/dist/main.js run\n' \
+  >"$work/deploy/mes-courses-agent.service"
+expect_failure "unit starts a file the build does not produce" "does not produce" sh "$dir/pack-agent.sh" 1.0.0
+
 [ "$failures" -eq 0 ] || exit 1

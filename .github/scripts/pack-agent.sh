@@ -40,6 +40,18 @@ if [ ! -f apps/delivery/dist/composition/main.js ]; then
   echo "apps/delivery/dist/composition/main.js does not exist: run yarn build first" >&2
   exit 1
 fi
+# The agent unit starts the entry point from the root of the bundle. A build that does not produce
+# it would only fail on the Pi, with status 203.
+entry=$(sed -n 's|^ExecStart=.*/opt/mes-courses/agent/current/\([^ ]*\).*|\1|p' \
+  deploy/mes-courses-agent.service 2>/dev/null | head -1)
+if [ -z "$entry" ]; then
+  echo "deploy/mes-courses-agent.service has no ExecStart under /opt/mes-courses/agent/current" >&2
+  exit 1
+fi
+if [ ! -f "$entry" ]; then
+  echo "deploy/mes-courses-agent.service starts '$entry', which yarn build does not produce" >&2
+  exit 1
+fi
 
 rev=$(jq -r '.nodes.nixpkgs.locked.rev // empty' flake.lock)
 case "$rev" in
@@ -50,6 +62,10 @@ case "$rev" in
 esac
 
 yarn workspaces focus --production @mes-courses/delivery
+# @sentry/node pulls in oxc-parser through @sentry/bundler-plugins. Only the bundler entry points
+# (@sentry/node/bundler-plugin/*) load it, never the agent, and its platform binaries are native:
+# left out of the artifact, as in pack-server.sh.
+rm -rf node_modules/oxc-parser node_modules/@oxc-parser
 
 staging=$(mktemp -d)
 trap 'rm -rf "$staging"' EXIT
