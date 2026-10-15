@@ -237,7 +237,7 @@ to Sentry with the commit, and that commit is marked failed so the next passes d
 If the previous version also fails, the instance is left up under systemd and a critical error is
 reported ([ADR-0011](docs/adr/0011-stop-copy-validate-rollback.md)).
 
-The agent is `/opt/mes-courses/agent/runtime/bin/node /opt/mes-courses/agent/current/dist/main.js`
+The agent is `/opt/mes-courses/agent/runtime/bin/node /opt/mes-courses/agent/current/apps/delivery/dist/composition/main.js`
 (called `main.js` below), run as root:
 
 | Command                              | What it does                                                          |

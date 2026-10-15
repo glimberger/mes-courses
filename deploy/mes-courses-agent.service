@@ -18,7 +18,7 @@ EnvironmentFile=/etc/mes-courses/agent.env
 # nix and systemctl are found through PATH; nix keeps its cache under HOME.
 Environment=HOME=/var/lib/mes-courses-agent
 Environment=PATH=/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ExecStart=/opt/mes-courses/agent/runtime/bin/node /opt/mes-courses/agent/current/dist/composition/main.js run
+ExecStart=/opt/mes-courses/agent/runtime/bin/node /opt/mes-courses/agent/current/apps/delivery/dist/composition/main.js run
 
 # /run/mes-courses holds the port override of a validation; it is kept between passes.
 RuntimeDirectory=mes-courses
