@@ -7,11 +7,10 @@ import {
 
 import { DataFromNewerVersion } from './src/application/ports/data-from-newer-version';
 import { AppErrorBoundary } from './src/adapters/ui/components/app-error-boundary';
-import { LoadingState } from './src/adapters/ui/components/LoadingState';
 import { Navigation } from './src/adapters/ui/navigation';
 import { ScreenTrackingReporter } from './src/adapters/ui/screen-tracking-reporter';
-import { FullScreen } from './src/adapters/ui/screens/FullScreen';
 import { StartupError } from './src/adapters/ui/screens/StartupError';
+import { StartupSplash } from './src/adapters/ui/screens/StartupSplash';
 import { UpdateRequired } from './src/adapters/ui/screens/UpdateRequired';
 import { AppStoreProvider } from './src/adapters/ui/state/app-store-provider';
 import { ThemeProvider } from './src/adapters/ui/theme/theme-provider';
@@ -106,11 +105,7 @@ const renderStartup = (
   // and update-required behavior.
   switch (startup.status) {
     case 'starting':
-      return (
-        <FullScreen>
-          <LoadingState />
-        </FullScreen>
-      );
+      return <StartupSplash />;
     case 'failed':
       return <StartupError onRetry={restart} />;
     case 'tooOld':

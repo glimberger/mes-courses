@@ -44,10 +44,10 @@ description: "Task list for the startup splash screen feature"
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Write failing startup transition, offline readiness, failure/retry, and newer-data-version tests in `apps/mobile/App.test.tsx`, then replace the `starting` branch with `StartupSplash` while preserving the existing `ready`, `failed`, and `tooOld` branches and `composeApp()`-only readiness gate
-- [ ] T007 [P] [US1] Write failing component behavior and accessibility tests in `apps/mobile/src/adapters/ui/screens/StartupSplash.test.tsx`, then implement `apps/mobile/src/adapters/ui/screens/StartupSplash.tsx` with French `Mes Courses` identity semantics, no user actions, and a themed full-screen presentation
-- [ ] T008 [US1] Configure the native launch appearance in `apps/mobile/app.config.ts` to use `apps/mobile/assets/splash-screen.png` for the supported production and staging variants, with no change to synchronization or startup lifecycle behavior
-- [ ] T009 [US1] Add the `StartupSplash` component import and integration in `apps/mobile/App.tsx`, ensuring the existing `ThemeProvider`, status bar, safe-area handling, error reporting, retry action, and first navigation destination remain intact
+- [X] T006 [US1] Write failing startup transition, offline readiness, failure/retry, and newer-data-version tests in `apps/mobile/App.test.tsx`, then replace the `starting` branch with `StartupSplash` while preserving the existing `ready`, `failed`, and `tooOld` branches and `composeApp()`-only readiness gate
+- [X] T007 [P] [US1] Write failing component behavior and accessibility tests in `apps/mobile/src/adapters/ui/screens/StartupSplash.test.tsx`, then implement `apps/mobile/src/adapters/ui/screens/StartupSplash.tsx` with French `Mes Courses` identity semantics, no user actions, and a themed full-screen presentation
+- [X] T008 [US1] Configure the native launch appearance in `apps/mobile/app.config.ts` to use `apps/mobile/assets/splash-screen.png` for the supported production and staging variants, with no change to synchronization or startup lifecycle behavior
+- [X] T009 [US1] Add the `StartupSplash` component import and integration in `apps/mobile/App.tsx`, ensuring the existing `ThemeProvider`, status bar, safe-area handling, error reporting, retry action, and first navigation destination remain intact
 - [ ] T010 [US1] Measure the cold-launch timing in the device validation for `apps/mobile/`: confirm the branded splash is visible within 1 second and the first usable screen is reached within 2 seconds in at least 95% of normal launches, recording the sample size and results for SC-001 and SC-002
 
 **Checkpoint**: User Story 1 is independently functional: a cold launch shows the branded identity, local readiness transitions automatically, and offline/error/update-required paths are not blocked or swallowed.
