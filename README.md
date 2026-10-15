@@ -193,7 +193,8 @@ The Pi runs two instances of one systemd template unit, `mes-courses@staging` an
 built ([ADR-0006](docs/adr/0006-pull-based-continuous-delivery.md),
 [ADR-0010](docs/adr/0010-two-instances-on-one-pi.md)). Nothing is pushed to the Pi and no
 secret of the Pi lives in GitHub. The paths, units and ports are in
-[the Pi layout](specs/005-continuous-delivery/contracts/pi-layout.md).
+[the Pi layout](specs/005-continuous-delivery/contracts/pi-layout.md). How the agent works,
+step by step, is in [the delivery agent](docs/delivery-agent.md).
 
 #### One-time set-up
 
