@@ -1,10 +1,12 @@
 # Public entry of the Mes courses servers on the Pi (research R4, R8, R12, R17).
 #
-# Copy to /etc/caddy/Caddyfile. Caddy reads `{$MES_COURSES_DOMAIN}` (production) and
-# `{$MES_COURSES_STAGING_DOMAIN}` (staging) from its own environment: either replace them with the
-# domains (for example `courses.example.org` and `staging.courses.example.org`), or give the
-# Debian `caddy.service` those variables through a drop-in (`systemctl edit caddy`, then
-# `Environment=MES_COURSES_DOMAIN=courses.example.org`).
+# These are the blocks of Mes courses, to ADD to the live /etc/caddy/Caddyfile, not a file to copy
+# over it: on the Pi it also serves other projects (see hosts/agent-pi/PORTS.md in nix-config).
+# Write the two domains in full in place of `{$MES_COURSES_DOMAIN}` (production) and
+# `{$MES_COURSES_STAGING_DOMAIN}` (staging), for example `courses.example.org` and
+# `staging.courses.example.org`; the variables are only a way to keep this file free of the
+# owner's domains. Then `caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile` and
+# `systemctl reload caddy`.
 #
 # Naming a domain turns on automatic HTTPS: Caddy gets a Let's Encrypt certificate (ports 80 and
 # 443 must reach the Pi) and redirects HTTP to HTTPS. The servers listen on 127.0.0.1 only. Each

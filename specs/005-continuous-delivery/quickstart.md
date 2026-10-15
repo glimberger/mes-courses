@@ -40,6 +40,11 @@ key, password or token for the Pi.
 
 ## 3. Set up the Pi for two instances (once)
 
+The Pi is shared with other projects (freebox-partage, persona-bot, Ollama) and one Caddy. Before
+anything, read the list of the Pi's ports and domains (`hosts/agent-pi/PORTS.md` in `nix-config`) and
+look at the live state: `sudo ss -tlnp` and `/etc/caddy/Caddyfile`. Mes courses uses 3000
+(production), 3002 (staging), 3100 and 3101 (validation); 3001 is freebox-partage's.
+
 1. **DNS**: add an A record `staging.courses.<domain>` to the same address as `courses.<domain>`.
 2. **Read-only token**: on GitHub, create a fine-grained personal access token. Give it access to
    this repository only, with *Contents: read* and nothing else, and an expiry of one year. Write
@@ -48,30 +53,52 @@ key, password or token for the Pi.
    `useradd --system --no-create-home --shell /usr/sbin/nologin mes-courses-production`, the
    same for `mes-courses-staging`, then `mkdir -p /etc/mes-courses /srv/fdroid`.
 4. **Migrate production** (research R8):
-   - `systemctl stop mes-courses` and `cp /var/lib/mes-courses/mes-courses.db ~/pre-005.db`;
+   - `systemctl stop mes-courses` and `cp /var/lib/mes-courses/mes-courses.db ~/pre-005.db`
+     (with `sqlite3`, `.backup` does the same without stopping, then `PRAGMA integrity_check`);
    - `mkdir /var/lib/mes-courses/production && mv /var/lib/mes-courses/mes-courses.db* /var/lib/mes-courses/production/`
-     and `chown -R mes-courses-production: /var/lib/mes-courses/production`;
-   - move `/etc/mes-courses.env` to `/etc/mes-courses/production.env` and add
-     `MES_COURSES_ENV=production` and `MES_COURSES_PORT=3000`. Then create `staging.env` from
-     `deploy/mes-courses.env.example` with `MES_COURSES_ENV=staging`, `MES_COURSES_PORT=3002`
-     and the staging public URL. Set each file to mode 600, owned by its instance's user;
-   - install `deploy/mes-courses@.service`, `deploy/mes-courses-agent.{service,timer}`,
-     `deploy/allowed_signers` and `deploy/Caddyfile`, with both domains given to Caddy's drop-in;
+     and `chown -R mes-courses-production: /var/lib/mes-courses/production`. Then
+     `chmod 711 /var/lib/mes-courses`: the old folder belongs to the old user with mode 700, and
+     the new instances could not even reach their own sub-folder (`EACCES` on `mkdir`). Keep
+     the owner, so that the back-out below still works;
+   - create `/etc/mes-courses/production.env` and `staging.env` from
+     `deploy/mes-courses.env.example` (mode 600, owned by the instance's user): `MES_COURSES_ENV`,
+     `MES_COURSES_PORT` (3000 and 3002), the Sentry DSN of the project `mes-courses-server`
+     (not the app's), and the public URL of the instance. **The three mail variables are
+     mandatory**: the unit refuses to start when `MES_COURSES_SMTP_URL`, `MES_COURSES_MAIL_FROM` or
+     `MES_COURSES_PUBLIC_URL` is empty, and an old `/etc/mes-courses.env` does not have them.
+     Staging uses the same relay (spec assumption). Write the relay's URL in the file yourself:
+     it holds a password;
+   - install `deploy/mes-courses@.service`, `deploy/mes-courses-agent.{service,timer}` and
+     `deploy/allowed_signers`. **Caddy**: add the blocks of `deploy/Caddyfile` to the existing
+     `/etc/caddy/Caddyfile`, with the two domains written in full, and **do not copy the file over
+     it**: it also serves other projects (`partage…`). Keep a backup, then
+     `caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile` and
+     `systemctl reload caddy` (`reload` keeps the old configuration when the new one is refused);
    - create `/etc/mes-courses/agent.env` (mode 600, root) from `deploy/agent.env.example`, with
-     the token and the server's Sentry DSN.
+     the token and the server's Sentry DSN;
+   - **give production its first release**. Its channel is empty until the first `v*` tag, so no
+     agent pass can deploy it. Download the `server-staging` artifact of a green `Deliver staging`
+     run (`gh run download <run> -n server-staging`), copy `server-<sha>.tar.gz` to the Pi, create
+     `/var/lib/mes-courses-agent` (`mkdir -p -m 700`) and `/run/mes-courses`, and run
+     `main.js deploy-file production server-<sha>.tar.gz` as root with the Nix `bin` folder in
+     `PATH`. It stops nothing else, validates on 3100, then opens 3000. The version shows
+     `…-staging.N` until the first real release.
 5. **Install the agent** from the latest production release (§7). Before the first release
    there is none, and CI only builds the bundle on a tag (`release.yml`): build it on the
    maintainer's machine, in a throwaway copy of the repository, for the Pi's architecture. Add
    `supportedArchitectures: {os: [linux], cpu: [arm64], libc: [glibc]}` to that copy's
    `.yarnrc.yml`, then `yarn install --immutable`, `yarn workspace @mes-courses/delivery build`
    and `sh .github/scripts/pack-agent.sh <version of apps/delivery> <folder>`. Copy
-   `delivery-<version>.tar.gz` to the Pi and continue as in §7 from the unpacking.
+   `delivery-<version>.tar.gz` to the Pi and continue as in §7 from the unpacking: the bundle
+   holds `apps/delivery/dist/composition/main.js` and `node_modules` at its root, which is where
+   the unit looks. The agent has the ports and the other constants **built in**: after a change
+   of one of them, rebuild and reinstall it (new folder under `releases/`, then move `current`).
 6. **Sentry alert** (research R10, once): add an issue alert rule on the tag
    `component:delivery-agent`, in every environment, for new issues and monitor issues, emailing
    the maintainer. Production errors keep the two existing rules.
 7. `systemctl daemon-reload`, `systemctl enable mes-courses@production mes-courses@staging`,
-   `systemctl enable --now mes-courses-agent.timer`, `systemctl restart caddy`, then
-   `systemctl start mes-courses-agent`.
+   `systemctl enable --now mes-courses-agent.timer`, then `systemctl start mes-courses-agent`
+   (the first pass deploys staging from its channel).
    **Back out** (FR-034). The old unit `mes-courses` and `~/pre-005.db` stay untouched until the
    cleanup below. Expected downtime: from the `systemctl stop` of step 4 to the first healthy
    answer of `mes-courses@production`, a few minutes (do it in a quiet hour). If the new instance

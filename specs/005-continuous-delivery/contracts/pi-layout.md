@@ -13,7 +13,7 @@ paths are part of the contract: the agent's adapters and the unit files must agr
 | `deploy/mes-courses-agent.timer`      | `/etc/systemd/system/mes-courses-agent.timer`        | —                           |
 | `deploy/agent.env.example`            | `/etc/mes-courses/agent.env` (600, root)             | —                           |
 | `deploy/allowed_signers`              | `/etc/mes-courses/allowed_signers` (644, root)       | —                           |
-| `deploy/Caddyfile`                    | `/etc/caddy/Caddyfile`                               | same file, two sites        |
+| `deploy/Caddyfile`                    | its blocks added to `/etc/caddy/Caddyfile`           | same file, two sites        |
 | `deploy/fdroid/<variant>/…`           | not installed; read by CI (research R12)             | —                           |
 
 ## Paths on the Pi

@@ -213,7 +213,8 @@ The full steps, with their checks, are in [005 quickstart](specs/005-continuous-
    reports it to Sentry, and both instances keep running on their current release.
 4. **The Pi** (quickstart §3): one system user per instance, `/etc/mes-courses/<env>.env`
    (from `deploy/mes-courses.env.example`, mode 600), `deploy/mes-courses@.service`,
-   `deploy/mes-courses-agent.{service,timer}`, `deploy/allowed_signers` and `deploy/Caddyfile`.
+   `deploy/mes-courses-agent.{service,timer}` and `deploy/allowed_signers`; the blocks of
+   `deploy/Caddyfile` are added to the existing Caddyfile, not copied over it.
    An existing single-instance Pi is migrated by the steps of §3, which include the back-out.
 5. **Sentry**: the alert rule on the tag `component:delivery-agent` (see "Sentry alerts").
 6. **The agent** is installed from a release (§7 of the quickstart, and "Updating the agent"
