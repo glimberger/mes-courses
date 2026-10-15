@@ -49,13 +49,13 @@ if [ ! -f "$unit" ]; then
   echo "$unit does not exist" >&2
   exit 1
 fi
-paths=$(grep -o "$bundle[^[:space:]\"']*" "$unit" | sed "s|^$bundle||" || true)
+paths=$(grep -oE "$bundle[^[:space:]\"']+" "$unit" | sed "s|^$bundle||" || true)
 if [ -z "$paths" ]; then
   echo "$unit names no path under $bundle" >&2
   exit 1
 fi
 while IFS= read -r path; do
-  if [ ! -e "$path" ]; then
+  if [ ! -f "$path" ]; then
     echo "$unit names '$path', which yarn build does not produce" >&2
     exit 1
   fi
@@ -87,11 +87,10 @@ tar -czf "$archive" \
   -C "$root" apps/delivery/dist apps/delivery/package.json package.json node_modules \
   -C "$staging" nixpkgs-rev
 
-# The prune above may have removed a path the unit names: check the archive itself. A directory
-# is listed with a trailing slash.
+# The prune above may have removed a path the unit names: check the archive itself.
 listing=$(tar -tzf "$archive")
 while IFS= read -r path; do
-  if ! printf '%s\n' "$listing" | grep -qxF -e "$path" -e "$path/"; then
+  if ! printf '%s\n' "$listing" | grep -qxF "$path"; then
     rm -f "$archive"
     echo "$unit names '$path', which is not in the archive" >&2
     exit 1
