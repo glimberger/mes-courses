@@ -92,11 +92,19 @@ The agent is run as root with the Node runtime it ships with (`main.js` below st
 
 On the Pi, `~/.zshrc` of the maintainer defines a function so that `main.js` is typed as `agent`
 (`agent status`, `agent deploy-file staging server-<sha>.tar.gz`). It must be a function, not a
-variable: zsh does not word-split a variable holding a command. Nix is put on the `PATH` because
-`sudo` resets it, and `HOME` is set to root's for the Nix tools.
+variable: zsh does not word-split a variable holding a command. It loads `/etc/mes-courses/agent.env`
+first, as the systemd unit does: without it the agent has no `SENTRY_DSN`, falls back to the
+console reporter, and a failed `deploy-file` is printed in the terminal but never reaches Sentry
+(so no failure e-mail). Nix is put on the `PATH` because `sudo` resets it, and `HOME` is set to
+root's for the Nix tools.
 
 ```sh
-agent() { sudo env PATH="/nix/var/nix/profiles/default/bin:$PATH" HOME=/root /opt/mes-courses/agent/runtime/bin/node /opt/mes-courses/agent/current/apps/delivery/dist/composition/main.js "$@"; }
+agent() {
+  sudo sh -c 'set -a; . /etc/mes-courses/agent.env; set +a
+    exec env PATH="/nix/var/nix/profiles/default/bin:$PATH" HOME=/root \
+      /opt/mes-courses/agent/runtime/bin/node \
+      /opt/mes-courses/agent/current/apps/delivery/dist/composition/main.js "$@"' agent "$@"
+}
 ```
 
 | Command                               | What it does                                                                               |
