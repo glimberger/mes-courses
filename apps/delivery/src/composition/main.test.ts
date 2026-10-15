@@ -55,6 +55,13 @@ describe('parseAgentArgs, delivery commands', () => {
   });
 });
 
+describe('parseAgentArgs, status', () => {
+  it('parses status without arguments and rejects any', () => {
+    expect(parseAgentArgs(['status'])).toEqual({ command: 'status' });
+    expect(() => parseAgentArgs(['status', 'staging'])).toThrow(/Usage/);
+  });
+});
+
 describe('exitCodeOf', () => {
   it('is 0 unless an instance is degraded', () => {
     expect(exitCodeOf({ environments: {}, degraded: false })).toBe(0);

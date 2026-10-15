@@ -16,6 +16,7 @@ concurrency:
 env:
   COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
   SHA: ${{ github.sha }}
+  DELIVERY_ENVIRONMENT: production
   TAG: ${{ github.ref_name }}
 
 permissions:
@@ -51,6 +52,9 @@ jobs:
             echo "version=${TAG#v}"
             echo "sequence=$(git rev-list --count "$SHA")"
           } >> "$GITHUB_OUTPUT"
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh gate "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
   server-artifact:
     needs: gate
@@ -78,6 +82,9 @@ jobs:
           path: ${{ runner.temp }}/out/server-${{ env.SHA }}.tar.gz
           retention-days: 1
           if-no-files-found: error
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh server-artifact "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
   # The bundle of the agent that runs on the Pi, installed by hand (quickstart §7).
   agent-bundle:
@@ -103,6 +110,9 @@ jobs:
           path: ${{ runner.temp }}/out/delivery-*.tar.gz
           retention-days: 1
           if-no-files-found: error
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh agent-bundle "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
   android-apk:
     needs: gate
@@ -140,6 +150,9 @@ jobs:
           path: ${{ runner.temp }}/out/fdroid-production-${{ env.SHA }}.tar.gz
           retention-days: 1
           if-no-files-found: error
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh fdroid-repo "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
   publish:
     needs: [gate, server-artifact, agent-bundle, fdroid-repo]
@@ -187,6 +200,9 @@ jobs:
             --fdroid "$dir/fdroid-production/fdroid-production-$SHA.tar.gz"
           echo "### Published to the production channel" >> "$GITHUB_STEP_SUMMARY"
           echo "- release \`$TAG\`, commit \`$SHA\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh publish "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
   # The Pi deploys the server before it swaps the F-Droid repository. A timeout here fails the
   # run; the Pi's own report says why.
@@ -206,3 +222,33 @@ jobs:
         env:
           PRODUCTION_SERVER_URL: ${{ vars.PRODUCTION_SERVER_URL }}
         run: nix develop --command yarn workspace @mes-courses/delivery ci wait-health --url "$PRODUCTION_SERVER_URL" --commit "$SHA" --timeout 1200
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh wait-production-health "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  # One line per job, skipped and failed ones included (FR-030).
+  summary:
+    needs:
+      [
+        gate,
+        server-artifact,
+        agent-bundle,
+        android-apk,
+        fdroid-repo,
+        publish,
+        wait-production-health,
+      ]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: List the outcome of every job
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -eu
+          echo "### Outcome of every job" >> "$GITHUB_STEP_SUMMARY"
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key) \(.value.result)"' | while read -r job result; do
+            sh .github/scripts/delivery-summary.sh "$job" "$result"
+          done

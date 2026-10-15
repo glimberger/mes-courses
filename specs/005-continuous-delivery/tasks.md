@@ -160,8 +160,8 @@ description: 'Task list for continuous delivery to staging and production'
 
 **Independent Test**: after a staging deployment and a release, compare the versions reported by each environment and the run summaries with the delivered commits.
 
-- [ ] T052 [P] [US5] Write `.github/scripts/delivery-summary.sh <target> <outcome> [url]` appending a line `commit, environment, target, outcome (url)` to `$GITHUB_STEP_SUMMARY` (FR-030), with its shell test first in `test:scripts`. Call it from every job of `deliver-staging.yml` (T035) and `release.yml` (T044), plus a final `summary` job with `if: always()` that lists the outcome of every `needs` entry, including skipped and failed ones. `actionlint` must pass.
-- [ ] T053 [P] [US5] Implement the `status` command (`apps/delivery/src/application/show-status.ts`, wired in `apps/delivery/src/composition/main.ts`): prints both `InstanceState`s (server and F-Droid commit, `failedCommits`, `lastFetchSuccessAt`) and the health of each instance, exit `0`. Test first with the doubles: fresh state, a failed commit, an unreachable instance.
+- [X] T052 [P] [US5] Write `.github/scripts/delivery-summary.sh <target> <outcome> [url]` appending a line `commit, environment, target, outcome (url)` to `$GITHUB_STEP_SUMMARY` (FR-030), with its shell test first in `test:scripts`. Call it from every job of `deliver-staging.yml` (T035) and `release.yml` (T044), plus a final `summary` job with `if: always()` that lists the outcome of every `needs` entry, including skipped and failed ones. `actionlint` must pass.
+- [X] T053 [P] [US5] Implement the `status` command (`apps/delivery/src/application/show-status.ts`, wired in `apps/delivery/src/composition/main.ts`): prints both `InstanceState`s (server and F-Droid commit, `failedCommits`, `lastFetchSuccessAt`) and the health of each instance, exit `0`. Test first with the doubles: fresh state, a failed commit, an unreachable instance.
 
 ---
 

@@ -22,11 +22,13 @@ import { createSystemdServiceManager } from '../adapters/systemd/service-manager
 import { createSystemClock } from '../adapters/system/clock';
 import { deployFile } from '../application/deploy-file';
 import { forgetFailure } from '../application/forget-failure';
+import { showStatus } from '../application/show-status';
 import { runAgent, type RunResult } from '../application/run-agent';
 import type { Environment } from '../domain/manifest';
 
 export type AgentCommand =
   | { command: 'run'; only?: Environment }
+  | { command: 'status' }
   | { command: 'forget-failure'; environment: Environment; sha: string }
   | { command: 'deploy-file'; environment: Environment; file: string };
 
@@ -54,9 +56,13 @@ export const parseAgentArgs = (argv: string[]): AgentCommand => {
       ? { command, environment, sha: argument }
       : { command, environment, file: argument };
   }
+  if (command === 'status') {
+    if (rest.length !== 0) throw new Error('Usage: status');
+    return { command };
+  }
   if (command !== 'run') {
     throw new Error(
-      `Unknown command: ${command ?? '(none)'}. Use run, forget-failure or deploy-file.`,
+      `Unknown command: ${command ?? '(none)'}. Use run, status, forget-failure or deploy-file.`,
     );
   }
   let only: Environment | undefined;
@@ -102,6 +108,13 @@ const run = async (args: AgentCommand): Promise<number> => {
     ? createSentryReporter(createSentryClient(dsn))
     : { ...createConsoleReporter(), flush: async () => undefined };
   const stateStore = createFileStateStore(PATHS.state);
+
+  if (args.command === 'status') {
+    console.log(
+      await showStatus({ stateStore, health: createHttpHealthProbe() }),
+    );
+    return 0;
+  }
 
   if (args.command === 'forget-failure') {
     const forgotten = await forgetFailure(

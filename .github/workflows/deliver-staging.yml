@@ -17,6 +17,7 @@ concurrency:
 env:
   COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
   SHA: ${{ github.event.workflow_run.head_sha }}
+  DELIVERY_ENVIRONMENT: staging
 
 permissions:
   contents: write
@@ -74,6 +75,9 @@ jobs:
             echo "- $server"
             echo "- $app"
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh plan "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
   server-artifact:
     needs: plan
@@ -104,6 +108,9 @@ jobs:
           path: ${{ runner.temp }}/out/server-${{ env.SHA }}.tar.gz
           retention-days: 1
           if-no-files-found: error
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh server-artifact "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
   android-apk:
     needs: plan
@@ -144,6 +151,9 @@ jobs:
           path: ${{ runner.temp }}/out/fdroid-staging-${{ env.SHA }}.tar.gz
           retention-days: 1
           if-no-files-found: errors
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh fdroid-repo "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
   publish:
     needs: [plan, server-artifact, fdroid-repo]
@@ -181,3 +191,24 @@ jobs:
           # shellcheck disable=SC2086
           nix develop --command yarn workspace @mes-courses/delivery ci write-manifest $args
           echo "### Published to the staging channel" >> "$GITHUB_STEP_SUMMARY"
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh publish "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  # One line per job, skipped and failed ones included (FR-030).
+  summary:
+    needs: [plan, server-artifact, android-apk, fdroid-repo, publish]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: List the outcome of every job
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -eu
+          echo "### Outcome of every job" >> "$GITHUB_STEP_SUMMARY"
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key) \(.value.result)"' | while read -r job result; do
+            sh .github/scripts/delivery-summary.sh "$job" "$result"
+          done
