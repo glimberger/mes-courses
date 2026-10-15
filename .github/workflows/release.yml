@@ -1,0 +1,254 @@
+name: Release
+
+# Pushing a tag vX.Y.Z on a validated commit of main releases to production (research R15,
+# contracts/workflows.md): the server through the Pi's agent, and the Android build through the
+# production F-Droid repository. The workflow holds no logic of its
+# own: it calls scripts and the delivery workspace. Re-running the failed jobs of a run completes
+# a partial release on the same commit; no new tag is needed.
+on:
+  push:
+    tags: ['v*.*.*']
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+  SHA: ${{ github.sha }}
+  DELIVERY_ENVIRONMENT: production
+  TAG: ${{ github.ref_name }}
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  # Nothing else starts unless every rule holds. The failed rules are all printed.
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.facts.outputs.version }}
+      sequence: ${{ steps.facts.outputs.sequence }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: DeterminateSystems/determinate-nix-action@v3
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+      - run: nix develop --command yarn install --immutable
+      - name: Check the release rules
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+        run: nix develop --command yarn workspace @mes-courses/delivery ci release-gate --tag "$TAG" --commit "$SHA"
+      - id: facts
+        run: |
+          {
+            echo "version=${TAG#v}"
+            echo "sequence=$(git rev-list --count "$SHA")"
+          } >> "$GITHUB_OUTPUT"
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh gate "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  server-artifact:
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: DeterminateSystems/determinate-nix-action@v3
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+      - run: nix develop --command yarn install --immutable
+      - run: nix develop --command yarn build
+      - name: Pack the server
+        env:
+          VERSION: ${{ needs.gate.outputs.version }}
+          SEQUENCE: ${{ needs.gate.outputs.sequence }}
+        run: nix develop --command sh .github/scripts/pack-server.sh "$VERSION" "$SHA" "$SEQUENCE" "$RUNNER_TEMP/out"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: server-production
+          path: ${{ runner.temp }}/out/server-${{ env.SHA }}.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh server-artifact "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  # The bundle of the agent that runs on the Pi, installed by hand (quickstart §7).
+  agent-bundle:
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/determinate-nix-action@v3
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+      - run: nix develop --command yarn install --immutable
+      - run: nix develop --command yarn workspace @mes-courses/delivery build
+      - name: Pack the agent
+        run: |
+          version=$(node -p "require('./apps/delivery/package.json').version")
+          nix develop --command sh .github/scripts/pack-agent.sh "$version" "$RUNNER_TEMP/out"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: agent-bundle
+          path: ${{ runner.temp }}/out/delivery-*.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh agent-bundle "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  android-apk:
+    needs: gate
+    uses: ./.github/workflows/android-apk.yml
+    with:
+      variant: production
+      sequence: ${{ needs.gate.outputs.sequence }}
+      server-url: ${{ vars.PRODUCTION_SERVER_URL }}
+    secrets: inherit
+
+  fdroid-repo:
+    needs: android-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/determinate-nix-action@v3
+      - uses: actions/download-artifact@v8
+        with:
+          name: apk-production
+          path: ${{ runner.temp }}/apk
+      - name: Build the production repository
+        env:
+          SERVER_URL: ${{ vars.PRODUCTION_SERVER_URL }}
+          FDROID_KEYSTORE_BASE64: ${{ secrets.FDROID_KEYSTORE_BASE64 }}
+          FDROID_KEYSTORE_PASSWORD: ${{ secrets.FDROID_KEYSTORE_PASSWORD }}
+          FDROID_KEY_PASSWORD: ${{ secrets.FDROID_KEY_PASSWORD }}
+        run: |
+          apk=$(find "$RUNNER_TEMP/apk" -name '*.apk' | head -1)
+          nix shell nixpkgs#fdroidserver --command \
+            sh .github/scripts/build-fdroid-repo.sh production "$apk" "$SHA" "$RUNNER_TEMP/out"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: fdroid-production
+          path: ${{ runner.temp }}/out/fdroid-production-${{ env.SHA }}.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh fdroid-repo "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  publish:
+    needs: [gate, server-artifact, agent-bundle, fdroid-repo]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: DeterminateSystems/determinate-nix-action@v3
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+      - run: nix develop --command yarn install --immutable
+      - uses: actions/download-artifact@v8
+        with:
+          path: ${{ runner.temp }}/artifacts
+      - name: Create the release vX.Y.Z
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          dir="$RUNNER_TEMP/artifacts"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --verify-tag --title "$TAG" --generate-notes
+          fi
+          # The APK is attached for history, the agent bundle for the Pi (quickstart §7).
+          gh release upload "$TAG" --clobber \
+            "$dir"/apk-production/*.apk \
+            "$dir"/agent-bundle/delivery-*.tar.gz \
+            "$dir/server-production/server-$SHA.tar.gz"
+      - name: Write, sign and upload the production manifest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_SIGNING_KEY: ${{ secrets.DEPLOY_SIGNING_KEY }}
+          VERSION: ${{ needs.gate.outputs.version }}
+        run: |
+          set -eu
+          dir="$RUNNER_TEMP/artifacts"
+          nix develop --command yarn workspace @mes-courses/delivery ci write-manifest \
+            --env production --commit "$SHA" --version "$VERSION" \
+            --server "$dir/server-production/server-$SHA.tar.gz" \
+            --fdroid "$dir/fdroid-production/fdroid-production-$SHA.tar.gz"
+          echo "### Published to the production channel" >> "$GITHUB_STEP_SUMMARY"
+          echo "- release \`$TAG\`, commit \`$SHA\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh publish "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  # The Pi deploys the server before it swaps the F-Droid repository. A timeout here fails the
+  # run; the Pi's own report says why.
+  wait-production-health:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/determinate-nix-action@v3
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+      - run: nix develop --command yarn install --immutable
+      - name: Wait for the production server to run the release
+        env:
+          PRODUCTION_SERVER_URL: ${{ vars.PRODUCTION_SERVER_URL }}
+        run: nix develop --command yarn workspace @mes-courses/delivery ci wait-health --url "$PRODUCTION_SERVER_URL" --commit "$SHA" --timeout 1200
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh wait-production-health "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  # One line per job, skipped and failed ones included (FR-030).
+  summary:
+    needs:
+      [
+        gate,
+        server-artifact,
+        agent-bundle,
+        android-apk,
+        fdroid-repo,
+        publish,
+        wait-production-health,
+      ]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: List the outcome of every job
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -eu
+          echo "### Outcome of every job" >> "$GITHUB_STEP_SUMMARY"
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key) \(.value.result)"' | while read -r job result; do
+            sh .github/scripts/delivery-summary.sh "$job" "$result"
+          done

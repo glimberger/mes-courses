@@ -19,6 +19,8 @@ export type AppDeps = {
   publicUrl: string;
   /** Apps below this version are refused with 426. */
   minAppVersion: string;
+  /** The release this server is, reported by `GET /v1/health` (FR-029). */
+  release: { version: string; commit: string };
 };
 
 declare module 'fastify' {

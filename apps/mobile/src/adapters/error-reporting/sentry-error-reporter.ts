@@ -10,7 +10,7 @@ import { ConsoleErrorReporter } from './console-error-reporter';
 import { scrubAddresses, scrubError } from './scrub-addresses';
 
 /** The only environments a report may carry (FR-030, research R13). */
-const ENVIRONMENTS = ['production', 'preview'];
+const ENVIRONMENTS = ['production', 'staging'];
 
 /** The operation of an error the global handlers catch (FR-039a). */
 const UNCAUGHT = 'uncaught';
@@ -116,7 +116,7 @@ const errorType = (event: ErrorEvent): string =>
 
 /**
  * Sentry reporter (research R13). It returns a console reporter when the environment is neither
- * `production` nor `preview`, so a report never carries an unknown environment.
+ * `production` nor `staging`, so a report never carries an unknown environment.
  */
 export const createSentryErrorReporter = ({
   dsn,

@@ -1,0 +1,214 @@
+name: Deliver staging
+
+# Every green CI run on main delivers to staging (research R1, contracts/workflows.md): the
+# server artifact and the signed Android build in the staging F-Droid repository. The workflow
+# holds no logic of its own: it calls scripts and the delivery
+# workspace. It never runs on a pull request, so pull request code cannot reach its secrets.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: deliver-staging
+  cancel-in-progress: false
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+  SHA: ${{ github.event.workflow_run.head_sha }}
+  DELIVERY_ENVIRONMENT: staging
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  plan:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      server: ${{ steps.targets.outputs.server }}
+      app: ${{ steps.targets.outputs.app }}
+      sequence: ${{ steps.targets.outputs.sequence }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SHA }}
+          fetch-depth: 0
+      # The diff base of each target is the commit last delivered to staging for it, read from
+      # the staging manifest (research R2). With no manifest, or a base git does not know, the
+      # target is built.
+      - id: targets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          sequence=$(git rev-list --count "$SHA")
+          rm -f manifest.json
+          gh release download channel-staging --pattern manifest.json --repo "$GITHUB_REPOSITORY" || true
+          changed_since() {
+            base=$1
+            if [ -n "$base" ] && git cat-file -e "$base^{commit}" 2>/dev/null; then
+              git diff --name-only "$base" "$SHA" | sh .github/scripts/delivery-targets.sh
+            else
+              printf 'server=true\napp=true\n'
+            fi
+          }
+          server_base=""
+          app_base=""
+          if [ -f manifest.json ]; then
+            server_base=$(jq -r '.server.commit // empty' manifest.json)
+            app_base=$(jq -r '.fdroid.commit // empty' manifest.json)
+          fi
+          server=$(changed_since "$server_base" | grep '^server=')
+          app=$(changed_since "$app_base" | grep '^app=')
+          {
+            echo "$server"
+            echo "$app"
+            echo "sequence=$sequence"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "### Staging delivery plan"
+            echo "- commit \`$SHA\` (sequence $sequence)"
+            echo "- $server"
+            echo "- $app"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh plan "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  server-artifact:
+    needs: plan
+    if: needs.plan.outputs.server == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SHA }}
+          fetch-depth: 0
+      - uses: DeterminateSystems/determinate-nix-action@v3
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+      - run: nix develop --command yarn install --immutable
+      - run: nix develop --command yarn build
+      - name: Pack the server
+        env:
+          SEQUENCE: ${{ needs.plan.outputs.sequence }}
+        run: |
+          base=$(node -p "require('./apps/server/package.json').version")
+          nix develop --command sh .github/scripts/pack-server.sh "$base-staging.$SEQUENCE" "$SHA" "$SEQUENCE" "$RUNNER_TEMP/out"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: server-staging
+          path: ${{ runner.temp }}/out/server-${{ env.SHA }}.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh server-artifact "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  android-apk:
+    needs: plan
+    if: needs.plan.outputs.app == 'true'
+    uses: ./.github/workflows/android-apk.yml
+    with:
+      variant: staging
+      sequence: ${{ needs.plan.outputs.sequence }}
+      server-url: ${{ vars.STAGING_SERVER_URL }}
+    secrets: inherit
+
+  fdroid-repo:
+    needs: android-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SHA }}
+      - uses: DeterminateSystems/determinate-nix-action@v3
+      - uses: actions/download-artifact@v8
+        with:
+          name: apk-staging
+          path: ${{ runner.temp }}/apk
+      - name: Build the staging repository
+        env:
+          SERVER_URL: ${{ vars.STAGING_SERVER_URL }}
+          FDROID_KEYSTORE_BASE64: ${{ secrets.FDROID_KEYSTORE_BASE64 }}
+          FDROID_KEYSTORE_PASSWORD: ${{ secrets.FDROID_KEYSTORE_PASSWORD }}
+          FDROID_KEY_PASSWORD: ${{ secrets.FDROID_KEY_PASSWORD }}
+        run: |
+          apk=$(find "$RUNNER_TEMP/apk" -name '*.apk' | head -1)
+          nix shell nixpkgs#fdroidserver --command \
+            sh .github/scripts/build-fdroid-repo.sh staging "$apk" "$SHA" "$RUNNER_TEMP/out"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: fdroid-staging
+          path: ${{ runner.temp }}/out/fdroid-staging-${{ env.SHA }}.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh fdroid-repo "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  publish:
+    needs: [plan, server-artifact, android-apk, fdroid-repo]
+    if: >-
+      always() && !cancelled() && !contains(needs.*.result, 'failure') &&
+      (needs.server-artifact.result == 'success' || needs.fdroid-repo.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SHA }}
+          fetch-depth: 0
+      - uses: DeterminateSystems/determinate-nix-action@v3
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+      - run: nix develop --command yarn install --immutable
+      - uses: actions/download-artifact@v8
+        with:
+          path: ${{ runner.temp }}/artifacts
+      - name: Write, sign and upload the manifest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_SIGNING_KEY: ${{ secrets.DEPLOY_SIGNING_KEY }}
+        run: |
+          set -eu
+          args="--env staging --commit $SHA"
+          server="$RUNNER_TEMP/artifacts/server-staging/server-$SHA.tar.gz"
+          fdroid="$RUNNER_TEMP/artifacts/fdroid-staging/fdroid-staging-$SHA.tar.gz"
+          [ -f "$server" ] && args="$args --server $server"
+          [ -f "$fdroid" ] && args="$args --fdroid $fdroid"
+          # shellcheck disable=SC2086
+          nix develop --command yarn workspace @mes-courses/delivery ci write-manifest $args
+          echo "### Published to the staging channel" >> "$GITHUB_STEP_SUMMARY"
+      - name: Summarize this job
+        if: always()
+        run: sh .github/scripts/delivery-summary.sh publish "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  # One line per job, skipped and failed ones included (FR-030).
+  summary:
+    needs: [plan, server-artifact, android-apk, fdroid-repo, publish]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: List the outcome of every job
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -eu
+          echo "### Outcome of every job" >> "$GITHUB_STEP_SUMMARY"
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key) \(.value.result)"' | while read -r job result; do
+            sh .github/scripts/delivery-summary.sh "$job" "$result"
+          done

@@ -1,0 +1,133 @@
+name: Android APK
+
+# Builds and signs the Android APK of one variant (research R11, contracts/workflows.md).
+# Called by deliver-staging.yml and release.yml; never run on a pull request. The APK is handed
+# over as the job artifact `apk-<variant>`, kept one day.
+on:
+  workflow_call:
+    inputs:
+      variant:
+        description: staging or production
+        type: string
+        required: true
+      sequence:
+        description: The commit's position on main, used as the Android versionCode
+        type: string
+        required: true
+      server-url:
+        description: The server address the app pre-fills on its sign-in screen
+        type: string
+        required: true
+    secrets:
+      ANDROID_KEYSTORE_BASE64:
+        required: true
+      ANDROID_KEYSTORE_PASSWORD:
+        required: true
+      ANDROID_KEY_ALIAS:
+        required: true
+      ANDROID_KEY_PASSWORD:
+        required: true
+      SENTRY_AUTH_TOKEN:
+        required: true
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/.ghcup /opt/ghc /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: DeterminateSystems/determinate-nix-action@v3
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+      - id: gradle-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('yarn.lock', 'apps/mobile/app.config.ts') }}-${{ github.run_id }}
+          restore-keys: |
+            gradle-${{ runner.os }}-${{ hashFiles('yarn.lock', 'apps/mobile/app.config.ts') }}-
+            gradle-${{ runner.os }}-
+      # No secret reaches a step that runs the install scripts.
+      - run: nix develop --command yarn install --immutable
+      - name: Generate the native project
+        working-directory: apps/mobile
+        env:
+          APP_VARIANT: ${{ inputs.variant == 'staging' && 'staging' || '' }}
+          EXPO_PUBLIC_APP_ENVIRONMENT: ${{ inputs.variant }}
+          EXPO_PUBLIC_DEFAULT_SERVER_URL: ${{ inputs.server-url }}
+          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
+          ANDROID_VERSION_CODE: ${{ inputs.sequence }}
+        run: nix develop --command yarn expo prebuild --platform android --clean
+      # The Sentry Gradle step uploads source maps and native debug files during the build.
+      - name: Build the release APK
+        working-directory: apps/mobile/android
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          APP_VARIANT: ${{ inputs.variant == 'staging' && 'staging' || '' }}
+          EXPO_PUBLIC_APP_ENVIRONMENT: ${{ inputs.variant }}
+          EXPO_PUBLIC_DEFAULT_SERVER_URL: ${{ inputs.server-url }}
+          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
+          ANDROID_VERSION_CODE: ${{ inputs.sequence }}
+        run: nix develop --command ./gradlew :app:assembleRelease --no-daemon
+      - name: Align and sign
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_CERT_SHA256: ${{ vars.ANDROID_CERT_SHA256 }}
+          VARIANT: ${{ inputs.variant }}
+          VERSION_CODE: ${{ inputs.sequence }}
+        run: |
+          set -eu
+          tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 | sort -V | tail -1)
+          built=$(find apps/mobile/android/app/build/outputs/apk/release -name '*.apk' | head -1)
+          out="$RUNNER_TEMP/out"
+          mkdir -p "$out"
+          apk="$out/app-$VARIANT-$VERSION_CODE.apk"
+          "$tools/zipalign" -p -f 4 "$built" "$RUNNER_TEMP/aligned.apk"
+          keystore="$RUNNER_TEMP/upload.jks"
+          (umask 077 && printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$keystore")
+          "$tools/apksigner" sign \
+            --ks "$keystore" --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD \
+            --out "$apk" "$RUNNER_TEMP/aligned.apk"
+          rm -f "$keystore"
+          certs=$("$tools/apksigner" verify --print-certs "$apk")
+          echo "$certs"
+          printf '%s\n' "$certs" | grep -qi "SHA-256 digest: $ANDROID_CERT_SHA256" || {
+            echo "The APK is not signed by the expected key (ANDROID_CERT_SHA256)" >&2
+            exit 1
+          }
+          echo "APK_PATH=$apk" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: apk-${{ inputs.variant }}
+          path: ${{ env.APK_PATH }}
+          retention-days: 1
+          if-no-files-found: error
+      - if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ steps.gradle-cache.outputs.cache-primary-key }}

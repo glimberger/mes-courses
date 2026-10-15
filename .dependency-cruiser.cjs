@@ -14,6 +14,7 @@ const MOBILE_SRC = '^apps/mobile/src';
 
 const SERVER_SRC = '^apps/server/src';
 const SYNC_CORE = '^packages/sync-core/';
+const DELIVERY_SRC = '^apps/delivery/src';
 
 const STORIES = '\\.stories\\.tsx$';
 const STORYBOOK_CONFIG = '^apps/mobile/\\.rnstorybook/';
@@ -146,6 +147,37 @@ module.exports = {
         pathNot: `${SERVER_SRC}/adapters/(crypto|sqlite)/`,
       },
       to: { path: '^(node:)?crypto$', dependencyTypes: ['core'] },
+    },
+    {
+      name: 'delivery-domain-imports-only-itself',
+      severity: 'error',
+      comment:
+        'The delivery domain imports only itself: no npm package and no Node module.',
+      from: { path: `${DELIVERY_SRC}/domain/` },
+      to: { pathNot: `${DELIVERY_SRC}/domain/` },
+    },
+    {
+      name: 'delivery-application-imports-only-domain-and-application',
+      severity: 'error',
+      comment:
+        'The delivery application layer imports the delivery domain and itself only.',
+      from: { path: `${DELIVERY_SRC}/application/` },
+      to: { pathNot: `${DELIVERY_SRC}/(domain|application)/` },
+    },
+    {
+      name: 'delivery-adapters-imported-only-by-composition-and-adapters',
+      severity: 'error',
+      comment:
+        'Only delivery adapters and the delivery composition root import delivery adapters.',
+      from: { pathNot: `${DELIVERY_SRC}/(adapters|composition)/` },
+      to: { path: `${DELIVERY_SRC}/adapters/` },
+    },
+    {
+      name: 'delivery-adapters-never-import-composition',
+      severity: 'error',
+      comment: 'Delivery adapters never import the composition root.',
+      from: { path: `${DELIVERY_SRC}/adapters/` },
+      to: { path: `${DELIVERY_SRC}/composition/` },
     },
     {
       name: 'testing-helpers-never-imported-by-production-code',

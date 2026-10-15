@@ -1,0 +1,9 @@
+Categories:
+  - Shopping
+License: MIT
+SourceCode: https://github.com/glimberger/mes-courses
+Name: Mes courses
+Summary: Listes de courses synchronisées entre vos appareils
+Description: |-
+  Mes courses est une application de listes de courses qui fonctionne hors ligne et se
+  synchronise avec votre serveur.

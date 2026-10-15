@@ -8,13 +8,14 @@
       "environment": "development",
       "node": "24.21.0"
     },
-    "preview": {
+    "staging": {
       "distribution": "internal",
-      "environment": "preview",
+      "environment": "staging",
       "autoIncrement": true,
       "node": "24.21.0",
       "env": {
-        "EXPO_PUBLIC_APP_ENVIRONMENT": "preview"
+        "APP_VARIANT": "staging",
+        "EXPO_PUBLIC_APP_ENVIRONMENT": "staging"
       }
     },
     "production": {
@@ -23,13 +24,6 @@
       "node": "24.21.0",
       "env": {
         "EXPO_PUBLIC_APP_ENVIRONMENT": "production"
-      }
-    }
-  },
-  "submit": {
-    "production": {
-      "android": {
-        "track": "internal"
       }
     }
   }

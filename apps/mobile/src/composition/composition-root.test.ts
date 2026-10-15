@@ -215,13 +215,13 @@ describe('createErrorReporter', () => {
 
   it('FR-030 reports to Sentry, in the given environment, when a DSN is set', () => {
     process.env.EXPO_PUBLIC_SENTRY_DSN = 'https://key@o1.ingest.de.sentry.io/1';
-    process.env.EXPO_PUBLIC_APP_ENVIRONMENT = 'preview';
+    process.env.EXPO_PUBLIC_APP_ENVIRONMENT = 'staging';
 
     const reporter = createErrorReporter();
 
     expect(reporter).not.toBeInstanceOf(ConsoleErrorReporter);
     expect(Sentry.init).toHaveBeenCalledWith(
-      expect.objectContaining({ environment: 'preview' }),
+      expect.objectContaining({ environment: 'staging' }),
     );
   });
 

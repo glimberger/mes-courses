@@ -31,11 +31,15 @@ export const createMailer = (config: MailConfig): Mailer => {
   }
 };
 
+/** The release of a server started with no build info (tests, development). */
+const DEV_RELEASE = { version: '0.0.0-dev', commit: 'dev' };
+
 export const appDeps = ({
   store,
   errorReporter,
   mailer,
   publicUrl,
+  release = DEV_RELEASE,
   clock = systemClock,
   hasher = createPasswordHasher(systemRandom),
 }: {
@@ -43,6 +47,7 @@ export const appDeps = ({
   errorReporter: ErrorReporter;
   mailer: Mailer;
   publicUrl: string;
+  release?: AppDeps['release'];
   clock?: Clock;
   hasher?: PasswordHasher;
 }): AppDeps => ({
@@ -55,6 +60,7 @@ export const appDeps = ({
   mailer,
   publicUrl,
   minAppVersion: MIN_APP_VERSION,
+  release,
 });
 
 /** Forgets the sign-in and reset attempts no limit reads any more (also done on every auth request). */

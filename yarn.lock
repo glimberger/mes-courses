@@ -2582,6 +2582,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@mes-courses/delivery@workspace:apps/delivery":
+  version: 0.0.0-use.local
+  resolution: "@mes-courses/delivery@workspace:apps/delivery"
+  dependencies:
+    "@sentry/node": "npm:^11.5.0"
+    "@types/jest": "npm:^30"
+    "@types/node": "npm:^24"
+    jest: "npm:^30"
+    ts-jest: "npm:^29"
+    tsx: "npm:^4.23.15"
+    typescript: "npm:~6.0.3"
+  languageName: unknown
+  linkType: soft
+
 "@mes-courses/e2e-tests@workspace:tests/e2e":
   version: 0.0.0-use.local
   resolution: "@mes-courses/e2e-tests@workspace:tests/e2e"

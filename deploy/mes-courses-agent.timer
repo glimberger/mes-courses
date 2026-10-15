@@ -1,0 +1,12 @@
+# Runs the delivery agent every 2 minutes (research R6). Copy to
+# /etc/systemd/system/mes-courses-agent.timer, then `systemctl enable --now mes-courses-agent.timer`.
+[Unit]
+Description=Run the Mes courses delivery agent
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
