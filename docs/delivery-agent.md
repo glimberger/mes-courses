@@ -25,6 +25,12 @@ exits. It is not a long-running process.
 
 One pass handles **staging first, then production**. A problem in one never stops the other.
 
+Only one operation works on the instances at a time. `run` and `deploy-file` both take the lock
+file `/var/lib/mes-courses-agent/agent.lock` (it holds the PID of its owner; a lock whose process
+is gone is stale and taken over). A timer pass that finds it taken exits at once and leaves the
+work to the next tick; `deploy-file` refuses to start and exits with 1. Without it, a pass would
+read the deployment in flight of a manual `deploy-file` as a crash and undo it.
+
 ## One pass over an environment
 
 1. **Recover.** If the state file is unreadable, it is moved aside (`<env>.json.corrupt`) and
