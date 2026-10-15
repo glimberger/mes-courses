@@ -58,13 +58,13 @@ beforeEach(() => {
 });
 
 describe('App startup', () => {
-  it('FR-039 shows LoadingState while the app starts, then CurrentList', async () => {
+  it('FR-039 shows the branded splash while the app starts, then CurrentList', async () => {
     const start = deferred<ComposedApp>();
     compose.mockReturnValueOnce(start.promise);
 
     render(<App />);
 
-    expect(screen.getByLabelText('Chargement')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Mes Courses')).toBeOnTheScreen();
     await waitFor(() => expect(compose).toHaveBeenCalledTimes(1));
     await act(async () => start.resolve(await started()));
     expect(await currentList()).toBeOnTheScreen();
@@ -84,7 +84,7 @@ describe('App startup', () => {
     ]);
   });
 
-  it('FR-039 starts again on "Réessayer", with LoadingState, and reaches CurrentList', async () => {
+  it('FR-039 starts again on "Réessayer", with the branded splash, and reaches CurrentList', async () => {
     const second = deferred<ComposedApp>();
     compose
       .mockRejectedValueOnce(new Error('database locked'))
@@ -94,7 +94,7 @@ describe('App startup', () => {
 
     retry();
 
-    expect(screen.getByLabelText('Chargement')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Mes Courses')).toBeOnTheScreen();
     await waitFor(() => expect(compose).toHaveBeenCalledTimes(2));
     await act(async () => second.resolve(await started()));
     expect(await currentList()).toBeOnTheScreen();
@@ -214,7 +214,7 @@ describe('App after a failure while drawing', () => {
 
     retry();
 
-    expect(screen.getByLabelText('Chargement')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Mes Courses')).toBeOnTheScreen();
     await act(async () => second.resolve(await started()));
     expect(await currentList()).toBeOnTheScreen();
     expect(first.close).toHaveBeenCalledTimes(1);

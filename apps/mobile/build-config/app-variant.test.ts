@@ -22,7 +22,7 @@ describe('appVariant', () => {
       icon: './assets/icon.png',
       adaptiveForeground: './assets/android-icon-foreground.png',
       adaptiveMonochrome: './assets/android-icon-monochrome.png',
-      splashImage: './assets/splash-icon.png',
+      splashImage: './assets/splash-screen.png',
     });
   });
 
@@ -33,7 +33,7 @@ describe('appVariant', () => {
       icon: './assets/staging/icon.png',
       adaptiveForeground: './assets/staging/android-icon-foreground.png',
       adaptiveMonochrome: './assets/staging/android-icon-monochrome.png',
-      splashImage: './assets/staging/splash-icon.png',
+      splashImage: './assets/splash-screen.png',
     });
   });
 

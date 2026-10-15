@@ -18,7 +18,7 @@ const detoxBuild = process.env.DETOX_BUILD === '1';
 const variant = appVariant(process.env);
 const versionCode = androidVersionCode(process.env);
 
-const config: ExpoConfig = {
+const config = {
   name: variant.name,
   slug: 'mes-courses',
   // Semantic versioning, set by hand in the pull request that leads to a release (research R24);
@@ -27,6 +27,10 @@ const config: ExpoConfig = {
   orientation: 'portrait',
   icon: variant.icon,
   userInterfaceStyle: 'automatic',
+  splash: {
+    image: variant.splashImage,
+    resizeMode: 'contain',
+  },
   ios: {
     // Store identity: permanent once the app is first uploaded to a store.
     bundleIdentifier: variant.package,
@@ -72,4 +76,6 @@ const config: ExpoConfig = {
 
 // A plugin given as a function is applied here: `plugins` only types names. The URL schemes are
 // removed last, after every plugin that could add one (FR-041).
-export default withNoUrlSchemes(withAndroidNoMinify(withAndroidAnrOff(config)));
+export default withNoUrlSchemes(
+  withAndroidNoMinify(withAndroidAnrOff(config as ExpoConfig)),
+);

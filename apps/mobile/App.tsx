@@ -7,11 +7,10 @@ import {
 
 import { DataFromNewerVersion } from './src/application/ports/data-from-newer-version';
 import { AppErrorBoundary } from './src/adapters/ui/components/app-error-boundary';
-import { LoadingState } from './src/adapters/ui/components/LoadingState';
 import { Navigation } from './src/adapters/ui/navigation';
 import { ScreenTrackingReporter } from './src/adapters/ui/screen-tracking-reporter';
-import { FullScreen } from './src/adapters/ui/screens/FullScreen';
 import { StartupError } from './src/adapters/ui/screens/StartupError';
+import { StartupSplash } from './src/adapters/ui/screens/StartupSplash';
 import { UpdateRequired } from './src/adapters/ui/screens/UpdateRequired';
 import { AppStoreProvider } from './src/adapters/ui/state/app-store-provider';
 import { ThemeProvider } from './src/adapters/ui/theme/theme-provider';
@@ -26,6 +25,14 @@ type Startup =
   | { status: 'ready'; app: ComposedApp }
   | { status: 'failed' }
   | { status: 'tooOld' };
+
+/**
+ * The composition root is the only readiness gate: starting lasts until
+ * composeApp() settles, then the app is ready or one of the two existing
+ * failure presentations is selected. Retry returns to starting and runs the
+ * same composition flow again; there is no timer, navigation route, or
+ * network readiness check in this state machine.
+ */
 
 /**
  * Starts the app and shows where it is (contracts/ui-screens.md#app-startup-fr-039): loading,
@@ -93,13 +100,12 @@ const renderStartup = (
   reporter: ScreenTrackingReporter,
   restart: () => void,
 ) => {
+  // Keep these branches mutually exclusive so the startup lifecycle remains
+  // starting -> ready, failed, or tooOld without changing the existing retry
+  // and update-required behavior.
   switch (startup.status) {
     case 'starting':
-      return (
-        <FullScreen>
-          <LoadingState />
-        </FullScreen>
-      );
+      return <StartupSplash />;
     case 'failed':
       return <StartupError onRetry={restart} />;
     case 'tooOld':
