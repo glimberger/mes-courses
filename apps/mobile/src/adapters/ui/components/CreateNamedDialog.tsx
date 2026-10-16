@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type Ref } from 'react';
 import { View, type HostInstance } from 'react-native';
-import { Dialog, Portal } from 'react-native-paper';
+import { Dialog, Portal, useTheme } from 'react-native-paper';
 
 import type { NameAlreadyUsed, NameError } from '../../../domain/name';
 import { validateName } from '../../../domain/name';
@@ -123,30 +123,39 @@ export const CreateNamedDialogForm = ({
   saving,
   onClose,
   onSubmit,
-}: CreateNamedDialogFormProps) => (
-  <Portal>
-    {/* Not closed while saving, so the outcome of the save is always shown. */}
-    <Dialog
-      visible
-      dismissable={!saving}
-      onDismiss={onClose}
-      overlayAccessibilityLabel="Fermer la boîte de dialogue"
-    >
-      {/* The title read as one header, and the target of the focus move. */}
-      <View ref={titleRef} accessible accessibilityRole="header">
-        <Dialog.Title>{title}</Dialog.Title>
-      </View>
-      <Dialog.Content>
-        <NameField value={name} onChangeText={onChangeName} error={error} />
-      </Dialog.Content>
-      <Dialog.Actions>
-        <Button disabled={saving} onPress={onClose}>
-          Annuler
-        </Button>
-        <Button disabled={saving} onPress={onSubmit}>
-          Créer
-        </Button>
-      </Dialog.Actions>
-    </Dialog>
-  </Portal>
-);
+}: CreateNamedDialogFormProps) => {
+  const { colors } = useTheme();
+  return (
+    <Portal>
+      {/* Not closed while saving, so the outcome of the save is always shown. */}
+      <Dialog
+        visible
+        dismissable={!saving}
+        onDismiss={onClose}
+        overlayAccessibilityLabel="Fermer la boîte de dialogue"
+      >
+        {/* The title read as one header, and the target of the focus move. */}
+        <View ref={titleRef} accessible accessibilityRole="header">
+          <Dialog.Title>{title}</Dialog.Title>
+        </View>
+        <Dialog.Content>
+          <NameField value={name} onChangeText={onChangeName} error={error} />
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button disabled={saving} onPress={onClose}>
+            Annuler
+          </Button>
+          <Button
+            disabled={saving}
+            mode="contained-tonal"
+            buttonColor={colors.primaryContainer}
+            textColor={colors.onPrimaryContainer}
+            onPress={onSubmit}
+          >
+            Créer
+          </Button>
+        </Dialog.Actions>
+      </Dialog>
+    </Portal>
+  );
+};

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useTheme } from 'react-native-paper';
 
 import { Button } from '../components/Button';
 import { PasswordField } from '../components/PasswordField';
@@ -128,49 +129,58 @@ export const ChangePasswordDialogForm = ({
   saving,
   onClose,
   onSubmit,
-}: ChangePasswordDialogFormProps) => (
-  <DeviceDialog
-    title="Changer de mot de passe"
-    onClose={onClose}
-    dismissable={!saving}
-    actions={
-      <>
-        <Button disabled={saving} onPress={onClose}>
-          Annuler
-        </Button>
-        <Button disabled={saving} onPress={onSubmit}>
-          Enregistrer
-        </Button>
-      </>
-    }
-  >
-    <View style={styles.body}>
-      <PasswordField
-        label="Mot de passe actuel"
-        value={current}
-        onChangeText={onChangeCurrent}
-        error={errors.current}
-        disabled={saving}
-      />
-      <PasswordField
-        label="Nouveau mot de passe"
-        kind="new"
-        value={next}
-        onChangeText={onChangeNext}
-        error={errors.next}
-        disabled={saving}
-      />
-      <PasswordField
-        label="Confirmer le mot de passe"
-        kind="new"
-        value={confirmation}
-        onChangeText={onChangeConfirmation}
-        error={errors.confirmation}
-        disabled={saving}
-      />
-    </View>
-  </DeviceDialog>
-);
+}: ChangePasswordDialogFormProps) => {
+  const { colors } = useTheme();
+  return (
+    <DeviceDialog
+      title="Changer de mot de passe"
+      onClose={onClose}
+      dismissable={!saving}
+      actions={
+        <>
+          <Button disabled={saving} onPress={onClose}>
+            Annuler
+          </Button>
+          <Button
+            disabled={saving}
+            mode="contained-tonal"
+            buttonColor={colors.primaryContainer}
+            textColor={colors.onPrimaryContainer}
+            onPress={onSubmit}
+          >
+            Enregistrer
+          </Button>
+        </>
+      }
+    >
+      <View style={styles.body}>
+        <PasswordField
+          label="Mot de passe actuel"
+          value={current}
+          onChangeText={onChangeCurrent}
+          error={errors.current}
+          disabled={saving}
+        />
+        <PasswordField
+          label="Nouveau mot de passe"
+          kind="new"
+          value={next}
+          onChangeText={onChangeNext}
+          error={errors.next}
+          disabled={saving}
+        />
+        <PasswordField
+          label="Confirmer le mot de passe"
+          kind="new"
+          value={confirmation}
+          onChangeText={onChangeConfirmation}
+          error={errors.confirmation}
+          disabled={saving}
+        />
+      </View>
+    </DeviceDialog>
+  );
+};
 
 const styles = StyleSheet.create({
   body: { gap: spacing.sm },

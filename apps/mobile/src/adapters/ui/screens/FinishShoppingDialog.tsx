@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { View, type HostInstance } from 'react-native';
-import { Dialog, Portal, Text } from 'react-native-paper';
+import { StyleSheet, View, type HostInstance } from 'react-native';
+import { Dialog, Portal, Text, useTheme } from 'react-native-paper';
 
 import { focusOn } from '../accessibility/focus';
 import { Button } from '../components/Button';
+import { IconCircle } from '../components/IconCircle';
+import type { AppTheme } from '../theme/theme';
+import { spacing } from '../theme/spacing';
 
 export type FinishShoppingDialogProps = {
   visible: boolean;
@@ -21,6 +24,7 @@ export const FinishShoppingDialog = ({
   onConfirm,
 }: FinishShoppingDialogProps) => {
   const titleRef = useRef<HostInstance>(null);
+  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   useEffect(() => {
     if (visible) focusOn(titleRef);
   }, [visible]);
@@ -36,16 +40,33 @@ export const FinishShoppingDialog = ({
         <View ref={titleRef} accessible accessibilityRole="header">
           <Dialog.Title>Terminer les courses ?</Dialog.Title>
         </View>
-        <Dialog.Content>
+        <Dialog.Content style={styles.content}>
+          <IconCircle
+            icon="check"
+            size={32}
+            color={colors.primary}
+            backgroundColor={colors.surfaceContainerHigh}
+          />
           <Text variant="bodyMedium">
             Tous les articles seront décochés et resteront dans la liste.
           </Text>
         </Dialog.Content>
         <Dialog.Actions>
           <Button onPress={onCancel}>Annuler</Button>
-          <Button onPress={onConfirm}>Terminer</Button>
+          <Button
+            mode="contained-tonal"
+            buttonColor={colors.primaryContainer}
+            textColor={colors.onPrimaryContainer}
+            onPress={onConfirm}
+          >
+            Terminer
+          </Button>
         </Dialog.Actions>
       </Dialog>
     </Portal>
   );
 };
+
+const styles = StyleSheet.create({
+  content: { gap: spacing.sm, alignItems: 'center' },
+});

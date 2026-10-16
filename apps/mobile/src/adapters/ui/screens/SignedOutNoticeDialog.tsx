@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { Text } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
 
 import type { SignedOutReason } from '../../../application/use-cases/synchronize';
 import { Button } from '../components/Button';
@@ -43,13 +43,23 @@ export const SignedOutNoticeDialog = ({
   onAcknowledge,
 }: SignedOutNoticeDialogProps) => {
   const { title, body } = TEXT[reason];
+  const { colors } = useTheme();
   const lost = lostChangesText(pendingCount);
   return (
     <DeviceDialog
       title={title}
       onClose={onAcknowledge}
       dismissable={false}
-      actions={<Button onPress={onAcknowledge}>Compris</Button>}
+      actions={
+        <Button
+          mode="contained-tonal"
+          buttonColor={colors.primaryContainer}
+          textColor={colors.onPrimaryContainer}
+          onPress={onAcknowledge}
+        >
+          Compris
+        </Button>
+      }
     >
       <View style={styles.body}>
         <Text variant="bodyMedium">{body}</Text>

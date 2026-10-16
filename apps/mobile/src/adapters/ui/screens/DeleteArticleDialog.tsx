@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { View, type HostInstance } from 'react-native';
-import { Dialog, Portal, Text } from 'react-native-paper';
+import { StyleSheet, View, type HostInstance } from 'react-native';
+import { Dialog, Portal, Text, useTheme } from 'react-native-paper';
 
 import type { ArticleUsage } from '../../../domain/article';
 import { focusOn } from '../accessibility/focus';
 import { Button } from '../components/Button';
+import { IconCircle } from '../components/IconCircle';
+import { spacing } from '../theme/spacing';
 import { joinFrench } from '../components/join-french';
 import { useAppStore } from '../state/use-app-store';
 
@@ -32,6 +34,7 @@ export const DeleteArticleDialog = ({
   onClose,
 }: DeleteArticleDialogProps) => {
   const deleteArticle = useAppStore((state) => state.deleteArticle);
+  const { colors } = useTheme();
   const titleRef = useRef<HostInstance>(null);
   // A second tap on "Supprimer" must not delete, or close, twice.
   const deleting = useRef(false);
@@ -65,14 +68,26 @@ export const DeleteArticleDialog = ({
         <View ref={titleRef} accessible accessibilityRole="header">
           <Dialog.Title>{`Supprimer « ${usage.article.name} » ?`}</Dialog.Title>
         </View>
-        <Dialog.Content>
+        <Dialog.Content style={styles.content}>
+          <IconCircle
+            icon="delete-outline"
+            size={32}
+            color={colors.onErrorContainer}
+            backgroundColor={colors.errorContainer}
+          />
           <Text variant="bodyMedium">{consequence(usage.lists)}</Text>
         </Dialog.Content>
         <Dialog.Actions>
           <Button onPress={onClose}>Annuler</Button>
-          <Button onPress={() => void confirm()}>Supprimer</Button>
+          <Button textColor={colors.error} onPress={() => void confirm()}>
+            Supprimer
+          </Button>
         </Dialog.Actions>
       </Dialog>
     </Portal>
   );
 };
+
+const styles = StyleSheet.create({
+  content: { gap: spacing.sm, alignItems: 'center' },
+});

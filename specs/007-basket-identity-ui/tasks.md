@@ -363,35 +363,35 @@ typeface titles, brand styling for non-destructive and error styling for destruc
 
 ### Implementation for User Story 7
 
-- [ ] T048 [US7] Restyle dialog titles, content and actions in all dialog screens:
+- [x] T048 [US7] Restyle dialog titles, content and actions in all dialog screens:
   `QuantityDialog.tsx`, `FinishShoppingDialog.tsx`, `DeleteArticleDialog.tsx`,
   `CreateListDialog.tsx`, `CreateCategoryDialog.tsx`, `ChangePasswordDialog.tsx`,
   `DeleteMyAccountDialog.tsx`, `InviteAccountDialog.tsx`, `ForgotPasswordDialog.tsx`,
   `SignOutDialog.tsx` and `SignedOutNoticeDialog.tsx`. Keep Paper's roundness at 4 (28 dp corners),
   use Nunito titles and `spacing` margins.
-- [ ] T048a [US7] Extend the dialog restyle to the account and device dialogs that also render `Dialog`: `AccountActionDialogs.tsx`, `DeleteAccountDialog.tsx`, `DeviceDialog.tsx`, `RenameDeviceDialog.tsx`, `ResendCredentialsDialog.tsx`, `RevokeDeviceDialog.tsx` and `SuspendAccountDialog.tsx`. Keep Paper's 28 dp corners, Nunito titles, and apply brand-yellow styling for non-destructive confirmations and the error family for destructive ones, preserving French copy and testIDs.
+- [x] T048a [US7] Extend the dialog restyle to the account and device dialogs that also render `Dialog`: `AccountActionDialogs.tsx`, `DeleteAccountDialog.tsx`, `DeviceDialog.tsx`, `RenameDeviceDialog.tsx`, `ResendCredentialsDialog.tsx`, `RevokeDeviceDialog.tsx` and `SuspendAccountDialog.tsx`. Keep Paper's 28 dp corners, Nunito titles, and apply brand-yellow styling for non-destructive confirmations and the error family for destructive ones, preserving French copy and testIDs.
 
-- [ ] T049 [US7] `QuantityDialog.tsx`: rounded `shape.lg` fields, and make the tertiary action
+- [x] T049 [US7] `QuantityDialog.tsx`: rounded `shape.lg` fields, and make the tertiary action
   visually secondary (outlined/text mode in `primary`).
-- [ ] T050 [US7] `FinishShoppingDialog.tsx`: render the confirmation in a brand-toned circular
+- [x] T050 [US7] `FinishShoppingDialog.tsx`: render the confirmation in a brand-toned circular
   icon (`primaryContainer` glyph on a soft `primaryContainer`-soft circle).
-- [ ] T051 [US7] `DeleteArticleDialog.tsx`: render its icon and confirm button in the error family
+- [x] T051 [US7] `DeleteArticleDialog.tsx`: render its icon and confirm button in the error family
   (never brand yellow), with the existing destructive copy and caution semantics.
-- [ ] T052 [US7] `CreateListDialog.tsx` and `CreateCategoryDialog.tsx`: make the create action
+- [x] T052 [US7] `CreateListDialog.tsx` and `CreateCategoryDialog.tsx`: make the create action
   contained-tonal so it paints brand yellow with dark text.
-- [ ] T053 [P] [US7] Update the dialog stories for the refreshed styling:
+- [x] T053 [P] [US7] Update the dialog stories for the refreshed styling:
   `QuantityDialog.stories.tsx`, `FinishShoppingDialog.stories.tsx`, `CreateListDialog.stories.tsx`,
   `CreateCategoryDialog.stories.tsx`, `ChangePasswordDialog.stories.tsx`,
   `DeleteArticleDialog.stories.tsx`, `DeleteMyAccountDialog.stories.tsx`, `InviteAccountDialog.stories.tsx`,
   `ForgotPasswordDialog.stories.tsx`, `SignOutDialog.stories.tsx` and
   `SignedOutNoticeDialog.stories.tsx` (corners are Paper's, no explicit radius).
-- [ ] T053a [P] [US7] Add/refresh stories for the dialogs newly covered by T048a: `AccountActionDialogs`, `DeleteAccountDialog`, `DeviceDialog`, `RenameDeviceDialog`, `ResendCredentialsDialog`, `RevokeDeviceDialog` and `SuspendAccountDialog`, in light and dark, keeping story IDs aligned with `required-stories.ts`.
+- [x] T053a [P] [US7] Add/refresh stories for the dialogs newly covered by T048a: `AccountActionDialogs`, `DeleteAccountDialog`, `DeviceDialog`, `RenameDeviceDialog`, `ResendCredentialsDialog`, `RevokeDeviceDialog` and `SuspendAccountDialog`, in light and dark, keeping story IDs aligned with `required-stories.ts`.
 
-- [ ] T054 [US7] Update the dialog tests (`quantity-dialog.test.tsx`, `finish-shopping-dialog.test.tsx`,
+- [x] T054 [US7] Update the dialog tests (`quantity-dialog.test.tsx`, `finish-shopping-dialog.test.tsx`,
   `create-list-dialog.test.tsx`, `create-category-dialog.test.tsx`, `delete-article-dialog.test.tsx`,
   `change-password` test if present) to assert the new treatment; keep French copy and testIDs.
 
-- [ ] T054a [US7] Add or update tests for the same dialogs, asserting corner/title treatment, brand vs destructive coloring, and unchanged French copy/testIDs.
+- [x] T054a [US7] Add or update tests for the same dialogs, asserting corner/title treatment, brand vs destructive coloring, and unchanged French copy/testIDs.
 
 **Checkpoint**: User Story 7 tests pass and the dialog stories render in light and dark.
 

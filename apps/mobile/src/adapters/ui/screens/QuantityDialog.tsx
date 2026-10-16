@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type Ref } from 'react';
 import { StyleSheet, View, type HostInstance } from 'react-native';
-import { Dialog, Portal, Text } from 'react-native-paper';
+import { Dialog, Portal, Text, useTheme } from 'react-native-paper';
 
 import type { ArticleId } from '../../../domain/article';
 import {
@@ -181,49 +181,58 @@ export const QuantityDialogForm = ({
   onClose,
   onClear,
   onSubmit,
-}: QuantityDialogFormProps) => (
-  <Portal>
-    {/* Not closed while saving, so the outcome of the save is always shown. */}
-    <Dialog
-      visible
-      dismissable={!saving}
-      onDismiss={onClose}
-      overlayAccessibilityLabel="Fermer la boîte de dialogue"
-    >
-      {/* The title read as one header, and the target of the focus move. */}
-      <View ref={titleRef} accessible accessibilityRole="header">
-        <Dialog.Title>{name}</Dialog.Title>
-      </View>
-      <Dialog.Content style={styles.content}>
-        {mode === 'alreadyOnList' && (
-          <Text variant="bodyMedium">
-            {`« ${name} » est déjà dans la liste.`}
-          </Text>
-        )}
-        <QuantityFields
-          amount={amount}
-          unit={unit}
-          onChangeAmount={onChangeAmount}
-          onChangeUnit={onChangeUnit}
-          error={error}
-        />
-      </Dialog.Content>
-      <Dialog.Actions>
-        <Button disabled={saving} onPress={onClose}>
-          {mode === 'alreadyOnList' ? 'Fermer' : 'Annuler'}
-        </Button>
-        {mode === 'edit' && (
-          <Button disabled={saving} onPress={onClear}>
-            Effacer la quantité
+}: QuantityDialogFormProps) => {
+  const { colors } = useTheme();
+  return (
+    <Portal>
+      {/* Not closed while saving, so the outcome of the save is always shown. */}
+      <Dialog
+        visible
+        dismissable={!saving}
+        onDismiss={onClose}
+        overlayAccessibilityLabel="Fermer la boîte de dialogue"
+      >
+        {/* The title read as one header, and the target of the focus move. */}
+        <View ref={titleRef} accessible accessibilityRole="header">
+          <Dialog.Title>{name}</Dialog.Title>
+        </View>
+        <Dialog.Content style={styles.content}>
+          {mode === 'alreadyOnList' && (
+            <Text variant="bodyMedium">
+              {`« ${name} » est déjà dans la liste.`}
+            </Text>
+          )}
+          <QuantityFields
+            amount={amount}
+            unit={unit}
+            onChangeAmount={onChangeAmount}
+            onChangeUnit={onChangeUnit}
+            error={error}
+          />
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button disabled={saving} onPress={onClose}>
+            {mode === 'alreadyOnList' ? 'Fermer' : 'Annuler'}
           </Button>
-        )}
-        <Button disabled={saving} onPress={onSubmit}>
-          {SUBMIT_LABEL[mode]}
-        </Button>
-      </Dialog.Actions>
-    </Dialog>
-  </Portal>
-);
+          {mode === 'edit' && (
+            <Button disabled={saving} onPress={onClear}>
+              Effacer la quantité
+            </Button>
+          )}
+          <Button
+            disabled={saving}
+            mode="contained-tonal"
+            buttonColor={colors.primaryContainer}
+            textColor={colors.onPrimaryContainer}
+            onPress={onSubmit}
+          >
+            {SUBMIT_LABEL[mode]}
+          </Button>
+        </Dialog.Actions>
+      </Dialog>
+    </Portal>
+  );
+};
 
 const SUBMIT_LABEL: Record<QuantityRequest['mode'], string> = {
   add: 'Ajouter',

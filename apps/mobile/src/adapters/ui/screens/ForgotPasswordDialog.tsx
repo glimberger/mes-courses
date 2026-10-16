@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { HelperText, Text, TextInput } from 'react-native-paper';
+import { HelperText, Text, TextInput, useTheme } from 'react-native-paper';
 
 import { useAnnouncement } from '../accessibility/announce';
 import { Button } from '../components/Button';
@@ -111,6 +111,7 @@ export const ForgotPasswordDialogForm = ({
   onClose,
   onSubmit,
 }: ForgotPasswordDialogFormProps) => {
+  const { colors } = useTheme();
   useAnnouncement(sent ? SENT_TEXT : error);
   return (
     <DeviceDialog
@@ -125,7 +126,13 @@ export const ForgotPasswordDialogForm = ({
             <Button disabled={sending} onPress={onClose}>
               Annuler
             </Button>
-            <Button disabled={sending} onPress={onSubmit}>
+            <Button
+              disabled={sending}
+              mode="contained-tonal"
+              buttonColor={colors.primaryContainer}
+              textColor={colors.onPrimaryContainer}
+              onPress={onSubmit}
+            >
               Envoyer
             </Button>
           </>

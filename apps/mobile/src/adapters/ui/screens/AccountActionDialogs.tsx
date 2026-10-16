@@ -71,7 +71,13 @@ export const AccountActionDialogForm = ({
           </Button>
           <Button
             disabled={busy}
-            {...(destructive && { textColor: colors.error })}
+            {...(destructive
+              ? { textColor: colors.error }
+              : {
+                  mode: 'contained-tonal',
+                  buttonColor: colors.primaryContainer,
+                  textColor: colors.onPrimaryContainer,
+                })}
             onPress={onConfirm}
           >
             {confirm}
