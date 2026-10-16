@@ -104,7 +104,11 @@ export const ListItemRow = memo(function ListItemRow({
         <View style={styles.content}>
           <View
             importantForAccessibility="no-hide-descendants"
-            style={styles.checkbox}
+            style={[
+              styles.checkbox,
+              styles.checkboxBorder,
+              { borderColor: colors.onSurface },
+            ]}
           >
             <Checkbox.Android
               status={inCart ? 'checked' : 'unchecked'}
@@ -177,6 +181,7 @@ const styles = StyleSheet.create({
   },
   // The row takes the tap; the box only shows the state.
   checkbox: { pointerEvents: 'none' },
+  checkboxBorder: { borderWidth: 1.5, borderRadius: 2 },
   name: { flex: 1 },
   ticked: { textDecorationLine: 'line-through' },
   actions: { flexDirection: 'row' },
