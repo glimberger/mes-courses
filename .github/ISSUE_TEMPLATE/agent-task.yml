@@ -1,0 +1,50 @@
+name: Agent Task
+description: Tâche pour un agent autonome
+title: '[Agent] '
+labels: ['agent-ready']
+body:
+  - type: input
+    id: context
+    attributes:
+      label: Contexte
+      description: Contexte de la tâche, spec de référence, ADR lié
+      placeholder: 'Ex: specs/006-splash-screen, ADR-0003'
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Objectif
+      description: Que doit accomplir l'agent ?
+      placeholder: "Description claire et concise de l'objectif"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critères d'acceptation
+      description: Comment vérifier que la tâche est terminée ?
+      placeholder: "- [ ] Critère 1\n- [ ] Critère 2"
+    validations:
+      required: true
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Complexité
+      description: Estimation de la complexité
+      options:
+        - 'S (< 30min)'
+        - 'M (~1h)'
+        - 'L (demi-journée)'
+        - 'XL (jour+)'
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options:
+        - 'improvement'
+        - 'fix'
+    validations:
+      required: true
