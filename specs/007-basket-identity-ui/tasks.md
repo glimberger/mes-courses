@@ -514,30 +514,30 @@ transition.
 **Purpose**: Validate the complete refresh, quality gates and review artifacts (SC-003, SC-005,
 SC-006, SC-009).
 
-- [ ] T070 [P] Run the fast suite against the changed components and screens:
+- [x] T070 [P] Run the fast suite against the changed components and screens:
   `yarn workspace @mes-courses/mobile test` (must be fully green) and fix only defects in the
   feature paths.
-- [ ] T071 [P] Run `yarn workspace @mes-courses/mobile typecheck` and `yarn lint` against the
+- [x] T071 [P] Run `yarn workspace @mes-courses/mobile typecheck` and `yarn lint` against the
   changed files; confirm the screen layout rule, `no-color-literals` and `no-inline-styles` remain
   satisfied despite the new card styling.
-- [ ] T072 [P] Run `yarn format:check` and `yarn test:architecture`; resolve only formatting or
+- [x] T072 [P] Run `yarn format:check` and `yarn test:architecture`; resolve only formatting or
   dependency-cruiser findings from this change.
-- [ ] T073 Verify `usedColorPairs` against `theme.test.ts` in both light and dark; add any missing
+- [x] T073 Verify `usedColorPairs` against `theme.test.ts` in both light and dark; add any missing
   pair discovered by review; ensure no threshold is relaxed (FR-017, SC-003).
-- [ ] T074 Verify `required-stories` in
+- [x] T074 Verify `required-stories` in
   `apps/mobile/src/adapters/ui/required-stories.ts` still matches Storybook stories after the
   refresh; add updates only if a new required story id was introduced. Run `stories.test.tsx`.
-- [ ] T075 Re-run the Storybook rendering test and the required-story test across all stories in
+- [x] T075 Re-run the Storybook rendering test and the required-story test across all stories in
   light and dark; fix any console error/warning before merge (SC-009).
-- [ ] T076 Re-run the theme and shape tests (`theme.test.ts` plus the shape test) and the
+- [x] T076 Re-run the theme and shape tests (`theme.test.ts` plus the shape test) and the
   contrast suite; keep the brand yellow (`#FFDE3F`) marked as unchanged between appearances.
-- [ ] T077 Review `quickstart.md` paths/commands against the final implementation; update asset,
+- [x] T077 Review `quickstart.md` paths/commands against the final implementation; update asset,
   story and test references where a path changed, keeping the manual visual/accessibility/native
   checks executable (SC-001..SC-009).
 - [ ] T078 Produce the PR review artifacts: screenshots of every refreshed shared component and
   screen, in both appearances, through the project's Storybook flow; attach them to the PR body
   for SC-009. Run the `gl-pr-screenshots` flow if available.
-- [ ] T079 Note the milestone in the daily journal at
+- [x] T079 Note the milestone in the daily journal at
   `~/WORKSPACE/VAULT/1_JOURNAL/...` (one French line in the `## 🗒️ Notes` section under the
   `#### mes-courses` heading) mentioning the basket-identity UI refresh, per `AGENTS.md`. Do not
   ask first; just mention it in the delivery reply.
