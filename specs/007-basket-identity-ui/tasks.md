@@ -461,17 +461,17 @@ clipping, 48 dp touch targets and unchanged labels/identifiers across the refres
 
 ### Implementation for User Story 10
 
-- [ ] T062 [US10] Audit all refreshed components (`ListItemRow`, `ArticleRow`, `ListSummaryRow`,
+- [x] T062 [US10] Audit all refreshed components (`ListItemRow`, `ArticleRow`, `ListSummaryRow`,
   `SearchField`, `NameField`, `QuantityFields`, `Button`, `ScreenFab`, `EmptyState`, `ErrorState`,
   `SettingsRow`, `CategoryHeader`) for `minHeight: 48` / 48 dp touch targets and for text that
   wraps rather than clips; update style tokens where a target falls below 48 dp.
-- [ ] T063 [US10] Confirm every screen at 200% font scale either wraps or scrolls (no `numberOfLines`
+- [x] T063 [US10] Confirm every screen at 200% font scale either wraps or scrolls (no `numberOfLines`
   that clips a required label except where the existing contract allowed and the affected value is
   reviewed); add a test utility or story for the `LongName` case where needed.
-- [ ] T064 [P] [US10] Add 200%-scale Storybook stories for `Components/ListItemRow/LongName`,
+- [x] T064 [P] [US10] Add 200%-scale Storybook stories for `Components/ListItemRow/LongName`,
   `Components/ArticleRow/Default` and the `Screens/CurrentList/Success` screen, and assert no
   console warning/error under `stories.test.tsx`.
-- [ ] T065 [US10] Update accessibility tests (`accessibility.test.tsx`, the screen tests and
+- [x] T065 [US10] Update accessibility tests (`accessibility.test.tsx`, the screen tests and
   `screen-state.test.tsx`) to keep passing after the visual changes; ensure testID and accessible
   label values remain byte-identical.
 
