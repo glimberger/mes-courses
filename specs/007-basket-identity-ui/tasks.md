@@ -254,14 +254,14 @@ creating the first list.
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Update `ListSummaryRow.tsx` and its wrapping in `ListsScreen.tsx` so the row is a
+- [x] T031 [US3] Update `ListSummaryRow.tsx` and its wrapping in `ListsScreen.tsx` so the row is a
   rounded card with elevation 1 (from T017), and the current-list badge uses the brand yellow/
   dark text treatment (not the former `primary` link color).
-- [ ] T032 [US3] Confirm `ListsScreen.tsx` keeps its empty state (friendly message + "Nouvelle
+- [x] T032 [US3] Confirm `ListsScreen.tsx` keeps its empty state (friendly message + "Nouvelle
   liste" action via the FAB) and wraps inside `ScreenStateView`; no empty-state duplication.
-- [ ] T033 [P] [US3] Update `ListsScreen.stories.tsx` (`Loading`, `Error`, `Success`) with a
+- [x] T033 [P] [US3] Update `ListsScreen.stories.tsx` (`Loading`, `Error`, `Success`) with a
   multi-list current/non-current case, a one-list case, and an empty-lists case; keep story ids.
-- [ ] T034 [US3] Update `lists-screen.test.tsx` for the current-list badge color/label, card
+- [x] T034 [US3] Update `lists-screen.test.tsx` for the current-list badge color/label, card
   shape and the empty-list action; keep accessible labels and identifiers unchanged.
 
 **Checkpoint**: User Story 3 passes its screen test and its stories render in light and dark.
@@ -279,16 +279,16 @@ action; verify the stadium search field with the brand typeface.
 
 ### Implementation for User Story 4
 
-- [ ] T035 [US4] Finalize `ArticleRow.tsx` so the on-list chip is green tertiary (from T012), is
+- [x] T035 [US4] Finalize `ArticleRow.tsx` so the on-list chip is green tertiary (from T012), is
   `accessibilityElementsHidden` and is part of the row's accessible label; candidates not on the
   list keep the existing add affordance.
-- [ ] T036 [US4] Make `SearchField.tsx`'s default `style` a rounded stadium on `surfaceContainer`
+- [x] T036 [US4] Make `SearchField.tsx`'s default `style` a rounded stadium on `surfaceContainer`
   (shape.pill, Nunito) so screens do not pass styling; update `AddArticlesScreen.tsx` to drop any
   search-field style override and rely on the shared default.
-- [ ] T037 [P] [US4] Update `AddArticlesScreen.stories.tsx` (`Loading`, `Error`, `NoQuery`,
+- [x] T037 [P] [US4] Update `AddArticlesScreen.stories.tsx` (`Loading`, `Error`, `NoQuery`,
   `SearchMatches`, `SearchNoMatch`) to include at least one already-on-list candidate in the
   matches story and a scrolled/wrapped case.
-- [ ] T038 [US4] Update `add-articles-screen.test.tsx` for the green chip, missing add action,
+- [x] T038 [US4] Update `add-articles-screen.test.tsx` for the green chip, missing add action,
   add action for new candidates and stadium search field rendering.
 
 **Checkpoint**: User Story 4 tests pass and its stories render in light and dark.

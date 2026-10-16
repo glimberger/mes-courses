@@ -78,7 +78,12 @@ export const ListSummaryRow = memo(function ListSummaryRow({
 });
 
 const styles = StyleSheet.create({
-  row: { minHeight: 48, justifyContent: 'center', elevation: 1 },
+  row: {
+    minHeight: 48,
+    justifyContent: 'center',
+    elevation: 1,
+    marginBottom: spacing.sm,
+  },
   content: {
     flexDirection: 'row',
     alignItems: 'center',

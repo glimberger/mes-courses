@@ -27,3 +27,21 @@ export { LoadFailed as Error };
 export const Success: Story = {
   parameters: { scenario: { seed: fixture } },
 };
+
+/** A single list, shown as one card. */
+export const OneList: Story = {
+  parameters: {
+    scenario: {
+      seed: { ...fixture, lists: [fixture.lists[0]] },
+    },
+  },
+};
+
+/** No lists yet: the empty state leaves room and the FAB offers creating one. */
+export const Empty: Story = {
+  parameters: {
+    scenario: {
+      seed: { ...fixture, lists: [], items: [], currentListId: null },
+    },
+  },
+};
