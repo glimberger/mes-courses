@@ -8,6 +8,8 @@ import type { DeviceInfo } from '../../../application/use-cases/list-devices';
 import { BackAction } from '../components/BackAction';
 import { Button } from '../components/Button';
 import { ErrorState } from '../components/ErrorState';
+import { SettingsCard } from '../components/SettingsCard';
+import { SettingsRow } from '../components/SettingsRow';
 import { formatLastSync } from '../components/format-last-sync';
 import { LoadingState } from '../components/LoadingState';
 import { SyncStatusBar } from '../components/SyncStatusBar';
@@ -263,62 +265,69 @@ export const SettingsView = ({
     <SyncStatusBar />
     <ScrollView contentContainerStyle={styles.content}>
       {server === null ? (
-        <>
+        <SettingsCard>
           <Text variant="bodyLarge">
             Connectez-vous pour retrouver vos listes sur vos autres appareils.
           </Text>
           <Button mode="contained-tonal" onPress={onConnect}>
             Se connecter
           </Button>
-        </>
+        </SettingsCard>
       ) : (
         <>
           <List.Subheader accessibilityRole="header">Compte</List.Subheader>
-          <AccountSection
-            account={account}
-            onRetry={onRetryDevices}
-            onManageAccounts={onManageAccounts}
-            onChangePassword={onChangePassword}
-          />
+          <SettingsCard>
+            <AccountSection
+              account={account}
+              onRetry={onRetryDevices}
+              onManageAccounts={onManageAccounts}
+              onChangePassword={onChangePassword}
+            />
+          </SettingsCard>
 
           <List.Subheader accessibilityRole="header">Serveur</List.Subheader>
-          <List.Item
-            title={withoutScheme(server.url)}
-            description={() => (
-              <Text variant="bodyMedium">
-                Dernière synchronisation :{' '}
-                {formatLastSync(server.lastSyncAt, new Date())}
-              </Text>
-            )}
-          />
-          <Button
-            mode="outlined"
-            disabled={!server.canSyncNow}
-            onPress={onSyncNow}
-          >
-            Synchroniser maintenant
-          </Button>
+          <SettingsCard>
+            <SettingsRow
+              icon="server-network"
+              title={withoutScheme(server.url)}
+              subtitle={`Dernière synchronisation : ${formatLastSync(
+                server.lastSyncAt,
+                new Date(),
+              )}`}
+            />
+            <Button
+              mode="outlined"
+              disabled={!server.canSyncNow}
+              onPress={onSyncNow}
+            >
+              Synchroniser maintenant
+            </Button>
+          </SettingsCard>
 
           <List.Subheader accessibilityRole="header">Appareils</List.Subheader>
-          <DevicesSection
-            devices={devices}
-            onRetry={onRetryDevices}
-            onRename={onRenameDevice}
-            onRevoke={onRevokeDevice}
-          />
+          <SettingsCard>
+            <DevicesSection
+              devices={devices}
+              onRetry={onRetryDevices}
+              onRename={onRenameDevice}
+              onRevoke={onRevokeDevice}
+            />
+          </SettingsCard>
 
           <List.Subheader accessibilityRole="header">Actions</List.Subheader>
-          <Button mode="outlined" onPress={onSignOut}>
-            Se déconnecter de cet appareil
-          </Button>
-          <Button mode="outlined" onPress={onDeleteAccount}>
-            Supprimer mon compte
-          </Button>
-          {connectionNeeded && (
-            <Text variant="bodyMedium" style={styles.offline}>
-              {CONNECTION_NEEDED}
-            </Text>
-          )}
+          <SettingsCard>
+            <Button mode="outlined" onPress={onSignOut}>
+              Se déconnecter de cet appareil
+            </Button>
+            <Button mode="outlined" onPress={onDeleteAccount}>
+              Supprimer mon compte
+            </Button>
+            {connectionNeeded && (
+              <Text variant="bodyMedium" style={styles.offline}>
+                {CONNECTION_NEEDED}
+              </Text>
+            )}
+          </SettingsCard>
         </>
       )}
     </ScrollView>
@@ -367,9 +376,10 @@ const AccountSection = ({
     case 'success':
       return (
         <>
-          <List.Item
+          <SettingsRow
+            icon="account"
             title={account.email}
-            description={account.administrator ? 'Administrateur' : undefined}
+            subtitle={account.administrator ? 'Administrateur' : undefined}
           />
           <Button mode="outlined" onPress={onChangePassword}>
             Changer de mot de passe

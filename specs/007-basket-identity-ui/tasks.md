@@ -305,18 +305,18 @@ the top; verify the yellow button with dark text; verify account actions stay se
 
 ### Implementation for User Story 5
 
-- [ ] T039 [US5] Add the basket brand illustration and a "Mes Courses" title at the top of
+- [x] T039 [US5] Add the basket brand illustration and a "Mes Courses" title at the top of
   `SignInForm` in `SignInScreen.tsx`, using the existing basket artwork
   (`apps/mobile/assets/splash-screen.png` or a basket-on-cream image asset) and Nunito typography,
   with a fallback to the application name on a themed background if the image fails to render. Keep
   layout-only style keys in the screen.
-- [ ] T040 [US5] Ensure the `Se connecter` button is tonal brand yellow with dark text (through
+- [x] T040 [US5] Ensure the `Se connecter` button is tonal brand yellow with dark text (through
   T021) and that `Mot de passe oublié ?` / `Créer un compte`-style actions remain text mode with
   `primary` color and stay secondary. Keep the button's 48 dp target.
-- [ ] T041 [P] [US5] Update `SignInScreen.stories.tsx` (`Default`, `InvalidCredentials`,
+- [x] T041 [P] [US5] Update `SignInScreen.stories.tsx` (`Default`, `InvalidCredentials`,
   `TemporaryPasswordExpired`, `AccountSuspended`, `TooManyAttempts`, `ServerUnreachable`,
   `UntrustedServer`) to show the refreshed header and button in light and dark.
-- [ ] T042 [US5] Update `sign-in-screen.test.tsx` for the illustration presence/alt text, the app
+- [x] T042 [US5] Update `sign-in-screen.test.tsx` for the illustration presence/alt text, the app
   name and the brand-yellow button treatment, without changing accessibility labels or identifiers.
 
 **Checkpoint**: User Story 5 tests pass in both appearances.
@@ -333,19 +333,19 @@ row in a distinct rounded strip with a sync indicator, and leading brand-toned c
 
 ### Implementation for User Story 6
 
-- [ ] T043 [US6] Refactor `SettingsView` in `SettingsScreen.tsx` to wrap the account, server,
+- [x] T043 [US6] Refactor `SettingsView` in `SettingsScreen.tsx` to wrap the account, server,
   devices and actions sections into rounded `Surface` cards (`shape.lg`, elevation 1) using the
   shared `SettingsRow` component, while preserving every existing prop, label and testID.
-- [ ] T044 [US6] Style the sync status strip as a distinct rounded strip (`surfaceContainer`,
+- [x] T044 [US6] Style the sync status strip as a distinct rounded strip (`surfaceContainer`,
   `shape.md`) hosting `SyncStatusBar` and a stable sync indicator; keep the failed-sync recovery
   action working as before.
-- [ ] T045 [US6] Replace the leading `List.Item` icons with the circular brand-toned icon
+- [x] T045 [US6] Replace the leading `List.Item` icons with the circular brand-toned icon
   containers from `SettingsRow` (`primary` icon on a soft brand container) and preserve the
   account row text for screen readers.
-- [ ] T046 [P] [US6] Update `SettingsScreen.stories.tsx` (`Connected`, `SignedIn`,
+- [x] T046 [P] [US6] Update `SettingsScreen.stories.tsx` (`Connected`, `SignedIn`,
   `SignedInAdministrator`, `DevicesLoading/…`, `NotSignedIn`) for grouped cards, sync strip and
   dark appearance.
-- [ ] T047 [US6] Update `settings-screen.test.tsx`, `settings-account.test.tsx` and
+- [x] T047 [US6] Update `settings-screen.test.tsx`, `settings-account.test.tsx` and
   `settings-devices-screen.test.tsx` and `settings-own-account.test.tsx` for the new grouping
   without changing the accessibility tree or test identifiers.
 

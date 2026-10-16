@@ -15,7 +15,7 @@ import { spacing } from '../theme/spacing';
 export type SettingsRowProps = {
   icon: string;
   title: string;
-  subtitle?: string;
+  subtitle?: string | undefined;
   onPress?: () => void;
   trailing?: ReactNode;
 };

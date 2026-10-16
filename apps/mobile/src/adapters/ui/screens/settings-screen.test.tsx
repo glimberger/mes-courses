@@ -177,7 +177,13 @@ describe('Settings', () => {
 
       const line = await screen.findByText(/^Dernière synchronisation : /);
       expect(line).toBeOnTheScreen();
-      expect(line.props.children.join('')).not.toContain('Jamais');
+      const text =
+        typeof line.props.children === 'string'
+          ? line.props.children
+          : Array.isArray(line.props.children)
+            ? line.props.children.join('')
+            : String(line.props.children);
+      expect(text).not.toContain('Jamais');
     });
   });
 });
