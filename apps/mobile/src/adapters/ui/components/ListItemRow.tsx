@@ -14,6 +14,8 @@ import {
 } from 'react-native-paper';
 
 import type { Quantity } from '../../../domain/quantity';
+import type { AppTheme } from '../theme/theme';
+import { shape } from '../theme/shape';
 import { spacing } from '../theme/spacing';
 import { formatQuantity } from './format-quantity';
 import { paperRef } from './paper-ref';
@@ -63,7 +65,7 @@ export const ListItemRow = memo(function ListItemRow({
   onRemove,
   ref,
 }: ListItemRowProps) {
-  const { colors } = useTheme();
+  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   const textStyle = [
     { color: inCart ? colors.onSurfaceVariant : colors.onSurface },
     inCart && styles.ticked,
@@ -80,7 +82,15 @@ export const ListItemRow = memo(function ListItemRow({
   };
 
   return (
-    <View style={styles.row}>
+    <View
+      style={[
+        styles.row,
+        {
+          backgroundColor: colors.surfaceContainerLowest,
+          borderRadius: shape.lg,
+        },
+      ]}
+    >
       <TouchableRipple
         ref={paperRef(ref)}
         onPress={onToggle}
@@ -147,7 +157,7 @@ export const ListItemRow = memo(function ListItemRow({
 });
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', elevation: 1 },
   checkboxArea: { flex: 1, minHeight: 48, justifyContent: 'center' },
   content: {
     flexDirection: 'row',

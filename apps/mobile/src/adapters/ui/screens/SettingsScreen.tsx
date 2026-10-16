@@ -267,7 +267,7 @@ export const SettingsView = ({
           <Text variant="bodyLarge">
             Connectez-vous pour retrouver vos listes sur vos autres appareils.
           </Text>
-          <Button mode="contained" onPress={onConnect}>
+          <Button mode="contained-tonal" onPress={onConnect}>
             Se connecter
           </Button>
         </>

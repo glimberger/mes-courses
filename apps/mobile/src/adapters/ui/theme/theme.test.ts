@@ -109,6 +109,14 @@ describe.each(themes)(
   },
 );
 
+describe('Nunito typography', () => {
+  it('uses a bundled Nunito family for every Paper type role', () => {
+    for (const variant of Object.values(lightTheme.fonts)) {
+      expect(variant.fontFamily).toMatch(/^Nunito_/);
+    }
+  });
+});
+
 describe('spacing tokens', () => {
   it('go from xs = 4 to xl = 32', () => {
     expect(spacing).toEqual({ xs: 4, sm: 8, md: 16, lg: 24, xl: 32 });

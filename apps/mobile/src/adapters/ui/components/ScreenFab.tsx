@@ -8,6 +8,7 @@ import {
   useTheme,
 } from 'react-native-paper';
 
+import { shape } from '../theme/shape';
 import { spacing } from '../theme/spacing';
 import { paperRef } from './paper-ref';
 
@@ -72,9 +73,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     end: spacing.md,
     bottom: spacing.md,
-    borderRadius: spacing.md,
+    borderRadius: shape.lg,
   },
-  touchable: { borderRadius: spacing.md },
+  touchable: { borderRadius: shape.lg },
   content: {
     minHeight: FAB_HEIGHT,
     flexDirection: 'row',

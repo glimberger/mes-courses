@@ -5,7 +5,13 @@ import {
   type AccessibilityActionEvent,
   type HostInstance,
 } from 'react-native';
-import { Chip, Menu, Text, TouchableRipple } from 'react-native-paper';
+import {
+  Chip,
+  Menu,
+  Text,
+  TouchableRipple,
+  useTheme,
+} from 'react-native-paper';
 
 import { spacing } from '../theme/spacing';
 import { AppbarIconAction } from './AppbarIconAction';
@@ -42,6 +48,7 @@ export const ArticleRow = memo(function ArticleRow({
   ref,
 }: ArticleRowProps) {
   const [menuVisible, setMenuVisible] = useState(false);
+  const { colors } = useTheme();
   const actions = [
     ...(onEdit ? [{ name: EDIT, label: 'Modifier' }] : []),
     ...(onDelete ? [{ name: DELETE, label: 'Supprimer' }] : []),
@@ -76,7 +83,13 @@ export const ArticleRow = memo(function ArticleRow({
             accessibilityElementsHidden
             style={styles.chip}
           >
-            <Chip compact icon="check">
+            <Chip
+              compact
+              mode="flat"
+              icon="check"
+              style={{ backgroundColor: colors.tertiaryContainer }}
+              textStyle={{ color: colors.onTertiaryContainer }}
+            >
               Déjà dans la liste
             </Chip>
           </View>

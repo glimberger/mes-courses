@@ -1,5 +1,8 @@
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import { IconButton, Searchbar } from 'react-native-paper';
+import { IconButton, Searchbar, useTheme } from 'react-native-paper';
+
+import type { AppTheme } from '../theme/theme';
+import { shape } from '../theme/shape';
 
 export type SearchFieldProps = {
   /** Shown while the field is empty, and read by screen readers. */
@@ -18,30 +21,38 @@ export const SearchField = ({
   value,
   onChangeText,
   style,
-}: SearchFieldProps) => (
-  <Searchbar
-    placeholder={placeholder}
-    accessibilityLabel={placeholder}
-    searchAccessibilityLabel="Rechercher"
-    // Paper's own clear button, which Paper hides once `right` is set.
-    clearAccessibilityLabel="Effacer la recherche"
-    value={value}
-    onChangeText={onChangeText}
-    style={style}
-    right={({ color }) =>
-      value === '' ? null : (
-        <IconButton
-          icon="close"
-          iconColor={color}
-          accessibilityLabel="Effacer la recherche"
-          onPress={() => onChangeText('')}
-          style={styles.clear}
-        />
-      )
-    }
-  />
-);
+}: SearchFieldProps) => {
+  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
+  return (
+    <Searchbar
+      placeholder={placeholder}
+      accessibilityLabel={placeholder}
+      searchAccessibilityLabel="Rechercher"
+      // Paper's own clear button, which Paper hides once `right` is set.
+      clearAccessibilityLabel="Effacer la recherche"
+      value={value}
+      onChangeText={onChangeText}
+      style={[
+        styles.bar,
+        { borderRadius: shape.pill, backgroundColor: colors.surfaceContainer },
+        style,
+      ]}
+      right={({ color }) =>
+        value === '' ? null : (
+          <IconButton
+            icon="close"
+            iconColor={color}
+            accessibilityLabel="Effacer la recherche"
+            onPress={() => onChangeText('')}
+            style={styles.clear}
+          />
+        )
+      }
+    />
+  );
+};
 
 const styles = StyleSheet.create({
+  bar: {},
   clear: { width: 48, height: 48, margin: 0 },
 });

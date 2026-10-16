@@ -264,7 +264,7 @@ export const CreateArticleForm = ({
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
-          mode="contained"
+          mode="contained-tonal"
           disabled={saving}
           onPress={onSubmit}
           style={styles.submit}

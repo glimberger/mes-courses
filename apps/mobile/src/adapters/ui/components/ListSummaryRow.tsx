@@ -2,6 +2,8 @@ import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Icon, Text, TouchableRipple, useTheme } from 'react-native-paper';
 
+import type { AppTheme } from '../theme/theme';
+import { shape } from '../theme/shape';
 import { spacing } from '../theme/spacing';
 
 /** "4 articles", "1 article", "0 articles" (US3-8). */
@@ -27,14 +29,20 @@ export const ListSummaryRow = memo(function ListSummaryRow({
   isCurrent,
   onPress,
 }: ListSummaryRowProps) {
-  const { colors } = useTheme();
+  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   const count = countText(itemCount);
   return (
     <TouchableRipple
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${name}, ${count}${isCurrent ? ', liste actuelle' : ''}`}
-      style={styles.row}
+      style={[
+        styles.row,
+        {
+          backgroundColor: colors.surfaceContainerLowest,
+          borderRadius: shape.lg,
+        },
+      ]}
     >
       <View style={styles.content}>
         <View style={styles.text}>
@@ -44,9 +52,22 @@ export const ListSummaryRow = memo(function ListSummaryRow({
           </Text>
         </View>
         {isCurrent && (
-          <View style={styles.current}>
-            <Icon source="check" size={20} color={colors.primary} />
-            <Text variant="labelLarge" style={{ color: colors.primary }}>
+          <View
+            style={[
+              styles.current,
+              {
+                backgroundColor: colors.primaryContainer,
+                borderRadius: shape.pill,
+                paddingHorizontal: spacing.sm,
+                paddingVertical: spacing.xs,
+              },
+            ]}
+          >
+            <Icon source="check" size={20} color={colors.onPrimaryContainer} />
+            <Text
+              variant="labelLarge"
+              style={{ color: colors.onPrimaryContainer }}
+            >
               Liste actuelle
             </Text>
           </View>
@@ -57,7 +78,7 @@ export const ListSummaryRow = memo(function ListSummaryRow({
 });
 
 const styles = StyleSheet.create({
-  row: { minHeight: 48, justifyContent: 'center' },
+  row: { minHeight: 48, justifyContent: 'center', elevation: 1 },
   content: {
     flexDirection: 'row',
     alignItems: 'center',

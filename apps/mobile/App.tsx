@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import * as Font from 'expo-font';
 import {
   initialWindowMetrics,
   SafeAreaProvider,
@@ -42,6 +43,17 @@ type Startup =
  * again), and the next start waits for that close, so one connection at a time holds the file.
  */
 export default function App() {
+  // Bundle Nunito for the brand typeface; load lazily so the startup splash
+  // and the starting/ready/failed/tooOld lifecycle keep their existing gate.
+  useEffect(() => {
+    Font.loadAsync({
+      Nunito_400Regular: require('./assets/fonts/Nunito_400Regular.ttf'),
+      Nunito_600SemiBold: require('./assets/fonts/Nunito_600SemiBold.ttf'),
+      Nunito_700Bold: require('./assets/fonts/Nunito_700Bold.ttf'),
+      Nunito_800ExtraBold: require('./assets/fonts/Nunito_800ExtraBold.ttf'),
+    }).catch(() => undefined);
+  }, []);
+
   // Built first, so a failure at startup can be reported.
   const [reporter] = useState(
     () => new ScreenTrackingReporter(createErrorReporter()),
