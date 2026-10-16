@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="right">
+      <span class="material-symbols-rounded">signal_cellular_alt</span>
+      <span class="material-symbols-rounded">wifi</span>
+      <span class="material-symbols-rounded">battery_full</span>
+    </span>
+  </div>
+
+  <div style="display:flex;justify-content:center;padding:6px 0 2px">
+    <img src="assets/splash-screen.png"
+         style="width:215px;height:215px;object-fit:cover;object-position:center 28%;border-radius:40px;box-shadow:0 10px 28px rgba(58,48,0,.14)" alt="">
+  </div>
+
+  <div style="padding:14px 24px 0;display:flex;flex-direction:column;gap:15px">
+    <fieldset class="field">
+      <legend>Adresse du serveur</legend>
+      <input value="">
+    </fieldset>
+    <fieldset class="field">
+      <legend>Adresse e-mail</legend>
+      <input value="">
+    </fieldset>
+    <fieldset class="field">
+      <legend>Mot de passe</legend>
+      <input value="">
+      <span class="trailing material-symbols-rounded">visibility</span>
+    </fieldset>
+    <fieldset class="field">
+      <legend>Nom de cet appareil</legend>
+      <input value="iPhone de Léa">
+    </fieldset>
+
+    <div class="btn brand" style="margin-top:10px">Se connecter</div>
+    <div style="text-align:center;font-size:14.5px;font-weight:800;color:var(--primary);padding:2px 0">Mot de passe oublié ?</div>
+  </div>
+</body>
+</html>

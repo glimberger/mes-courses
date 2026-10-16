@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .appbar.center { padding-bottom: 4px; }
+  .section { padding: 13px 20px 7px; }
+  .card.pad { padding: 13px 16px; gap: 11px; }
+  .btn { height: 46px; }
+</style>
+</head>
+<body>
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="right">
+      <span class="material-symbols-rounded">signal_cellular_alt</span>
+      <span class="material-symbols-rounded">wifi</span>
+      <span class="material-symbols-rounded">battery_full</span>
+    </span>
+  </div>
+
+  <div class="appbar center"><h1>Réglages</h1></div>
+  <div class="syncstrip"><span class="material-symbols-rounded">cloud_upload</span>En attente de synchronisation</div>
+
+  <div class="section"><span class="bar"></span><h2>Compte</h2></div>
+  <div class="cards">
+    <div class="card pad">
+      <div class="rowline">
+        <span class="lead"><span class="material-symbols-rounded">account_circle</span></span>
+        <div class="texts"><div class="t1">lea@example.org</div></div>
+      </div>
+      <div class="btn outlined">Changer de mot de passe</div>
+    </div>
+  </div>
+
+  <div class="section"><span class="bar"></span><h2>Serveur</h2></div>
+  <div class="cards">
+    <div class="card pad">
+      <div class="rowline">
+        <span class="lead"><span class="material-symbols-rounded">dns</span></span>
+        <div class="texts">
+          <div class="t1">courses.example.fr</div>
+          <div class="t2">Dernière synchronisation : il y a 7 min</div>
+        </div>
+      </div>
+      <div class="btn brand"><span class="material-symbols-rounded">sync</span>Synchroniser maintenant</div>
+    </div>
+  </div>
+
+  <div class="section"><span class="bar"></span><h2>Appareils</h2></div>
+  <div class="cards">
+    <div class="card pad">
+      <div class="rowline">
+        <span class="lead"><span class="material-symbols-rounded">smartphone</span></span>
+        <div class="texts">
+          <div class="t1">iPhone de Léa</div>
+          <div class="t2">Cet appareil</div>
+        </div>
+        <span class="material-symbols-rounded" style="color:var(--on-surface-var)">chevron_right</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section"><span class="bar"></span><h2>Actions</h2></div>
+  <div class="cards">
+    <div class="card pad" style="gap:10px">
+      <div class="btn outlined"><span class="material-symbols-rounded">logout</span>Se déconnecter de cet appareil</div>
+      <div class="btn danger"><span class="material-symbols-rounded">delete</span>Supprimer mon compte</div>
+    </div>
+  </div>
+</body>
+</html>

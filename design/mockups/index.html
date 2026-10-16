@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mes Courses — Maquettes UI</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --cream: #fff9ee; --ink: #1e1b13; --muted: #7c7767; --yellow: #ffde3f; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--cream); color: var(--ink);
+    font-family: "Nunito", sans-serif; padding: 40px 32px 64px;
+  }
+  header { max-width: 1200px; margin: 0 auto 36px; }
+  h1 { font-size: 32px; font-weight: 900; letter-spacing: -0.3px; }
+  h1 .accent { color: #d4a017; }
+  p.sub { margin-top: 6px; font-size: 15px; font-weight: 600; color: var(--muted); }
+  h2.section-title {
+    max-width: 1200px; margin: 0 auto 22px; font-size: 19px; font-weight: 800;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2.section-title::before { content: ""; width: 5px; height: 20px; border-radius: 3px; background: var(--yellow); }
+  .grid {
+    max-width: 1200px; margin: 0 auto 48px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 36px 28px;
+  }
+  figure { display: flex; flex-direction: column; gap: 12px; }
+  .phone {
+    width: 237px; height: 514px; margin: 0 auto;
+    border-radius: 28px; overflow: hidden;
+    box-shadow: 0 2px 6px rgba(30,27,19,.08), 0 18px 44px rgba(30,27,19,.13);
+    background: #fff;
+  }
+  .phone iframe {
+    width: 393px; height: 852px; border: 0;
+    transform: scale(0.603); transform-origin: top left;
+  }
+  figcaption { text-align: center; font-size: 14.5px; font-weight: 800; }
+  figcaption small { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Mes <span class="accent">Courses</span> — maquettes de la refonte UI</h1>
+    <p class="sub">Direction « identité panier » · Material 3 · Nunito · jaune #FFDE3F</p>
+  </header>
+  <h2 class="section-title">Écrans</h2>
+  <div class="grid">
+    <figure>
+      <div class="phone"><iframe src="1-liste.html" title="Ma liste"></iframe></div>
+      <figcaption>1 · Ma liste<small>cartes, puce compteur, FAB jaune</small></figcaption>
+    </figure>
+    <figure>
+      <div class="phone"><iframe src="2-listes.html" title="Mes listes"></iframe></div>
+      <figcaption>2 · Mes listes<small>cartes + puce « Liste actuelle »</small></figcaption>
+    </figure>
+    <figure>
+      <div class="phone"><iframe src="3-ajouter.html" title="Ajouter des articles"></iframe></div>
+      <figcaption>3 · Ajouter des articles<small>puces vertes, barre de recherche</small></figcaption>
+    </figure>
+    <figure>
+      <div class="phone"><iframe src="4-connexion.html" title="Connexion"></iframe></div>
+      <figcaption>4 · Connexion<small>logo en vignette, bouton de marque</small></figcaption>
+    </figure>
+    <figure>
+      <div class="phone"><iframe src="5-reglages.html" title="Réglages"></iframe></div>
+      <figcaption>5 · Réglages<small>sections en cartes groupées</small></figcaption>
+    </figure>
+    <figure>
+      <div class="phone"><iframe src="6-liste-dark.html" title="Ma liste, sombre"></iframe></div>
+      <figcaption>6 · Ma liste — mode sombre<small>jaune de marque inchangé</small></figcaption>
+    </figure>
+  </div>
+
+  <h2 class="section-title">Dialogues</h2>
+  <div class="grid">
+    <figure>
+      <div class="phone"><iframe src="7-dialog-quantite.html" title="Quantité"></iframe></div>
+      <figcaption>7 · Quantité<small>champs arrondis, action tertiaire à gauche</small></figcaption>
+    </figure>
+    <figure>
+      <div class="phone"><iframe src="8-dialog-terminer.html" title="Terminer les courses"></iframe></div>
+      <figcaption>8 · Terminer les courses<small>icône en cercle jaune, confirmation de marque</small></figcaption>
+    </figure>
+    <figure>
+      <div class="phone"><iframe src="9-dialog-supprimer.html" title="Supprimer un article"></iframe></div>
+      <figcaption>9 · Supprimer un article<small>destructif : icône et bouton en erreur</small></figcaption>
+    </figure>
+    <figure>
+      <div class="phone"><iframe src="10-dialog-nouvelle-liste.html" title="Nouvelle liste"></iframe></div>
+      <figcaption>10 · Nouvelle liste<small>saisie + « Créer » jaune</small></figcaption>
+    </figure>
+  </div>
+
+  <h2 class="section-title">Démarrage</h2>
+  <div class="grid">
+    <figure>
+      <div class="phone"><iframe src="11-splash.html" title="Écran de démarrage"></iframe></div>
+      <figcaption>11 · Splash<small>logo en vignette, indicateur de chargement jaune</small></figcaption>
+    </figure>
+  </div>
+</body>
+</html>
