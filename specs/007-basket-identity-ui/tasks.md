@@ -409,15 +409,15 @@ dedicated shared component.
 
 ### Implementation for User Story 8
 
-- [ ] T055 [US8] Finalize `EmptyState`, `ErrorState`, `LoadingState`, `ScreenStateView` and
+- [x] T055 [US8] Finalize `EmptyState`, `ErrorState`, `LoadingState`, `ScreenStateView` and
   `StateMessage` interactions so every data screen keeps using its dedicated component
   (Principle IX), wrapping internal padding/layout in `spacing` tokens and the brand icon circle
   from T010.
-- [ ] T056 [P] [US8] Add/update the state stories (`EmptyState.stories.tsx`,
+- [x] T056 [P] [US8] Add/update the state stories (`EmptyState.stories.tsx`,
   `ErrorState.stories.tsx`, `LoadingState.stories.tsx`) with light/dark and action/no-action cases,
   adding the refreshed visual treatment; keep story ids stable or update `requiredStories`
   accordingly.
-- [ ] T057 [US8] Update `screen-state.test.tsx` and the emptied screens' tests for the soft icon,
+- [x] T057 [US8] Update `screen-state.test.tsx` and the emptied screens' tests for the soft icon,
   recovery action and the dedicated-component rule; do not change French copy.
 
 **Checkpoint**: User Story 8 stories render in light/dark and its tests pass.
@@ -434,15 +434,15 @@ surfaces and Nunito persist with legible text on all core screens.
 
 ### Implementation for User Story 9
 
-- [ ] T058 [US9] Audit every shared component and screen for dark-only regressions: ensure no
+- [x] T058 [US9] Audit every shared component and screen for dark-only regressions: ensure no
   surface uses a hard-coded light color, default elevations stay readable and Nunito still applies
   under `MD3DarkTheme`. Fix any `useColorScheme`-dependent cast or fallback introduced in Phase 1.
-- [ ] T059 [US9] Verify `UsedColorPairs` passes in dark for all pairs added in T008/T010-T017
+- [x] T059 [US9] Verify `UsedColorPairs` passes in dark for all pairs added in T008/T010-T017
   (`theme.test.ts`); add any missing pair and re-run until green. Do not weaken contrast thresholds
   (FR-017).
-- [ ] T060 [P] [US9] Render the full Storybook gallery in dark via `required-stories` and fix
+- [x] T060 [P] [US9] Render the full Storybook gallery in dark via `required-stories` and fix
   warnings/errors caused by the dark theme (font, elevation, icon contrast).
-- [ ] T061 [US9] Add a focused regression test (in `theme.test.ts` or a new
+- [x] T061 [US9] Add a focused regression test (in `theme.test.ts` or a new
   `dark-appearance.test.tsx`) asserting `primaryContainer` is `#FFDE3F` in both themes and that
   surfaces use the dark family when `dark` is true; document dark screenshots in the PR.
 
@@ -490,18 +490,18 @@ transition.
 
 ### Implementation for User Story 11
 
-- [ ] T066 [US11] Replace the production and staging launcher assets with basket-on-cream
+- [x] T066 [US11] Replace the production and staging launcher assets with basket-on-cream
   artwork: `apps/mobile/assets/icon.png`, `apps/mobile/assets/staging/icon.png`,
   `apps/mobile/assets/android-icon-foreground.png`,
   `apps/mobile/assets/staging/android-icon-foreground.png`,
   `apps/mobile/assets/android-icon-monochrome.png` and
   `apps/mobile/assets/staging/android-icon-monochrome.png`, preserving file paths and `appVariant`.
   Keep `apps/mobile/assets/splash-screen.png` as the existing basket-on-cream splash from 006.
-- [ ] T067 [US11] Update the staging badge so production and staging remain visually
+- [x] T067 [US11] Update the staging badge so production and staging remain visually
   distinguishable while both keep the basket identity (per `build-config/app-variant.cjs`).
-- [ ] T068 [US11] Do not change `apps/mobile/app.config.ts`, `build-config/app-variant.cjs` or the
+- [x] T068 [US11] Do not change `apps/mobile/app.config.ts`, `build-config/app-variant.cjs` or the
   splash transition logic; verify them unchanged in review and only replace.asset files.
-- [ ] T069 [US11] Update `StartupSplash.tsx`/its stories/tests (from feature 006) so the startup
+- [x] T069 [US11] Update `StartupSplash.tsx`/its stories/tests (from feature 006) so the startup
   screen keeps the basket-on-cream visual in both light and dark, with the automatic offline
   transition unchanged. Keep `StartupSplash.test.tsx` green.
 
