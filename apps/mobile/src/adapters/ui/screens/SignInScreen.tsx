@@ -7,7 +7,13 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { Appbar, HelperText, Text, TextInput } from 'react-native-paper';
+import {
+  Appbar,
+  HelperText,
+  Text,
+  TextInput,
+  useTheme,
+} from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -22,6 +28,7 @@ import type { RootStackParamList } from '../routes';
 import type { AppState } from '../state/app-store';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
+import type { AppTheme } from '../theme/theme';
 
 /** A device name has at most 60 characters (FR-019c). */
 const MAX_DEVICE_NAME = 60;
@@ -175,6 +182,7 @@ export const SignInForm = ({
   onForgotPassword,
 }: SignInFormProps) => {
   const insets = useSafeAreaInsets();
+  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   const [brandFailed, setBrandFailed] = useState(false);
   useAnnouncement(error);
   return (
@@ -258,6 +266,8 @@ export const SignInForm = ({
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
           mode="contained-tonal"
+          buttonColor={colors.primaryContainer}
+          textColor={colors.onPrimaryContainer}
           disabled={saving}
           onPress={onSubmit}
           style={styles.submit}

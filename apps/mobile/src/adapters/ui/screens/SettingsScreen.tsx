@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Appbar, List, Text } from 'react-native-paper';
+import { Appbar, List, Text, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -16,6 +16,7 @@ import { SyncStatusBar } from '../components/SyncStatusBar';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
+import type { AppTheme } from '../theme/theme';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
 import { DeleteMyAccountDialog } from './DeleteMyAccountDialog';
 import { DeviceRow } from './DeviceRow';
@@ -256,83 +257,93 @@ export const SettingsView = ({
   onSignOut,
   onDeleteAccount,
   connectionNeeded,
-}: SettingsViewProps) => (
-  <View style={styles.screen}>
-    <Appbar.Header>
-      {onBack && <BackAction onPress={onBack} />}
-      <Appbar.Content title="Réglages" />
-    </Appbar.Header>
-    <SyncStatusBar />
-    <ScrollView contentContainerStyle={styles.content}>
-      {server === null ? (
-        <SettingsCard>
-          <Text variant="bodyLarge">
-            Connectez-vous pour retrouver vos listes sur vos autres appareils.
-          </Text>
-          <Button mode="contained-tonal" onPress={onConnect}>
-            Se connecter
-          </Button>
-        </SettingsCard>
-      ) : (
-        <>
-          <List.Subheader accessibilityRole="header">Compte</List.Subheader>
+}: SettingsViewProps) => {
+  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
+  return (
+    <View style={styles.screen}>
+      <Appbar.Header>
+        {onBack && <BackAction onPress={onBack} />}
+        <Appbar.Content title="Réglages" />
+      </Appbar.Header>
+      <SyncStatusBar />
+      <ScrollView contentContainerStyle={styles.content}>
+        {server === null ? (
           <SettingsCard>
-            <AccountSection
-              account={account}
-              onRetry={onRetryDevices}
-              onManageAccounts={onManageAccounts}
-              onChangePassword={onChangePassword}
-            />
-          </SettingsCard>
-
-          <List.Subheader accessibilityRole="header">Serveur</List.Subheader>
-          <SettingsCard>
-            <SettingsRow
-              icon="server-network"
-              title={withoutScheme(server.url)}
-              subtitle={`Dernière synchronisation : ${formatLastSync(
-                server.lastSyncAt,
-                new Date(),
-              )}`}
-            />
+            <Text variant="bodyLarge">
+              Connectez-vous pour retrouver vos listes sur vos autres appareils.
+            </Text>
             <Button
-              mode="outlined"
-              disabled={!server.canSyncNow}
-              onPress={onSyncNow}
+              mode="contained-tonal"
+              buttonColor={colors.primaryContainer}
+              textColor={colors.onPrimaryContainer}
+              onPress={onConnect}
             >
-              Synchroniser maintenant
+              Se connecter
             </Button>
           </SettingsCard>
+        ) : (
+          <>
+            <List.Subheader accessibilityRole="header">Compte</List.Subheader>
+            <SettingsCard>
+              <AccountSection
+                account={account}
+                onRetry={onRetryDevices}
+                onManageAccounts={onManageAccounts}
+                onChangePassword={onChangePassword}
+              />
+            </SettingsCard>
 
-          <List.Subheader accessibilityRole="header">Appareils</List.Subheader>
-          <SettingsCard>
-            <DevicesSection
-              devices={devices}
-              onRetry={onRetryDevices}
-              onRename={onRenameDevice}
-              onRevoke={onRevokeDevice}
-            />
-          </SettingsCard>
+            <List.Subheader accessibilityRole="header">Serveur</List.Subheader>
+            <SettingsCard>
+              <SettingsRow
+                icon="server-network"
+                title={withoutScheme(server.url)}
+                subtitle={`Dernière synchronisation : ${formatLastSync(
+                  server.lastSyncAt,
+                  new Date(),
+                )}`}
+              />
+              <Button
+                mode="outlined"
+                disabled={!server.canSyncNow}
+                onPress={onSyncNow}
+              >
+                Synchroniser maintenant
+              </Button>
+            </SettingsCard>
 
-          <List.Subheader accessibilityRole="header">Actions</List.Subheader>
-          <SettingsCard>
-            <Button mode="outlined" onPress={onSignOut}>
-              Se déconnecter de cet appareil
-            </Button>
-            <Button mode="outlined" onPress={onDeleteAccount}>
-              Supprimer mon compte
-            </Button>
-            {connectionNeeded && (
-              <Text variant="bodyMedium" style={styles.offline}>
-                {CONNECTION_NEEDED}
-              </Text>
-            )}
-          </SettingsCard>
-        </>
-      )}
-    </ScrollView>
-  </View>
-);
+            <List.Subheader accessibilityRole="header">
+              Appareils
+            </List.Subheader>
+            <SettingsCard>
+              <DevicesSection
+                devices={devices}
+                onRetry={onRetryDevices}
+                onRename={onRenameDevice}
+                onRevoke={onRevokeDevice}
+              />
+            </SettingsCard>
+
+            <List.Subheader accessibilityRole="header">Actions</List.Subheader>
+            <SettingsCard>
+              <Button mode="outlined" onPress={onSignOut}>
+                Se déconnecter de cet appareil
+              </Button>
+              <Button mode="outlined" onPress={onDeleteAccount}>
+                Supprimer mon compte
+              </Button>
+              {connectionNeeded && (
+                <Text variant="bodyMedium" style={styles.offline}>
+                  {CONNECTION_NEEDED}
+                </Text>
+              )}
+            </SettingsCard>
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+};
 
 const AccountSection = ({
   account,

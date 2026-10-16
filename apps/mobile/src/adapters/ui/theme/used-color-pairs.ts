@@ -34,6 +34,7 @@ export const usedColorPairs: readonly UsedColorPair[] = [
   ...onEveryBackground('onSurface', 'text'),
   ...onEveryBackground('onSurfaceVariant', 'text'),
   ...onEveryBackground('primary', 'text'),
+  ...onEveryBackground('error', 'text'),
   // An unticked checkbox and outlined fields.
   ...onEveryBackground('outline', 'graphic'),
   // The FAB's label and icon (ScreenFab), the current-list badge and brand markers.
