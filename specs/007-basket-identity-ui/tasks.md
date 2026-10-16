@@ -222,20 +222,20 @@ headings are bold and muted with a small brand-yellow accent; the FAB adds an ar
 
 ### Implementation for User Story 2
 
-- [ ] T026 [US2] Integrate `CategoryHeader` in `CurrentListScreen.tsx` (inside `renderSectionHeader`)
+- [x] T026 [US2] Integrate `CategoryHeader` in `CurrentListScreen.tsx` (inside `renderSectionHeader`)
   instead of `List.Subheader`, keeping the `accessibilityRole="header"` behavior and passing the
   existing section title. Keep screen styling layout-only.
-- [ ] T027 [US2] Update `CurrentListScreen.tsx` card spacing and the list's bottom clearance so
+- [x] T027 [US2] Update `CurrentListScreen.tsx` card spacing and the list's bottom clearance so
   no row sits under the FAB; replace any ad hoc radius/spacing literals with `spacing` tokens and
   the now-shared card surfaces from `ListItemRow`.
-- [ ] T028 [P] [US2] Update `CurrentListScreen.stories.tsx` (`Loading`, `Error`, `Empty`,
+- [x] T028 [P] [US2] Update `CurrentListScreen.stories.tsx` (`Loading`, `Error`, `Empty`,
   `Success`, `AllInCart`, `WithSyncStatus`) to exercise long article names, wrapped text, dark
   appearance and the `LongName` row, and add a story for the category header with a long category
   name.
-- [ ] T029 [US2] Update `current-list-screen.test.tsx` and `current-list-offline.test.tsx` for
+- [x] T029 [US2] Update `current-list-screen.test.tsx` and `current-list-offline.test.tsx` for
   the rounded card, category accent, long-name wrapping and FAB clearance assertions; keep
   accessibility labels/tests IDs unchanged and the offline rendering expectations green.
-- [ ] T030 [P] [US2] Add a `Screens/CurrentList/LongNames` story id to `requiredStories.ts` only
+- [x] T030 [P] [US2] Add a `Screens/CurrentList/LongNames` story id to `requiredStories.ts` only
   if a new story is added; otherwise leave the list unchanged. Record the decision in the commit.
 
 **Checkpoint**: User Story 2 is independently reviewable through `CurrentListScreen.stories.tsx`

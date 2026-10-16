@@ -106,7 +106,10 @@ export const ListItemRow = memo(function ListItemRow({
             importantForAccessibility="no-hide-descendants"
             style={styles.checkbox}
           >
-            <Checkbox.Android status={inCart ? 'checked' : 'unchecked'} />
+            <Checkbox.Android
+              status={inCart ? 'checked' : 'unchecked'}
+              color={colors.primaryContainer}
+            />
           </View>
           {/* Remounted per tick state: Android kept a stale text style. */}
           <Text
@@ -157,7 +160,12 @@ export const ListItemRow = memo(function ListItemRow({
 });
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', elevation: 1 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 1,
+    marginBottom: spacing.sm,
+  },
   checkboxArea: { flex: 1, minHeight: 48, justifyContent: 'center' },
   content: {
     flexDirection: 'row',

@@ -16,11 +16,17 @@ export type CategoryHeaderProps = {
 export const CategoryHeader = ({ title }: CategoryHeaderProps) => {
   const { colors } = useTheme();
   return (
-    <View style={styles.container} accessibilityRole="header">
+    <View style={styles.container}>
       <View
         style={[styles.bar, { backgroundColor: colors.primaryContainer }]}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
       />
-      <Text variant="titleSmall" style={{ color: colors.onSurfaceVariant }}>
+      <Text
+        variant="titleSmall"
+        style={{ color: colors.onSurfaceVariant }}
+        accessibilityRole="header"
+      >
         {title}
       </Text>
     </View>
