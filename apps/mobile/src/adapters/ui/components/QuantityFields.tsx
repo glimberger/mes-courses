@@ -3,6 +3,7 @@ import { HelperText, TextInput } from 'react-native-paper';
 
 import type { QuantityError } from '../../../domain/quantity';
 import { useAnnouncement } from '../accessibility/announce';
+import { shape } from '../theme/shape';
 import { spacing } from '../theme/spacing';
 
 /** The French text of each quantity error (FR-016, contracts/ui-screens.md). */
@@ -60,6 +61,7 @@ export const QuantityFields = ({
           onChangeText={onChangeAmount}
           inputMode="decimal"
           error={amountMessage !== null}
+          style={{ borderRadius: shape.lg }}
         />
         {amountMessage !== null && (
           <HelperText type="error">{amountMessage}</HelperText>
@@ -74,6 +76,7 @@ export const QuantityFields = ({
           onChangeText={onChangeUnit}
           autoCapitalize="none"
           error={unitMessage !== null}
+          style={{ borderRadius: shape.lg }}
         />
         {unitMessage !== null && (
           <HelperText type="error">{unitMessage}</HelperText>

@@ -54,3 +54,8 @@ export const WithSyncStatus: Story = {
     },
   },
 };
+
+/** Long names wrap without clipping at the requested text scales (SC-006). */
+export const LongNames: Story = {
+  parameters: { scenario: { seed: fixture } },
+};

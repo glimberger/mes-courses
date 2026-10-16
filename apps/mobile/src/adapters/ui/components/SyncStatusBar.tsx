@@ -6,6 +6,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../routes';
 import type { SyncSlice } from '../state/store-kit';
 import { useAppStore } from '../state/use-app-store';
+import type { AppTheme } from '../theme/theme';
+import { shape } from '../theme/shape';
 import { spacing } from '../theme/spacing';
 import { Button } from './Button';
 
@@ -94,13 +96,19 @@ export const SyncStatusBar = () => {
   const retry = useAppStore((state) => state.retry);
   const shown = display(sync);
 
-  const { colors } = useTheme();
+  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   if (shown === null) return null;
   const { icon, text, label, action } = shown;
   return (
     <View
       testID="sync-status-bar"
-      style={[styles.bar, { backgroundColor: colors.elevation.level2 }]}
+      style={[
+        styles.bar,
+        {
+          backgroundColor: colors.surfaceContainer,
+          borderRadius: shape.md,
+        },
+      ]}
     >
       <TouchableRipple
         accessibilityRole="button"

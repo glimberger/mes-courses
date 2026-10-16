@@ -6,7 +6,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { Appbar, Text } from 'react-native-paper';
+import { Appbar, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
@@ -28,6 +28,7 @@ import { useAppStoreApi } from '../state/app-store-provider';
 import { useAppStore } from '../state/use-app-store';
 import { useRemoteRemoval } from '../state/use-remote-removal';
 import { spacing } from '../theme/spacing';
+import type { AppTheme } from '../theme/theme';
 
 /**
  * Renames an article and changes its category (002 User Stories 1 and 3). It reads the article
@@ -193,6 +194,7 @@ export const EditArticleForm = ({
   onSubmit,
 }: EditArticleFormProps) => {
   const insets = useSafeAreaInsets();
+  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -221,7 +223,9 @@ export const EditArticleForm = ({
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
-          mode="contained"
+          mode="contained-tonal"
+          buttonColor={colors.primaryContainer}
+          textColor={colors.onPrimaryContainer}
           disabled={saving}
           onPress={onSubmit}
           style={styles.submit}

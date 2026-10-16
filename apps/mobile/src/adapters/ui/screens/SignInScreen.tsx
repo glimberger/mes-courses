@@ -1,12 +1,19 @@
 import { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
-import { Appbar, HelperText, TextInput } from 'react-native-paper';
+import {
+  Appbar,
+  HelperText,
+  Text,
+  TextInput,
+  useTheme,
+} from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,6 +28,7 @@ import type { RootStackParamList } from '../routes';
 import type { AppState } from '../state/app-store';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
+import type { AppTheme } from '../theme/theme';
 
 /** A device name has at most 60 characters (FR-019c). */
 const MAX_DEVICE_NAME = 60;
@@ -174,6 +182,8 @@ export const SignInForm = ({
   onForgotPassword,
 }: SignInFormProps) => {
   const insets = useSafeAreaInsets();
+  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
+  const [brandFailed, setBrandFailed] = useState(false);
   useAnnouncement(error);
   return (
     <KeyboardAvoidingView
@@ -188,6 +198,30 @@ export const SignInForm = ({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.form}
       >
+        <View style={styles.brand}>
+          {brandFailed ? (
+            <Text accessibilityRole="header" variant="headlineLarge">
+              Mes Courses
+            </Text>
+          ) : (
+            <>
+              <Image
+                accessible
+                accessibilityLabel="Mes Courses"
+                accessibilityRole="image"
+                height={96}
+                onError={() => setBrandFailed(true)}
+                resizeMode="contain"
+                source={require('../../../../assets/splash-screen.png')}
+                testID="sign-in-brand-image"
+                width={96}
+              />
+              <Text accessibilityRole="header" variant="headlineSmall">
+                Mes Courses
+              </Text>
+            </>
+          )}
+        </View>
         <TextInput
           mode="outlined"
           label="Adresse du serveur"
@@ -231,7 +265,9 @@ export const SignInForm = ({
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
-          mode="contained"
+          mode="contained-tonal"
+          buttonColor={colors.primaryContainer}
+          textColor={colors.onPrimaryContainer}
           disabled={saving}
           onPress={onSubmit}
           style={styles.submit}
@@ -248,6 +284,7 @@ export const SignInForm = ({
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  brand: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
   form: { padding: spacing.md, gap: spacing.sm },
   footer: { paddingHorizontal: spacing.md },
   submit: { marginVertical: spacing.sm },

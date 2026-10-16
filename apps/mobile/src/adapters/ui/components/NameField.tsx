@@ -1,4 +1,6 @@
 import { View } from 'react-native';
+
+import { shape } from '../theme/shape';
 import { HelperText, TextInput } from 'react-native-paper';
 
 import type { NameError } from '../../../domain/name';
@@ -45,6 +47,7 @@ export const NameField = ({
         autoCapitalize="sentences"
         error={error !== null}
         disabled={disabled}
+        style={{ borderRadius: shape.lg }}
       />
       {error !== null && <HelperText type="error">{error}</HelperText>}
     </View>

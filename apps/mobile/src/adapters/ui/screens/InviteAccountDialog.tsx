@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { HelperText, Text, TextInput } from 'react-native-paper';
+import { HelperText, Text, TextInput, useTheme } from 'react-native-paper';
 
 import { useAnnouncement } from '../accessibility/announce';
 import { Button } from '../components/Button';
@@ -87,6 +87,7 @@ export const InviteAccountDialogForm = ({
   onClose,
   onSubmit,
 }: InviteAccountDialogFormProps) => {
+  const { colors } = useTheme();
   useAnnouncement(error);
   return (
     <DeviceDialog
@@ -98,7 +99,13 @@ export const InviteAccountDialogForm = ({
           <Button disabled={sending} onPress={onClose}>
             Annuler
           </Button>
-          <Button disabled={sending} onPress={onSubmit}>
+          <Button
+            disabled={sending}
+            mode="contained-tonal"
+            buttonColor={colors.primaryContainer}
+            textColor={colors.onPrimaryContainer}
+            onPress={onSubmit}
+          >
             Inviter
           </Button>
         </>

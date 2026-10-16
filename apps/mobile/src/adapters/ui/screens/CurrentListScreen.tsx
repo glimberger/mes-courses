@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SectionList, StyleSheet, View, type HostInstance } from 'react-native';
-import { Appbar, List, Text } from 'react-native-paper';
+import { Appbar, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -8,6 +8,7 @@ import type { ArticleId } from '../../../domain/article';
 import type { CurrentListView } from '../../../domain/current-list-view';
 import { focusOn } from '../accessibility/focus';
 import { AppbarIconAction } from '../components/AppbarIconAction';
+import { CategoryHeader } from '../components/CategoryHeader';
 import { ListItemRow } from '../components/ListItemRow';
 import { SCREEN_FAB_CLEARANCE, ScreenFab } from '../components/ScreenFab';
 import { ScreenStateView } from '../components/ScreenStateView';
@@ -333,9 +334,7 @@ const CurrentListSections = ({
     // move (FR-037, research R11).
     keyExtractor={rowId}
     renderSectionHeader={({ section }) => (
-      <List.Subheader accessibilityRole="header">
-        {section.title}
-      </List.Subheader>
+      <CategoryHeader title={section.title} />
     )}
     renderItem={({ item }) => <CurrentListRow {...item} handlers={handlers} />}
     stickySectionHeadersEnabled={false}

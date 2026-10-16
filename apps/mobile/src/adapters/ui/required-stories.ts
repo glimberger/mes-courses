@@ -25,6 +25,7 @@ export const requiredStories: readonly string[] = [
   'Screens/CurrentList/Empty',
   'Screens/CurrentList/Success',
   'Screens/CurrentList/AllInCart',
+  'Screens/CurrentList/LongNames',
   'Dialogs/FinishShoppingDialog/Default',
   // User Story 5
   'Components/SyncStatusBar/SignedOutRevoked',

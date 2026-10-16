@@ -1,6 +1,35 @@
-import { MD3DarkTheme, MD3LightTheme, type MD3Theme } from 'react-native-paper';
+import {
+  MD3DarkTheme,
+  MD3LightTheme,
+  configureFonts,
+  type MD3Theme,
+} from 'react-native-paper';
 
 import materialTheme from '../../../../../../design/material-theme.json';
+
+// Nunito is the single application typeface (research R4); the registered TTF names are
+// the family names Paper reads, so they stay aligned with expo-font registration.
+const nunitoFonts = configureFonts({
+  isV3: true,
+  config: {
+    default: { fontFamily: 'Nunito_400Regular' },
+    displayLarge: { fontFamily: 'Nunito_400Regular' },
+    displayMedium: { fontFamily: 'Nunito_400Regular' },
+    displaySmall: { fontFamily: 'Nunito_400Regular' },
+    headlineLarge: { fontFamily: 'Nunito_700Bold' },
+    headlineMedium: { fontFamily: 'Nunito_700Bold' },
+    headlineSmall: { fontFamily: 'Nunito_700Bold' },
+    titleLarge: { fontFamily: 'Nunito_800ExtraBold' },
+    titleMedium: { fontFamily: 'Nunito_600SemiBold' },
+    titleSmall: { fontFamily: 'Nunito_600SemiBold' },
+    bodyLarge: { fontFamily: 'Nunito_400Regular' },
+    bodyMedium: { fontFamily: 'Nunito_400Regular' },
+    bodySmall: { fontFamily: 'Nunito_400Regular' },
+    labelLarge: { fontFamily: 'Nunito_600SemiBold' },
+    labelMedium: { fontFamily: 'Nunito_600SemiBold' },
+    labelSmall: { fontFamily: 'Nunito_600SemiBold' },
+  },
+} as never);
 
 type Scheme = typeof materialTheme.schemes.light;
 
@@ -21,6 +50,7 @@ const rgba = (hex: string, alpha: number): string => {
 // design/material-theme.json stays the only color source (Principle V).
 const buildTheme = (base: MD3Theme, scheme: Scheme): AppTheme => ({
   ...base,
+  fonts: nunitoFonts as never,
   colors: {
     ...base.colors,
     ...scheme,

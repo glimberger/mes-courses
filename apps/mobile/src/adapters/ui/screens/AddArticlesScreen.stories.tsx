@@ -55,3 +55,13 @@ export const SearchNoMatch: Story = {
     },
   },
 };
+
+/** A long article name wraps in the matches list without clipping. */
+export const SearchWrapped: Story = {
+  parameters: {
+    scenario: {
+      seed: fixture,
+      prepare: searching('yaourt'),
+    },
+  },
+};

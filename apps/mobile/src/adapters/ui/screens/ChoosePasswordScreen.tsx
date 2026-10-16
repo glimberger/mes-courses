@@ -6,7 +6,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { Appbar, HelperText, Text } from 'react-native-paper';
+import { Appbar, HelperText, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
@@ -24,6 +24,7 @@ import type { RootStackParamList } from '../routes';
 import type { AppState } from '../state/app-store';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
+import type { AppTheme } from '../theme/theme';
 import { signInErrorText } from './SignInScreen';
 
 type ChooseFailure = Extract<
@@ -150,6 +151,7 @@ export const ChoosePasswordForm = ({
   onSubmit,
 }: ChoosePasswordFormProps) => {
   const insets = useSafeAreaInsets();
+  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   useAnnouncement(error);
   return (
     <KeyboardAvoidingView
@@ -191,7 +193,9 @@ export const ChoosePasswordForm = ({
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
-          mode="contained"
+          mode="contained-tonal"
+          buttonColor={colors.primaryContainer}
+          textColor={colors.onPrimaryContainer}
           disabled={saving}
           onPress={onSubmit}
           style={styles.submit}

@@ -34,12 +34,31 @@ export const usedColorPairs: readonly UsedColorPair[] = [
   ...onEveryBackground('onSurface', 'text'),
   ...onEveryBackground('onSurfaceVariant', 'text'),
   ...onEveryBackground('primary', 'text'),
+  ...onEveryBackground('error', 'text'),
   // An unticked checkbox and outlined fields.
   ...onEveryBackground('outline', 'graphic'),
-  // The FAB's label and icon (ScreenFab).
+  // The FAB's label and icon (ScreenFab), the current-list badge and brand markers.
   {
     foreground: 'onPrimaryContainer',
     background: 'primaryContainer',
+    kind: 'text',
+  },
+  // Brand-toned circular settings/dialog icons on the soft brand surface proxy.
+  {
+    foreground: 'primary',
+    background: 'surfaceContainerHigh',
+    kind: 'graphic',
+  },
+  // Green "Déjà dans la liste" chip (ArticleRow).
+  {
+    foreground: 'onTertiaryContainer',
+    background: 'tertiaryContainer',
+    kind: 'text',
+  },
+  // Destructive dialog icons and confirm buttons on their circle.
+  {
+    foreground: 'onErrorContainer',
+    background: 'errorContainer',
     kind: 'text',
   },
 ];

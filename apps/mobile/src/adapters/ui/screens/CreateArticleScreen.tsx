@@ -7,7 +7,7 @@ import {
   View,
   type HostInstance,
 } from 'react-native';
-import { Appbar, HelperText, List } from 'react-native-paper';
+import { Appbar, HelperText, List, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
@@ -31,6 +31,7 @@ import type { RootStackParamList } from '../routes';
 import { useAppStoreApi } from '../state/app-store-provider';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
+import type { AppTheme } from '../theme/theme';
 import { QuantityDialog, type QuantityRequest } from './QuantityDialog';
 import { paperRef } from '../components/paper-ref';
 
@@ -220,6 +221,7 @@ export const CreateArticleForm = ({
   onSubmit,
 }: CreateArticleFormProps) => {
   const insets = useSafeAreaInsets();
+  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   useAnnouncement(categoryMissing ? NO_CATEGORY : null);
   return (
     // On iOS, typing covers the bottom of the window: the form is pushed up so "Créer et ajouter"
@@ -264,7 +266,9 @@ export const CreateArticleForm = ({
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
-          mode="contained"
+          mode="contained-tonal"
+          buttonColor={colors.primaryContainer}
+          textColor={colors.onPrimaryContainer}
           disabled={saving}
           onPress={onSubmit}
           style={styles.submit}

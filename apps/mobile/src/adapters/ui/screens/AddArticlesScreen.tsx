@@ -187,12 +187,13 @@ export const AddArticlesScreen = () => {
         />
       </Appbar.Header>
       <SyncStatusBar />
-      <SearchField
-        placeholder="Rechercher un article"
-        value={query}
-        onChangeText={searchCatalog}
-        style={styles.search}
-      />
+      <View style={styles.search}>
+        <SearchField
+          placeholder="Rechercher un article"
+          value={query}
+          onChangeText={searchCatalog}
+        />
+      </View>
       <ScreenStateView
         state={catalog}
         errorMessage="Impossible de charger les articles."
