@@ -19,7 +19,7 @@ export const ErrorState = ({
   title,
   message,
   onRetry,
-  icon = 'alert-circle-outline',
+  icon = 'error',
 }: ErrorStateProps) => {
   const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   const circle = 56;

@@ -181,7 +181,7 @@ export const AddArticlesScreen = () => {
           }
         />
         <AppbarIconAction
-          icon="plus"
+          icon="add"
           accessibilityLabel="Nouvel article"
           onPress={newArticle}
         />

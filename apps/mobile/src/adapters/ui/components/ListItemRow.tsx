@@ -143,7 +143,7 @@ export const ListItemRow = memo(function ListItemRow({
         >
           {onEditQuantity && (
             <IconButton
-              icon="pencil-outline"
+              icon="edit"
               accessibilityLabel="Modifier la quantité"
               onPress={onEditQuantity}
               style={styles.action}

@@ -274,18 +274,18 @@ export const CurrentListScreen = () => {
         {view?.hasItemsInCart && (
           <AppbarIconAction
             ref={finishActionRef}
-            icon="cart-check"
+            icon="shopping_cart_checkout"
             accessibilityLabel="Terminer les courses"
             onPress={() => setFinishing(true)}
           />
         )}
         <AppbarIconAction
-          icon="format-list-bulleted"
+          icon="format_list_bulleted"
           accessibilityLabel="Mes listes"
           onPress={() => navigation.navigate('Lists')}
         />
         <AppbarIconAction
-          icon="cog"
+          icon="settings"
           accessibilityLabel="Réglages"
           onPress={() => navigation.navigate('Settings')}
         />
@@ -304,7 +304,7 @@ export const CurrentListScreen = () => {
           <CurrentListSections view={data} handlers={handlers} />
         )}
       />
-      {view && <ScreenFab icon="plus" label="Ajouter" onPress={addArticles} />}
+      {view && <ScreenFab icon="add" label="Ajouter" onPress={addArticles} />}
       <FinishShoppingDialog
         visible={finishing}
         onCancel={cancelFinish}

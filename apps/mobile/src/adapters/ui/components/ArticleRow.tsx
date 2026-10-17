@@ -110,7 +110,7 @@ export const ArticleRow = memo(function ArticleRow({
           anchorPosition="bottom"
           anchor={
             <AppbarIconAction
-              icon="dots-vertical"
+              icon="more_vert"
               accessibilityLabel={`Plus d'actions pour « ${name} »`}
               onPress={() => setMenuVisible(true)}
             />

@@ -65,7 +65,7 @@ export const CategoryPicker = ({
             </RadioButton.Group>
             <Button
               ref={paperRef(newCategoryRef)}
-              icon="plus"
+              icon="add"
               disabled={disabled}
               onPress={() => setCreating(true)}
             >

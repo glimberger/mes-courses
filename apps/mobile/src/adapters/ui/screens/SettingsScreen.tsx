@@ -296,7 +296,7 @@ export const SettingsView = ({
             <List.Subheader accessibilityRole="header">Serveur</List.Subheader>
             <SettingsCard>
               <SettingsRow
-                icon="server-network"
+                icon="dns"
                 title={withoutScheme(server.url)}
                 subtitle={`Dernière synchronisation : ${formatLastSync(
                   server.lastSyncAt,
@@ -388,7 +388,7 @@ const AccountSection = ({
       return (
         <>
           <SettingsRow
-            icon="account"
+            icon="account_circle"
             title={account.email}
             subtitle={account.administrator ? 'Administrateur' : undefined}
           />

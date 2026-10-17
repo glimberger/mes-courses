@@ -35,19 +35,19 @@ const display = ({
     case 'signedOut':
       return signedOutReason === 'accountDeleted'
         ? {
-            icon: 'cloud-off-outline',
+            icon: 'cloud_off',
             text: 'Ce compte a été supprimé.',
             action: { label: 'Se connecter', target: 'reconnect' },
           }
         : {
-            icon: 'cloud-off-outline',
+            icon: 'cloud_off',
             text: "Cet appareil n'est plus autorisé. Reconnectez-vous.",
             action: { label: 'Se reconnecter', target: 'reconnect' },
           };
     case 'suspended':
       // Not an error: the lists stay on the phone and keep working (Principle VII).
       return {
-        icon: 'pause-circle-outline',
+        icon: 'pause_circle',
         text: 'Votre compte est suspendu. Vos listes restent sur cet appareil.',
       };
     case 'updateRequired':
@@ -60,10 +60,10 @@ const display = ({
   }
   switch (status) {
     case 'saved':
-      return { icon: 'cloud-check-outline', text: 'Synchronisé' };
+      return { icon: 'cloud_done', text: 'Synchronisé' };
     case 'waiting':
       return {
-        icon: 'cloud-clock-outline',
+        icon: 'cloud_upload',
         // Offline with nothing to send: waiting for the server, with no count to give.
         text:
           pendingCount === 0
@@ -75,10 +75,10 @@ const display = ({
             : `En attente de synchronisation, ${modifications(pendingCount)}`,
       };
     case 'sending':
-      return { icon: 'progress-upload', text: 'Synchronisation…' };
+      return { icon: 'cloud_sync', text: 'Synchronisation…' };
     case 'failed':
       return {
-        icon: 'cloud-alert-outline',
+        icon: 'cloud_alert',
         text: 'Échec de la synchronisation',
         action: { label: 'Réessayer', target: 'retry' },
       };

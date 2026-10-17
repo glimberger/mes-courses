@@ -23,7 +23,7 @@ export const EmptyState = ({
   message,
   action,
   messageRef,
-  icon = 'basket-outline',
+  icon = 'shopping_basket',
 }: EmptyStateProps) => {
   const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   const circle = 56;

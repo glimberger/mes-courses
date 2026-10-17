@@ -45,7 +45,7 @@ export const DeviceRow = ({ device, onRename, onRevoke }: DeviceRowProps) => {
           overlayAccessibilityLabel="Fermer le menu"
           anchor={
             <AppbarIconAction
-              icon="dots-vertical"
+              icon="more_vert"
               accessibilityLabel={`Actions de ${device.name}`}
               onPress={() => setOpen(true)}
             />

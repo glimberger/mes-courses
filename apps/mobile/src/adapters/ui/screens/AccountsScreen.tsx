@@ -111,7 +111,7 @@ export const AccountsScreen = () => {
         )}
         <Appbar.Content title="Comptes" />
         <AppbarIconAction
-          icon="account-plus"
+          icon="person_add"
           accessibilityLabel="Inviter"
           onPress={() => setInviting(true)}
         />
@@ -234,7 +234,7 @@ const AccountRow = ({
             overlayAccessibilityLabel="Fermer le menu"
             anchor={
               <AppbarIconAction
-                icon="dots-vertical"
+                icon="more_vert"
                 accessibilityLabel={`Actions de ${account.email}`}
                 onPress={() => setOpen(true)}
               />

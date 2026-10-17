@@ -70,7 +70,7 @@ export const DeleteArticleDialog = ({
         </View>
         <Dialog.Content style={styles.content}>
           <IconCircle
-            icon="delete-outline"
+            icon="delete"
             size={32}
             color={colors.onErrorContainer}
             backgroundColor={colors.errorContainer}

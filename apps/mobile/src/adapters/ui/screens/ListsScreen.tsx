@@ -107,7 +107,7 @@ export const ListsScreen = () => {
       />
       <ScreenFab
         ref={fabRef}
-        icon="plus"
+        icon="add"
         label="Nouvelle liste"
         onPress={() => setCreating(true)}
       />

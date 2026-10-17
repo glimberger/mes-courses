@@ -43,7 +43,7 @@ type Startup =
  * again), and the next start waits for that close, so one connection at a time holds the file.
  */
 export default function App() {
-  // Bundle Nunito for the brand typeface; load lazily so the startup splash
+  // Bundle Nunito for the brand typeface and the Material Symbols icons; load lazily so the startup splash
   // and the starting/ready/failed/tooOld lifecycle keep their existing gate.
   useEffect(() => {
     Font.loadAsync({
@@ -51,6 +51,8 @@ export default function App() {
       Nunito_600SemiBold: require('./assets/fonts/Nunito_600SemiBold.ttf'),
       Nunito_700Bold: require('./assets/fonts/Nunito_700Bold.ttf'),
       Nunito_800ExtraBold: require('./assets/fonts/Nunito_800ExtraBold.ttf'),
+      MaterialSymbolsRounded_500: require('./assets/fonts/MaterialSymbolsRounded_500.ttf'),
+      MaterialSymbolsRounded_700: require('./assets/fonts/MaterialSymbolsRounded_700.ttf'),
     }).catch(() => undefined);
   }, []);
 

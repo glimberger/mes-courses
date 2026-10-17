@@ -47,7 +47,7 @@ export const PasswordField = ({
         disabled={disabled}
         right={
           <TextInput.Icon
-            icon={shown ? 'eye-off-outline' : 'eye-outline'}
+            icon={shown ? 'visibility_off' : 'visibility'}
             accessibilityLabel={
               shown ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
             }
