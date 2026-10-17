@@ -1,11 +1,14 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { MD3LightTheme } from 'react-native-paper';
 
 import materialTheme from '../../../../../../design/material-theme.json';
 import { spacing } from './spacing';
-import { darkTheme, lightTheme } from './theme';
+import { darkTheme, lightTheme, type SchemeRole } from './theme';
 import { usedColorPairs } from './used-color-pairs';
 
-// onSurface (#1E1B13 light, #E8E2D4 dark) and scrim (#000000) written out as RGB, so the
+// onSurface (#1E1B13 light, #E8E2D4 dark) and scrim (#141108) written out as RGB, so the
 // derived roles are checked against values computed by hand, not by the code under test.
 const themes = [
   {
@@ -13,14 +16,14 @@ const themes = [
     theme: lightTheme,
     scheme: materialTheme.schemes.light,
     onSurfaceRgb: '30, 27, 19',
-    scrimRgb: '0, 0, 0',
+    scrimRgb: '20, 17, 8',
   },
   {
     name: 'dark',
     theme: darkTheme,
     scheme: materialTheme.schemes.dark,
     onSurfaceRgb: '232, 226, 212',
-    scrimRgb: '0, 0, 0',
+    scrimRgb: '20, 17, 8',
   },
 ] as const;
 
@@ -92,7 +95,7 @@ describe.each(themes)(
       expect(theme.colors.onSurfaceDisabled).toBe(
         `rgba(${onSurfaceRgb}, 0.38)`,
       );
-      expect(theme.colors.backdrop).toBe(`rgba(${scrimRgb}, 0.4)`);
+      expect(theme.colors.backdrop).toBe(`rgba(${scrimRgb}, 0.36)`);
     });
 
     describe('FR-036 meets WCAG AA contrast on every color pair the app draws', () => {
@@ -128,3 +131,67 @@ describe('spacing tokens', () => {
     }
   });
 });
+
+// The mockup stylesheet (design/mockups/styles.css) is the visual reference: each color token of
+// its :root and body.dark blocks is the export role it stands for (SC-004). A token missing from
+// body.dark keeps its light value in dark.
+const STYLES_CSS = readFileSync(
+  path.resolve(__dirname, '../../../../../../design/mockups/styles.css'),
+  'utf8',
+);
+
+const colorTokens = (block: RegExp): Record<string, string> => {
+  const body = STYLES_CSS.match(block)?.[1] ?? '';
+  return Object.fromEntries(
+    [...body.matchAll(/(--[\w-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)].map(
+      ([, token, color = '']) => [token, color.toLowerCase()],
+    ),
+  );
+};
+
+const lightTokens = colorTokens(/:root\s*\{([^}]*)\}/);
+const darkTokens = {
+  ...lightTokens,
+  ...colorTokens(/body\.dark\s*\{([^}]*)\}/),
+};
+
+const MOCKUP_TOKEN_ROLES: readonly (readonly [string, SchemeRole])[] = [
+  ['--bg', 'surface'],
+  ['--bg', 'background'],
+  ['--card', 'surfaceContainerLowest'],
+  ['--container', 'surfaceContainer'],
+  ['--on-surface', 'onSurface'],
+  ['--on-surface-var', 'onSurfaceVariant'],
+  ['--muted', 'outline'],
+  ['--hairline', 'surfaceContainerHigh'],
+  ['--primary', 'primary'],
+  ['--yellow', 'primaryContainer'],
+  ['--on-yellow', 'onPrimaryContainer'],
+  ['--yellow-soft', 'brandSoft'],
+  ['--secondary-container', 'secondaryContainer'],
+  ['--on-secondary-container', 'onSecondaryContainer'],
+  ['--tertiary-container', 'tertiaryContainer'],
+  ['--on-tertiary-container', 'onTertiaryContainer'],
+  ['--error', 'error'],
+  ['--inverse-surface', 'inverseSurface'],
+  ['--inverse-on-surface', 'inverseOnSurface'],
+  ['--inverse-primary', 'inversePrimary'],
+];
+
+describe.each([
+  { name: 'light', tokens: lightTokens, scheme: materialTheme.schemes.light },
+  { name: 'dark', tokens: darkTokens, scheme: materialTheme.schemes.dark },
+])(
+  'SC-004 the $name mockup tokens equal their export roles',
+  ({ tokens, scheme }) => {
+    it.each(MOCKUP_TOKEN_ROLES)('%s is %s', (token, role) => {
+      expect({
+        token,
+        color: scheme[role].toLowerCase(),
+      }).toEqual({
+        token,
+        color: tokens[token],
+      });
+    });
+  },
+);
