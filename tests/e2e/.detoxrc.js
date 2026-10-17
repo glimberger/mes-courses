@@ -79,6 +79,11 @@ module.exports = {
       // Detox installs the app. In CI the emulator runner boots it first, so this is unused.
       bootArgs: '-no-snapshot-load',
     },
+    // A physical Android phone plugged in over USB: `adb devices` gives its serial (DETOX_ADB_NAME).
+    attached: {
+      type: 'android.attached',
+      device: { adbName: process.env.DETOX_ADB_NAME ?? '.*' },
+    },
     simulator: {
       type: 'ios.simulator',
       device: {
@@ -92,6 +97,8 @@ module.exports = {
     'android.emu.release': { device: 'emulator', app: 'android.release' },
     'ios.sim.release': { device: 'simulator', app: 'ios.release' },
     'android.emu.shots': { device: 'emulator', app: 'android.shots' },
+    'android.phone.release': { device: 'attached', app: 'android.release' },
+    'android.phone.shots': { device: 'attached', app: 'android.shots' },
     'ios.sim.shots': { device: 'simulator', app: 'ios.shots' },
   },
 };
