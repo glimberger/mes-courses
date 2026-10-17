@@ -136,4 +136,8 @@ export const requiredStories: readonly string[] = [
   'Dialogs/DeleteMyAccountDialog/WrongPassword',
   'Dialogs/DeleteMyAccountDialog/LastAdministrator',
   'Components/NoticeSnackbar/PasswordChanged',
+  // 008 Mockup-faithful UI: shared blocks
+  'Components/Chip/Secondary',
+  'Components/Chip/Tertiary',
+  'Components/Chip/Brand',
 ];
