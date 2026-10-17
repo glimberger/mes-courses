@@ -6,7 +6,6 @@ import {
   type HostInstance,
 } from 'react-native';
 import {
-  Checkbox,
   IconButton,
   Text,
   TouchableRipple,
@@ -15,10 +14,14 @@ import {
 
 import type { Quantity } from '../../../domain/quantity';
 import type { AppTheme } from '../theme/theme';
-import { shape } from '../theme/shape';
-import { spacing } from '../theme/spacing';
+import { typeOverrides } from '../theme/typography';
+import { CheckboxBox } from './BrandCheckbox';
+import { Card } from './Card';
 import { formatQuantity } from './format-quantity';
 import { paperRef } from './paper-ref';
+
+// The mockups' row measures (`.row`), off the 4 dp grid.
+const ROW_MIN_HEIGHT = 64;
 
 export type ListItemRowProps = {
   name: string;
@@ -65,10 +68,11 @@ export const ListItemRow = memo(function ListItemRow({
   onRemove,
   ref,
 }: ListItemRowProps) {
-  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
+  const { colors, fonts } = useTheme() as AppTheme;
   const textStyle = [
     { color: inCart ? colors.onSurfaceVariant : colors.onSurface },
     inCart && styles.ticked,
+    inCart && { fontFamily: fonts.bodyLarge.fontFamily },
   ];
   const actions = [
     ...(onEditQuantity
@@ -82,15 +86,7 @@ export const ListItemRow = memo(function ListItemRow({
   };
 
   return (
-    <View
-      style={[
-        styles.row,
-        {
-          backgroundColor: colors.surfaceContainerLowest,
-          borderRadius: shape.lg,
-        },
-      ]}
-    >
+    <Card style={styles.row}>
       <TouchableRipple
         ref={paperRef(ref)}
         onPress={onToggle}
@@ -102,23 +98,11 @@ export const ListItemRow = memo(function ListItemRow({
         style={styles.checkboxArea}
       >
         <View style={styles.content}>
-          <View
-            importantForAccessibility="no-hide-descendants"
-            style={[
-              styles.checkbox,
-              styles.checkboxBorder,
-              { borderColor: colors.onSurface },
-            ]}
-          >
-            <Checkbox.Android
-              status={inCart ? 'checked' : 'unchecked'}
-              color={colors.primaryContainer}
-            />
-          </View>
+          <CheckboxBox checked={inCart} />
           {/* Remounted per tick state: Android kept a stale text style. */}
           <Text
             key={`name-${inCart}`}
-            variant="bodyLarge"
+            variant="titleMedium"
             style={[styles.name, ...textStyle]}
           >
             {name}
@@ -126,8 +110,11 @@ export const ListItemRow = memo(function ListItemRow({
           {quantity !== null && (
             <Text
               key={`quantity-${inCart}`}
-              variant="bodyMedium"
-              style={textStyle}
+              style={[
+                styles.quantity,
+                { color: colors.onSurfaceVariant },
+                inCart && styles.ticked,
+              ]}
             >
               {formatQuantity(quantity)}
             </Text>
@@ -159,7 +146,7 @@ export const ListItemRow = memo(function ListItemRow({
           )}
         </View>
       )}
-    </View>
+    </Card>
   );
 });
 
@@ -167,24 +154,22 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 1,
-    marginBottom: spacing.sm,
+    minHeight: ROW_MIN_HEIGHT,
+    paddingVertical: 8,
+    paddingEnd: 6,
+    paddingStart: 14,
+    marginBottom: 10,
   },
   checkboxArea: { flex: 1, minHeight: 48, justifyContent: 'center' },
   content: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-    paddingStart: spacing.sm,
-    paddingEnd: spacing.md,
+    alignItems: 'baseline',
+    gap: 10,
   },
-  // The row takes the tap; the box only shows the state.
-  checkbox: { pointerEvents: 'none' },
-  checkboxBorder: { borderWidth: 1.5, borderRadius: 2 },
   name: { flex: 1 },
+  quantity: typeOverrides.quantity,
   ticked: { textDecorationLine: 'line-through' },
   actions: { flexDirection: 'row' },
-  // Paper's 40 dp buttons, grown to the 48 dp a finger needs (FR-034).
+  // The mockups' 48 dp icon buttons (FR-034).
   action: { width: 48, height: 48, margin: 0 },
 });

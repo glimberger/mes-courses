@@ -94,9 +94,9 @@ describe('ListItemRow', () => {
   it('FR-035 shows a ticked item with a check mark and struck-through text, not only a color', () => {
     renderRow({ inCart: true, quantity: { amount: 2, unit: 'L' } });
 
-    // The marked box icon, as Paper's checkbox draws it.
+    // The marked box: the weight-700 check mark of the mockups.
     expect(
-      screen.UNSAFE_queryAllByProps({ name: 'checkbox-marked' }),
+      screen.UNSAFE_queryAllByProps({ name: 'check', weight: 700 }),
     ).not.toHaveLength(0);
     expect(screen.getByText('Lait')).toHaveStyle({
       textDecorationLine: 'line-through',
@@ -120,7 +120,7 @@ describe('ListItemRow', () => {
         color: theme.colors.onSurfaceVariant,
       });
       expect(
-        screen.UNSAFE_queryAllByProps({ name: 'checkbox-marked' }),
+        screen.UNSAFE_queryAllByProps({ name: 'check', weight: 700 }),
       ).not.toHaveLength(0);
       expect(screen.getByText('Lait')).toHaveStyle({
         textDecorationLine: 'line-through',
@@ -135,11 +135,8 @@ describe('ListItemRow', () => {
     renderRow({ inCart: false });
 
     expect(
-      screen.UNSAFE_queryAllByProps({ name: 'checkbox-marked' }),
+      screen.UNSAFE_queryAllByProps({ name: 'check', weight: 700 }),
     ).toHaveLength(0);
-    expect(
-      screen.UNSAFE_queryAllByProps({ name: 'checkbox-blank-outline' }),
-    ).not.toHaveLength(0);
     expect(screen.getByText('Lait')).not.toHaveStyle({
       textDecorationLine: 'line-through',
     });

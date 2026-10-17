@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import type { ReactNode, Ref } from 'react';
+import { StyleSheet, View, type HostInstance } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,6 +27,8 @@ export type ScreenHeaderProps = {
   actions?: ReactNode;
   /** Shows the "Retour" action at the start. */
   onBack?: () => void;
+  /** The title, the target of a focus move (FR-037). */
+  titleRef?: Ref<HostInstance>;
   testID?: string;
 };
 
@@ -41,6 +43,7 @@ export const ScreenHeader = ({
   chip,
   actions,
   onBack,
+  titleRef,
   testID,
 }: ScreenHeaderProps) => {
   const { colors } = useTheme() as AppTheme;
@@ -73,14 +76,21 @@ export const ScreenHeader = ({
     >
       {back}
       <View style={styles.titles}>
-        <Text
-          variant={titleVariant ?? 'headlineMedium'}
-          accessibilityRole="header"
-          style={[styles.largeTitle, { color: colors.onSurface }]}
-        >
-          {title}
-        </Text>
-        {chip ? <View style={styles.chip}>{chip}</View> : null}
+        <View ref={titleRef}>
+          <Text
+            variant={titleVariant ?? 'headlineMedium'}
+            accessibilityRole="header"
+            style={[styles.largeTitle, { color: colors.onSurface }]}
+          >
+            {title}
+          </Text>
+        </View>
+        {chip ? (
+          // Not announced when it changes (FR-038).
+          <View style={styles.chip} accessibilityLiveRegion="none">
+            {chip}
+          </View>
+        ) : null}
       </View>
       {actions ? <View style={styles.actions}>{actions}</View> : null}
     </View>
