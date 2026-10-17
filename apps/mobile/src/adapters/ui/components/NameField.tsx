@@ -1,7 +1,8 @@
 import { View } from 'react-native';
 
 import { shape } from '../theme/shape';
-import { HelperText, TextInput } from 'react-native-paper';
+import type { AppTheme } from '../theme/theme';
+import { HelperText, TextInput, useTheme } from 'react-native-paper';
 
 import type { NameError } from '../../../domain/name';
 import { useAnnouncement } from '../accessibility/announce';
@@ -36,6 +37,7 @@ export const NameField = ({
   disabled = false,
 }: NameFieldProps) => {
   useAnnouncement(error);
+  const { fonts } = useTheme() as AppTheme;
   return (
     <View>
       <TextInput
@@ -47,7 +49,10 @@ export const NameField = ({
         autoCapitalize="sentences"
         error={error !== null}
         disabled={disabled}
-        style={{ borderRadius: shape.lg }}
+        style={{
+          borderRadius: shape.lg,
+          fontFamily: fonts.bodyLarge.fontFamily,
+        }}
       />
       {error !== null && <HelperText type="error">{error}</HelperText>}
     </View>

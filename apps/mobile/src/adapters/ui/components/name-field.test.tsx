@@ -50,3 +50,12 @@ describe('NameField', () => {
     expect(announce).toHaveBeenCalledWith('Indiquez un nom.');
   });
 });
+
+describe('NameField typeface', () => {
+  it('sets the typed text in the bodyLarge family, Nunito_600SemiBold', () => {
+    renderField();
+    expect(screen.getByLabelText('Nom')).toHaveStyle({
+      fontFamily: 'Nunito_600SemiBold',
+    });
+  });
+});

@@ -11,6 +11,7 @@ import { Icon, Text, useTheme } from 'react-native-paper';
 
 import { shape } from '../theme/shape';
 import type { AppTheme, SchemeRole } from '../theme/theme';
+import { typeOverrides } from '../theme/typography';
 
 export type ButtonMode =
   'brand' | 'outlined' | 'danger' | 'dangerFilled' | 'text';
@@ -78,8 +79,7 @@ const LEGACY_MODES: Record<LegacyMode, ButtonMode> = {
 const isLegacyMode = (mode: ButtonMode | LegacyMode): mode is LegacyMode =>
   mode in LEGACY_MODES;
 
-// The compact label (14.5 dp) and the 20 dp icon of the mockups' `.btn` (research R6).
-const COMPACT_LABEL_SIZE = 14.5;
+// The 20 dp icon of the mockups' `.btn` (research R6).
 const ICON_SIZE = 20;
 const BORDER_WIDTH = 1.5;
 const DEFAULT_HEIGHT = 50;
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   default: { height: DEFAULT_HEIGHT },
   bordered: { borderWidth: BORDER_WIDTH },
   disabled: { opacity: 0.5 },
-  compactLabel: { fontSize: COMPACT_LABEL_SIZE },
+  compactLabel: { fontSize: typeOverrides.compactLabel.fontSize },
 });
 
 Button.displayName = 'Button';

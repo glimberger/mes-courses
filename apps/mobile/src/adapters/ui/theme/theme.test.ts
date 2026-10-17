@@ -6,6 +6,7 @@ import { MD3LightTheme } from 'react-native-paper';
 import materialTheme from '../../../../../../design/material-theme.json';
 import { spacing } from './spacing';
 import { darkTheme, lightTheme, type SchemeRole } from './theme';
+import { typeOverrides, typeScale } from './typography';
 import { alternativeColorPairs, usedColorPairs } from './used-color-pairs';
 
 // onSurface (#1E1B13 light, #E8E2D4 dark) and scrim (#141108) written out as RGB, so the
@@ -136,6 +137,49 @@ describe('Nunito typography', () => {
     for (const variant of Object.values(lightTheme.fonts)) {
       expect(variant.fontFamily).toMatch(/^Nunito_/);
     }
+  });
+});
+
+describe('SC-003 the mockup type scale', () => {
+  it.each(Object.entries(typeScale))(
+    '%s uses its scale entry',
+    (role, type) => {
+      const font = lightTheme.fonts[role as keyof typeof lightTheme.fonts];
+      expect({ role, ...font }).toMatchObject({ role, ...type });
+      expect(font).not.toHaveProperty('fontWeight');
+    },
+  );
+
+  it('keeps the brand weights: 800 headlines and titles, 600 body, 700 labels', () => {
+    expect(typeScale.headlineMedium.fontFamily).toBe('Nunito_800ExtraBold');
+    expect(typeScale.titleMedium.fontFamily).toBe('Nunito_700Bold');
+    expect(typeScale.bodyMedium.fontFamily).toBe('Nunito_600SemiBold');
+    expect(typeScale.labelMedium.fontFamily).toBe('Nunito_700Bold');
+  });
+
+  it('sets the mockups overrides outside the scale', () => {
+    expect(typeOverrides).toEqual({
+      quantity: expect.objectContaining({
+        fontSize: 13.5,
+        fontFamily: 'Nunito_700Bold',
+      }),
+      compactLabel: expect.objectContaining({
+        fontSize: 14.5,
+        fontFamily: 'Nunito_800ExtraBold',
+      }),
+      snackbarMessage: expect.objectContaining({
+        fontSize: 15,
+        fontFamily: 'Nunito_700Bold',
+      }),
+      syncStrip: expect.objectContaining({
+        fontSize: 14,
+        fontFamily: 'Nunito_700Bold',
+      }),
+      emptyCategory: expect.objectContaining({
+        fontSize: 14,
+        fontFamily: 'Nunito_600SemiBold',
+      }),
+    });
   });
 });
 
