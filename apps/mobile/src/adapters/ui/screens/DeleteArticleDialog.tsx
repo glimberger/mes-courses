@@ -69,12 +69,7 @@ export const DeleteArticleDialog = ({
           <Dialog.Title>{`Supprimer « ${usage.article.name} » ?`}</Dialog.Title>
         </View>
         <Dialog.Content style={styles.content}>
-          <IconCircle
-            icon="delete"
-            size={32}
-            color={colors.onErrorContainer}
-            backgroundColor={colors.errorContainer}
-          />
+          <IconCircle icon="delete" tone="error" />
           <Text variant="bodyMedium">{consequence(usage.lists)}</Text>
         </Dialog.Content>
         <Dialog.Actions>

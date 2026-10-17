@@ -41,12 +41,7 @@ export const FinishShoppingDialog = ({
           <Dialog.Title>Terminer les courses ?</Dialog.Title>
         </View>
         <Dialog.Content style={styles.content}>
-          <IconCircle
-            icon="check"
-            size={32}
-            color={colors.primary}
-            backgroundColor={colors.surfaceContainerHigh}
-          />
+          <IconCircle icon="check" />
           <Text variant="bodyMedium">
             Tous les articles seront décochés et resteront dans la liste.
           </Text>
