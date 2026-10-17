@@ -1,10 +1,10 @@
 import { View } from 'react-native';
-
-import { shape } from '../theme/shape';
-import { HelperText, TextInput } from 'react-native-paper';
+import { HelperText, TextInput, useTheme } from 'react-native-paper';
 
 import type { NameError } from '../../../domain/name';
 import { useAnnouncement } from '../accessibility/announce';
+import type { AppTheme } from '../theme/theme';
+import { fieldStyle } from './field-style';
 
 /** The French text of the name errors every form shares (contracts/ui-screens.md). */
 export const nameErrorText = (error: NameError): string => {
@@ -23,6 +23,8 @@ export type NameFieldProps = {
   error: string | null;
   /** Locks the field, for a form being saved. */
   disabled?: boolean;
+  /** The outline of a screen (16 dp corners) or of a dialog (14 dp). */
+  context?: 'screen' | 'dialog';
 };
 
 /**
@@ -34,12 +36,14 @@ export const NameField = ({
   onChangeText,
   error,
   disabled = false,
+  context = 'screen',
 }: NameFieldProps) => {
   useAnnouncement(error);
+  const theme = useTheme() as AppTheme;
   return (
     <View>
       <TextInput
-        mode="outlined"
+        {...fieldStyle(context, theme)}
         label="Nom"
         accessibilityLabel="Nom"
         value={value}
@@ -47,7 +51,6 @@ export const NameField = ({
         autoCapitalize="sentences"
         error={error !== null}
         disabled={disabled}
-        style={{ borderRadius: shape.lg }}
       />
       {error !== null && <HelperText type="error">{error}</HelperText>}
     </View>

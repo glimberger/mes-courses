@@ -21,6 +21,8 @@ export type AppStoryParameters = {
   withoutStore?: boolean;
   /** The route params of a screen story. */
   routeParams?: object;
+  /** The appearance the story is drawn in; the system scheme when none is given. */
+  appearance?: 'light' | 'dark';
 };
 
 // One object, so a story without a scenario keeps its store when the decorator renders again.
@@ -63,7 +65,7 @@ export const withAppProviders = (
   Story: ComponentType,
   { parameters }: { parameters: AppStoryParameters },
 ) => (
-  <ThemeProvider>
+  <ThemeProvider appearance={parameters.appearance}>
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       {parameters.withoutStore ? (
         <Story />

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { HelperText, TextInput } from 'react-native-paper';
+import { HelperText, TextInput, useTheme } from 'react-native-paper';
 
 import { useAnnouncement } from '../accessibility/announce';
+import type { AppTheme } from '../theme/theme';
+import { fieldStyle } from './field-style';
 
 export type PasswordFieldProps = {
   /** The visible label, also the accessible one ("Mot de passe", "Nouveau mot de passe"…). */
@@ -15,6 +17,8 @@ export type PasswordFieldProps = {
   disabled?: boolean;
   /** Lets the system offer a stored password; a new one asks for a generated password. */
   kind?: 'current' | 'new';
+  /** The outline of a screen (16 dp corners) or of a dialog (14 dp). */
+  context?: 'screen' | 'dialog';
 };
 
 /**
@@ -28,13 +32,15 @@ export const PasswordField = ({
   error = null,
   disabled = false,
   kind = 'current',
+  context = 'screen',
 }: PasswordFieldProps) => {
   const [shown, setShown] = useState(false);
+  const theme = useTheme() as AppTheme;
   useAnnouncement(error);
   return (
     <View>
       <TextInput
-        mode="outlined"
+        {...fieldStyle(context, theme)}
         label={label}
         accessibilityLabel={label}
         value={value}
@@ -47,7 +53,7 @@ export const PasswordField = ({
         disabled={disabled}
         right={
           <TextInput.Icon
-            icon={shown ? 'eye-off-outline' : 'eye-outline'}
+            icon={shown ? 'visibility_off' : 'visibility'}
             accessibilityLabel={
               shown ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
             }

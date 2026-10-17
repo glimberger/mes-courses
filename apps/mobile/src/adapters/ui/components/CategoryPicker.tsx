@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { type HostInstance } from 'react-native';
-import { RadioButton } from 'react-native-paper';
 
 import type { CategoryId } from '../../../domain/category';
 import { focusOn } from '../accessibility/focus';
 import { CreateCategoryDialog } from '../screens/CreateCategoryDialog';
 import { useAppStore } from '../state/use-app-store';
 import { Button } from './Button';
+import { Card } from './Card';
 import { paperRef } from './paper-ref';
 import { RadioItem } from './RadioItem';
 import { ScreenStateView } from './ScreenStateView';
@@ -50,22 +50,21 @@ export const CategoryPicker = ({
         onRetry={() => void loadCategories()}
         renderSuccess={(data) => (
           <>
-            <RadioButton.Group
-              value={value ?? ''}
-              onValueChange={(id) => onChange(id as CategoryId)}
-            >
+            <Card>
               {data.map((category) => (
                 <RadioItem
                   key={category.id}
                   label={category.name}
-                  value={category.id}
+                  selected={category.id === value}
                   disabled={disabled}
+                  onPress={() => onChange(category.id)}
                 />
               ))}
-            </RadioButton.Group>
+            </Card>
             <Button
               ref={paperRef(newCategoryRef)}
-              icon="plus"
+              mode="outlined"
+              icon="add"
               disabled={disabled}
               onPress={() => setCreating(true)}
             >

@@ -16,6 +16,9 @@
   --tertiary-container: #c5ecce;   /* vert salade du logo */
   --on-tertiary-container: #2c4e38;
   --error: #ba1a1a;
+  --inverse-surface: #333027;      /* snackbar */
+  --inverse-on-surface: #f7f0e2;
+  --inverse-primary: #dbc66e;      /* action du snackbar */
   --shadow-card: 0 1px 2px rgba(30, 27, 19, 0.05), 0 6px 16px rgba(30, 27, 19, 0.06);
   --shadow-fab: 0 4px 12px rgba(58, 48, 0, 0.2), 0 1px 3px rgba(58, 48, 0, 0.14);
 }
@@ -34,6 +37,9 @@ body.dark {
   --tertiary-container: #2c4e38;
   --on-tertiary-container: #c5ecce;
   --error: #ffb4ab;
+  --inverse-surface: #e8e2d4;
+  --inverse-on-surface: #333027;
+  --inverse-primary: #6d5e0f;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 0, 0, 0.3);
 }
 
@@ -191,6 +197,17 @@ fieldset.field .trailing { position: absolute; right: 12px; top: 13px; color: va
 .btn.text { background: transparent; color: var(--primary); height: 44px; padding: 0 14px; border-radius: 999px; font-size: 14.5px; font-weight: 800; }
 .btn.pill { height: 44px; padding: 0 22px; border-radius: 999px; font-size: 14.5px; font-weight: 800; }
 .btn.pill.error { background: var(--error); color: #ffffff; }
+
+/* ---- Snackbar (annulation, notices) : au-dessus du FAB ---- */
+.snackbar {
+  position: absolute; left: 16px; right: 16px; bottom: 92px;
+  min-height: 56px; border-radius: 16px; padding: 8px 6px 8px 18px;
+  background: var(--inverse-surface); color: var(--inverse-on-surface);
+  box-shadow: 0 6px 18px rgba(20, 17, 8, 0.26), 0 1px 3px rgba(20, 17, 8, 0.16);
+  display: flex; align-items: center; gap: 8px;
+}
+.snackbar .s-text { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; line-height: 1.35; }
+.snackbar .btn.text { color: var(--inverse-primary); flex: none; }
 
 /* ---- Splash ---- */
 .splash {

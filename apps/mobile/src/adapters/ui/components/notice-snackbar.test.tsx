@@ -176,4 +176,8 @@ describe('NoticeSnackbar', () => {
       ABOVE_UNDO_OFFER,
     );
   });
+
+  it('sits one 8 dp gap above the 60 dp undo offer, itself above the 92 dp floating button zone', () => {
+    expect(ABOVE_UNDO_OFFER.bottom).toBe(92 + 60 + 8);
+  });
 });

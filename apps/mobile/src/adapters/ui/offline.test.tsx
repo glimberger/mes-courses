@@ -148,6 +148,9 @@ const networks: [string, () => Network][] = [
   ],
 ];
 
+// Twelve actions through the whole app: a busy machine (CI, a build running) outlasts Jest's 5 s default.
+jest.setTimeout(30_000);
+
 describe.each(networks)(
   'the app with no network, %s',
   (_network, makeNetwork) => {

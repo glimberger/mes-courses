@@ -6,13 +6,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import {
-  Appbar,
-  HelperText,
-  Text,
-  TextInput,
-  useTheme,
-} from 'react-native-paper';
+import { HelperText, Text, TextInput, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -22,7 +16,9 @@ import { useAnnouncement } from '../accessibility/announce';
 import { BackAction } from '../components/BackAction';
 import { BrandImage } from '../components/BrandImage';
 import { Button } from '../components/Button';
+import { fieldStyle } from '../components/field-style';
 import { PasswordField } from '../components/PasswordField';
+import { VisuallyHidden } from '../components/VisuallyHidden';
 import { ForgotPasswordDialog } from './ForgotPasswordDialog';
 import type { RootStackParamList } from '../routes';
 import type { AppState } from '../state/app-store';
@@ -164,7 +160,8 @@ export type SignInFormProps = {
 
 /**
  * The form of SignIn, its values, error and callbacks given as props, so a story can show each
- * outcome.
+ * outcome. The mockup has no app bar: the screen name is a heading for screen readers only, and
+ * "Retour", when there is a screen to go back to, sits above the brand tile.
  */
 export const SignInForm = ({
   onBack,
@@ -182,38 +179,39 @@ export const SignInForm = ({
   onForgotPassword,
 }: SignInFormProps) => {
   const insets = useSafeAreaInsets();
-  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
+  const theme = useTheme() as AppTheme;
   const [brandFailed, setBrandFailed] = useState(false);
   useAnnouncement(error);
+  const field = fieldStyle('screen', theme);
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.screen}
     >
-      <Appbar.Header>
-        {onBack && <BackAction onPress={onBack} />}
-        <Appbar.Content title="Se connecter" />
-      </Appbar.Header>
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.form}
+        contentContainerStyle={[
+          styles.form,
+          { paddingTop: insets.top + FORM_TOP, paddingBottom: insets.bottom },
+        ]}
       >
+        <VisuallyHidden role="header">Se connecter</VisuallyHidden>
+        {onBack && (
+          <View style={styles.back}>
+            <BackAction onPress={onBack} />
+          </View>
+        )}
         <View style={styles.brand}>
           {brandFailed ? (
             <Text accessibilityRole="header" variant="headlineLarge">
               Mes Courses
             </Text>
           ) : (
-            <>
-              <BrandImage onError={() => setBrandFailed(true)} />
-              <Text accessibilityRole="header" variant="headlineSmall">
-                Mes Courses
-              </Text>
-            </>
+            <BrandImage onError={() => setBrandFailed(true)} />
           )}
         </View>
         <TextInput
-          mode="outlined"
+          {...field}
           label="Adresse du serveur"
           accessibilityLabel="Adresse du serveur"
           placeholder="courses.example.fr"
@@ -225,7 +223,7 @@ export const SignInForm = ({
           disabled={saving}
         />
         <TextInput
-          mode="outlined"
+          {...field}
           label="Adresse e-mail"
           accessibilityLabel="Adresse e-mail"
           value={email}
@@ -243,7 +241,7 @@ export const SignInForm = ({
           disabled={saving}
         />
         <TextInput
-          mode="outlined"
+          {...field}
           label="Nom de cet appareil"
           accessibilityLabel="Nom de cet appareil"
           value={deviceName}
@@ -252,12 +250,8 @@ export const SignInForm = ({
           disabled={saving}
         />
         {error !== null && <HelperText type="error">{error}</HelperText>}
-      </ScrollView>
-      <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
-          mode="contained-tonal"
-          buttonColor={colors.primaryContainer}
-          textColor={colors.onPrimaryContainer}
+          mode="brand"
           disabled={saving}
           onPress={onSubmit}
           style={styles.submit}
@@ -267,15 +261,23 @@ export const SignInForm = ({
         <Button mode="text" disabled={saving} onPress={onForgotPassword}>
           Mot de passe oublié ?
         </Button>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };
 
+// The mockups' sign-in measures (`.screen` padding and gaps), off the 4 dp grid.
+const FORM_TOP = 14;
+const FIELD_GAP = 15;
+const SUBMIT_GAP = 10;
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  brand: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
-  form: { padding: spacing.md, gap: spacing.sm },
-  footer: { paddingHorizontal: spacing.md },
-  submit: { marginVertical: spacing.sm },
+  back: { alignSelf: 'flex-start' },
+  brand: { alignItems: 'center', gap: spacing.sm },
+  form: {
+    paddingHorizontal: spacing.lg,
+    gap: FIELD_GAP,
+  },
+  submit: { marginTop: SUBMIT_GAP },
 });

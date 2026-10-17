@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo } from 'react-native';
-import { Snackbar } from 'react-native-paper';
 
 import type { Notice } from '../state/app-store';
 import { useAppStore } from '../state/use-app-store';
+import { BrandSnackbar } from './BrandSnackbar';
 import { ABOVE_SCREEN_FAB } from './ScreenFab';
 import { ABOVE_UNDO_OFFER } from './UndoSnackbar';
 
@@ -54,7 +54,7 @@ export const NoticeSnackbar = () => {
   }, [notice]);
 
   return (
-    <Snackbar
+    <BrandSnackbar
       key={shown?.id}
       visible={notice !== null}
       onDismiss={dismissNotice}
@@ -64,6 +64,6 @@ export const NoticeSnackbar = () => {
       wrapperStyle={undoOffered ? ABOVE_UNDO_OFFER : ABOVE_SCREEN_FAB}
     >
       {shown ? text(shown.notice) : ''}
-    </Snackbar>
+    </BrandSnackbar>
   );
 };

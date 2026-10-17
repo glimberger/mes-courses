@@ -2,37 +2,55 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Icon, useTheme } from 'react-native-paper';
 
-import type { AppTheme } from '../theme/theme';
+import type { AppTheme, SchemeRole } from '../theme/theme';
 
-export type IconCircleProps = {
-  icon: string;
-  size?: number;
-  color?: string;
-  diameter?: number;
-  backgroundColor?: string;
+export type IconCircleTone = 'brand' | 'error';
+
+const TONE_ROLES: Record<IconCircleTone, [SchemeRole, SchemeRole]> = {
+  brand: ['brandSoft', 'onBrandSoft'],
+  error: ['errorContainer', 'onErrorContainer'],
 };
 
+// The mockups' two circle sizes, each with its icon (`.d-icon`, `.item-icon`).
+const ICON_SIZE = { 44: 24, 56: 28 } as const;
+
+export type IconCircleProps = {
+  /** A Material Symbol name. */
+  icon: string;
+  diameter?: keyof typeof ICON_SIZE;
+  tone?: IconCircleTone;
+  testID?: string;
+};
+
+/** A round tonal badge around an icon. It is decorative: its row or dialog carries the label. */
 export const IconCircle = ({
   icon,
-  size = 32,
-  color,
   diameter = 56,
-  backgroundColor,
+  tone = 'brand',
+  testID,
 }: IconCircleProps): ReactNode => {
-  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
+  const { colors } = useTheme() as AppTheme;
+  const [background, foreground] = TONE_ROLES[tone];
   return (
     <View
+      testID={testID}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
       style={[
         styles.circle,
         {
           width: diameter,
           height: diameter,
           borderRadius: diameter / 2,
-          backgroundColor: backgroundColor ?? colors.surfaceContainerHigh,
+          backgroundColor: colors[background],
         },
       ]}
     >
-      <Icon source={icon} size={size} color={color ?? colors.primary} />
+      <Icon
+        source={icon}
+        size={ICON_SIZE[diameter]}
+        color={colors[foreground]}
+      />
     </View>
   );
 };

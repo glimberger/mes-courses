@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import type { AccountServer } from '../../../application/ports/account-server';
@@ -5,6 +6,7 @@ import { RecordingErrorReporter } from '../../../application/testing/recording-e
 import { err, ok } from '../../../domain/result';
 import { Navigation } from '../navigation';
 import { fixture } from '../testing/fixtures';
+import { lightTheme } from '../theme/theme';
 import { renderWithStore } from '../testing/render-with-store';
 
 jest.mock('expo-device', () => ({ modelName: 'Pixel 8' }), { virtual: true });
@@ -447,6 +449,56 @@ describe('ForgotPasswordDialog', () => {
       await renderSignIn();
 
       expect(screen.getByLabelText('Adresse du serveur').props.value).toBe('');
+    });
+  });
+});
+
+describe('SignIn in the mockup look', () => {
+  it('draws "Se connecter" as the brand button, 50 dp high, 10 dp under the fields', async () => {
+    await renderSignIn();
+    expect(screen.getByRole('button', { name: 'Se connecter' })).toHaveStyle({
+      backgroundColor: lightTheme.colors.primaryContainer,
+      borderRadius: 9999,
+      minHeight: 50,
+      marginTop: 10,
+    });
+  });
+
+  it('puts each field on the screen outline, with 16 dp corners', async () => {
+    await renderSignIn();
+    const outline = screen
+      .UNSAFE_getAllByProps({ label: 'Adresse e-mail' })
+      .map((node) => node.props)
+      .filter((props) => 'outlineStyle' in props)[0];
+    expect(outline).toMatchObject({
+      outlineStyle: { borderRadius: 16, borderWidth: 1.5 },
+    });
+  });
+
+  it('keeps the label of every field in its top border, even when empty', async () => {
+    await renderSignIn();
+    const outlines = screen
+      .UNSAFE_getAllByProps({ label: 'Mot de passe' })
+      .filter((node) => 'labelFloated' in node.props);
+    expect(outlines[0]?.props.labelFloated).toBe(true);
+  });
+
+  it('draws the brand once, as the image, with no title under the tile (mockup 4)', async () => {
+    await renderSignIn();
+    expect(
+      screen.getByRole('image', { name: 'Mes Courses' }),
+    ).toBeOnTheScreen();
+    expect(screen.queryByText('Mes Courses')).not.toBeOnTheScreen();
+  });
+
+  it('keeps the screen name a heading that is clipped, not transparent, so screen readers read it', async () => {
+    await renderSignIn();
+    const heading = screen.getByRole('header', { name: 'Se connecter' });
+    expect(StyleSheet.flatten(heading.props.style)?.opacity).toBeUndefined();
+    expect(heading.parent?.parent).toHaveStyle({
+      width: 1,
+      height: 1,
+      overflow: 'hidden',
     });
   });
 });

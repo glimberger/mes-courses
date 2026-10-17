@@ -6,7 +6,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { Appbar, HelperText, Text, useTheme } from 'react-native-paper';
+import { HelperText, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
@@ -17,14 +17,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { PasswordProblem } from '@mes-courses/sync-core';
 
 import { useAnnouncement } from '../accessibility/announce';
-import { BackAction } from '../components/BackAction';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { Button } from '../components/Button';
 import { PasswordField } from '../components/PasswordField';
 import type { RootStackParamList } from '../routes';
 import type { AppState } from '../state/app-store';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
-import type { AppTheme } from '../theme/theme';
 import { signInErrorText } from './SignInScreen';
 
 type ChooseFailure = Extract<
@@ -151,17 +150,17 @@ export const ChoosePasswordForm = ({
   onSubmit,
 }: ChoosePasswordFormProps) => {
   const insets = useSafeAreaInsets();
-  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   useAnnouncement(error);
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.screen}
     >
-      <Appbar.Header>
-        <BackAction onPress={onBack} />
-        <Appbar.Content title="Choisir votre mot de passe" />
-      </Appbar.Header>
+      <ScreenHeader
+        variant="center"
+        title="Choisir votre mot de passe"
+        onBack={onBack}
+      />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.form}
@@ -193,9 +192,7 @@ export const ChoosePasswordForm = ({
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
-          mode="contained-tonal"
-          buttonColor={colors.primaryContainer}
-          textColor={colors.onPrimaryContainer}
+          mode="brand"
           disabled={saving}
           onPress={onSubmit}
           style={styles.submit}

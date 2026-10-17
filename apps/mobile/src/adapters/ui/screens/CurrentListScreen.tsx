@@ -1,6 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SectionList, StyleSheet, View, type HostInstance } from 'react-native';
-import { Appbar, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -9,11 +8,14 @@ import type { CurrentListView } from '../../../domain/current-list-view';
 import { focusOn } from '../accessibility/focus';
 import { AppbarIconAction } from '../components/AppbarIconAction';
 import { CategoryHeader } from '../components/CategoryHeader';
+import { Chip } from '../components/Chip';
 import { ListItemRow } from '../components/ListItemRow';
 import { SCREEN_FAB_CLEARANCE, ScreenFab } from '../components/ScreenFab';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenStateView } from '../components/ScreenStateView';
 import { SyncStatusBar } from '../components/SyncStatusBar';
 import type { RootStackParamList } from '../routes';
+import { spacing } from '../theme/spacing';
 import type { AppState } from '../state/app-store';
 import { useAppStoreApi } from '../state/app-store-provider';
 import { shownList } from '../state/current-list-actions';
@@ -252,44 +254,37 @@ export const CurrentListScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <Appbar.Header>
-        <Appbar.Content
-          title={
-            <View>
-              {/* The list name as a header, and the target of a focus move. */}
-              <View ref={titleRef} accessible accessibilityRole="header">
-                <Text variant="titleLarge" numberOfLines={1}>
-                  {list?.name ?? ''}
-                </Text>
-              </View>
-              {view && (
-                // Not announced when it changes (FR-038).
-                <Text variant="bodyMedium" accessibilityLiveRegion="none">
-                  {remainingText(view.remainingCount)}
-                </Text>
-              )}
-            </View>
-          }
-        />
-        {view?.hasItemsInCart && (
-          <AppbarIconAction
-            ref={finishActionRef}
-            icon="cart-check"
-            accessibilityLabel="Terminer les courses"
-            onPress={() => setFinishing(true)}
-          />
-        )}
-        <AppbarIconAction
-          icon="format-list-bulleted"
-          accessibilityLabel="Mes listes"
-          onPress={() => navigation.navigate('Lists')}
-        />
-        <AppbarIconAction
-          icon="cog"
-          accessibilityLabel="Réglages"
-          onPress={() => navigation.navigate('Settings')}
-        />
-      </Appbar.Header>
+      <ScreenHeader
+        titleRef={titleRef}
+        title={list?.name ?? ''}
+        chip={
+          view ? (
+            <Chip tone="secondary">{remainingText(view.remainingCount)}</Chip>
+          ) : undefined
+        }
+        actions={
+          <>
+            {view?.hasItemsInCart && (
+              <AppbarIconAction
+                ref={finishActionRef}
+                icon="shopping_cart_checkout"
+                accessibilityLabel="Terminer les courses"
+                onPress={() => setFinishing(true)}
+              />
+            )}
+            <AppbarIconAction
+              icon="format_list_bulleted"
+              accessibilityLabel="Mes listes"
+              onPress={() => navigation.navigate('Lists')}
+            />
+            <AppbarIconAction
+              icon="settings"
+              accessibilityLabel="Réglages"
+              onPress={() => navigation.navigate('Settings')}
+            />
+          </>
+        }
+      />
       <SyncStatusBar />
       <ScreenStateView
         state={currentList}
@@ -304,7 +299,7 @@ export const CurrentListScreen = () => {
           <CurrentListSections view={data} handlers={handlers} />
         )}
       />
-      {view && <ScreenFab icon="plus" label="Ajouter" onPress={addArticles} />}
+      {view && <ScreenFab icon="add" label="Ajouter" onPress={addArticles} />}
       <FinishShoppingDialog
         visible={finishing}
         onCancel={cancelFinish}
@@ -344,5 +339,8 @@ const CurrentListSections = ({
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingBottom: SCREEN_FAB_CLEARANCE },
+  content: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: SCREEN_FAB_CLEARANCE,
+  },
 });

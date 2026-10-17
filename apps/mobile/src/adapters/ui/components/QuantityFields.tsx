@@ -1,10 +1,10 @@
 import { StyleSheet, View } from 'react-native';
-import { HelperText, TextInput } from 'react-native-paper';
+import { HelperText, TextInput, useTheme } from 'react-native-paper';
 
 import type { QuantityError } from '../../../domain/quantity';
 import { useAnnouncement } from '../accessibility/announce';
-import { shape } from '../theme/shape';
-import { spacing } from '../theme/spacing';
+import type { AppTheme } from '../theme/theme';
+import { fieldStyle } from './field-style';
 
 /** The French text of each quantity error (FR-016, contracts/ui-screens.md). */
 export const quantityErrorText = (error: QuantityError): string => {
@@ -49,19 +49,20 @@ export const QuantityFields = ({
   const unitMessage = error?.type === 'UnitTooLong' ? message : null;
   const amountMessage = unitMessage === null ? message : null;
   useAnnouncement(message);
+  const theme = useTheme() as AppTheme;
+  const field = fieldStyle('dialog', theme);
 
   return (
-    <View style={styles.row}>
+    <View testID="quantity-fields" style={styles.row}>
       <View style={styles.field}>
         <TextInput
-          mode="outlined"
+          {...field}
           label="Quantité"
           accessibilityLabel="Quantité"
           value={amount}
           onChangeText={onChangeAmount}
           inputMode="decimal"
           error={amountMessage !== null}
-          style={{ borderRadius: shape.lg }}
         />
         {amountMessage !== null && (
           <HelperText type="error">{amountMessage}</HelperText>
@@ -69,14 +70,13 @@ export const QuantityFields = ({
       </View>
       <View style={styles.field}>
         <TextInput
-          mode="outlined"
+          {...field}
           label="Unité"
           accessibilityLabel="Unité"
           value={unit}
           onChangeText={onChangeUnit}
           autoCapitalize="none"
           error={unitMessage !== null}
-          style={{ borderRadius: shape.lg }}
         />
         {unitMessage !== null && (
           <HelperText type="error">{unitMessage}</HelperText>
@@ -87,6 +87,6 @@ export const QuantityFields = ({
 };
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: spacing.sm },
+  row: { flexDirection: 'row', gap: 12 },
   field: { flex: 1 },
 });

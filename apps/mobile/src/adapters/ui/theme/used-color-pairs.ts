@@ -61,4 +61,53 @@ export const usedColorPairs: readonly UsedColorPair[] = [
     background: 'errorContainer',
     kind: 'text',
   },
+  // Brand icon circles and the round add button (IconCircle, ArticleRow).
+  {
+    foreground: 'onBrandSoft',
+    background: 'brandSoft',
+    kind: 'graphic',
+  },
+  // Remaining-articles chip (secondary tone).
+  {
+    foreground: 'onSecondaryContainer',
+    background: 'secondaryContainer',
+    kind: 'text',
+  },
+  // Snackbar message and its action (SnackbarBar).
+  {
+    foreground: 'inverseOnSurface',
+    background: 'inverseSurface',
+    kind: 'text',
+  },
+  {
+    foreground: 'inversePrimary',
+    background: 'inverseSurface',
+    kind: 'text',
+  },
+  // Filled delete confirmation (AppDialog dangerFilled).
+  {
+    foreground: 'onError',
+    background: 'error',
+    kind: 'text',
+  },
+];
+
+/**
+ * A checkbox mark whose color depends on the appearance: each scheme needs one of the
+ * alternatives to pass its graphic minimum (3:1). The checked box draws its border in
+ * onPrimaryContainer (light) or its fill in primaryContainer (dark) on surfaceContainerLowest.
+ */
+export const alternativeColorPairs: readonly (readonly UsedColorPair[])[] = [
+  [
+    {
+      foreground: 'onPrimaryContainer',
+      background: 'surfaceContainerLowest',
+      kind: 'graphic',
+    },
+    {
+      foreground: 'primaryContainer',
+      background: 'surfaceContainerLowest',
+      kind: 'graphic',
+    },
+  ],
 ];

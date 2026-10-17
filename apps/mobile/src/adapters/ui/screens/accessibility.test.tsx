@@ -1,5 +1,5 @@
 import type { ReactTestInstance } from 'react-test-renderer';
-import { StyleSheet, TextInput } from 'react-native';
+import { PixelRatio, StyleSheet, TextInput } from 'react-native';
 import { fireEvent, screen } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
@@ -416,5 +416,74 @@ describe.each(Object.entries(views))('%s', (_view, open) => {
       .map(describeNode);
 
     expect(small).toEqual([]);
+  });
+});
+
+// The screens and the four mockup dialogs at a 200% text size (FR-013, SC-007). Each renders its
+// content in a scroll area, so taller text scrolls: the tests check that nothing cuts a text
+// short and no target shrinks.
+/** Whether the text is part of a field's label: Paper keeps it on one line by design, and draws an empty copy. */
+const isFieldLabel = (node: ReactTestInstance) => {
+  const text = textOf(node);
+  if (text === '') return true;
+  for (let at = node.parent; at; at = at.parent) {
+    if (at.props.label === text) return true;
+  }
+  return false;
+};
+
+const LARGE_TEXT_VIEWS = [
+  'CurrentList',
+  'Lists',
+  'AddArticles',
+  '004 SignIn',
+  '003 Settings, connected',
+  'FinishShoppingDialog',
+  'QuantityDialog',
+  'CreateListDialog',
+  'DeleteArticleDialog',
+] as const;
+
+describe.each(LARGE_TEXT_VIEWS)('%s at fontScale 2', (name) => {
+  beforeEach(() => {
+    jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(2);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const openView = async () => {
+    const open = views[name];
+    if (!open) throw new Error(`No view "${name}"`);
+    await open();
+  };
+
+  it('FR-013 keeps every interactive element at 48 dp or more', async () => {
+    await openView();
+
+    const small = interactiveElements()
+      .filter((node) => !disabled(node))
+      .filter(
+        (node) =>
+          declaredSize(node, 'height') < 48 ||
+          (iconOnly(node) && declaredSize(node, 'width') < 48),
+      )
+      .map(describeNode);
+
+    expect(small).toEqual([]);
+  });
+
+  it('SC-007 cuts no title, name or message short', async () => {
+    await openView();
+
+    const cut = screen.UNSAFE_root.findAll(
+      (node) =>
+        String(node.type) === 'Text' &&
+        node.props.numberOfLines !== undefined &&
+        !isFieldLabel(node),
+    ).map((node) => `${String(node.type)} "${textOf(node)}"`);
+
+    expect(cut).toEqual([]);
   });
 });

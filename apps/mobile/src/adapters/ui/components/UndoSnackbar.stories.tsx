@@ -33,3 +33,16 @@ const deleteLait: StoryScenario['prepare'] = async (store) => {
 export const DeletedArticle: Story = {
   parameters: { scenario: { seed: fixture, prepare: deleteLait } },
 };
+
+/** Mockup 12: the undo offer above the screen's FAB. */
+export const AboveFab: Story = {
+  parameters: { scenario: { seed: fixture, prepare: removeLait } },
+};
+
+/** Mockup 13: the same offer in dark appearance. */
+export const AboveFabDark: Story = {
+  parameters: {
+    scenario: { seed: fixture, prepare: removeLait },
+    appearance: 'dark',
+  },
+};

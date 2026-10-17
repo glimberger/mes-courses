@@ -18,3 +18,9 @@ export const Default: Story = {
     onConfirm: () => undefined,
   },
 };
+
+/** Mockup 8 in dark appearance. */
+export const DefaultDark: Story = {
+  ...Default,
+  parameters: { ...Default.parameters, appearance: 'dark' },
+};

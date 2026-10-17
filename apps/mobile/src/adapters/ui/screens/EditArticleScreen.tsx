@@ -6,7 +6,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { Appbar, Text, useTheme } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
@@ -18,7 +18,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { ArticleId } from '../../../domain/article';
 import type { CategoryId } from '../../../domain/category';
 import { validateName } from '../../../domain/name';
-import { BackAction } from '../components/BackAction';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { Button } from '../components/Button';
 import { CategoryPicker } from '../components/CategoryPicker';
 import { nameErrorText, NameField } from '../components/NameField';
@@ -28,7 +28,6 @@ import { useAppStoreApi } from '../state/app-store-provider';
 import { useAppStore } from '../state/use-app-store';
 import { useRemoteRemoval } from '../state/use-remote-removal';
 import { spacing } from '../theme/spacing';
-import type { AppTheme } from '../theme/theme';
 
 /**
  * Renames an article and changes its category (002 User Stories 1 and 3). It reads the article
@@ -66,12 +65,13 @@ export const EditArticleScreen = () => {
   if (initial === null) {
     return (
       <View style={styles.screen}>
-        <Appbar.Header>
-          {navigation.canGoBack() && (
-            <BackAction onPress={() => navigation.goBack()} />
-          )}
-          <Appbar.Content title="Modifier l'article" />
-        </Appbar.Header>
+        <ScreenHeader
+          variant="center"
+          title="Modifier l'article"
+          onBack={
+            navigation.canGoBack() ? () => navigation.goBack() : undefined
+          }
+        />
         <Text style={styles.form}>
           {full.status === 'loading' || full.status === 'idle'
             ? 'Chargement…'
@@ -194,16 +194,16 @@ export const EditArticleForm = ({
   onSubmit,
 }: EditArticleFormProps) => {
   const insets = useSafeAreaInsets();
-  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.screen}
     >
-      <Appbar.Header>
-        {onBack && <BackAction onPress={onBack} />}
-        <Appbar.Content title="Modifier l'article" />
-      </Appbar.Header>
+      <ScreenHeader
+        variant="center"
+        title="Modifier l'article"
+        onBack={onBack ?? undefined}
+      />
       <SyncStatusBar />
       <ScrollView
         keyboardShouldPersistTaps="handled"
@@ -223,9 +223,7 @@ export const EditArticleForm = ({
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
-          mode="contained-tonal"
-          buttonColor={colors.primaryContainer}
-          textColor={colors.onPrimaryContainer}
+          mode="brand"
           disabled={saving}
           onPress={onSubmit}
           style={styles.submit}

@@ -79,3 +79,30 @@ describe('QuantityFields', () => {
     },
   );
 });
+
+describe('QuantityFields in the dialog look', () => {
+  // Paper's outlined input gets the outline props it is given, on the element that carries them.
+  const outlineOf = (label: string) =>
+    screen
+      .UNSAFE_getAllByProps({ label })
+      .map((node) => node.props)
+      .filter((props) => 'outlineStyle' in props)[0];
+
+  it('draws both outlines with 14 dp corners, as a dialog field', () => {
+    render(<Form error={null} />, { wrapper: ThemeProvider });
+    expect(outlineOf('Quantité')).toMatchObject({
+      outlineStyle: { borderRadius: 14, borderWidth: 1.5 },
+    });
+    expect(outlineOf('Unité')).toMatchObject({
+      outlineStyle: { borderRadius: 14, borderWidth: 1.5 },
+    });
+  });
+
+  it('sets the two fields side by side, 12 dp apart', () => {
+    render(<Form error={null} />, { wrapper: ThemeProvider });
+    expect(screen.getByTestId('quantity-fields')).toHaveStyle({
+      flexDirection: 'row',
+      gap: 12,
+    });
+  });
+});

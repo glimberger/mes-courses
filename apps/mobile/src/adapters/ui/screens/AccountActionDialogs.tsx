@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Text, HelperText, useTheme } from 'react-native-paper';
+import { Text, HelperText } from 'react-native-paper';
 import type { AccountSummary } from '@mes-courses/sync-core';
 
 import { useAnnouncement } from '../accessibility/announce';
@@ -57,27 +57,25 @@ export const AccountActionDialogForm = ({
   onClose,
   onConfirm,
 }: FrameProps) => {
-  const { colors } = useTheme();
   useAnnouncement(error);
   return (
     <DeviceDialog
       title={title}
       onClose={onClose}
       dismissable={!busy}
+      {...(destructive && {
+        icon: 'delete',
+        iconTone: 'error',
+        layout: 'centered',
+      })}
       actions={
         <>
-          <Button disabled={busy} onPress={onClose}>
+          <Button mode="text" disabled={busy} onPress={onClose}>
             Annuler
           </Button>
           <Button
             disabled={busy}
-            {...(destructive
-              ? { textColor: colors.error }
-              : {
-                  mode: 'contained-tonal',
-                  buttonColor: colors.primaryContainer,
-                  textColor: colors.onPrimaryContainer,
-                })}
+            mode={destructive ? 'dangerFilled' : 'brand'}
             onPress={onConfirm}
           >
             {confirm}

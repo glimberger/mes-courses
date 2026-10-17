@@ -14,6 +14,7 @@ import { StartupError } from './src/adapters/ui/screens/StartupError';
 import { StartupSplash } from './src/adapters/ui/screens/StartupSplash';
 import { UpdateRequired } from './src/adapters/ui/screens/UpdateRequired';
 import { AppStoreProvider } from './src/adapters/ui/state/app-store-provider';
+import { nunitoFontFiles } from './src/adapters/ui/theme/fonts';
 import { ThemeProvider } from './src/adapters/ui/theme/theme-provider';
 import {
   composeApp,
@@ -43,14 +44,11 @@ type Startup =
  * again), and the next start waits for that close, so one connection at a time holds the file.
  */
 export default function App() {
-  // Bundle Nunito for the brand typeface; load lazily so the startup splash
+  // Bundle Nunito for the brand typeface and the Material Symbols icons; load lazily so the startup splash
   // and the starting/ready/failed/tooOld lifecycle keep their existing gate.
   useEffect(() => {
     Font.loadAsync({
-      Nunito_400Regular: require('./assets/fonts/Nunito_400Regular.ttf'),
-      Nunito_600SemiBold: require('./assets/fonts/Nunito_600SemiBold.ttf'),
-      Nunito_700Bold: require('./assets/fonts/Nunito_700Bold.ttf'),
-      Nunito_800ExtraBold: require('./assets/fonts/Nunito_800ExtraBold.ttf'),
+      ...nunitoFontFiles,
     }).catch(() => undefined);
   }, []);
 

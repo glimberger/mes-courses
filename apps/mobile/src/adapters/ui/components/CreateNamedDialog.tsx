@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState, type Ref } from 'react';
-import { View, type HostInstance } from 'react-native';
-import { Dialog, Portal, useTheme } from 'react-native-paper';
+import type { HostInstance } from 'react-native';
 
 import type { NameAlreadyUsed, NameError } from '../../../domain/name';
 import { validateName } from '../../../domain/name';
 import type { Result } from '../../../domain/result';
 import { focusOn } from '../accessibility/focus';
 import type { WriteFailed } from '../state/store-kit';
-import { Button } from './Button';
+import { AppDialog } from './AppDialog';
 import { nameErrorText, NameField } from './NameField';
 
 /** What creating a named entity returns: the store actions' results, whatever the entity. */
@@ -123,39 +122,23 @@ export const CreateNamedDialogForm = ({
   saving,
   onClose,
   onSubmit,
-}: CreateNamedDialogFormProps) => {
-  const { colors } = useTheme();
-  return (
-    <Portal>
-      {/* Not closed while saving, so the outcome of the save is always shown. */}
-      <Dialog
-        visible
-        dismissable={!saving}
-        onDismiss={onClose}
-        overlayAccessibilityLabel="Fermer la boîte de dialogue"
-      >
-        {/* The title read as one header, and the target of the focus move. */}
-        <View ref={titleRef} accessible accessibilityRole="header">
-          <Dialog.Title>{title}</Dialog.Title>
-        </View>
-        <Dialog.Content>
-          <NameField value={name} onChangeText={onChangeName} error={error} />
-        </Dialog.Content>
-        <Dialog.Actions>
-          <Button disabled={saving} onPress={onClose}>
-            Annuler
-          </Button>
-          <Button
-            disabled={saving}
-            mode="contained-tonal"
-            buttonColor={colors.primaryContainer}
-            textColor={colors.onPrimaryContainer}
-            onPress={onSubmit}
-          >
-            Créer
-          </Button>
-        </Dialog.Actions>
-      </Dialog>
-    </Portal>
-  );
-};
+}: CreateNamedDialogFormProps) => (
+  // Not closed while saving, so the outcome of the save is always shown.
+  <AppDialog
+    visible
+    dismissable={!saving}
+    onDismiss={onClose}
+    title={title}
+    titleRef={titleRef}
+    cancel={{ label: 'Annuler', onPress: onClose, disabled: saving }}
+    confirm={{ label: 'Créer', onPress: onSubmit, disabled: saving }}
+  >
+    <NameField
+      context="dialog"
+      value={name}
+      onChangeText={onChangeName}
+      error={error}
+      disabled={saving}
+    />
+  </AppDialog>
+);

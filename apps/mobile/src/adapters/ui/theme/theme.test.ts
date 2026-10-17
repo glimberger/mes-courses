@@ -1,11 +1,15 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { MD3LightTheme } from 'react-native-paper';
 
 import materialTheme from '../../../../../../design/material-theme.json';
 import { spacing } from './spacing';
-import { darkTheme, lightTheme } from './theme';
-import { usedColorPairs } from './used-color-pairs';
+import { darkTheme, lightTheme, type SchemeRole } from './theme';
+import { typeOverrides, typeScale } from './typography';
+import { alternativeColorPairs, usedColorPairs } from './used-color-pairs';
 
-// onSurface (#1E1B13 light, #E8E2D4 dark) and scrim (#000000) written out as RGB, so the
+// onSurface (#1E1B13 light, #E8E2D4 dark) and scrim (#141108) written out as RGB, so the
 // derived roles are checked against values computed by hand, not by the code under test.
 const themes = [
   {
@@ -13,14 +17,14 @@ const themes = [
     theme: lightTheme,
     scheme: materialTheme.schemes.light,
     onSurfaceRgb: '30, 27, 19',
-    scrimRgb: '0, 0, 0',
+    scrimRgb: '20, 17, 8',
   },
   {
     name: 'dark',
     theme: darkTheme,
     scheme: materialTheme.schemes.dark,
     onSurfaceRgb: '232, 226, 212',
-    scrimRgb: '0, 0, 0',
+    scrimRgb: '20, 17, 8',
   },
 ] as const;
 
@@ -92,7 +96,26 @@ describe.each(themes)(
       expect(theme.colors.onSurfaceDisabled).toBe(
         `rgba(${onSurfaceRgb}, 0.38)`,
       );
-      expect(theme.colors.backdrop).toBe(`rgba(${scrimRgb}, 0.4)`);
+      expect(theme.colors.backdrop).toBe(`rgba(${scrimRgb}, 0.36)`);
+    });
+
+    describe('SC-005 meets WCAG 3:1 on the checkbox alternatives', () => {
+      it.each(
+        alternativeColorPairs.map((alternatives) => [
+          alternatives
+            .map(
+              ({ foreground, background }) => `${foreground} on ${background}`,
+            )
+            .join(' or '),
+          alternatives,
+        ]),
+      )('%s passes in this scheme', (_label, alternatives) => {
+        const passing = alternatives.some(
+          ({ foreground, background }) =>
+            contrastRatio(scheme[foreground], scheme[background]) >= 3,
+        );
+        expect(passing).toBe(true);
+      });
     });
 
     describe('FR-036 meets WCAG AA contrast on every color pair the app draws', () => {
@@ -117,6 +140,49 @@ describe('Nunito typography', () => {
   });
 });
 
+describe('SC-003 the mockup type scale', () => {
+  it.each(Object.entries(typeScale))(
+    '%s uses its scale entry',
+    (role, type) => {
+      const font = lightTheme.fonts[role as keyof typeof lightTheme.fonts];
+      expect({ role, ...font }).toMatchObject({ role, ...type });
+      expect(font).not.toHaveProperty('fontWeight');
+    },
+  );
+
+  it('keeps the brand weights: 800 headlines and titles, 600 body, 700 labels', () => {
+    expect(typeScale.headlineMedium.fontFamily).toBe('Nunito_800ExtraBold');
+    expect(typeScale.titleMedium.fontFamily).toBe('Nunito_700Bold');
+    expect(typeScale.bodyMedium.fontFamily).toBe('Nunito_600SemiBold');
+    expect(typeScale.labelMedium.fontFamily).toBe('Nunito_700Bold');
+  });
+
+  it('sets the mockups overrides outside the scale', () => {
+    expect(typeOverrides).toEqual({
+      quantity: expect.objectContaining({
+        fontSize: 13.5,
+        fontFamily: 'Nunito_700Bold',
+      }),
+      compactLabel: expect.objectContaining({
+        fontSize: 14.5,
+        fontFamily: 'Nunito_800ExtraBold',
+      }),
+      snackbarMessage: expect.objectContaining({
+        fontSize: 15,
+        fontFamily: 'Nunito_700Bold',
+      }),
+      syncStrip: expect.objectContaining({
+        fontSize: 14,
+        fontFamily: 'Nunito_700Bold',
+      }),
+      emptyCategory: expect.objectContaining({
+        fontSize: 14,
+        fontFamily: 'Nunito_600SemiBold',
+      }),
+    });
+  });
+});
+
 describe('spacing tokens', () => {
   it('go from xs = 4 to xl = 32', () => {
     expect(spacing).toEqual({ xs: 4, sm: 8, md: 16, lg: 24, xl: 32 });
@@ -128,3 +194,67 @@ describe('spacing tokens', () => {
     }
   });
 });
+
+// The mockup stylesheet (design/mockups/styles.css) is the visual reference: each color token of
+// its :root and body.dark blocks is the export role it stands for (SC-004). A token missing from
+// body.dark keeps its light value in dark.
+const STYLES_CSS = readFileSync(
+  path.resolve(__dirname, '../../../../../../design/mockups/styles.css'),
+  'utf8',
+);
+
+const colorTokens = (block: RegExp): Record<string, string> => {
+  const body = STYLES_CSS.match(block)?.[1] ?? '';
+  return Object.fromEntries(
+    [...body.matchAll(/(--[\w-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)].map(
+      ([, token, color = '']) => [token, color.toLowerCase()],
+    ),
+  );
+};
+
+const lightTokens = colorTokens(/:root\s*\{([^}]*)\}/);
+const darkTokens = {
+  ...lightTokens,
+  ...colorTokens(/body\.dark\s*\{([^}]*)\}/),
+};
+
+const MOCKUP_TOKEN_ROLES: readonly (readonly [string, SchemeRole])[] = [
+  ['--bg', 'surface'],
+  ['--bg', 'background'],
+  ['--card', 'surfaceContainerLowest'],
+  ['--container', 'surfaceContainer'],
+  ['--on-surface', 'onSurface'],
+  ['--on-surface-var', 'onSurfaceVariant'],
+  ['--muted', 'outline'],
+  ['--hairline', 'surfaceContainerHigh'],
+  ['--primary', 'primary'],
+  ['--yellow', 'primaryContainer'],
+  ['--on-yellow', 'onPrimaryContainer'],
+  ['--yellow-soft', 'brandSoft'],
+  ['--secondary-container', 'secondaryContainer'],
+  ['--on-secondary-container', 'onSecondaryContainer'],
+  ['--tertiary-container', 'tertiaryContainer'],
+  ['--on-tertiary-container', 'onTertiaryContainer'],
+  ['--error', 'error'],
+  ['--inverse-surface', 'inverseSurface'],
+  ['--inverse-on-surface', 'inverseOnSurface'],
+  ['--inverse-primary', 'inversePrimary'],
+];
+
+describe.each([
+  { name: 'light', tokens: lightTokens, scheme: materialTheme.schemes.light },
+  { name: 'dark', tokens: darkTokens, scheme: materialTheme.schemes.dark },
+])(
+  'SC-004 the $name mockup tokens equal their export roles',
+  ({ tokens, scheme }) => {
+    it.each(MOCKUP_TOKEN_ROLES)('%s is %s', (token, role) => {
+      expect({
+        token,
+        color: scheme[role].toLowerCase(),
+      }).toEqual({
+        token,
+        color: tokens[token],
+      });
+    });
+  },
+);
