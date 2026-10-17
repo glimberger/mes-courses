@@ -140,4 +140,9 @@ export const requiredStories: readonly string[] = [
   'Components/Chip/Secondary',
   'Components/Chip/Tertiary',
   'Components/Chip/Brand',
+  'Components/Button/Brand',
+  'Components/Button/Outlined',
+  'Components/Button/Danger',
+  'Components/Button/DangerFilled',
+  'Components/Button/Text',
 ];
