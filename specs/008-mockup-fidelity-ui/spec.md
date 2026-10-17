@@ -455,6 +455,17 @@ soft-yellow icon circles, stadium buttons, rounded outlined fields, chips).
   extra-bold, plus regular where still needed), so the app stays offline-capable.
 - Captures used for SC-001 come from the project's usual component review and screenshot
   tooling.
+- The mockups of the lists (2), add-articles (3) and settings (5) screens draw no back arrow.
+  The application keeps its back action there (FR-012: navigation flow unchanged). It sits at
+  the start of the header in a 48 dp target; the title stays centered (mockups 2 and 5) or
+  start-aligned right after it (mockup 3). This is a known, deliberate difference from the
+  captures.
+- In mockup 3, the card "Yaourt à la grecque…" shows neither the "Déjà dans la liste" chip nor
+  the round add button. This is a sample-data artifact of the long-name case: in the
+  application every article is either on the list or addable, so its card shows one of the two.
+- Where a mockup label differs from the current wording, the current wording wins (FR-012). The
+  known cases are "0 article" in mockups 2 and 10 (the application reads "0 articles") and the
+  placeholder "Courses de la semaine" of mockup 10 (the application shows none).
 
 ## Scope and out-of-scope
 

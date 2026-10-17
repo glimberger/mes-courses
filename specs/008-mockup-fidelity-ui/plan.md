@@ -178,7 +178,9 @@ layout only.
 
 ## Complexity Tracking
 
-No constitution violation to justify.
+| Deviation | Why needed | Simpler alternative rejected because |
+|-----------|------------|--------------------------------------|
+| Component dimensions (row height 64, search 54, brand tile 215, FAB 56…) are named constants inside the shared component, not theme tokens (Principle V, "hard-coded values are forbidden") | The mockups fix these measures per component; each is used by one block only, and the shared module is where Principle V puts the look | A global size-token file would hold single-use values and add an indirection with no second consumer (Principle IV) |
 
 ## Post-Design Constitution Check
 
