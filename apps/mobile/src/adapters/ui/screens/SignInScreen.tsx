@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,6 +20,7 @@ import * as Device from 'expo-device';
 
 import { useAnnouncement } from '../accessibility/announce';
 import { BackAction } from '../components/BackAction';
+import { BrandImage } from '../components/BrandImage';
 import { Button } from '../components/Button';
 import { PasswordField } from '../components/PasswordField';
 import { ForgotPasswordDialog } from './ForgotPasswordDialog';
@@ -205,17 +205,7 @@ export const SignInForm = ({
             </Text>
           ) : (
             <>
-              <Image
-                accessible
-                accessibilityLabel="Mes Courses"
-                accessibilityRole="image"
-                height={96}
-                onError={() => setBrandFailed(true)}
-                resizeMode="contain"
-                source={require('../../../../assets/splash-screen.png')}
-                testID="sign-in-brand-image"
-                width={96}
-              />
+              <BrandImage onError={() => setBrandFailed(true)} />
               <Text accessibilityRole="header" variant="headlineSmall">
                 Mes Courses
               </Text>
