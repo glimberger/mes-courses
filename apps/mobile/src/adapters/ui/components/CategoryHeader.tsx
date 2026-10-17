@@ -2,7 +2,15 @@ import { StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 
 import { shape } from '../theme/shape';
-import { spacing } from '../theme/spacing';
+import type { AppTheme } from '../theme/theme';
+
+// The mockups' section measures (`.section`), which sit off the 4 dp spacing grid.
+const PADDING_TOP = 18;
+const PADDING_BOTTOM = 9;
+const PADDING_SIDES = 20;
+const GAP = 9;
+const BAR_WIDTH = 4;
+const BAR_HEIGHT = 16;
 
 export type CategoryHeaderProps = {
   /** The category name. */
@@ -10,14 +18,15 @@ export type CategoryHeaderProps = {
 };
 
 /**
- * A section header for a category: a small brand-yellow accent bar followed by a muted semibold
- * category name. Screens keep layout-only styling.
+ * A section header for a category: a short brand-yellow bar, then the category name in a
+ * muted semibold title. The name wraps; it is a header for assistive technology.
  */
 export const CategoryHeader = ({ title }: CategoryHeaderProps) => {
-  const { colors } = useTheme();
+  const { colors } = useTheme() as AppTheme;
   return (
-    <View style={styles.container}>
+    <View testID="category-header" style={styles.container}>
       <View
+        testID="category-bar"
         style={[styles.bar, { backgroundColor: colors.primaryContainer }]}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
@@ -37,13 +46,14 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    gap: GAP,
+    paddingTop: PADDING_TOP,
+    paddingBottom: PADDING_BOTTOM,
+    paddingHorizontal: PADDING_SIDES,
   },
   bar: {
-    width: shape.xs,
-    height: spacing.md,
-    borderRadius: shape.xs / 2,
+    width: BAR_WIDTH,
+    height: BAR_HEIGHT,
+    borderRadius: shape.bar,
   },
 });
