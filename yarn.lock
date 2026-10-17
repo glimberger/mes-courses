@@ -2643,7 +2643,7 @@ __metadata:
     react: "npm:19.3.0"
     react-native: "npm:0.88.0-rc.3"
     react-native-gesture-handler: "npm:~3.2.1"
-    react-native-paper: "patch:react-native-paper@npm%3A5.15.3#~/.yarn/patches/react-native-paper-npm-5.15.3-9a600de527.patch"
+    react-native-paper: "patch:react-native-paper@patch%3Areact-native-paper@npm%253A5.15.3%23~/.yarn/patches/react-native-paper-npm-5.15.3-9a600de527.patch%3A%3Aversion=5.15.3&hash=31638f#~/.yarn/patches/react-native-paper-patch-dfb0b0a44e.patch"
     react-native-reanimated: "npm:4.7.0"
     react-native-safe-area-context: "npm:~5.9.1"
     react-native-screens: "npm:~4.28.0"
@@ -12582,7 +12582,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-paper@patch:react-native-paper@npm%3A5.15.3#~/.yarn/patches/react-native-paper-npm-5.15.3-9a600de527.patch":
+"react-native-paper@patch:react-native-paper@npm%3A5.15.3#~/.yarn/patches/react-native-paper-npm-5.15.3-9a600de527.patch::version=5.15.3&hash=31638f":
   version: 5.15.3
   resolution: "react-native-paper@patch:react-native-paper@npm%3A5.15.3#~/.yarn/patches/react-native-paper-npm-5.15.3-9a600de527.patch::version=5.15.3&hash=31638f"
   dependencies:
@@ -12594,6 +12594,21 @@ __metadata:
     react-native: "*"
     react-native-safe-area-context: "*"
   checksum: 10c0/3e1ecfa4736720c6908cf2160983c8cc38b0da427f3f75935992b8ba96c3f00d49e3b6f7f73ace91344223c967a3483e0f1fa3076f2785c4fcb0bc1dbbf5f43f
+  languageName: node
+  linkType: hard
+
+"react-native-paper@patch:react-native-paper@patch%3Areact-native-paper@npm%253A5.15.3%23~/.yarn/patches/react-native-paper-npm-5.15.3-9a600de527.patch%3A%3Aversion=5.15.3&hash=31638f#~/.yarn/patches/react-native-paper-patch-dfb0b0a44e.patch":
+  version: 5.15.3
+  resolution: "react-native-paper@patch:react-native-paper@patch%3Areact-native-paper@npm%253A5.15.3%23~/.yarn/patches/react-native-paper-npm-5.15.3-9a600de527.patch%3A%3Aversion=5.15.3&hash=31638f#~/.yarn/patches/react-native-paper-patch-dfb0b0a44e.patch::version=5.15.3&hash=71c0ef"
+  dependencies:
+    "@callstack/react-theme-provider": "npm:^3.0.9"
+    color: "npm:^3.1.2"
+    use-latest-callback: "npm:^0.2.3"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+    react-native-safe-area-context: "*"
+  checksum: 10c0/985722b9d23823d41e99e7d581583420bf32393f3252e7c13d79dcd60bf564d26dcf196e24c48f7d309f2b0f68b220ca02d0531f77ab49556fee14e02b07690b
   languageName: node
   linkType: hard
 

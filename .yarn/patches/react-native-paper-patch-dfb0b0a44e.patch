@@ -1,0 +1,170 @@
+diff --git a/lib/commonjs/components/TextInput/TextInput.js b/lib/commonjs/components/TextInput/TextInput.js
+index 8c8c920dbad6827adfd12249b1bce7f5843a3c3f..34afe61be7ce43a9b8155713fcfb254021b546d7 100644
+--- a/lib/commonjs/components/TextInput/TextInput.js
++++ b/lib/commonjs/components/TextInput/TextInput.js
+@@ -49,6 +49,7 @@ const TextInput = (0, _forwardRef.forwardRef)(({
+   mode = 'flat',
+   dense = false,
+   disabled = false,
++  labelFloated = false,
+   error: errorProp = false,
+   multiline = false,
+   editable = true,
+@@ -62,7 +63,7 @@ const TextInput = (0, _forwardRef.forwardRef)(({
+   const validInputValue = isControlled ? rest.value : rest.defaultValue;
+   const {
+     current: labeled
+-  } = React.useRef(new _reactNative.Animated.Value(validInputValue ? 0 : 1));
++  } = React.useRef(new _reactNative.Animated.Value(validInputValue || labelFloated ? 0 : 1));
+   const {
+     current: error
+   } = React.useRef(new _reactNative.Animated.Value(errorProp ? 1 : 0));
+@@ -175,7 +176,7 @@ const TextInput = (0, _forwardRef.forwardRef)(({
+     // In minimized mode, the label moves up and becomes small
+     // workaround for animated regression for react native > 0.61
+     // https://github.com/callstack/react-native-paper/pull/1440
+-    if (value || focused) {
++    if (value || focused || labelFloated) {
+       // minimize label
+       _reactNative.Animated.timing(labeled, {
+         toValue: 0,
+@@ -192,7 +193,7 @@ const TextInput = (0, _forwardRef.forwardRef)(({
+         useNativeDriver: true
+       }).start();
+     }
+-  }, [focused, value, labeled, scale]);
++  }, [focused, value, labelFloated, labeled, scale]);
+   const onLeftAffixLayoutChange = React.useCallback(event => {
+     const height = (0, _roundLayoutSize.roundLayoutSize)(event.nativeEvent.layout.height);
+     const width = (0, _roundLayoutSize.roundLayoutSize)(event.nativeEvent.layout.width);
+@@ -274,7 +275,7 @@ const TextInput = (0, _forwardRef.forwardRef)(({
+   const {
+     maxFontSizeMultiplier = 1.5
+   } = rest;
+-  const scaledLabel = !!(value || focused);
++  const scaledLabel = !!(value || focused || labelFloated);
+   if (mode === 'outlined') {
+     return /*#__PURE__*/React.createElement(_TextInputOutlined.default, _extends({
+       dense: dense,
+diff --git a/lib/module/components/TextInput/TextInput.js b/lib/module/components/TextInput/TextInput.js
+index 21c21569f38a685b406e723d452c32f8a52b6d28..b64e199f1cc09e346afe04b00622fb9fe982e6b3 100644
+--- a/lib/module/components/TextInput/TextInput.js
++++ b/lib/module/components/TextInput/TextInput.js
+@@ -41,6 +41,7 @@ const TextInput = forwardRef(({
+   mode = 'flat',
+   dense = false,
+   disabled = false,
++  labelFloated = false,
+   error: errorProp = false,
+   multiline = false,
+   editable = true,
+@@ -54,7 +55,7 @@ const TextInput = forwardRef(({
+   const validInputValue = isControlled ? rest.value : rest.defaultValue;
+   const {
+     current: labeled
+-  } = React.useRef(new Animated.Value(validInputValue ? 0 : 1));
++  } = React.useRef(new Animated.Value(validInputValue || labelFloated ? 0 : 1));
+   const {
+     current: error
+   } = React.useRef(new Animated.Value(errorProp ? 1 : 0));
+@@ -167,7 +168,7 @@ const TextInput = forwardRef(({
+     // In minimized mode, the label moves up and becomes small
+     // workaround for animated regression for react native > 0.61
+     // https://github.com/callstack/react-native-paper/pull/1440
+-    if (value || focused) {
++    if (value || focused || labelFloated) {
+       // minimize label
+       Animated.timing(labeled, {
+         toValue: 0,
+@@ -184,7 +185,7 @@ const TextInput = forwardRef(({
+         useNativeDriver: true
+       }).start();
+     }
+-  }, [focused, value, labeled, scale]);
++  }, [focused, value, labelFloated, labeled, scale]);
+   const onLeftAffixLayoutChange = React.useCallback(event => {
+     const height = roundLayoutSize(event.nativeEvent.layout.height);
+     const width = roundLayoutSize(event.nativeEvent.layout.width);
+@@ -266,7 +267,7 @@ const TextInput = forwardRef(({
+   const {
+     maxFontSizeMultiplier = 1.5
+   } = rest;
+-  const scaledLabel = !!(value || focused);
++  const scaledLabel = !!(value || focused || labelFloated);
+   if (mode === 'outlined') {
+     return /*#__PURE__*/React.createElement(TextInputOutlined, _extends({
+       dense: dense,
+diff --git a/lib/typescript/components/TextInput/TextInput.d.ts b/lib/typescript/components/TextInput/TextInput.d.ts
+index 3db5d0096c8666307192768ab9576b5560076a9a..89e8071201195e7191593517c272a0163a18d226 100644
+--- a/lib/typescript/components/TextInput/TextInput.d.ts
++++ b/lib/typescript/components/TextInput/TextInput.d.ts
+@@ -26,6 +26,10 @@ export type Props = React.ComponentPropsWithRef<typeof NativeTextInput> & {
+      * If true, user won't be able to interact with the component.
+      */
+     disabled?: boolean;
++    /**
++     * Keeps the label minimized in the outline while the input is empty and not focused.
++     */
++    labelFloated?: boolean;
+     /**
+      * The text or component to use for the floating label.
+      */
+diff --git a/src/components/TextInput/TextInput.tsx b/src/components/TextInput/TextInput.tsx
+index 7c289d9152599fac15be4e932538d58699e1ca1f..c366916a604d83c1af6f747d0233de077139249c 100644
+--- a/src/components/TextInput/TextInput.tsx
++++ b/src/components/TextInput/TextInput.tsx
+@@ -49,6 +49,10 @@ export type Props = React.ComponentPropsWithRef<typeof NativeTextInput> & {
+    * If true, user won't be able to interact with the component.
+    */
+   disabled?: boolean;
++  /**
++   * Keeps the label minimized in the outline while the input is empty and not focused.
++   */
++  labelFloated?: boolean;
+   /**
+    * The text or component to use for the floating label.
+    */
+@@ -226,6 +230,7 @@ const TextInput = forwardRef<TextInputHandles, Props>(
+       mode = 'flat',
+       dense = false,
+       disabled = false,
++      labelFloated = false,
+       error: errorProp = false,
+       multiline = false,
+       editable = true,
+@@ -241,7 +246,7 @@ const TextInput = forwardRef<TextInputHandles, Props>(
+     const validInputValue = isControlled ? rest.value : rest.defaultValue;
+ 
+     const { current: labeled } = React.useRef<Animated.Value>(
+-      new Animated.Value(validInputValue ? 0 : 1)
++      new Animated.Value(validInputValue || labelFloated ? 0 : 1)
+     );
+     const { current: error } = React.useRef<Animated.Value>(
+       new Animated.Value(errorProp ? 1 : 0)
+@@ -359,7 +364,7 @@ const TextInput = forwardRef<TextInputHandles, Props>(
+       // In minimized mode, the label moves up and becomes small
+       // workaround for animated regression for react native > 0.61
+       // https://github.com/callstack/react-native-paper/pull/1440
+-      if (value || focused) {
++      if (value || focused || labelFloated) {
+         // minimize label
+         Animated.timing(labeled, {
+           toValue: 0,
+@@ -376,7 +381,7 @@ const TextInput = forwardRef<TextInputHandles, Props>(
+           useNativeDriver: true,
+         }).start();
+       }
+-    }, [focused, value, labeled, scale]);
++    }, [focused, value, labelFloated, labeled, scale]);
+ 
+     const onLeftAffixLayoutChange = React.useCallback(
+       (event: LayoutChangeEvent) => {
+@@ -480,7 +485,7 @@ const TextInput = forwardRef<TextInputHandles, Props>(
+ 
+     const { maxFontSizeMultiplier = 1.5 } = rest;
+ 
+-    const scaledLabel = !!(value || focused);
++    const scaledLabel = !!(value || focused || labelFloated);
+ 
+     if (mode === 'outlined') {
+       return (

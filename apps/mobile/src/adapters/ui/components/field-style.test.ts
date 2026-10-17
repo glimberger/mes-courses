@@ -19,6 +19,19 @@ describe.each([
     });
   });
 
+  it('keeps the label in the top border while the field is empty', () => {
+    expect(fieldStyle('screen', theme).labelFloated).toBe(true);
+  });
+
+  it('fills a dialog field with the dialog surface and a screen field with the background', () => {
+    expect(fieldStyle('dialog', theme).theme.colors.background).toBe(
+      theme.colors.surfaceContainerLowest,
+    );
+    expect(fieldStyle('screen', theme).theme.colors.background).toBe(
+      theme.colors.background,
+    );
+  });
+
   it('outlines in the outline role and types the text in onSurface', () => {
     const style = fieldStyle('screen', theme);
     expect(style.outlineColor).toBe(theme.colors.outline);

@@ -11,6 +11,8 @@ export const fieldStyle = (context: 'screen' | 'dialog', theme: AppTheme) => {
   const { colors } = theme;
   return {
     mode: 'outlined' as const,
+    // The label sits in the top border even when the field is empty (Paper patch, README).
+    labelFloated: true,
     outlineStyle: {
       borderRadius: context === 'screen' ? shape.lg : shape.field,
       borderWidth: OUTLINE_WIDTH,
@@ -25,6 +27,12 @@ export const fieldStyle = (context: 'screen' | 'dialog', theme: AppTheme) => {
       colors: {
         ...theme.colors,
         onSurfaceVariant: colors.onSurfaceVariant,
+        // Paper fills the field, and the gap its label cuts in the outline, with `background`:
+        // inside a dialog that is the dialog's own surface.
+        background:
+          context === 'dialog'
+            ? colors.surfaceContainerLowest
+            : colors.background,
       },
     },
   };

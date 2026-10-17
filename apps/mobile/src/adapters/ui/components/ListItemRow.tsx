@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     gap: 10,
   },
-  name: { flex: 1 },
+  name: { flexShrink: 1 },
   quantity: typeOverrides.quantity,
   ticked: { textDecorationLine: 'line-through' },
   actions: { flexDirection: 'row' },

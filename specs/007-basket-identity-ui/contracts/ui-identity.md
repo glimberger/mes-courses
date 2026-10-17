@@ -1,5 +1,8 @@
 # UI Contract: Basket Identity (Visual Refresh)
 
+> **Superseded** where it differs by
+> [008 ui-building-blocks.md](../../008-mockup-fidelity-ui/contracts/ui-building-blocks.md).
+
 This contract describes the observable visual identity of the mobile UI after the refresh.
 It does not change navigation, user flows, data, sync behavior, accessible labels or test
 identifiers (FR-020); it states how a refreshed screen or component must look and be

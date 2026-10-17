@@ -98,11 +98,15 @@ describe('the Material Symbols icons', () => {
 
 describe('the fonts App.tsx bundles (FR-015)', () => {
   const APP_FILE = path.resolve(__dirname, '../../../../App.tsx');
+  const FONTS_FILE = path.resolve(__dirname, './fonts.ts');
 
   it('loads every font from a local asset, never from a URL', () => {
     const app = readFileSync(APP_FILE, 'utf8');
     const loaded = app.match(/Font\.loadAsync\(\{([\s\S]*?)\}\)/)?.[1] ?? '';
-    const entries = [...loaded.matchAll(/(\w+): (.+)/g)].map(
+    // The Nunito files are listed in theme/fonts.ts, which App.tsx spreads.
+    expect(loaded).toContain('...nunitoFontFiles');
+    const nunito = readFileSync(FONTS_FILE, 'utf8');
+    const entries = [...(loaded + nunito).matchAll(/(\w+): (.+)/g)].map(
       ([, family, source]) => ({ family, source }),
     );
 
@@ -117,7 +121,7 @@ describe('the fonts App.tsx bundles (FR-015)', () => {
       expect({ family, local: source }).toEqual({
         family,
         local: expect.stringMatching(
-          /^require\('\.\/assets\/fonts\/[^']+\.ttf'\),?$/,
+          /^require\('(\.\/|(\.\.\/){4})assets\/fonts\/[^']+\.ttf'\),?$/,
         ),
       });
     }

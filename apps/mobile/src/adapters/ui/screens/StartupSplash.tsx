@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Image, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text } from 'react-native-paper';
+
+import { SplashMark } from '../components/SplashMark';
 
 import { FullScreen } from './FullScreen';
 
@@ -12,22 +13,10 @@ export const StartupSplash = () => {
   return (
     <FullScreen>
       <SafeAreaView testID="startup-splash-container" style={styles.container}>
-        {assetFailed ? (
-          <Text accessibilityRole="header" variant="headlineLarge">
-            Mes Courses
-          </Text>
-        ) : (
-          <Image
-            accessible
-            accessibilityLabel="Mes Courses"
-            accessibilityRole="image"
-            onError={() => setAssetFailed(true)}
-            resizeMode="contain"
-            source={require('../../../../assets/splash-screen.png')}
-            style={styles.image}
-            testID="startup-splash-image"
-          />
-        )}
+        <SplashMark
+          assetFailed={assetFailed}
+          onError={() => setAssetFailed(true)}
+        />
       </SafeAreaView>
     </FullScreen>
   );
@@ -38,8 +27,5 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  image: {
-    flex: 1,
   },
 });

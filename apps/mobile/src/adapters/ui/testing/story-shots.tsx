@@ -1,5 +1,13 @@
-import { useState, type ComponentType, type ReactElement } from 'react';
+import {
+  useEffect,
+  useState,
+  type ComponentType,
+  type ReactElement,
+} from 'react';
+import * as Font from 'expo-font';
 import { Pressable, StyleSheet, View } from 'react-native';
+
+import { nunitoFontFiles } from '../theme/fonts';
 
 export type ShotStory = { id: string; Story: ComponentType };
 
@@ -67,8 +75,17 @@ export const composeShotStories = (
  */
 export const StoryShots = ({ stories }: { stories: readonly ShotStory[] }) => {
   const [index, setIndex] = useState(0);
+  // The app loads Nunito in App.tsx, which a story build does not run: without it a capture is
+  // drawn in the system font.
+  const [fontsReady, setFontsReady] = useState(false);
+  useEffect(() => {
+    Font.loadAsync(nunitoFontFiles).then(
+      () => setFontsReady(true),
+      () => setFontsReady(true),
+    );
+  }, []);
   const current = stories[index];
-  if (current === undefined) return null;
+  if (!fontsReady || current === undefined) return null;
   const { id, Story } = current;
   return (
     <View style={styles.root}>

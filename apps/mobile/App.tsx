@@ -14,6 +14,7 @@ import { StartupError } from './src/adapters/ui/screens/StartupError';
 import { StartupSplash } from './src/adapters/ui/screens/StartupSplash';
 import { UpdateRequired } from './src/adapters/ui/screens/UpdateRequired';
 import { AppStoreProvider } from './src/adapters/ui/state/app-store-provider';
+import { nunitoFontFiles } from './src/adapters/ui/theme/fonts';
 import { ThemeProvider } from './src/adapters/ui/theme/theme-provider';
 import {
   composeApp,
@@ -47,10 +48,7 @@ export default function App() {
   // and the starting/ready/failed/tooOld lifecycle keep their existing gate.
   useEffect(() => {
     Font.loadAsync({
-      Nunito_400Regular: require('./assets/fonts/Nunito_400Regular.ttf'),
-      Nunito_600SemiBold: require('./assets/fonts/Nunito_600SemiBold.ttf'),
-      Nunito_700Bold: require('./assets/fonts/Nunito_700Bold.ttf'),
-      Nunito_800ExtraBold: require('./assets/fonts/Nunito_800ExtraBold.ttf'),
+      ...nunitoFontFiles,
       MaterialSymbolsRounded_500: require('./assets/fonts/MaterialSymbolsRounded_500.ttf'),
       MaterialSymbolsRounded_700: require('./assets/fonts/MaterialSymbolsRounded_700.ttf'),
     }).catch(() => undefined);

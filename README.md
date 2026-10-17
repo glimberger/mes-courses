@@ -58,7 +58,7 @@ This is a Yarn workspaces monorepo ([research R20](specs/001-shopping-lists/rese
 | `deploy/`                 | The Pi files: systemd units and timer, Caddyfile, environment templates, keys  |
 | `specs/`, `.specify/`     | Feature specifications and the Spec Kit configuration                          |
 | `docs/adr/`               | The [architecture decision records](docs/adr/README.md)                        |
-| `design/`                 | The Material 3 theme export                                                    |
+| `design/`                 | The [Material 3 theme, mockups and icon script](design/README.md)              |
 | `flake.nix`, `flake.lock` | The Nix dev shell                                                              |
 | `.github/`                | The workflows (`ci`, `e2e`, `deliver-staging`, `release`) and their scripts    |
 
@@ -88,6 +88,8 @@ brand-new release is ignored until then.
 React Native Paper carries one Yarn patch (`.yarn/patches/`): its `Dialog` passes
 `overlayAccessibilityLabel` on to its `Modal`, so screen readers read the dialog backdrop in
 French. Check it still applies when Paper is upgraded, and drop it once Paper does this itself.
+A second patch adds a `labelFloated` prop to its `TextInput`, which keeps the label in the outline of an
+empty field as the mockups draw it (FR-009); drop it if Paper gains such a prop.
 
 `yarn install` also installs the Git hooks ([Lefthook](https://lefthook.dev), `lefthook.yml`).
 Before each commit, Prettier formats the staged files and stages the result, ESLint checks
@@ -108,6 +110,18 @@ yarn test:architecture  # dependency-cruiser layer and workspace rules
 yarn test:hooks         # the Claude Code guardrail hooks (.claude/hooks)
 yarn build              # expo export for Android and iOS
 ```
+
+## Icons
+
+The app draws its icons from a Material Symbols Rounded font subset to the names listed in
+`apps/mobile/src/adapters/ui/icons/symbols.txt`. After adding or removing a name there,
+regenerate the font and the glyph table, then commit the result:
+
+```sh
+design/icons/build-symbols.sh   # needs network access and nix
+```
+
+Rerunning it without a change leaves no diff.
 
 ## Agent guardrails
 

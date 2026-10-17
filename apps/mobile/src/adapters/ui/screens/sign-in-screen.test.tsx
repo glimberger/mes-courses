@@ -474,6 +474,22 @@ describe('SignIn in the mockup look', () => {
     });
   });
 
+  it('keeps the label of every field in its top border, even when empty', async () => {
+    await renderSignIn();
+    const outlines = screen
+      .UNSAFE_getAllByProps({ label: 'Mot de passe' })
+      .filter((node) => 'labelFloated' in node.props);
+    expect(outlines[0]?.props.labelFloated).toBe(true);
+  });
+
+  it('draws the brand once, as the image, with no title under the tile (mockup 4)', async () => {
+    await renderSignIn();
+    expect(
+      screen.getByRole('image', { name: 'Mes Courses' }),
+    ).toBeOnTheScreen();
+    expect(screen.queryByText('Mes Courses')).not.toBeOnTheScreen();
+  });
+
   it('keeps the screen name a heading that is not drawn, as the mockup has no app bar', async () => {
     await renderSignIn();
     expect(screen.getByRole('header', { name: 'Se connecter' })).toHaveStyle({

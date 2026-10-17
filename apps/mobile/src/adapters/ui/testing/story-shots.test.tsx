@@ -1,8 +1,14 @@
+import * as Font from 'expo-font';
 import { Text } from 'react-native';
 
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import { nunitoFontFiles } from '../theme/fonts';
 import { composeShotStories, StoryShots, type ShotStory } from './story-shots';
+
+jest.mock('expo-font', () => ({
+  loadAsync: jest.fn(() => Promise.resolve()),
+}));
 
 const stories: ShotStory[] = [
   { id: 'Screens/A/One', Story: () => <Text>first story</Text> },
@@ -10,19 +16,27 @@ const stories: ShotStory[] = [
 ];
 
 describe('StoryShots', () => {
-  it('shows the first story and names it on the control that moves on', () => {
+  it('draws no story before Nunito is loaded, so no capture shows the system font', async () => {
     render(<StoryShots stories={stories} />);
 
-    expect(screen.getByText('first story')).toBeTruthy();
+    expect(Font.loadAsync).toHaveBeenCalledWith(nunitoFontFiles);
+    expect(screen.queryByText('first story')).toBeNull();
+    expect(await screen.findByText('first story')).toBeTruthy();
+  });
+
+  it('shows the first story and names it on the control that moves on', async () => {
+    render(<StoryShots stories={stories} />);
+
+    expect(await screen.findByText('first story')).toBeTruthy();
     expect(screen.getByTestId('shots-next').props.accessibilityLabel).toBe(
       'Screens/A/One',
     );
   });
 
-  it('shows the next story at each press and comes back to the first after the last', () => {
+  it('shows the next story at each press and comes back to the first after the last', async () => {
     render(<StoryShots stories={stories} />);
 
-    fireEvent.press(screen.getByTestId('shots-next'));
+    fireEvent.press(await screen.findByTestId('shots-next'));
     expect(screen.getByText('second story')).toBeTruthy();
     expect(screen.getByTestId('shots-next').props.accessibilityLabel).toBe(
       'Screens/B/Two',

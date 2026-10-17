@@ -207,12 +207,7 @@ export const SignInForm = ({
               Mes Courses
             </Text>
           ) : (
-            <>
-              <BrandImage onError={() => setBrandFailed(true)} />
-              <Text accessibilityRole="header" variant="headlineSmall">
-                Mes Courses
-              </Text>
-            </>
+            <BrandImage onError={() => setBrandFailed(true)} />
           )}
         </View>
         <TextInput

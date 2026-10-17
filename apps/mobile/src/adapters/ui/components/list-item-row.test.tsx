@@ -171,6 +171,25 @@ describe('ListItemRow', () => {
     expect(screen.getByRole('checkbox')).toHaveStyle({ minHeight: 48 });
   });
 
+  it('keeps the quantity next to the name on one baseline, 10 dp apart (mockup 1)', () => {
+    renderRow();
+
+    const name = StyleSheet.flatten(screen.getByText('Lait').props.style);
+    expect(name.flex).toBeUndefined();
+    expect(name.flexShrink).toBe(1);
+    const holder = screen
+      .getByRole('checkbox')
+      .findAll(
+        (node) =>
+          StyleSheet.flatten(node.props.style)?.alignItems === 'baseline',
+      )[0];
+    expect(StyleSheet.flatten(holder?.props.style)).toMatchObject({
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 10,
+    });
+  });
+
   it('FR-033 wraps a long name instead of cutting it', () => {
     renderRow({ name: LONG_ARTICLE_NAME });
 
