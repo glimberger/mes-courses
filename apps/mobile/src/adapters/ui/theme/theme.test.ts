@@ -6,7 +6,7 @@ import { MD3LightTheme } from 'react-native-paper';
 import materialTheme from '../../../../../../design/material-theme.json';
 import { spacing } from './spacing';
 import { darkTheme, lightTheme, type SchemeRole } from './theme';
-import { usedColorPairs } from './used-color-pairs';
+import { alternativeColorPairs, usedColorPairs } from './used-color-pairs';
 
 // onSurface (#1E1B13 light, #E8E2D4 dark) and scrim (#141108) written out as RGB, so the
 // derived roles are checked against values computed by hand, not by the code under test.
@@ -96,6 +96,25 @@ describe.each(themes)(
         `rgba(${onSurfaceRgb}, 0.38)`,
       );
       expect(theme.colors.backdrop).toBe(`rgba(${scrimRgb}, 0.36)`);
+    });
+
+    describe('SC-005 meets WCAG 3:1 on the checkbox alternatives', () => {
+      it.each(
+        alternativeColorPairs.map((alternatives) => [
+          alternatives
+            .map(
+              ({ foreground, background }) => `${foreground} on ${background}`,
+            )
+            .join(' or '),
+          alternatives,
+        ]),
+      )('%s passes in this scheme', (_label, alternatives) => {
+        const passing = alternatives.some(
+          ({ foreground, background }) =>
+            contrastRatio(scheme[foreground], scheme[background]) >= 3,
+        );
+        expect(passing).toBe(true);
+      });
     });
 
     describe('FR-036 meets WCAG AA contrast on every color pair the app draws', () => {
