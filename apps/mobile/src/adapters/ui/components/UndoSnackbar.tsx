@@ -8,8 +8,11 @@ import { useAppStore } from '../state/use-app-store';
 import { BrandSnackbar } from './BrandSnackbar';
 import { ABOVE_SCREEN_FAB } from './ScreenFab';
 
-/** The room one snackbar takes: Paper's 48 dp minimum height and its 8 dp margins. */
-const SNACKBAR_SPACE = 48 + 2 * 8;
+/**
+ * The room one undo offer takes: its 60 dp height (44 dp action button plus 8 dp padding above and
+ * below, as on mockup 12) and an 8 dp gap.
+ */
+const SNACKBAR_SPACE = 60 + 8;
 
 /** Where a notice shown during an undo offer sits: above the offer, never covering it. */
 export const ABOVE_UNDO_OFFER = {
