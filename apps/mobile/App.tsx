@@ -49,8 +49,6 @@ export default function App() {
   useEffect(() => {
     Font.loadAsync({
       ...nunitoFontFiles,
-      MaterialSymbolsRounded_500: require('./assets/fonts/MaterialSymbolsRounded_500.ttf'),
-      MaterialSymbolsRounded_700: require('./assets/fonts/MaterialSymbolsRounded_700.ttf'),
     }).catch(() => undefined);
   }, []);
 

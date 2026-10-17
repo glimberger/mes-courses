@@ -111,11 +111,7 @@ describe('the fonts App.tsx bundles (FR-015)', () => {
     );
 
     expect(entries.map(({ family }) => family)).toEqual(
-      expect.arrayContaining([
-        'Nunito_600SemiBold',
-        'MaterialSymbolsRounded_500',
-        'MaterialSymbolsRounded_700',
-      ]),
+      expect.arrayContaining(['Nunito_600SemiBold']),
     );
     for (const { family, source } of entries) {
       expect({ family, local: source }).toEqual({

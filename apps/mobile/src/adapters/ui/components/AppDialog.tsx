@@ -183,6 +183,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: PADDING_SIDES,
     paddingBottom: PADDING_BOTTOM,
     gap: GAP,
+    // Lets the scroll area take the height left under the surface's `maxHeight`.
+    flexShrink: 1,
   },
   centered: { alignItems: 'center' },
   centeredText: { textAlign: 'center' },

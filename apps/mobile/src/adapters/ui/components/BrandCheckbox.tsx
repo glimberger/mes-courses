@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTheme } from 'react-native-paper';
 
 import { AppIcon } from '../icons/AppIcon';
@@ -6,11 +6,14 @@ import { shape } from '../theme/shape';
 import type { AppTheme } from '../theme/theme';
 
 const BOX_SIZE = 24;
-const TARGET_SIZE = 48;
 const BORDER_WIDTH = 2;
 const MARK_SIZE = 17;
 
-/** The box and its mark, drawn from the state alone: rows that are already the checkbox use it. */
+/**
+ * The mockups' checkbox box: 24 dp with a 2 dp border, yellow and dark-outlined when checked, the
+ * mark being the weight-700 `check` (styles.css `.checkbox`). It is drawn from the state alone:
+ * the row that holds it is the checkbox (role, state and the 48 dp target), as in `ListItemRow`.
+ */
 export const CheckboxBox = ({
   checked,
   testID,
@@ -46,42 +49,7 @@ export const CheckboxBox = ({
   );
 };
 
-export type BrandCheckboxProps = {
-  checked: boolean;
-  onPress: () => void;
-  /** The row's name, read by screen readers with the checked state. */
-  accessibilityLabel: string;
-  testID?: string;
-};
-
-/**
- * The mockups' checkbox: a 24 dp box with a 2 dp border, yellow and dark-outlined when checked,
- * inside a 48 dp target. The mark is the weight-700 `check` (styles.css `.checkbox`).
- */
-export const BrandCheckbox = ({
-  checked,
-  onPress,
-  accessibilityLabel,
-  testID,
-}: BrandCheckboxProps) => (
-  <Pressable
-    accessibilityRole="checkbox"
-    accessibilityLabel={accessibilityLabel}
-    accessibilityState={{ checked }}
-    onPress={onPress}
-    style={styles.target}
-  >
-    <CheckboxBox checked={checked} testID={testID} />
-  </Pressable>
-);
-
 const styles = StyleSheet.create({
-  target: {
-    width: TARGET_SIZE,
-    height: TARGET_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   box: {
     width: BOX_SIZE,
     height: BOX_SIZE,

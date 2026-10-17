@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
@@ -24,7 +25,7 @@ describe.each([
 ])('Button in the %s appearance', (_name, theme) => {
   it('is a stadium 50 dp high by default, with a 48 dp target', () => {
     const { button } = renderButton(theme, { mode: 'brand' });
-    expect(button).toHaveStyle({ borderRadius: 9999, height: 50 });
+    expect(button).toHaveStyle({ borderRadius: 9999, minHeight: 50 });
   });
 
   it('is 44 dp high when compact, and reaches 48 dp with a hit slop', () => {
@@ -32,7 +33,7 @@ describe.each([
       mode: 'outlined',
       size: 'compact',
     });
-    expect(button).toHaveStyle({ height: 44 });
+    expect(button).toHaveStyle({ minHeight: 44 });
     expect(button.props.hitSlop).toEqual({ top: 2, bottom: 2 });
   });
 
@@ -78,11 +79,9 @@ describe.each([
     expect(label()).toHaveStyle({ color: theme.colors.primary });
   });
 
-  it('keeps the former Paper mode names as the brand button', () => {
-    const { button } = renderButton(theme, { mode: 'contained-tonal' });
-    expect(button).toHaveStyle({
-      backgroundColor: theme.colors.primaryContainer,
-    });
+  it('sets a minimum height, not a fixed one, so a wrapped label is not cut', () => {
+    const { button } = renderButton(theme, { mode: 'brand' });
+    expect(StyleSheet.flatten(button.props.style).height).toBeUndefined();
   });
 
   it('keeps the label as the button name and calls onPress', () => {

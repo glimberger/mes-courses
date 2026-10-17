@@ -35,8 +35,13 @@ export const AppIcon = ({
   color,
   testID,
 }: AppIconProps) => {
-  const Set = weight === 700 ? BOLD : MEDIUM;
+  const IconSet = weight === 700 ? BOLD : MEDIUM;
   return (
-    <Set name={resolveSymbol(name)} size={size} color={color} testID={testID} />
+    <IconSet
+      name={resolveSymbol(name)}
+      size={size}
+      color={color}
+      testID={testID}
+    />
   );
 };

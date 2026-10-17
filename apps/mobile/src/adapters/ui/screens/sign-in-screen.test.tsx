@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import type { AccountServer } from '../../../application/ports/account-server';
@@ -458,7 +459,7 @@ describe('SignIn in the mockup look', () => {
     expect(screen.getByRole('button', { name: 'Se connecter' })).toHaveStyle({
       backgroundColor: lightTheme.colors.primaryContainer,
       borderRadius: 9999,
-      height: 50,
+      minHeight: 50,
       marginTop: 10,
     });
   });
@@ -490,10 +491,14 @@ describe('SignIn in the mockup look', () => {
     expect(screen.queryByText('Mes Courses')).not.toBeOnTheScreen();
   });
 
-  it('keeps the screen name a heading that is not drawn, as the mockup has no app bar', async () => {
+  it('keeps the screen name a heading that is clipped, not transparent, so screen readers read it', async () => {
     await renderSignIn();
-    expect(screen.getByRole('header', { name: 'Se connecter' })).toHaveStyle({
-      opacity: 0,
+    const heading = screen.getByRole('header', { name: 'Se connecter' });
+    expect(StyleSheet.flatten(heading.props.style)?.opacity).toBeUndefined();
+    expect(heading.parent?.parent).toHaveStyle({
+      width: 1,
+      height: 1,
+      overflow: 'hidden',
     });
   });
 });

@@ -99,26 +99,28 @@ export const ListItemRow = memo(function ListItemRow({
       >
         <View style={styles.content}>
           <CheckboxBox checked={inCart} />
-          {/* Remounted per tick state: Android kept a stale text style. */}
-          <Text
-            key={`name-${inCart}`}
-            variant="titleMedium"
-            style={[styles.name, ...textStyle]}
-          >
-            {name}
-          </Text>
-          {quantity !== null && (
+          <View style={styles.text}>
+            {/* Remounted per tick state: Android kept a stale text style. */}
             <Text
-              key={`quantity-${inCart}`}
-              style={[
-                styles.quantity,
-                { color: colors.onSurfaceVariant },
-                inCart && styles.ticked,
-              ]}
+              key={`name-${inCart}`}
+              variant="titleMedium"
+              style={[styles.name, ...textStyle]}
             >
-              {formatQuantity(quantity)}
+              {name}
             </Text>
-          )}
+            {quantity !== null && (
+              <Text
+                key={`quantity-${inCart}`}
+                style={[
+                  styles.quantity,
+                  { color: colors.onSurfaceVariant },
+                  inCart && styles.ticked,
+                ]}
+              >
+                {formatQuantity(quantity)}
+              </Text>
+            )}
+          </View>
         </View>
       </TouchableRipple>
       {actions.length > 0 && (
@@ -161,10 +163,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   checkboxArea: { flex: 1, minHeight: 48, justifyContent: 'center' },
+  // The box is centered on the row, however many lines the name takes.
   content: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     gap: 10,
+  },
+  // The name and the quantity share a baseline, 10 dp apart, and wrap together.
+  text: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+    columnGap: 10,
   },
   name: { flexShrink: 1 },
   quantity: typeOverrides.quantity,

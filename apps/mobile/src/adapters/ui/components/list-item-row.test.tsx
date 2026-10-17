@@ -177,17 +177,22 @@ describe('ListItemRow', () => {
     const name = StyleSheet.flatten(screen.getByText('Lait').props.style);
     expect(name.flex).toBeUndefined();
     expect(name.flexShrink).toBe(1);
-    const holder = screen
+    const flat = (node: ReactTestInstance | undefined) =>
+      StyleSheet.flatten(node?.props.style) ?? {};
+    const within = screen
       .getByRole('checkbox')
-      .findAll(
-        (node) =>
-          StyleSheet.flatten(node.props.style)?.alignItems === 'baseline',
-      )[0];
-    expect(StyleSheet.flatten(holder?.props.style)).toMatchObject({
+      .findAll((node) => typeof node.type === 'string');
+    const holder = within.find((node) => flat(node).alignItems === 'baseline');
+    expect(flat(holder)).toMatchObject({
       flexDirection: 'row',
-      alignItems: 'baseline',
-      gap: 10,
+      flexWrap: 'wrap',
+      columnGap: 10,
     });
+    // The box stays centered on the row, whatever the lines of the name.
+    const outer = within.find(
+      (node) => flat(node).alignItems === 'center' && flat(node).gap === 10,
+    );
+    expect(outer).toBeDefined();
   });
 
   it('FR-033 wraps a long name instead of cutting it', () => {

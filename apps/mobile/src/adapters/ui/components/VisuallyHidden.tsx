@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 /**
  * Text that screen readers read but nothing draws: a heading for a screen whose mockup shows no
@@ -12,11 +12,12 @@ export const VisuallyHidden = ({
   children: ReactNode;
   role?: 'header' | undefined;
 }) => (
-  <Text accessibilityRole={role} style={styles.hidden}>
-    {children}
-  </Text>
+  // A 1 dp clip, not a transparent view: screen readers skip views with an alpha of 0.
+  <View style={styles.clip}>
+    <Text accessibilityRole={role}>{children}</Text>
+  </View>
 );
 
 const styles = StyleSheet.create({
-  hidden: { position: 'absolute', width: 1, height: 1, opacity: 0 },
+  clip: { position: 'absolute', width: 1, height: 1, overflow: 'hidden' },
 });

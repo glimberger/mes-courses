@@ -82,7 +82,11 @@ module.exports = {
     // A physical Android phone plugged in over USB: `adb devices` gives its serial (DETOX_ADB_NAME).
     attached: {
       type: 'android.attached',
-      device: { adbName: process.env.DETOX_ADB_NAME ?? '.*' },
+      // Without DETOX_ADB_NAME no device matches, so the run fails at once instead of picking
+      // whichever adb device is connected (an emulator next to the phone).
+      device: {
+        adbName: process.env.DETOX_ADB_NAME ?? 'DETOX_ADB_NAME-not-set',
+      },
     },
     simulator: {
       type: 'ios.simulator',

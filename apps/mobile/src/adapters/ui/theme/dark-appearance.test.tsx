@@ -4,7 +4,7 @@ import { PaperProvider } from 'react-native-paper';
 import { render, screen } from '@testing-library/react-native';
 
 import materialTheme from '../../../../../../design/material-theme.json';
-import { BrandCheckbox } from '../components/BrandCheckbox';
+import { CheckboxBox } from '../components/BrandCheckbox';
 import { CategoryHeader } from '../components/CategoryHeader';
 import { Card } from '../components/Card';
 import { ScreenFab } from '../components/ScreenFab';
@@ -66,10 +66,8 @@ describe('the current list blocks in dark appearance', () => {
   });
 
   it('fills a checked checkbox with the brand yellow', () => {
-    renderIn(
-      <BrandCheckbox checked accessibilityLabel="Lait" onPress={() => {}} />,
-    );
-    const box = screen.getByRole('checkbox', { name: 'Lait' });
+    renderIn(<CheckboxBox checked testID="box" />);
+    const box = screen.getByTestId('box', { includeHiddenElements: true });
     expect(
       drawnIn(box, darkTheme.colors.primaryContainer).length,
     ).toBeGreaterThan(0);

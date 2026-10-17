@@ -1,5 +1,6 @@
 import { forwardRef, type ReactNode, type Ref } from 'react';
 import {
+  Platform,
   Pressable,
   StyleSheet,
   type HostInstance,
@@ -10,27 +11,20 @@ import {
 import { Icon, Text, useTheme } from 'react-native-paper';
 
 import { shape } from '../theme/shape';
-import type { AppTheme, SchemeRole } from '../theme/theme';
+import { rgba, type AppTheme, type SchemeRole } from '../theme/theme';
 import { typeOverrides } from '../theme/typography';
 
 export type ButtonMode =
   'brand' | 'outlined' | 'danger' | 'dangerFilled' | 'text';
 
-// Paper's former mode names, still used by callers: a contained button is the brand button.
-type LegacyMode = 'contained' | 'contained-tonal' | 'elevated';
-
 export type ButtonProps = {
-  mode?: ButtonMode | LegacyMode;
+  mode?: ButtonMode;
   /** `compact` is 44 dp high, for dialogs and inline actions; the default is 50 dp. */
   size?: 'default' | 'compact';
   /** A Material Symbol name drawn at 20 dp before the label. */
   icon?: string;
   disabled?: boolean;
   onPress?: () => void;
-  /** Overrides the mode's fill, for the callers that still pick a role themselves. */
-  buttonColor?: string;
-  /** Overrides the mode's text and icon color. */
-  textColor?: string;
   style?: StyleProp<ViewStyle>;
   testID?: string | undefined;
   children: ReactNode;
@@ -70,20 +64,13 @@ const PALETTES: Record<ButtonMode, Palette> = {
   },
 };
 
-const LEGACY_MODES: Record<LegacyMode, ButtonMode> = {
-  contained: 'brand',
-  'contained-tonal': 'brand',
-  elevated: 'brand',
-};
-
-const isLegacyMode = (mode: ButtonMode | LegacyMode): mode is LegacyMode =>
-  mode in LEGACY_MODES;
-
 // The 20 dp icon of the mockups' `.btn` (research R6).
 const ICON_SIZE = 20;
 const BORDER_WIDTH = 1.5;
 const DEFAULT_HEIGHT = 50;
 const COMPACT_HEIGHT = 44;
+// The share of the label color a press ripples with.
+const PRESS_ALPHA = 0.12;
 // A compact button is 44 dp; a 2 dp hit slop on each side makes its target 48 dp (FR-034).
 const COMPACT_HIT_SLOP = { top: 2, bottom: 2 };
 
@@ -99,8 +86,6 @@ export const Button = forwardRef<View, ButtonProps>(
       icon,
       disabled = false,
       onPress,
-      buttonColor,
-      textColor,
       style,
       testID,
       children,
@@ -108,13 +93,12 @@ export const Button = forwardRef<View, ButtonProps>(
     ref,
   ) => {
     const { colors } = useTheme() as AppTheme;
-    const resolved = isLegacyMode(mode) ? LEGACY_MODES[mode] : mode;
-    const palette = PALETTES[resolved];
+    const palette = PALETTES[mode];
     const compact = size === 'compact';
-    const foreground = textColor ?? colors[palette.foreground];
-    const background =
-      buttonColor ??
-      (palette.background ? colors[palette.background] : 'transparent');
+    const foreground = colors[palette.foreground];
+    const background = palette.background
+      ? colors[palette.background]
+      : 'transparent';
 
     return (
       <Pressable
@@ -126,7 +110,8 @@ export const Button = forwardRef<View, ButtonProps>(
         disabled={disabled}
         onPress={onPress}
         hitSlop={compact ? COMPACT_HIT_SLOP : undefined}
-        style={[
+        android_ripple={{ color: rgba(foreground, PRESS_ALPHA) }}
+        style={({ pressed }) => [
           styles.button,
           compact ? styles.compact : styles.default,
           {
@@ -136,6 +121,8 @@ export const Button = forwardRef<View, ButtonProps>(
           palette.border && styles.bordered,
           palette.border && { borderColor: colors[palette.border] },
           disabled && styles.disabled,
+          // iOS has no ripple: a pressed button dims.
+          pressed && Platform.OS === 'ios' && styles.pressed,
           style,
         ]}
       >
@@ -146,7 +133,7 @@ export const Button = forwardRef<View, ButtonProps>(
           variant="labelLarge"
           style={[
             { color: foreground },
-            compact || resolved === 'text' ? styles.compactLabel : null,
+            compact || mode === 'text' ? styles.compactLabel : null,
           ]}
         >
           {children}
@@ -165,10 +152,12 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: shape.pill,
   },
-  compact: { height: COMPACT_HEIGHT },
-  default: { height: DEFAULT_HEIGHT },
+  // A minimum, so a label that wraps (large text) grows the button instead of being cut.
+  compact: { minHeight: COMPACT_HEIGHT },
+  default: { minHeight: DEFAULT_HEIGHT },
   bordered: { borderWidth: BORDER_WIDTH },
   disabled: { opacity: 0.5 },
+  pressed: { opacity: 0.85 },
   compactLabel: { fontSize: typeOverrides.compactLabel.fontSize },
 });
 
