@@ -1,18 +1,10 @@
-import { StyleSheet } from 'react-native';
-import { Appbar } from 'react-native-paper';
+import { AppbarIconAction } from './AppbarIconAction';
 
-/**
- * The Appbar's "Retour", grown from Paper's 40 dp to a 48 dp square (FR-034), taking the place of
- * its margins so the title does not move.
- */
+/** The header's "Retour": an arrow_back action, 48 dp square (FR-034). */
 export const BackAction = ({ onPress }: { onPress: () => void }) => (
-  <Appbar.BackAction
+  <AppbarIconAction
+    icon="arrow_back"
     accessibilityLabel="Retour"
     onPress={onPress}
-    style={styles.target}
   />
 );
-
-const styles = StyleSheet.create({
-  target: { width: 48, height: 48, marginHorizontal: 2 },
-});
