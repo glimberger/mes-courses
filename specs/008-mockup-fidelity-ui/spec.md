@@ -60,12 +60,11 @@ weights: titles, article names, category headings, chips, buttons and secondary 
 
 1. **Given** any screen, **When** it is displayed, **Then** every piece of text, including
    field values, placeholders, chips and button labels, uses Nunito.
-2. **Given** screen titles, category headings, button labels, chips and the floating action
-   button, **When** they are displayed, **Then** they use the extra-bold weight, as in the
-   mockups.
-3. **Given** article names, list names and setting row titles, **When** they are displayed,
-   **Then** they use the bold weight; secondary lines (quantity, article count, sync time,
-   dialog messages) use the semi-bold weight.
+2. **Given** screen titles, category headings, button labels and the floating action button,
+   **When** they are displayed, **Then** they use the extra-bold weight, as in the mockups.
+3. **Given** article names, list names, setting row titles, chips, quantities and the
+   snackbar message, **When** they are displayed, **Then** they use the bold weight;
+   secondary lines (article count, last sync time, dialog messages) use the semi-bold weight.
 4. **Given** any screen, **When** it is displayed, **Then** no text uses a regular or thin
    weight where the mockup shows a heavier one.
 
@@ -122,7 +121,7 @@ it with `shots/2-listes.png`.
    centered.
 2. **Given** a list, **When** it is displayed, **Then** it is a white rounded card holding a
    soft-yellow circle with a list icon, the list name in bold, its article count below in
-   smaller text ("4 articles", "0 article"), and a chevron on the right.
+   smaller text ("4 articles", "0 articles", as today), and a chevron on the right.
 3. **Given** the current list, **When** it is displayed, **Then** its card has a brand-yellow
    border and a brand-yellow chip "Liste actuelle" with a check mark in place of the chevron.
 4. **Given** the screen, **When** it is displayed, **Then** an extended brand-yellow floating
@@ -328,8 +327,8 @@ soft-yellow icon circles, stadium buttons, rounded outlined fields, chips).
 - At a 200% device text size, chips and buttons may grow and wrap; nothing is clipped and the
   content scrolls when it exceeds the screen.
 - The floating action button never hides the last card: the list leaves enough space below it.
-- A list with a single article reads "1 article", with zero "0 article", following French
-  conventions as today.
+- A list with a single article reads "1 article"; any other count, zero included, reads
+  "N articles", as today (FR-012: no text change).
 - The remaining-articles chip is hidden or reads accordingly when no article remains, as
   today.
 - With no network, every screen renders identically: the typeface and icons are bundled and
@@ -343,10 +342,13 @@ soft-yellow icon circles, stadium buttons, rounded outlined fields, chips).
 
 - **FR-001**: Every screen and dialog listed in the Context table MUST match its mockup in
   layout, element order, colors, corner radii, spacing, icons, text sizes and text weights,
-  in light appearance and, for the current list and the snackbar, in dark appearance.
+  in light appearance and, for the current list and the snackbar, in dark appearance. Every
+  other screen and dialog MUST use the dark tokens of `design/mockups/styles.css` in dark
+  appearance, with its light mockup's layout.
 - **FR-002**: All text MUST use Nunito; the semi-bold, bold and extra-bold weights MUST be
-  available and used as in the mockups (extra-bold for titles, headings, chips, buttons and
-  the floating action button; bold for item names; semi-bold for secondary text).
+  available and used as in the mockups (extra-bold for titles, headings, buttons and the
+  floating action button; bold for item names, chips, quantities and the snackbar message;
+  semi-bold for secondary text).
 - **FR-003**: Every color the mockups use MUST come from a Material 3 color role of the
   application theme, `design/material-theme.json`, which stays the single source of colors.
   The theme MUST be updated so that these roles carry the mockup values of
@@ -437,6 +439,9 @@ soft-yellow icon circles, stadium buttons, rounded outlined fields, chips).
   application keeps its real data and its current French texts. Where a mockup label differs
   from the application's current wording, the current wording stays unless it is a pure
   presentation label introduced by the mockups (for example the "Liste actuelle" chip).
+- One mockup color fails the contrast threshold: the empty-category text of mockup 3 uses
+  `--muted` (`outline`, 4.48:1 on the white card in light). It uses `onSurfaceVariant`, the
+  color of the other secondary lines, instead; FR-014 wins over FR-001 for this pair.
 - Status-bar content and the red autofill icon visible in the sign-in mockup capture come from
   the mockup frame and the browser, not from the design, and are out of scope.
 - The startup screen (mockup 11) was delivered by feature 006; it is only checked against its
