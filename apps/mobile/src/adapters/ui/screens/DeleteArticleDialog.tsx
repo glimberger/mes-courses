@@ -1,12 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet, View, type HostInstance } from 'react-native';
-import { Dialog, Portal, Text, useTheme } from 'react-native-paper';
+import type { HostInstance } from 'react-native';
 
 import type { ArticleUsage } from '../../../domain/article';
 import { focusOn } from '../accessibility/focus';
-import { Button } from '../components/Button';
-import { IconCircle } from '../components/IconCircle';
-import { spacing } from '../theme/spacing';
+import { AppDialog } from '../components/AppDialog';
 import { joinFrench } from '../components/join-french';
 import { useAppStore } from '../state/use-app-store';
 
@@ -34,7 +31,6 @@ export const DeleteArticleDialog = ({
   onClose,
 }: DeleteArticleDialogProps) => {
   const deleteArticle = useAppStore((state) => state.deleteArticle);
-  const { colors } = useTheme();
   const titleRef = useRef<HostInstance>(null);
   // A second tap on "Supprimer" must not delete, or close, twice.
   const deleting = useRef(false);
@@ -58,31 +54,21 @@ export const DeleteArticleDialog = ({
   // Gone at once, so its buttons never sit beside the undo offer's "Annuler" while it fades.
   if (usage === null) return null;
   return (
-    <Portal>
-      <Dialog
-        visible
-        onDismiss={onClose}
-        overlayAccessibilityLabel="Fermer la boîte de dialogue"
-      >
-        {/* The title read as one header, and the target of the focus move. */}
-        <View ref={titleRef} accessible accessibilityRole="header">
-          <Dialog.Title>{`Supprimer « ${usage.article.name} » ?`}</Dialog.Title>
-        </View>
-        <Dialog.Content style={styles.content}>
-          <IconCircle icon="delete" tone="error" />
-          <Text variant="bodyMedium">{consequence(usage.lists)}</Text>
-        </Dialog.Content>
-        <Dialog.Actions>
-          <Button onPress={onClose}>Annuler</Button>
-          <Button textColor={colors.error} onPress={() => void confirm()}>
-            Supprimer
-          </Button>
-        </Dialog.Actions>
-      </Dialog>
-    </Portal>
+    <AppDialog
+      visible
+      onDismiss={onClose}
+      icon="delete"
+      iconTone="error"
+      layout="centered"
+      title={`Supprimer « ${usage.article.name} » ?`}
+      titleRef={titleRef}
+      message={consequence(usage.lists)}
+      cancel={{ label: 'Annuler', onPress: onClose }}
+      confirm={{
+        label: 'Supprimer',
+        onPress: () => void confirm(),
+        mode: 'dangerFilled',
+      }}
+    />
   );
 };
-
-const styles = StyleSheet.create({
-  content: { gap: spacing.sm, alignItems: 'center' },
-});

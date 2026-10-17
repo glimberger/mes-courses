@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
 
+import type { ListId } from '../../../domain/shopping-list';
 import { fixture } from '../testing/fixtures';
 import { ListsScreen } from './ListsScreen';
 
@@ -26,6 +27,21 @@ export { LoadFailed as Error };
 /** "Barbecue", empty, and "Ma liste", current with four items. */
 export const Success: Story = {
   parameters: { scenario: { seed: fixture } },
+};
+
+/** Mockup 2: three lists, the middle one current, each a card. */
+export const ThreeListsOneCurrent: Story = {
+  parameters: {
+    scenario: {
+      seed: {
+        ...fixture,
+        lists: [
+          ...fixture.lists,
+          { id: 'list-noel' as ListId, name: 'Noël en famille' },
+        ],
+      },
+    },
+  },
 };
 
 /** A single list, shown as one card. */

@@ -1,7 +1,12 @@
 import { Text } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react-native';
 
 import { darkTheme, lightTheme, type AppTheme } from '../theme/theme';
 import { AppbarIconAction } from './AppbarIconAction';
@@ -46,7 +51,9 @@ describe.each([
 
     it('sets the title as a header in headlineMedium, onSurface, without truncation', () => {
       renderHeader(theme, { title: 'Liste de courses' });
-      const title = screen.getByRole('header', { name: 'Liste de courses' });
+      const title = within(
+        screen.getByRole('header', { name: 'Liste de courses' }),
+      ).getByText('Liste de courses');
       expect(title).toHaveStyle({
         color: theme.colors.onSurface,
         fontFamily: theme.fonts.headlineMedium.fontFamily,
@@ -60,7 +67,9 @@ describe.each([
         titleVariant: 'titleLarge',
       });
       expect(
-        screen.getByRole('header', { name: 'Ajouter des articles' }),
+        within(
+          screen.getByRole('header', { name: 'Ajouter des articles' }),
+        ).getByText('Ajouter des articles'),
       ).toHaveStyle({ fontFamily: theme.fonts.titleLarge.fontFamily });
     });
 

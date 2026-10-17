@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import { lightTheme } from '../theme/theme';
 import { ThemeProvider } from '../theme/theme-provider';
 import { ArticleRow } from './ArticleRow';
 
@@ -149,5 +150,35 @@ describe('ArticleRow', () => {
     expect(
       screen.queryByRole('button', { name: MENU_BUTTON }),
     ).not.toBeOnTheScreen();
+  });
+});
+
+describe('ArticleRow in the mockup look', () => {
+  it('draws the add icon of an article not on the list in onBrandSoft, in its brand circle', () => {
+    renderRow({ onList: false });
+
+    expect(screen.UNSAFE_getByProps({ source: 'add' }).props.color).toBe(
+      lightTheme.colors.onBrandSoft,
+    );
+  });
+
+  it('shows no add icon for an article already on the list', () => {
+    renderRow({ onList: true });
+
+    expect(screen.UNSAFE_queryByProps({ source: 'add' })).toBeNull();
+  });
+
+  it('sets its name in titleMedium, and wraps a long name instead of truncating it', () => {
+    renderRow({
+      name: 'Yaourt à la grecque nature au lait entier de brebis bio x 12',
+    });
+
+    const name = screen.getByText(
+      'Yaourt à la grecque nature au lait entier de brebis bio x 12',
+    );
+    expect(name).toHaveStyle({
+      fontFamily: lightTheme.fonts.titleMedium.fontFamily,
+    });
+    expect(name.props.numberOfLines).toBeUndefined();
   });
 });

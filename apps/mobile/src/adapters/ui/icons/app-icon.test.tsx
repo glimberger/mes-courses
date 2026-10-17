@@ -24,9 +24,12 @@ const literalIconNames = (): string[] =>
         .split('\n')
         .filter((line) => /\bicon\b|\bsource=/.test(line))
         .flatMap((line) =>
-          [...line.matchAll(/['"]([a-z][a-z0-9_-]*)['"]/g)].map(
-            ([, name = '']) => name,
-          ),
+          // Other attributes on the line (`tone="brand"`, `testID="x"`) are not icon names.
+          [
+            ...line
+              .replace(/\b(?!icon\b|source\b)\w+=(["'])[^"']*\1/g, '')
+              .matchAll(/['"]([a-z][a-z0-9_-]*)['"]/g),
+          ].map(([, name = '']) => name),
         ),
     );
 

@@ -32,7 +32,7 @@ export type ButtonProps = {
   /** Overrides the mode's text and icon color. */
   textColor?: string;
   style?: StyleProp<ViewStyle>;
-  testID?: string;
+  testID?: string | undefined;
   children: ReactNode;
 };
 

@@ -1,29 +1,30 @@
 import type { ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
-import { Surface } from 'react-native-paper';
 
-import { shape } from '../theme/shape';
-import { spacing } from '../theme/spacing';
+import { Card } from './Card';
 
 export type SettingsCardProps = {
   children: ReactNode;
+  /** The actions card: its rows sit 10 dp apart, not 14. */
+  dense?: boolean | undefined;
+  testID?: string | undefined;
 };
 
-/**
- * A rounded, elevated card that groups related settings (account, server, devices, actions).
- * Screens stay layout-only; the visual card styling lives here.
- */
-export const SettingsCard = ({ children }: SettingsCardProps) => (
-  <Surface style={styles.card} elevation={1}>
+// The mockups' settings card (`.card.pad`): 16 dp padding, 14 dp between rows (10 when dense).
+const GAP = 14;
+const DENSE_GAP = 10;
+
+/** A settings group: the mockups' card, with its rows spaced inside it. */
+export const SettingsCard = ({
+  children,
+  dense = false,
+  testID,
+}: SettingsCardProps) => (
+  <Card testID={testID} style={[styles.card, { gap: dense ? DENSE_GAP : GAP }]}>
     {children}
-  </Surface>
+  </Card>
 );
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: shape.lg,
-    padding: spacing.md,
-    gap: spacing.sm,
-    marginVertical: spacing.xs,
-  },
+  card: { padding: 16 },
 });

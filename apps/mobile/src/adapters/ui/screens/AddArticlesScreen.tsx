@@ -1,6 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { SectionList, StyleSheet, View, type HostInstance } from 'react-native';
-import { Appbar, List, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -11,8 +10,9 @@ import { cleanName } from '../../../domain/name';
 import { focusOn } from '../accessibility/focus';
 import { AppbarIconAction } from '../components/AppbarIconAction';
 import { ArticleRow } from '../components/ArticleRow';
-import { BackAction } from '../components/BackAction';
-import { Button } from '../components/Button';
+import { CategoryHeader } from '../components/CategoryHeader';
+import { EmptyCategoryCard } from '../components/EmptyCategoryCard';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenStateView } from '../components/ScreenStateView';
 import { SearchField } from '../components/SearchField';
 import { SyncStatusBar } from '../components/SyncStatusBar';
@@ -167,33 +167,25 @@ export const AddArticlesScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <Appbar.Header>
-        {navigation.canGoBack() && (
-          <BackAction onPress={() => navigation.goBack()} />
-        )}
-        <Appbar.Content
-          title={
-            <View ref={titleRef} accessible accessibilityRole="header">
-              <Text variant="titleLarge" numberOfLines={1}>
-                Ajouter des articles
-              </Text>
-            </View>
-          }
-        />
-        <AppbarIconAction
-          icon="add"
-          accessibilityLabel="Nouvel article"
-          onPress={newArticle}
-        />
-      </Appbar.Header>
+      <ScreenHeader
+        title="Ajouter des articles"
+        titleVariant="titleLarge"
+        titleRef={titleRef}
+        onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined}
+        actions={
+          <AppbarIconAction
+            icon="add"
+            accessibilityLabel="Nouvel article"
+            onPress={newArticle}
+          />
+        }
+      />
       <SyncStatusBar />
-      <View style={styles.search}>
-        <SearchField
-          placeholder="Rechercher un article"
-          value={query}
-          onChangeText={searchCatalog}
-        />
-      </View>
+      <SearchField
+        placeholder="Rechercher un article"
+        value={query}
+        onChangeText={searchCatalog}
+      />
       <ScreenStateView
         state={catalog}
         errorMessage="Impossible de charger les articles."
@@ -252,28 +244,27 @@ const CatalogSections = ({
     }))}
     keyExtractor={rowId}
     renderSectionHeader={({ section }) => (
-      <List.Subheader accessibilityRole="header">
-        {section.title}
-      </List.Subheader>
+      <CategoryHeader title={section.title} />
     )}
-    renderItem={({ item }) =>
-      isEmptyCategory(item) ? (
-        <View style={styles.emptyCategory}>
-          <Text variant="bodyMedium">Aucun article dans cette catégorie</Text>
-          <Button onPress={() => createInCategory(item.categoryId)}>
-            Créer un article
-          </Button>
-        </View>
-      ) : (
-        <CatalogRow
-          article={item}
-          open={open}
-          edit={edit}
-          remove={remove}
-          rowRefs={rowRefs}
-        />
-      )
-    }
+    renderItem={({ item }) => (
+      <View style={styles.item}>
+        {isEmptyCategory(item) ? (
+          <EmptyCategoryCard
+            message="Aucun article dans cette catégorie"
+            actionLabel="Créer un article"
+            onAction={() => createInCategory(item.categoryId)}
+          />
+        ) : (
+          <CatalogRow
+            article={item}
+            open={open}
+            edit={edit}
+            remove={remove}
+            rowRefs={rowRefs}
+          />
+        )}
+      </View>
+    )}
     stickySectionHeadersEnabled={false}
     // A phone shows about this many 48 dp rows: the first frame fills the screen.
     initialNumToRender={20}
@@ -282,15 +273,11 @@ const CatalogSections = ({
   />
 );
 
+// The mockups' rows: cards 16 dp from the sides and 10 dp apart.
+const CARD_GAP = 10;
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  search: { marginHorizontal: spacing.md, marginBottom: spacing.sm },
   content: { paddingBottom: spacing.xl },
-  emptyCategory: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingStart: spacing.md,
-    paddingEnd: spacing.sm,
-  },
+  item: { paddingHorizontal: spacing.md, paddingBottom: CARD_GAP },
 });

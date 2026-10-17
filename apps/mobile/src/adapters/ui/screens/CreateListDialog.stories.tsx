@@ -31,3 +31,9 @@ export const NameAlreadyUsed: Story = {
     />
   ),
 };
+
+/** Mockup 10 in dark appearance. */
+export const DefaultDark: Story = {
+  ...Default,
+  parameters: { ...Default.parameters, appearance: 'dark' },
+};

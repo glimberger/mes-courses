@@ -24,7 +24,10 @@ const LoadFailed: Story = {
 // Exported under the state's name without hiding the global `Error` in this file.
 export { LoadFailed as Error };
 
-/** Every category, most of them empty. */
+/**
+ * Mockup 3: categories with articles on the list ("Pommes", "Lait"), an addable one ("Beurre"), a
+ * long name, and an empty category.
+ */
 export const NoQuery: Story = {
   parameters: { scenario: { seed: fixture } },
 };

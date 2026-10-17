@@ -1,6 +1,7 @@
 import { AccessibilityInfo } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import { lightTheme } from '../theme/theme';
 import { ThemeProvider } from '../theme/theme-provider';
 import { NameField } from './NameField';
 
@@ -56,6 +57,40 @@ describe('NameField typeface', () => {
     renderField();
     expect(screen.getByLabelText('Nom')).toHaveStyle({
       fontFamily: 'Nunito_600SemiBold',
+    });
+  });
+});
+
+describe('NameField outline', () => {
+  // Paper's outlined input gets the outline props it is given, on the outermost element.
+  const outlineOf = () =>
+    screen
+      .UNSAFE_getAllByProps({ label: 'Nom' })
+      .map((node) => node.props)
+      .filter((props) => 'outlineStyle' in props)[0];
+
+  it('draws a 1.5 dp outline in the outline role on a screen, with 16 dp corners', () => {
+    renderField();
+    expect(outlineOf()).toMatchObject({
+      outlineStyle: { borderRadius: 16, borderWidth: 1.5 },
+    });
+    expect(outlineOf()).toMatchObject({
+      outlineColor: lightTheme.colors.outline,
+    });
+  });
+
+  it('draws the dialog outline with 14 dp corners in a dialog', () => {
+    render(
+      <NameField
+        value=""
+        onChangeText={jest.fn()}
+        error={null}
+        context="dialog"
+      />,
+      { wrapper: ThemeProvider },
+    );
+    expect(outlineOf()).toMatchObject({
+      outlineStyle: { borderRadius: 14, borderWidth: 1.5 },
     });
   });
 });

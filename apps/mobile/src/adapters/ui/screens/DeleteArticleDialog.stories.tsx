@@ -28,3 +28,9 @@ export const OneList: Story = { args: { usage: usageOn(['Ma liste']) } };
 export const SeveralLists: Story = {
   args: { usage: usageOn(['Barbecue', 'Ma liste', 'Pique-nique']) },
 };
+
+/** Mockup 9 in dark appearance. */
+export const SeveralListsDark: Story = {
+  ...SeveralLists,
+  parameters: { ...SeveralLists.parameters, appearance: 'dark' },
+};

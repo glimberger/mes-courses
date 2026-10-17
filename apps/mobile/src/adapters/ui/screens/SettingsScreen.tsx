@@ -1,22 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Appbar, List, Text, useTheme } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { DeviceInfo } from '../../../application/use-cases/list-devices';
-import { BackAction } from '../components/BackAction';
 import { Button } from '../components/Button';
+import { CategoryHeader } from '../components/CategoryHeader';
 import { ErrorState } from '../components/ErrorState';
-import { SettingsCard } from '../components/SettingsCard';
-import { SettingsRow } from '../components/SettingsRow';
 import { formatLastSync } from '../components/format-last-sync';
 import { LoadingState } from '../components/LoadingState';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { SettingsCard } from '../components/SettingsCard';
+import { SettingsRow } from '../components/SettingsRow';
 import { SyncStatusBar } from '../components/SyncStatusBar';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
-import type { AppTheme } from '../theme/theme';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
 import { DeleteMyAccountDialog } from './DeleteMyAccountDialog';
 import { DeviceRow } from './DeviceRow';
@@ -257,93 +257,101 @@ export const SettingsView = ({
   onSignOut,
   onDeleteAccount,
   connectionNeeded,
-}: SettingsViewProps) => {
-  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
-  return (
-    <View style={styles.screen}>
-      <Appbar.Header>
-        {onBack && <BackAction onPress={onBack} />}
-        <Appbar.Content title="Réglages" />
-      </Appbar.Header>
-      <SyncStatusBar />
-      <ScrollView contentContainerStyle={styles.content}>
-        {server === null ? (
+}: SettingsViewProps) => (
+  <View style={styles.screen}>
+    <ScreenHeader
+      title="Réglages"
+      variant="center"
+      onBack={onBack ?? undefined}
+    />
+    <SyncStatusBar variant="strip" />
+    <ScrollView contentContainerStyle={styles.content}>
+      {server === null ? (
+        <View style={styles.cards}>
           <SettingsCard>
             <Text variant="bodyLarge">
               Connectez-vous pour retrouver vos listes sur vos autres appareils.
             </Text>
-            <Button
-              mode="contained-tonal"
-              buttonColor={colors.primaryContainer}
-              textColor={colors.onPrimaryContainer}
-              onPress={onConnect}
-            >
+            <Button mode="brand" onPress={onConnect}>
               Se connecter
             </Button>
           </SettingsCard>
-        ) : (
-          <>
-            <List.Subheader accessibilityRole="header">Compte</List.Subheader>
-            <SettingsCard>
-              <AccountSection
-                account={account}
-                onRetry={onRetryDevices}
-                onManageAccounts={onManageAccounts}
-                onChangePassword={onChangePassword}
-              />
-            </SettingsCard>
+        </View>
+      ) : (
+        <>
+          <Section title="Compte">
+            <AccountSection
+              account={account}
+              onRetry={onRetryDevices}
+              onManageAccounts={onManageAccounts}
+              onChangePassword={onChangePassword}
+            />
+          </Section>
 
-            <List.Subheader accessibilityRole="header">Serveur</List.Subheader>
-            <SettingsCard>
-              <SettingsRow
-                icon="dns"
-                title={withoutScheme(server.url)}
-                subtitle={`Dernière synchronisation : ${formatLastSync(
-                  server.lastSyncAt,
-                  new Date(),
-                )}`}
-              />
-              <Button
-                mode="outlined"
-                disabled={!server.canSyncNow}
-                onPress={onSyncNow}
-              >
-                Synchroniser maintenant
-              </Button>
-            </SettingsCard>
+          <Section title="Serveur">
+            <SettingsRow
+              icon="dns"
+              title={withoutScheme(server.url)}
+              subtitle={`Dernière synchronisation : ${formatLastSync(
+                server.lastSyncAt,
+                new Date(),
+              )}`}
+            />
+            <Button
+              mode="brand"
+              icon="sync"
+              disabled={!server.canSyncNow}
+              onPress={onSyncNow}
+            >
+              Synchroniser maintenant
+            </Button>
+          </Section>
 
-            <List.Subheader accessibilityRole="header">
-              Appareils
-            </List.Subheader>
-            <SettingsCard>
-              <DevicesSection
-                devices={devices}
-                onRetry={onRetryDevices}
-                onRename={onRenameDevice}
-                onRevoke={onRevokeDevice}
-              />
-            </SettingsCard>
+          <Section title="Appareils">
+            <DevicesSection
+              devices={devices}
+              onRetry={onRetryDevices}
+              onRename={onRenameDevice}
+              onRevoke={onRevokeDevice}
+            />
+          </Section>
 
-            <List.Subheader accessibilityRole="header">Actions</List.Subheader>
-            <SettingsCard>
-              <Button mode="outlined" onPress={onSignOut}>
-                Se déconnecter de cet appareil
-              </Button>
-              <Button mode="outlined" onPress={onDeleteAccount}>
-                Supprimer mon compte
-              </Button>
-              {connectionNeeded && (
-                <Text variant="bodyMedium" style={styles.offline}>
-                  {CONNECTION_NEEDED}
-                </Text>
-              )}
-            </SettingsCard>
-          </>
-        )}
-      </ScrollView>
+          <Section title="Actions" dense>
+            <Button mode="outlined" icon="logout" onPress={onSignOut}>
+              Se déconnecter de cet appareil
+            </Button>
+            <Button mode="danger" icon="delete" onPress={onDeleteAccount}>
+              Supprimer mon compte
+            </Button>
+            {connectionNeeded && (
+              <Text variant="bodyMedium" style={styles.offline}>
+                {CONNECTION_NEEDED}
+              </Text>
+            )}
+          </Section>
+        </>
+      )}
+    </ScrollView>
+  </View>
+);
+
+/** A section of Settings: its category header, then one card holding its rows. */
+const Section = ({
+  title,
+  dense = false,
+  children,
+}: {
+  title: string;
+  dense?: boolean;
+  children: ReactNode;
+}) => (
+  <>
+    <CategoryHeader title={title} />
+    <View style={styles.cards}>
+      <SettingsCard dense={dense}>{children}</SettingsCard>
     </View>
-  );
-};
+  </>
+);
 
 const AccountSection = ({
   account,
@@ -373,7 +381,7 @@ const AccountSection = ({
           <Text variant="bodyMedium" style={styles.offline}>
             Compte indisponible hors connexion.
           </Text>
-          <Button mode="outlined" onPress={onChangePassword}>
+          <Button mode="outlined" icon="visibility" onPress={onChangePassword}>
             Changer de mot de passe
           </Button>
         </>
@@ -392,11 +400,15 @@ const AccountSection = ({
             title={account.email}
             subtitle={account.administrator ? 'Administrateur' : undefined}
           />
-          <Button mode="outlined" onPress={onChangePassword}>
+          <Button mode="outlined" icon="visibility" onPress={onChangePassword}>
             Changer de mot de passe
           </Button>
           {account.administrator && (
-            <Button mode="outlined" onPress={onManageAccounts}>
+            <Button
+              mode="outlined"
+              icon="person_add"
+              onPress={onManageAccounts}
+            >
               Gérer les comptes
             </Button>
           )}
@@ -457,6 +469,8 @@ const DevicesSection = ({
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { padding: spacing.md, gap: spacing.md },
+  content: { paddingBottom: spacing.xl },
+  // The mockups' cards: 16 dp from the sides.
+  cards: { paddingHorizontal: spacing.md },
   offline: { paddingHorizontal: spacing.md },
 });

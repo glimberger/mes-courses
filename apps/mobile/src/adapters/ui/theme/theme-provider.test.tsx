@@ -55,6 +55,26 @@ describe('ThemeProvider', () => {
   );
 });
 
+describe('an appearance given to the provider', () => {
+  it.each([
+    ['light', 'dark', 'light'],
+    ['dark', 'light', 'dark'],
+  ] as const)(
+    'shows the %s theme when the system scheme is %s',
+    (appearance, scheme, expected) => {
+      mockColorScheme = scheme;
+
+      render(
+        <ThemeProvider appearance={appearance}>
+          <ThemeName />
+        </ThemeProvider>,
+      );
+
+      expect(screen.getByText(expected)).toBeOnTheScreen();
+    },
+  );
+});
+
 describe('the Material Symbols icons', () => {
   it('draws a Paper icon name with its glyph in the weight 500 font', () => {
     mockFontLoaded = true;

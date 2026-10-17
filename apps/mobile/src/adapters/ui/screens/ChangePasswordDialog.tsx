@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useTheme } from 'react-native-paper';
 
 import { Button } from '../components/Button';
 import { PasswordField } from '../components/PasswordField';
@@ -130,7 +129,6 @@ export const ChangePasswordDialogForm = ({
   onClose,
   onSubmit,
 }: ChangePasswordDialogFormProps) => {
-  const { colors } = useTheme();
   return (
     <DeviceDialog
       title="Changer de mot de passe"
@@ -138,16 +136,10 @@ export const ChangePasswordDialogForm = ({
       dismissable={!saving}
       actions={
         <>
-          <Button disabled={saving} onPress={onClose}>
+          <Button mode="text" disabled={saving} onPress={onClose}>
             Annuler
           </Button>
-          <Button
-            disabled={saving}
-            mode="contained-tonal"
-            buttonColor={colors.primaryContainer}
-            textColor={colors.onPrimaryContainer}
-            onPress={onSubmit}
-          >
+          <Button disabled={saving} mode="brand" onPress={onSubmit}>
             Enregistrer
           </Button>
         </>

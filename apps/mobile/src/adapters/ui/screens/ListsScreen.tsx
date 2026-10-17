@@ -1,15 +1,15 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, StyleSheet, View, type HostInstance } from 'react-native';
-import { Appbar } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 
 import type { ListSummary } from '../../../domain/list-summary';
 import { focusOn } from '../accessibility/focus';
 import { ListSummaryRow } from '../components/ListSummaryRow';
-import { SCREEN_FAB_CLEARANCE, ScreenFab } from '../components/ScreenFab';
-import { BackAction } from '../components/BackAction';
+import { ScreenFab, SCREEN_FAB_CLEARANCE } from '../components/ScreenFab';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenStateView } from '../components/ScreenStateView';
 import { SyncStatusBar } from '../components/SyncStatusBar';
+import { spacing } from '../theme/spacing';
 import { useAppStore } from '../state/use-app-store';
 import { CreateListDialog } from './CreateListDialog';
 
@@ -83,12 +83,11 @@ export const ListsScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <Appbar.Header>
-        {navigation.canGoBack() && (
-          <BackAction onPress={() => navigation.goBack()} />
-        )}
-        <Appbar.Content title="Mes listes" />
-      </Appbar.Header>
+      <ScreenHeader
+        variant="center"
+        title="Mes listes"
+        onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined}
+      />
       <SyncStatusBar />
       <ScreenStateView
         state={lists}
@@ -116,7 +115,16 @@ export const ListsScreen = () => {
   );
 };
 
+// The mockup's lists: the first card sits 14 dp under the header, the cards 10 dp apart.
+const FIRST_CARD_TOP = 14;
+const CARD_GAP = 10;
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  list: { paddingBottom: SCREEN_FAB_CLEARANCE },
+  list: {
+    paddingTop: FIRST_CARD_TOP,
+    paddingHorizontal: spacing.md,
+    paddingBottom: SCREEN_FAB_CLEARANCE,
+    gap: CARD_GAP,
+  },
 });

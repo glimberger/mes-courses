@@ -2,6 +2,8 @@ import { Text } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { ScreenState } from '../state/screen-state';
+import { lightTheme } from '../theme/theme';
+import { ThemeProvider } from '../theme/theme-provider';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import { LoadingState } from './LoadingState';
@@ -140,5 +142,65 @@ describe('ScreenStateView', () => {
     );
 
     expect(screen.getByText('Lait')).toBeOnTheScreen();
+  });
+});
+
+describe('the state blocks in the mockup look', () => {
+  const colors = lightTheme.colors;
+
+  it('shows an empty state on a 56 dp brand circle with a 28 dp icon', () => {
+    render(<EmptyState message="Rien ici" icon="shopping_basket" />, {
+      wrapper: ThemeProvider,
+    });
+    expect(
+      screen.UNSAFE_getByProps({ source: 'shopping_basket' }).props,
+    ).toMatchObject({ color: colors.onBrandSoft, size: 28 });
+  });
+
+  it('sets an empty state title in titleLarge and its message in bodyMedium, muted and centered', () => {
+    render(<EmptyState title="Aucune liste" message="Créez-en une." />, {
+      wrapper: ThemeProvider,
+    });
+    expect(screen.getByText('Aucune liste')).toHaveStyle({
+      fontFamily: lightTheme.fonts.titleLarge.fontFamily,
+    });
+    expect(screen.getByText('Créez-en une.')).toHaveStyle({
+      fontFamily: lightTheme.fonts.bodyMedium.fontFamily,
+      color: colors.onSurfaceVariant,
+      textAlign: 'center',
+    });
+  });
+
+  it('draws the empty state action as the brand button', () => {
+    render(
+      <EmptyState
+        message="Rien ici"
+        action={{ label: 'Ajouter', onPress: jest.fn() }}
+      />,
+      { wrapper: ThemeProvider },
+    );
+    expect(screen.getByRole('button', { name: 'Ajouter' })).toHaveStyle({
+      backgroundColor: colors.primaryContainer,
+    });
+  });
+
+  it('draws the error icon on the error tone, and "Réessayer" as the brand button', () => {
+    render(<ErrorState message="Échec" onRetry={jest.fn()} />, {
+      wrapper: ThemeProvider,
+    });
+    expect(screen.UNSAFE_getByProps({ source: 'error' }).props.color).toBe(
+      colors.onErrorContainer,
+    );
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toHaveStyle({
+      backgroundColor: colors.primaryContainer,
+    });
+  });
+
+  it('draws the loading indicator in primary', () => {
+    render(<LoadingState />, { wrapper: ThemeProvider });
+    expect(
+      screen.UNSAFE_getByProps({ accessibilityLabel: 'Chargement' }).props
+        .color,
+    ).toBe(colors.primary);
   });
 });

@@ -1,105 +1,80 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import {
-  Icon,
-  Surface,
-  Text,
-  TouchableRipple,
-  useTheme,
-} from 'react-native-paper';
+import { Icon, Text, TouchableRipple, useTheme } from 'react-native-paper';
 
 import type { AppTheme } from '../theme/theme';
-import { shape } from '../theme/shape';
-import { spacing } from '../theme/spacing';
+import { IconCircle } from './IconCircle';
 
 export type SettingsRowProps = {
   icon: string;
   title: string;
   subtitle?: string | undefined;
-  onPress?: () => void;
+  onPress?: (() => void) | undefined;
+  /** Draws a muted chevron_right at the end, for a row that opens something. */
+  chevron?: boolean | undefined;
   trailing?: ReactNode;
 };
 
 /**
- * One setting of the settings screen: a soft brand-toned circular leading icon, a title and
- * an optional subtitle, grouped into a rounded card. Visual choices live here so screens stay
- * layout-only.
+ * One setting of a settings card: a 44 dp brand circle, a title and an optional subtitle, and an
+ * optional trailing chevron or element. The row draws no surface of its own; its card does. A
+ * long title wraps.
  */
 export const SettingsRow = ({
   icon,
   title,
   subtitle,
   onPress,
+  chevron = false,
   trailing,
 }: SettingsRowProps) => {
-  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
-  const circle = 44;
+  const { colors } = useTheme() as AppTheme;
   const row = (
     <View style={styles.row}>
-      <View
-        style={[
-          styles.iconCircle,
-          {
-            width: circle,
-            height: circle,
-            borderRadius: circle / 2,
-            backgroundColor: colors.surfaceContainerHigh,
-          },
-        ]}
-      >
-        <Icon source={icon} size={22} color={colors.primary} />
-      </View>
+      <IconCircle icon={icon} diameter={44} />
       <View style={styles.text}>
-        <Text variant="titleMedium">{title}</Text>
+        <Text variant="titleMedium" style={{ color: colors.onSurface }}>
+          {title}
+        </Text>
         {subtitle ? (
-          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
             {subtitle}
           </Text>
         ) : null}
       </View>
       {trailing}
+      {chevron && (
+        <Icon
+          source="chevron_right"
+          size={24}
+          color={colors.onSurfaceVariant}
+        />
+      )}
     </View>
   );
 
+  if (!onPress) return row;
   return (
-    <Surface style={styles.surface} elevation={1}>
-      {onPress ? (
-        <TouchableRipple
-          onPress={onPress}
-          accessibilityRole="button"
-          accessibilityLabel={title}
-          style={styles.touchable}
-        >
-          {row}
-        </TouchableRipple>
-      ) : (
-        row
-      )}
-    </Surface>
+    <TouchableRipple
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      style={styles.touchable}
+    >
+      {row}
+    </TouchableRipple>
   );
 };
 
 const styles = StyleSheet.create({
-  surface: {
-    borderRadius: shape.lg,
-    marginVertical: spacing.xs,
-  },
-  touchable: {
-    borderRadius: shape.lg,
-  },
+  touchable: { borderRadius: 16 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
+    gap: 14,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
     minHeight: 48,
   },
-  iconCircle: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    flex: 1,
-    gap: spacing.xs,
-  },
+  text: { flex: 1, minWidth: 0 },
 });

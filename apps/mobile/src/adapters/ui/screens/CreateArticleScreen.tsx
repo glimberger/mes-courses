@@ -7,7 +7,7 @@ import {
   View,
   type HostInstance,
 } from 'react-native';
-import { Appbar, HelperText, List, useTheme } from 'react-native-paper';
+import { HelperText } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
@@ -22,7 +22,8 @@ import { validateName } from '../../../domain/name';
 import { parseQuantity, type QuantityError } from '../../../domain/quantity';
 import { focusOn } from '../accessibility/focus';
 import { useAnnouncement } from '../accessibility/announce';
-import { BackAction } from '../components/BackAction';
+import { CategoryHeader } from '../components/CategoryHeader';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { Button } from '../components/Button';
 import { CategoryPicker } from '../components/CategoryPicker';
 import { nameErrorText, NameField } from '../components/NameField';
@@ -31,7 +32,6 @@ import type { RootStackParamList } from '../routes';
 import { useAppStoreApi } from '../state/app-store-provider';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
-import type { AppTheme } from '../theme/theme';
 import { QuantityDialog, type QuantityRequest } from './QuantityDialog';
 import { paperRef } from '../components/paper-ref';
 
@@ -221,7 +221,6 @@ export const CreateArticleForm = ({
   onSubmit,
 }: CreateArticleFormProps) => {
   const insets = useSafeAreaInsets();
-  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   useAnnouncement(categoryMissing ? NO_CATEGORY : null);
   return (
     // On iOS, typing covers the bottom of the window: the form is pushed up so "Créer et ajouter"
@@ -230,10 +229,11 @@ export const CreateArticleForm = ({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.screen}
     >
-      <Appbar.Header>
-        {onBack && <BackAction onPress={onBack} />}
-        <Appbar.Content title="Nouvel article" />
-      </Appbar.Header>
+      <ScreenHeader
+        variant="center"
+        title="Nouvel article"
+        onBack={onBack ?? undefined}
+      />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.form}
@@ -256,7 +256,7 @@ export const CreateArticleForm = ({
           onChangeUnit={onChangeUnit}
           error={quantityError}
         />
-        <List.Subheader accessibilityRole="header">Catégorie</List.Subheader>
+        <CategoryHeader title="Catégorie" />
         {categoryMissing && <HelperText type="error">{NO_CATEGORY}</HelperText>}
         <CategoryPicker
           value={categoryId}
@@ -266,9 +266,7 @@ export const CreateArticleForm = ({
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
-          mode="contained-tonal"
-          buttonColor={colors.primaryContainer}
-          textColor={colors.onPrimaryContainer}
+          mode="brand"
           disabled={saving}
           onPress={onSubmit}
           style={styles.submit}

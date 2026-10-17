@@ -59,3 +59,8 @@ export const WithSyncStatus: Story = {
 export const LongNames: Story = {
   parameters: { scenario: { seed: fixture } },
 };
+
+/** Mockup 6: the current list in dark appearance. */
+export const SuccessDark: Story = {
+  parameters: { scenario: { seed: fixture }, appearance: 'dark' },
+};

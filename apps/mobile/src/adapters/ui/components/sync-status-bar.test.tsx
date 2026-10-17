@@ -3,6 +3,8 @@ import { act, fireEvent, screen } from '@testing-library/react-native';
 
 import { renderWithStore } from '../testing/render-with-store';
 import type { AppState } from '../state/app-store';
+import { lightTheme } from '../theme/theme';
+import { typeOverrides } from '../theme/typography';
 import { SyncStatusBar } from './SyncStatusBar';
 
 const renderBar = async () => {
@@ -168,5 +170,60 @@ describe('SyncStatusBar', () => {
         screen.getByTestId('sync-status-bar').props.accessibilityLiveRegion,
       ).toBeUndefined();
     });
+  });
+});
+
+describe('SyncStatusBar as the settings strip', () => {
+  const renderStrip = async () => {
+    const rendered = await renderWithStore(<SyncStatusBar variant="strip" />);
+    const show = (sync: Partial<AppState['sync']>) =>
+      act(() =>
+        rendered.store.setState({
+          sync: {
+            ...rendered.store.getState().sync,
+            connection: 'connected',
+            ...sync,
+          },
+        }),
+      );
+    return { ...rendered, show };
+  };
+
+  it('is full width on surfaceContainer, padded 11 dp vertically and 20 dp at the sides', async () => {
+    const { show } = await renderStrip();
+    await show({ status: 'saved' });
+
+    expect(screen.getByTestId('sync-status-bar')).toHaveStyle({
+      backgroundColor: lightTheme.colors.surfaceContainer,
+      paddingVertical: 11,
+      paddingHorizontal: 20,
+    });
+  });
+
+  it('sets its text in the syncStrip role, in onSurfaceVariant', async () => {
+    const { show } = await renderStrip();
+    await show({ status: 'saved' });
+
+    expect(screen.getByText('Synchronisé')).toHaveStyle({
+      fontFamily: typeOverrides.syncStrip.fontFamily,
+      fontSize: typeOverrides.syncStrip.fontSize,
+      color: lightTheme.colors.onSurfaceVariant,
+    });
+  });
+
+  it('draws its status icon at 20 dp', async () => {
+    const { show } = await renderStrip();
+    await show({ status: 'saved' });
+
+    expect(screen.UNSAFE_getByProps({ source: 'cloud_done' }).props.size).toBe(
+      20,
+    );
+  });
+
+  it('keeps the recovery action of a failed sync, now a button', async () => {
+    const { show } = await renderStrip();
+    await show({ status: 'failed' });
+
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeOnTheScreen();
   });
 });

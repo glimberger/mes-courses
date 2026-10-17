@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { Appbar, Chip, List, Menu, Text } from 'react-native-paper';
+import { Menu, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import type { AccountSummary } from '@mes-courses/sync-core';
 
 import { AppbarIconAction } from '../components/AppbarIconAction';
-import { BackAction } from '../components/BackAction';
+import { Chip } from '../components/Chip';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { formatLastSync } from '../components/format-last-sync';
 import { LoadingState } from '../components/LoadingState';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { SettingsCard } from '../components/SettingsCard';
+import { SettingsRow } from '../components/SettingsRow';
 import { StateLayout } from '../components/StateLayout';
 import { SyncStatusBar } from '../components/SyncStatusBar';
 import { useAppStore } from '../state/use-app-store';
@@ -105,17 +108,18 @@ export const AccountsScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <Appbar.Header>
-        {navigation.canGoBack() && (
-          <BackAction onPress={() => navigation.goBack()} />
-        )}
-        <Appbar.Content title="Comptes" />
-        <AppbarIconAction
-          icon="person_add"
-          accessibilityLabel="Inviter"
-          onPress={() => setInviting(true)}
-        />
-      </Appbar.Header>
+      <ScreenHeader
+        variant="center"
+        title="Comptes"
+        onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined}
+        actions={
+          <AppbarIconAction
+            icon="person_add"
+            accessibilityLabel="Inviter"
+            onPress={() => setInviting(true)}
+          />
+        }
+      />
       <SyncStatusBar />
       <AccountsView
         state={state}
@@ -195,6 +199,7 @@ export const AccountsView = ({
           renderItem={({ item }) => (
             <AccountRow account={item} onAction={onAction} />
           )}
+          contentContainerStyle={styles.list}
         />
       );
   }
@@ -213,54 +218,58 @@ const AccountRow = ({
     onAction?.({ type, account });
   };
   return (
-    <List.Item
-      title={account.email}
-      description={() => (
-        <View style={styles.description}>
-          <View style={styles.chip}>
-            <Chip compact>{stateLabel(account)}</Chip>
+    <SettingsCard>
+      <SettingsRow
+        icon="account_circle"
+        title={account.email}
+        subtitle={`Dernière synchronisation : ${formatLastSync(account.lastSyncAt, new Date())}`}
+        trailing={
+          <View style={styles.trailing}>
+            <Chip tone="secondary">{stateLabel(account)}</Chip>
+            {onAction !== undefined && (
+              <Menu
+                visible={open}
+                onDismiss={() => setOpen(false)}
+                overlayAccessibilityLabel="Fermer le menu"
+                anchor={
+                  <AppbarIconAction
+                    icon="more_vert"
+                    accessibilityLabel={`Actions de ${account.email}`}
+                    onPress={() => setOpen(true)}
+                  />
+                }
+              >
+                {account.state === 'suspended' ? (
+                  <Menu.Item title="Réactiver" onPress={choose('reactivate')} />
+                ) : (
+                  <Menu.Item title="Suspendre" onPress={choose('suspend')} />
+                )}
+                {account.state === 'invited' && (
+                  <Menu.Item
+                    title="Renvoyer les identifiants"
+                    onPress={choose('resend')}
+                  />
+                )}
+                <Menu.Item title="Supprimer" onPress={choose('delete')} />
+              </Menu>
+            )}
           </View>
-          <Text variant="bodyMedium">
-            Dernière synchronisation :{' '}
-            {formatLastSync(account.lastSyncAt, new Date())}
-          </Text>
-        </View>
-      )}
-      right={() =>
-        onAction === undefined ? null : (
-          <Menu
-            visible={open}
-            onDismiss={() => setOpen(false)}
-            overlayAccessibilityLabel="Fermer le menu"
-            anchor={
-              <AppbarIconAction
-                icon="more_vert"
-                accessibilityLabel={`Actions de ${account.email}`}
-                onPress={() => setOpen(true)}
-              />
-            }
-          >
-            {account.state === 'suspended' ? (
-              <Menu.Item title="Réactiver" onPress={choose('reactivate')} />
-            ) : (
-              <Menu.Item title="Suspendre" onPress={choose('suspend')} />
-            )}
-            {account.state === 'invited' && (
-              <Menu.Item
-                title="Renvoyer les identifiants"
-                onPress={choose('resend')}
-              />
-            )}
-            <Menu.Item title="Supprimer" onPress={choose('delete')} />
-          </Menu>
-        )
-      }
-    />
+        }
+      />
+    </SettingsCard>
   );
 };
 
+// The mockups' account cards: 14 dp under the header, 10 dp apart.
+const FIRST_CARD_TOP = 14;
+const CARD_GAP = 10;
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  description: { gap: spacing.xs },
-  chip: { alignSelf: 'flex-start' },
+  list: {
+    paddingTop: FIRST_CARD_TOP,
+    paddingHorizontal: spacing.md,
+    gap: CARD_GAP,
+  },
+  trailing: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });

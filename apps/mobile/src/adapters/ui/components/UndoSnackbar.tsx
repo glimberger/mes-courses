@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
-import { Snackbar } from 'react-native-paper';
 
 import { useAnnouncement } from '../accessibility/announce';
 import { useScreenReaderOn } from '../accessibility/screen-reader';
 import type { PendingUndo } from '../state/app-store';
 import { useAppStore } from '../state/use-app-store';
+import { BrandSnackbar } from './BrandSnackbar';
 import { ABOVE_SCREEN_FAB } from './ScreenFab';
 
 /** The room one snackbar takes: Paper's 48 dp minimum height and its 8 dp margins. */
@@ -84,7 +84,7 @@ export const UndoSnackbar = () => {
   );
 
   return (
-    <Snackbar
+    <BrandSnackbar
       key={shown?.id}
       visible={pendingUndo !== null}
       onDismiss={dismissUndo}
@@ -96,6 +96,6 @@ export const UndoSnackbar = () => {
       wrapperStyle={ABOVE_SCREEN_FAB}
     >
       {shown ? text(shown.offer) : ''}
-    </Snackbar>
+    </BrandSnackbar>
   );
 };

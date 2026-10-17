@@ -133,3 +133,44 @@ export const ItemRemovedElsewhere: Story = {
     } satisfies StoryScenario,
   },
 };
+
+/** "« Beurre » ajouté", after an article is added from the catalog. */
+const addBeurre: StoryScenario['prepare'] = async (store) => {
+  await store.loadCurrentList();
+  await store.addArticleToList(
+    { id: 'article-beurre' as ArticleId, name: 'Beurre' },
+    null,
+  );
+};
+
+export const Added: Story = {
+  parameters: { scenario: { seed: fixture, prepare: addBeurre } },
+};
+
+/** The longest notice of the app: it wraps in the bar without clipping. */
+export const LongMessage: Story = {
+  parameters: {
+    scenario: {
+      seed: fixture,
+      failingWith: { toggleItemInCart: 'storageFull' },
+      prepare: tickLait,
+    },
+  },
+};
+
+/** A failed save while the undo offer is still shown: the notice stacks above it. */
+const removeThenFail: StoryScenario['prepare'] = async (store) => {
+  await store.loadCurrentList();
+  await store.removeItem('article-lait' as ArticleId);
+  await store.toggleItem('article-farine' as ArticleId);
+};
+
+export const StackedOverUndo: Story = {
+  parameters: {
+    scenario: {
+      seed: fixture,
+      failing: ['toggleItemInCart'],
+      prepare: removeThenFail,
+    },
+  },
+};

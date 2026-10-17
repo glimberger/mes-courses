@@ -65,3 +65,9 @@ export const InvalidAmount: Story = {
     />
   ),
 };
+
+/** Mockup 7 in dark appearance. */
+export const EditDark: Story = {
+  ...Edit,
+  parameters: { ...Edit.parameters, appearance: 'dark' },
+};

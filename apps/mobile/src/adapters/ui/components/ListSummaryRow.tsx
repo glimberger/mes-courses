@@ -2,9 +2,11 @@ import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Icon, Text, TouchableRipple, useTheme } from 'react-native-paper';
 
-import type { AppTheme } from '../theme/theme';
 import { shape } from '../theme/shape';
-import { spacing } from '../theme/spacing';
+import type { AppTheme } from '../theme/theme';
+import { Card } from './Card';
+import { Chip } from './Chip';
+import { IconCircle } from './IconCircle';
 
 /** "4 articles", "1 article", "0 articles" (US3-8). */
 const countText = (count: number) =>
@@ -16,81 +18,71 @@ export type ListSummaryRowProps = {
   itemCount: number;
   isCurrent: boolean;
   onPress: () => void;
+  testID?: string;
 };
 
 /**
- * One list of the lists screen: its name, its item count, and "Liste actuelle" with a check icon
- * on the current one (US3-8), read as one label, for example "Barbecue, 0 articles, liste
- * actuelle". The name wraps (FR-033) and the row is at least 48 dp high (FR-034).
+ * One list of the lists screen, as a mockup card: its name, its item count, and "Liste actuelle"
+ * with a check icon on the current one, which is outlined in brand (US3-8). It reads as one
+ * label, for example "Barbecue, 0 articles, liste actuelle". The name wraps (FR-033) and the
+ * card is at least 48 dp high (FR-034).
  */
 export const ListSummaryRow = memo(function ListSummaryRow({
   name,
   itemCount,
   isCurrent,
   onPress,
+  testID,
 }: ListSummaryRowProps) {
-  const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
+  const { colors } = useTheme() as AppTheme;
   const count = countText(itemCount);
   return (
-    <TouchableRipple
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${name}, ${count}${isCurrent ? ', liste actuelle' : ''}`}
-      style={[
-        styles.row,
-        {
-          backgroundColor: colors.surfaceContainerLowest,
-          borderRadius: shape.lg,
-        },
-      ]}
-    >
-      <View style={styles.content}>
-        <View style={styles.text}>
-          <Text variant="bodyLarge">{name}</Text>
-          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
-            {count}
-          </Text>
-        </View>
-        {isCurrent && (
-          <View
-            style={[
-              styles.current,
-              {
-                backgroundColor: colors.primaryContainer,
-                borderRadius: shape.pill,
-                paddingHorizontal: spacing.sm,
-                paddingVertical: spacing.xs,
-              },
-            ]}
-          >
-            <Icon source="check" size={20} color={colors.onPrimaryContainer} />
+    <Card testID={testID} outlined={isCurrent}>
+      <TouchableRipple
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${name}, ${count}${isCurrent ? ', liste actuelle' : ''}`}
+        style={styles.touchable}
+      >
+        <View style={styles.rowline}>
+          <IconCircle icon="format_list_bulleted" diameter={44} />
+          <View style={styles.texts}>
+            <Text variant="titleMedium" style={{ color: colors.onSurface }}>
+              {name}
+            </Text>
             <Text
-              variant="labelLarge"
-              style={{ color: colors.onPrimaryContainer }}
+              variant="bodySmall"
+              style={{ color: colors.onSurfaceVariant }}
             >
-              Liste actuelle
+              {count}
             </Text>
           </View>
-        )}
-      </View>
-    </TouchableRipple>
+          {isCurrent ? (
+            <Chip tone="brand" icon="check">
+              Liste actuelle
+            </Chip>
+          ) : (
+            <Icon
+              source="chevron_right"
+              size={24}
+              color={colors.onSurfaceVariant}
+            />
+          )}
+        </View>
+      </TouchableRipple>
+    </Card>
   );
 });
 
 const styles = StyleSheet.create({
-  row: {
-    minHeight: 48,
-    justifyContent: 'center',
-    elevation: 1,
-    marginBottom: spacing.sm,
-  },
-  content: {
+  // The declared floor of the 48 dp target (FR-034); the content sets the 72 dp card.
+  touchable: { borderRadius: shape.lg, minHeight: 48 },
+  rowline: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
-  text: { flex: 1 },
-  current: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  texts: { flex: 1, minWidth: 0 },
 });

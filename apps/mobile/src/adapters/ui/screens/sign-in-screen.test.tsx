@@ -5,6 +5,7 @@ import { RecordingErrorReporter } from '../../../application/testing/recording-e
 import { err, ok } from '../../../domain/result';
 import { Navigation } from '../navigation';
 import { fixture } from '../testing/fixtures';
+import { lightTheme } from '../theme/theme';
 import { renderWithStore } from '../testing/render-with-store';
 
 jest.mock('expo-device', () => ({ modelName: 'Pixel 8' }), { virtual: true });
@@ -447,6 +448,36 @@ describe('ForgotPasswordDialog', () => {
       await renderSignIn();
 
       expect(screen.getByLabelText('Adresse du serveur').props.value).toBe('');
+    });
+  });
+});
+
+describe('SignIn in the mockup look', () => {
+  it('draws "Se connecter" as the brand button, 50 dp high, 10 dp under the fields', async () => {
+    await renderSignIn();
+    expect(screen.getByRole('button', { name: 'Se connecter' })).toHaveStyle({
+      backgroundColor: lightTheme.colors.primaryContainer,
+      borderRadius: 9999,
+      height: 50,
+      marginTop: 10,
+    });
+  });
+
+  it('puts each field on the screen outline, with 16 dp corners', async () => {
+    await renderSignIn();
+    const outline = screen
+      .UNSAFE_getAllByProps({ label: 'Adresse e-mail' })
+      .map((node) => node.props)
+      .filter((props) => 'outlineStyle' in props)[0];
+    expect(outline).toMatchObject({
+      outlineStyle: { borderRadius: 16, borderWidth: 1.5 },
+    });
+  });
+
+  it('keeps the screen name a heading that is not drawn, as the mockup has no app bar', async () => {
+    await renderSignIn();
+    expect(screen.getByRole('header', { name: 'Se connecter' })).toHaveStyle({
+      opacity: 0,
     });
   });
 });

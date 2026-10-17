@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { HelperText, Text, useTheme } from 'react-native-paper';
+import { HelperText, Text } from 'react-native-paper';
 
 import { useAnnouncement } from '../accessibility/announce';
 import { Button } from '../components/Button';
@@ -21,7 +21,6 @@ export const RevokeDeviceDialog = ({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
-  const { colors } = useTheme();
   useAnnouncement(error);
 
   const confirm = async () => {
@@ -49,14 +48,17 @@ export const RevokeDeviceDialog = ({
       title={`Révoquer « ${device.name} » ?`}
       onClose={onClose}
       dismissable={!saving}
+      icon="delete"
+      iconTone="error"
+      layout="centered"
       actions={
         <>
-          <Button disabled={saving} onPress={onClose}>
+          <Button mode="text" disabled={saving} onPress={onClose}>
             Annuler
           </Button>
           <Button
             disabled={saving}
-            textColor={colors.error}
+            mode="dangerFilled"
             onPress={() => void confirm()}
           >
             Révoquer

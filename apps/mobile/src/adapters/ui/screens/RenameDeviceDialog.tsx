@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 
 import { validateName } from '../../../domain/name';
 import { Button } from '../components/Button';
-import { useTheme } from 'react-native-paper';
 import { nameErrorText, NameField } from '../components/NameField';
 import { useAppStore } from '../state/use-app-store';
 import { DeviceDialog } from './DeviceDialog';
@@ -66,8 +65,6 @@ export const RenameDeviceDialog = ({
     }
     setError(deviceFailureText(outcome.error.type));
   };
-
-  const { colors } = useTheme();
   return (
     <DeviceDialog
       title="Renommer l'appareil"
@@ -75,16 +72,10 @@ export const RenameDeviceDialog = ({
       dismissable={!saving}
       actions={
         <>
-          <Button disabled={saving} onPress={onClose}>
+          <Button mode="text" disabled={saving} onPress={onClose}>
             Annuler
           </Button>
-          <Button
-            disabled={saving}
-            mode="contained-tonal"
-            buttonColor={colors.primaryContainer}
-            textColor={colors.onPrimaryContainer}
-            onPress={() => void submit()}
-          >
+          <Button disabled={saving} mode="brand" onPress={() => void submit()}>
             Enregistrer
           </Button>
         </>

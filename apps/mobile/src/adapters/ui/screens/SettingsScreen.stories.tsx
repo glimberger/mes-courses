@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
 
+import type { ArticleId } from '../../../domain/article';
 import { ok } from '../../../domain/result';
 import { fixture } from '../testing/fixtures';
+import type { StoryScenario } from '../testing/story-store';
 import { SettingsScreen } from './SettingsScreen';
 
 const meta = {
@@ -122,4 +124,17 @@ export const AccountError: Story = {
 /** Offline: the address is not shown and nothing is in the error color (US6-1). */
 export const AccountOffline: Story = {
   parameters: { scenario: signedIn },
+};
+
+// A change made while the server cannot be reached: it waits to be sent.
+const waitingToSend: StoryScenario['prepare'] = async (store) => {
+  await store.loadCurrentList();
+  await store.toggleItem('article-lait' as ArticleId);
+};
+
+/** Mockup 5: the settings with changes waiting to be sent, in the strip above the cards. */
+export const PendingSync: Story = {
+  parameters: {
+    scenario: { seed: fixture, connected, prepare: waitingToSend },
+  },
 };

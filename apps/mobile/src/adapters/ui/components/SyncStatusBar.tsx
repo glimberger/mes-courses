@@ -9,6 +9,7 @@ import { useAppStore } from '../state/use-app-store';
 import type { AppTheme } from '../theme/theme';
 import { shape } from '../theme/shape';
 import { spacing } from '../theme/spacing';
+import { typeOverrides } from '../theme/typography';
 import { Button } from './Button';
 
 type Display = {
@@ -89,7 +90,11 @@ const display = ({
  * The state of the synchronization, under the Appbar of every data screen (FR-020). Not a live
  * region: the failure and the recovery are announced by `SyncAnnouncer`, once for all the bars.
  */
-export const SyncStatusBar = () => {
+export const SyncStatusBar = ({
+  variant = 'bar',
+}: {
+  variant?: 'bar' | 'strip';
+}) => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const sync = useAppStore((state) => state.sync);
@@ -99,15 +104,14 @@ export const SyncStatusBar = () => {
   const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   if (shown === null) return null;
   const { icon, text, label, action } = shown;
+  const strip = variant === 'strip';
   return (
     <View
       testID="sync-status-bar"
       style={[
         styles.bar,
-        {
-          backgroundColor: colors.surfaceContainer,
-          borderRadius: shape.md,
-        },
+        { backgroundColor: colors.surfaceContainer },
+        strip && styles.stripBar,
       ]}
     >
       <TouchableRipple
@@ -116,9 +120,15 @@ export const SyncStatusBar = () => {
         onPress={() => navigation.navigate('Settings')}
         style={styles.status}
       >
-        <View style={styles.row}>
+        <View style={[styles.row, strip && styles.stripRow]}>
           <Icon source={icon} size={20} color={colors.onSurfaceVariant} />
-          <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant }}>
+          <Text
+            variant="labelLarge"
+            style={[
+              { color: colors.onSurfaceVariant },
+              strip && styles.stripText,
+            ]}
+          >
             {text}
           </Text>
         </View>
@@ -141,6 +151,7 @@ export const SyncStatusBar = () => {
 
 const styles = StyleSheet.create({
   bar: {
+    borderRadius: shape.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -148,4 +159,15 @@ const styles = StyleSheet.create({
   },
   status: { flex: 1, minHeight: 48, justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // The settings strip (`.sync-strip`): full width, 11 dp down, 20 dp at the sides.
+  stripBar: {
+    borderRadius: 0,
+    paddingVertical: 11,
+    paddingHorizontal: 20,
+  },
+  stripRow: { gap: 10 },
+  stripText: {
+    fontFamily: typeOverrides.syncStrip.fontFamily,
+    fontSize: typeOverrides.syncStrip.fontSize,
+  },
 });

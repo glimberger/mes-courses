@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 
 import { Button } from '../components/Button';
 import { useAppStore } from '../state/use-app-store';
@@ -67,25 +67,21 @@ export const SignOutDialogView = ({
   onClose,
   onConfirm,
 }: SignOutDialogViewProps) => {
-  const { colors } = useTheme();
   const lost = pendingChangesText(pendingCount);
   return (
     <DeviceDialog
       title="Se déconnecter de cet appareil ?"
       onClose={onClose}
       dismissable={!saving}
+      icon="logout"
+      iconTone="error"
+      layout="centered"
       actions={
         <>
-          <Button disabled={saving} onPress={onClose}>
+          <Button mode="text" disabled={saving} onPress={onClose}>
             Annuler
           </Button>
-          <Button
-            disabled={saving}
-            mode="contained-tonal"
-            buttonColor={colors.primaryContainer}
-            textColor={colors.onPrimaryContainer}
-            onPress={onConfirm}
-          >
+          <Button disabled={saving} mode="brand" onPress={onConfirm}>
             {lost === null ? 'Se déconnecter' : 'Se déconnecter quand même'}
           </Button>
         </>

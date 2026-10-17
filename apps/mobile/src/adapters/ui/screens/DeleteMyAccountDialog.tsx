@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 
 import { Button } from '../components/Button';
 import { PasswordField } from '../components/PasswordField';
@@ -109,22 +109,20 @@ export const DeleteMyAccountDialogForm = ({
   onClose,
   onConfirm,
 }: DeleteMyAccountDialogFormProps) => {
-  const { colors } = useTheme();
   return (
     <DeviceDialog
       title="Supprimer votre compte ?"
       onClose={onClose}
       dismissable={!saving}
+      icon="delete"
+      iconTone="error"
+      layout="centered"
       actions={
         <>
-          <Button disabled={saving} onPress={onClose}>
+          <Button mode="text" disabled={saving} onPress={onClose}>
             Annuler
           </Button>
-          <Button
-            disabled={saving}
-            textColor={colors.error}
-            onPress={onConfirm}
-          >
+          <Button disabled={saving} mode="dangerFilled" onPress={onConfirm}>
             Supprimer mon compte
           </Button>
         </>

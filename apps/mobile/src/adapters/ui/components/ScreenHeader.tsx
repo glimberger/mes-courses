@@ -24,9 +24,9 @@ export type ScreenHeaderProps = {
   /** A line under the title, 6 dp below it (the list's remaining count). */
   chip?: ReactNode;
   /** Trailing actions, in the order given. */
-  actions?: ReactNode;
+  actions?: ReactNode | undefined;
   /** Shows the "Retour" action at the start. */
-  onBack?: () => void;
+  onBack?: (() => void) | undefined;
   /** The title, the target of a focus move (FR-037). */
   titleRef?: Ref<HostInstance>;
   testID?: string;
@@ -64,7 +64,7 @@ export const ScreenHeader = ({
         >
           {title}
         </Text>
-        <View style={styles.spacer} />
+        {actions ?? <View style={styles.spacer} />}
       </View>
     );
   }
@@ -76,10 +76,10 @@ export const ScreenHeader = ({
     >
       {back}
       <View style={styles.titles}>
-        <View ref={titleRef}>
+        {/* The title's header is the element focus moves to (FR-037). */}
+        <View ref={titleRef} accessible accessibilityRole="header">
           <Text
             variant={titleVariant ?? 'headlineMedium'}
-            accessibilityRole="header"
             style={[styles.largeTitle, { color: colors.onSurface }]}
           >
             {title}
