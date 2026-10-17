@@ -39,7 +39,7 @@ export type SchemeRole = keyof Scheme;
 /** Paper's MD3 theme, with every role of the export (the surface containers among them). */
 export type AppTheme = MD3Theme & { colors: MD3Theme['colors'] & Scheme };
 
-const rgba = (hex: string, alpha: number): string => {
+export const rgba = (hex: string, alpha: number): string => {
   const [red, green, blue] = [1, 3, 5].map((start) =>
     parseInt(hex.slice(start, start + 2), 16),
   );
