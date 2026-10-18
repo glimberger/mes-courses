@@ -237,7 +237,7 @@ const views: Record<string, () => Promise<void>> = {
   '004 SignIn': async () => {
     await openSettings({});
     await press('Se connecter');
-    await header('Se connecter');
+    await header('Connexion');
   },
   '003 device row menu': () => chooseDeviceAction('Renommer', 'Renommer'),
   '003 RenameDeviceDialog': () =>

@@ -192,10 +192,10 @@ export const SignInForm = ({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.form,
-          { paddingTop: insets.top + FORM_TOP, paddingBottom: insets.bottom },
+          { paddingTop: insets.top + FORM_TOP },
         ]}
       >
-        <VisuallyHidden role="header">Se connecter</VisuallyHidden>
+        <VisuallyHidden role="header">Connexion</VisuallyHidden>
         {onBack && (
           <View style={styles.back}>
             <BackAction onPress={onBack} />
@@ -250,6 +250,10 @@ export const SignInForm = ({
           disabled={saving}
         />
         {error !== null && <HelperText type="error">{error}</HelperText>}
+      </ScrollView>
+      {/* Out of the scroll view, so the button is on screen without scrolling (and so a
+          selector on its label finds it, not the hidden title). */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
         <Button
           mode="brand"
           disabled={saving}
@@ -261,7 +265,7 @@ export const SignInForm = ({
         <Button mode="text" disabled={saving} onPress={onForgotPassword}>
           Mot de passe oublié ?
         </Button>
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 };
@@ -279,5 +283,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: FIELD_GAP,
   },
+  footer: { paddingHorizontal: spacing.lg },
   submit: { marginTop: SUBMIT_GAP },
 });

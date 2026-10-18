@@ -357,7 +357,7 @@ describe('a signed-in device reopened with no network (004 US2-6, FR-007)', () =
     expect(
       screen.queryByRole('button', { name: 'Se connecter' }),
     ).not.toBeOnTheScreen();
-    expect(screen.queryByRole('header', { name: 'Se connecter' })).toBeNull();
+    expect(screen.queryByRole('header', { name: 'Connexion' })).toBeNull();
     await waitFor(() => expect(errorReporter.reports).toEqual([]));
   });
 });

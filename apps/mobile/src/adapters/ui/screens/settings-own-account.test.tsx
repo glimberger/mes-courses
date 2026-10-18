@@ -165,7 +165,7 @@ describe('Settings, my account (004 US6)', () => {
       ).toBeOnTheScreen();
       press('Se déconnecter');
 
-      await screen.findByRole('header', { name: 'Se connecter' });
+      await screen.findByRole('header', { name: 'Connexion' });
       expect(revokeDevice).toHaveBeenCalledWith(
         expect.objectContaining({ deviceId: 'story-device' }),
         'story-device',
@@ -223,7 +223,7 @@ describe('Settings, my account (004 US6)', () => {
       await screen.findByText('Se déconnecter de cet appareil ?');
       press('Se déconnecter');
 
-      await screen.findByRole('header', { name: 'Se connecter' });
+      await screen.findByRole('header', { name: 'Connexion' });
       expect(store.getState().sync.connection).toBe('notConnected');
     });
   });
@@ -255,7 +255,7 @@ describe('Settings, my account (004 US6)', () => {
 
       confirm('mon mot de passe');
 
-      await screen.findByRole('header', { name: 'Se connecter' });
+      await screen.findByRole('header', { name: 'Connexion' });
       expect(deleteAccount).toHaveBeenCalledWith(
         expect.objectContaining({ deviceId: 'story-device' }),
         'mon mot de passe',

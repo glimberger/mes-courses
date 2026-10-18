@@ -43,7 +43,7 @@ const renderSignIn = async (
   await screen.findByText('Ma liste');
   fireEvent.press(screen.getByRole('button', { name: 'Réglages' }));
   fireEvent.press(await screen.findByRole('button', { name: 'Se connecter' }));
-  await screen.findByRole('header', { name: 'Se connecter' });
+  await screen.findByRole('header', { name: 'Connexion' });
   return rendered;
 };
 
@@ -165,7 +165,7 @@ describe('SignIn', () => {
 
       expect(await screen.findByText(message)).toBeOnTheScreen();
       expect(
-        screen.getByRole('header', { name: 'Se connecter' }),
+        screen.getByRole('header', { name: 'Connexion' }),
       ).toBeOnTheScreen();
       expect(screen.getByLabelText('Adresse du serveur').props.value).toBe(
         address,
@@ -304,7 +304,7 @@ describe('ChoosePassword', () => {
     );
     await waitFor(() =>
       expect(
-        screen.getByRole('header', { name: 'Se connecter' }),
+        screen.getByRole('header', { name: 'Connexion' }),
       ).toBeOnTheScreen(),
     );
   });
@@ -436,7 +436,7 @@ describe('ForgotPasswordDialog', () => {
       fireEvent.press(
         await screen.findByRole('button', { name: 'Se reconnecter' }),
       );
-      await screen.findByRole('header', { name: 'Se connecter' });
+      await screen.findByRole('header', { name: 'Connexion' });
 
       expect(screen.getByLabelText('Adresse du serveur').props.value).toBe(
         'courses.example.fr',
@@ -454,6 +454,21 @@ describe('ForgotPasswordDialog', () => {
 });
 
 describe('SignIn in the mockup look', () => {
+  it('labels only the submit button "Se connecter", pinned outside the scroll view', async () => {
+    await renderSignIn();
+    // The hidden title is named "Connexion": the button is the only "Se connecter" on screen.
+    expect(
+      screen.queryByRole('header', { name: 'Se connecter' }),
+    ).not.toBeOnTheScreen();
+    expect(screen.getAllByText('Se connecter')).toHaveLength(1);
+    const button = screen.getByRole('button', { name: 'Se connecter' });
+    let node = button.parent;
+    while (node) {
+      expect(node.type).not.toBe('RCTScrollView');
+      node = node.parent;
+    }
+  });
+
   it('draws "Se connecter" as the brand button, 50 dp high, 10 dp under the fields', async () => {
     await renderSignIn();
     expect(screen.getByRole('button', { name: 'Se connecter' })).toHaveStyle({
@@ -493,7 +508,7 @@ describe('SignIn in the mockup look', () => {
 
   it('keeps the screen name a heading that is clipped, not transparent, so screen readers read it', async () => {
     await renderSignIn();
-    const heading = screen.getByRole('header', { name: 'Se connecter' });
+    const heading = screen.getByRole('header', { name: 'Connexion' });
     expect(StyleSheet.flatten(heading.props.style)?.opacity).toBeUndefined();
     expect(heading.parent?.parent).toHaveStyle({
       width: 1,
