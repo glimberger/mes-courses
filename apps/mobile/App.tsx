@@ -17,7 +17,10 @@ import { StartupSplash } from './src/adapters/ui/screens/StartupSplash';
 import { UpdateRequired } from './src/adapters/ui/screens/UpdateRequired';
 import { AppStoreProvider } from './src/adapters/ui/state/app-store-provider';
 import { nunitoFontFiles } from './src/adapters/ui/theme/fonts';
-import { ThemeProvider } from './src/adapters/ui/theme/theme-provider';
+import {
+  applyNativeScheme,
+  ThemeProvider,
+} from './src/adapters/ui/theme/theme-provider';
 import {
   composeApp,
   createErrorReporter,
@@ -32,6 +35,7 @@ type Startup =
 
 // Read synchronously by the ThemeProvider on its first render, before the database opens.
 const appearanceStore = new KvAppearanceStore();
+applyNativeScheme(appearanceStore.read());
 
 /** The status bar icons follow the theme in use, not only the system scheme. */
 const ThemedStatusBar = () => (
@@ -108,7 +112,7 @@ export default function App() {
   };
 
   return (
-    <ThemeProvider appearanceStore={appearanceStore}>
+    <ThemeProvider appearanceStore={appearanceStore} syncNativeScheme>
       <ThemedStatusBar />
       {renderStartup(startup, reporter, restart)}
     </ThemeProvider>

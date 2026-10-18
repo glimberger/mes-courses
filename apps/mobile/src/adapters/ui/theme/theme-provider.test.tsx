@@ -104,7 +104,7 @@ describe('the appearance setting', () => {
     };
 
     render(
-      <ThemeProvider appearanceStore={memoryStore('dark')}>
+      <ThemeProvider appearanceStore={memoryStore('dark')} syncNativeScheme>
         <Probe />
       </ThemeProvider>,
     );
@@ -112,6 +112,21 @@ describe('the appearance setting', () => {
     fireEvent.press(screen.getByLabelText('Système'));
 
     expect(setColorScheme).toHaveBeenLastCalledWith('unspecified');
+    setColorScheme.mockRestore();
+  });
+
+  it('leaves the native scheme alone unless asked to sync it', () => {
+    const setColorScheme = jest
+      .spyOn(Appearance, 'setColorScheme')
+      .mockImplementation(() => undefined);
+
+    render(
+      <ThemeProvider appearanceStore={memoryStore('dark')}>
+        <Text>story</Text>
+      </ThemeProvider>,
+    );
+
+    expect(setColorScheme).not.toHaveBeenCalled();
     setColorScheme.mockRestore();
   });
 

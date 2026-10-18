@@ -40,7 +40,19 @@ export type ThemeProviderProps = {
   appearance?: 'light' | 'dark' | undefined;
   /** Where the setting is kept; without one it lasts as long as the provider (stories, tests). */
   appearanceStore?: AppearanceStore | undefined;
+  /**
+   * Hands the setting to the native scheme as well (see `applyNativeScheme`). Only the app does:
+   * it is global, so stories and tests leave the device scheme alone.
+   */
+  syncNativeScheme?: boolean | undefined;
 };
+
+/**
+ * Native UI (navigation bar, keyboard, system menus) follows the choice too, not only Paper.
+ * The app calls it once before the first render so the first frame is already consistent.
+ */
+export const applyNativeScheme = (setting: AppearanceSetting) =>
+  Appearance.setColorScheme(setting === 'system' ? 'unspecified' : setting);
 
 /**
  * Gives React Native Paper the project's Material 3 light or dark theme, as the appearance
@@ -53,6 +65,7 @@ export const ThemeProvider = ({
   children,
   appearance,
   appearanceStore,
+  syncNativeScheme,
 }: ThemeProviderProps) => {
   const scheme = useColorScheme();
   const [setting, setCurrent] = useState<AppearanceSetting>(
@@ -64,12 +77,9 @@ export const ThemeProvider = ({
     setReadFrom(appearanceStore);
     setCurrent(appearanceStore?.read() ?? DEFAULT_APPEARANCE_SETTING);
   }
-  // Native UI (navigation bar, keyboard, system menus) follows the choice too, not only Paper.
-  // Only with a store: stories and tests leave the device scheme alone.
   useEffect(() => {
-    if (appearanceStore === undefined) return;
-    Appearance.setColorScheme(setting === 'system' ? 'unspecified' : setting);
-  }, [appearanceStore, setting]);
+    if (syncNativeScheme) applyNativeScheme(setting);
+  }, [syncNativeScheme, setting]);
   const setSetting = useCallback(
     (next: AppearanceSetting) => {
       setCurrent(next);
