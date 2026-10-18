@@ -15,6 +15,9 @@ export type SettingsRowProps = {
   trailing?: ReactNode;
   /** Drawn under the subtitle, in the text column: for an element too wide to sit beside it. */
   footer?: ReactNode;
+  /** Keeps the title on that many lines, ellipsized in the middle: for an email, which has no
+   * space to wrap at. Omitted, a long title wraps. */
+  titleNumberOfLines?: number | undefined;
 };
 
 /**
@@ -30,13 +33,19 @@ export const SettingsRow = ({
   chevron = false,
   trailing,
   footer,
+  titleNumberOfLines,
 }: SettingsRowProps) => {
   const { colors } = useTheme() as AppTheme;
   const row = (
     <View style={styles.row}>
       <IconCircle icon={icon} diameter={44} />
       <View style={styles.text}>
-        <Text variant="titleMedium" style={{ color: colors.onSurface }}>
+        <Text
+          variant="titleMedium"
+          style={{ color: colors.onSurface }}
+          numberOfLines={titleNumberOfLines}
+          ellipsizeMode="middle"
+        >
           {title}
         </Text>
         {subtitle ? (

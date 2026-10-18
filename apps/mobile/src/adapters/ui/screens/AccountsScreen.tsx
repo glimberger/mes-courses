@@ -222,6 +222,7 @@ const AccountRow = ({
       <SettingsRow
         icon="account_circle"
         title={account.email}
+        titleNumberOfLines={1}
         subtitle={`Dernière synchronisation : ${formatLastSync(account.lastSyncAt, new Date())}`}
         // The chip goes under the text: a wide one would squeeze the email to a few characters.
         footer={<Chip tone="secondary">{stateLabel(account)}</Chip>}

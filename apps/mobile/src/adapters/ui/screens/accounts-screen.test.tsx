@@ -9,6 +9,14 @@ import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
 import type { StoryScenario } from '../testing/story-store';
 
+type Node = { parent: Node | null };
+
+const ancestors = (node: Node): Node[] => {
+  const found: Node[] = [];
+  for (let up = node.parent; up; up = up.parent) found.push(up);
+  return found;
+};
+
 const connected = {
   serverUrl: 'https://courses.example.fr',
   lastSyncAt: '2026-10-12T08:00:00.000Z',
@@ -107,6 +115,29 @@ describe('Accounts', () => {
     expect(
       screen.getAllByText('Dernière synchronisation : Jamais').length,
     ).toBe(4);
+  });
+
+  it('#129 draws the state chip under the email, not beside it, and keeps the email on one line', async () => {
+    await openAccounts(
+      new InMemoryAdminServer([
+        administrator,
+        account('account-3', 'marc@example.org', { state: 'invited' }),
+      ]),
+    );
+
+    const email = await screen.findByText('marc@example.org');
+    expect(email.props.numberOfLines).toBe(1);
+    const column = ancestors(email as Node);
+    const chip = ancestors(
+      screen.getByText('Invité, pas encore connecté') as Node,
+    );
+    const kebab = ancestors(
+      screen.getByLabelText('Actions de marc@example.org') as Node,
+    );
+    // The first ancestor the chip shares with the email is the text column; the kebab sits
+    // next to that column, not inside it.
+    const textColumn = chip.find((node) => column.includes(node));
+    expect(textColumn !== undefined && !kebab.includes(textColumn)).toBe(true);
   });
 
   it('004 FR-019 shows a loading state, then the empty state when only the administrator exists', async () => {

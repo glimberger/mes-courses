@@ -90,4 +90,12 @@ describe.each([
     const column = footer.find((node) => title.includes(node));
     expect(column !== undefined && !trailing.includes(column)).toBe(true);
   });
+
+  it('#129 keeps a title on the requested lines, ellipsized in the middle', () => {
+    renderRow(theme, { titleNumberOfLines: 1 });
+    expect(screen.getByText('Marie').props).toMatchObject({
+      numberOfLines: 1,
+      ellipsizeMode: 'middle',
+    });
+  });
 });
