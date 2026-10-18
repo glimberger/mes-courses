@@ -23,7 +23,13 @@ const RULES: { name: string; pattern: RegExp; allowedIn?: string }[] = [
     pattern: /<Snackbar[\s>]\s*[a-z]/,
     allowedIn: 'BrandSnackbar.tsx',
   },
-  { name: 'numberOfLines on Text', pattern: /numberOfLines=/ },
+  {
+    name: 'numberOfLines on Text',
+    pattern: /numberOfLines=/,
+    // Titles wrap everywhere but on a row that asks for an ellipsis (an email has no space to
+    // wrap at); the row decides it through `titleNumberOfLines`.
+    allowedIn: 'SettingsRow.tsx',
+  },
 ];
 
 const sources = () =>
