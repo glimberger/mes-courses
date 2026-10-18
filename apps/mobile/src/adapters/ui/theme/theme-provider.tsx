@@ -2,11 +2,12 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react';
-import { useColorScheme } from 'react-native';
+import { Appearance, useColorScheme } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 
 import type { AppearanceStore } from '../../../application/ports/appearance-store';
@@ -57,6 +58,18 @@ export const ThemeProvider = ({
   const [setting, setCurrent] = useState<AppearanceSetting>(
     () => appearanceStore?.read() ?? DEFAULT_APPEARANCE_SETTING,
   );
+  // A store handed over later is read again: the setting shown is always the store's.
+  const [readFrom, setReadFrom] = useState(appearanceStore);
+  if (readFrom !== appearanceStore) {
+    setReadFrom(appearanceStore);
+    setCurrent(appearanceStore?.read() ?? DEFAULT_APPEARANCE_SETTING);
+  }
+  // Native UI (navigation bar, keyboard, system menus) follows the choice too, not only Paper.
+  // Only with a store: stories and tests leave the device scheme alone.
+  useEffect(() => {
+    if (appearanceStore === undefined) return;
+    Appearance.setColorScheme(setting === 'system' ? 'unspecified' : setting);
+  }, [appearanceStore, setting]);
   const setSetting = useCallback(
     (next: AppearanceSetting) => {
       setCurrent(next);

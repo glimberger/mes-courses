@@ -5,7 +5,10 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { DeviceInfo } from '../../../application/use-cases/list-devices';
-import type { AppearanceSetting } from '../../../domain/appearance-setting';
+import {
+  APPEARANCE_SETTINGS,
+  type AppearanceSetting,
+} from '../../../domain/appearance-setting';
 import { Button } from '../components/Button';
 import { CategoryHeader } from '../components/CategoryHeader';
 import { ErrorState } from '../components/ErrorState';
@@ -282,9 +285,7 @@ export const SettingsView = ({
               </Button>
             </SettingsCard>
           </View>
-          <Section title="Apparence" dense>
-            <AppearanceSection />
-          </Section>
+          <AppearanceSection />
         </>
       ) : (
         <>
@@ -325,9 +326,7 @@ export const SettingsView = ({
             />
           </Section>
 
-          <Section title="Apparence" dense>
-            <AppearanceSection />
-          </Section>
+          <AppearanceSection />
 
           <Section title="Actions" dense>
             <Button mode="outlined" icon="logout" onPress={onSignOut}>
@@ -366,26 +365,28 @@ const Section = ({
   </>
 );
 
-const APPEARANCE_CHOICES: { setting: AppearanceSetting; label: string }[] = [
-  { setting: 'system', label: 'Système' },
-  { setting: 'light', label: 'Clair' },
-  { setting: 'dark', label: 'Sombre' },
-];
+const APPEARANCE_LABELS: Record<AppearanceSetting, string> = {
+  system: 'Système',
+  light: 'Clair',
+  dark: 'Sombre',
+};
 
 /** The theme choice: it applies at once and is kept for the next opening. */
 const AppearanceSection = () => {
   const { setting, setSetting } = useAppearanceSetting();
   return (
-    <View accessibilityRole="radiogroup">
-      {APPEARANCE_CHOICES.map((choice) => (
-        <RadioItem
-          key={choice.setting}
-          label={choice.label}
-          selected={setting === choice.setting}
-          onPress={() => setSetting(choice.setting)}
-        />
-      ))}
-    </View>
+    <Section title="Apparence" dense>
+      <View accessibilityRole="radiogroup" accessibilityLabel="Apparence">
+        {APPEARANCE_SETTINGS.map((choice) => (
+          <RadioItem
+            key={choice}
+            label={APPEARANCE_LABELS[choice]}
+            selected={setting === choice}
+            onPress={() => setSetting(choice)}
+          />
+        ))}
+      </View>
+    </Section>
   );
 };
 

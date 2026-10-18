@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { Pressable, Text } from 'react-native';
+import { Appearance, Pressable, Text } from 'react-native';
 import { IconButton, useTheme } from 'react-native-paper';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
@@ -89,6 +89,46 @@ const memoryStore = (setting: AppearanceSetting) => {
 };
 
 describe('the appearance setting', () => {
+  it('hands the choice to the native scheme, and system back to the device', () => {
+    const setColorScheme = jest
+      .spyOn(Appearance, 'setColorScheme')
+      .mockImplementation(() => undefined);
+    const Probe = () => {
+      const { setSetting } = useAppearanceSetting();
+      return (
+        <Pressable
+          accessibilityLabel="Système"
+          onPress={() => setSetting('system')}
+        />
+      );
+    };
+
+    render(
+      <ThemeProvider appearanceStore={memoryStore('dark')}>
+        <Probe />
+      </ThemeProvider>,
+    );
+    expect(setColorScheme).toHaveBeenLastCalledWith('dark');
+    fireEvent.press(screen.getByLabelText('Système'));
+
+    expect(setColorScheme).toHaveBeenLastCalledWith('unspecified');
+    setColorScheme.mockRestore();
+  });
+
+  it('reads the setting again when it is given another store', () => {
+    mockColorScheme = 'light';
+    const view = (store: AppearanceStore) => (
+      <ThemeProvider appearanceStore={store}>
+        <ThemeName />
+      </ThemeProvider>
+    );
+    const { rerender } = render(view(memoryStore('light')));
+
+    rerender(view(memoryStore('dark')));
+
+    expect(screen.getByText('dark')).toBeOnTheScreen();
+  });
+
   it.each([
     ['system', 'dark', 'dark'],
     ['system', 'light', 'light'],
