@@ -43,8 +43,7 @@ describe('signing in to a server that cannot be reached', () => {
     await typeInto('Adresse du serveur', '127.0.0.1:9');
     await typeInto('Adresse e-mail', 'marie@example.org');
     await typeInto('Mot de passe', 'any password');
-    // The screen title carries the same label as the button: the button comes second.
-    await element(by.label('Se connecter')).atIndex(1).tap();
+    await element(by.label('Se connecter')).tap();
 
     await waitFor(
       element(

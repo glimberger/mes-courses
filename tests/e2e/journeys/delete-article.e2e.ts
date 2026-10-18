@@ -8,6 +8,8 @@ import {
   expectRow,
   openAddArticles,
   openLists,
+  openQuantityDialog,
+  openRowMenu,
   tapUndo,
 } from '../support/app';
 
@@ -27,14 +29,13 @@ describe('delete an article', () => {
     await createList('Barbecue');
     await chooseList('Barbecue, 0 articles', 'Barbecue');
     await openAddArticles(true);
-    // The row and the name inside it match: tapping either opens the dialog.
-    await element(by.label('Lait')).atIndex(0).tap();
+    await openQuantityDialog('Lait');
     await element(by.label('Ajouter')).tap();
     await waitFor(element(by.text('« Lait » ajouté')))
       .toBeVisible()
       .withTimeout(2000);
 
-    await element(by.label("Plus d'actions pour « Lait »")).tap();
+    await openRowMenu('Lait', 'Supprimer');
     await element(by.text('Supprimer')).tap();
     await expect(element(by.text('Supprimer « Lait » ?'))).toBeVisible();
     await expect(

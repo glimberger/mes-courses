@@ -228,7 +228,7 @@ describe('Settings, devices (003 US4)', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Se reconnecter' }));
 
     expect(
-      await screen.findByRole('header', { name: 'Se connecter' }),
+      await screen.findByRole('header', { name: 'Connexion' }),
     ).toBeOnTheScreen();
   });
 

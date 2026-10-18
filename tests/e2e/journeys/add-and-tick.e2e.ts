@@ -6,6 +6,7 @@ import {
   expectAbove,
   expectRow,
   openAddArticles,
+  openQuantityDialog,
   removeRow,
 } from '../support/app';
 
@@ -29,8 +30,7 @@ describe('add articles and tick one', () => {
     await removeRow('Beurre, pas dans le caddie');
     await openAddArticles();
 
-    // The row and the name inside it match: tapping either opens the dialog.
-    await element(by.label('Beurre')).atIndex(0).tap();
+    await openQuantityDialog('Beurre');
     await element(by.label('Ajouter')).tap();
 
     await expect(element(by.text('« Beurre » ajouté'))).toBeVisible();

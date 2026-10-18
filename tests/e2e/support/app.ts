@@ -142,3 +142,26 @@ export const chooseList = async (rowLabel: string, name: string) => {
     .withTimeout(2000);
   await expect(element(by.text(name))).toBeVisible();
 };
+
+/**
+ * From AddArticles, taps the catalog row of this article and waits for the quantity dialog
+ * ("Ajouter"): the dialog mounts in a portal after the tap.
+ */
+export const openQuantityDialog = async (name: string) => {
+  // The row and the name inside it match: tapping either opens the dialog.
+  await element(by.label(name)).atIndex(0).tap();
+  await waitFor(element(by.label('Ajouter')))
+    .toBeVisible()
+    .withTimeout(2000);
+};
+
+/**
+ * From AddArticles, opens the menu of the catalog row of this article and waits for its entry
+ * (e.g. "Modifier" or "Supprimer"): the menu mounts in a portal after the tap.
+ */
+export const openRowMenu = async (name: string, entry: string) => {
+  await element(by.label(`Plus d'actions pour « ${name} »`)).tap();
+  await waitFor(element(by.text(entry)))
+    .toBeVisible()
+    .withTimeout(2000);
+};
