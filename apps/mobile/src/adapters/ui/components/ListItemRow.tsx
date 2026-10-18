@@ -55,8 +55,8 @@ const REMOVE = 'remove';
  * One item of a list, ticked or unticked by a tap. The checkbox, the whole row but its trailing
  * actions, is the one element screen readers see: they reach "Modifier la quantité" and
  * "Retirer de la liste" as its accessibility actions (FR-032), so the trailing buttons are hidden
- * from them. A ticked item shows a check mark and struck-through text in `onSurfaceVariant`,
- * never a lower opacity, so its contrast is the one the theme test checks (FR-035, FR-036). The
+ * from them. A ticked item shows a check mark and text in `onSurfaceVariant`, never a
+ * lower opacity, so its contrast is the one the theme test checks (FR-035, FR-036). The
  * name wraps (FR-033) and the row is at least 48 dp high (FR-034).
  */
 export const ListItemRow = memo(function ListItemRow({
@@ -71,7 +71,6 @@ export const ListItemRow = memo(function ListItemRow({
   const { colors, fonts } = useTheme() as AppTheme;
   const textStyle = [
     { color: inCart ? colors.onSurfaceVariant : colors.onSurface },
-    inCart && styles.ticked,
     inCart && { fontFamily: fonts.bodyLarge.fontFamily },
   ];
   const actions = [
@@ -111,11 +110,7 @@ export const ListItemRow = memo(function ListItemRow({
             {quantity !== null && (
               <Text
                 key={`quantity-${inCart}`}
-                style={[
-                  styles.quantity,
-                  { color: colors.onSurfaceVariant },
-                  inCart && styles.ticked,
-                ]}
+                style={[styles.quantity, { color: colors.onSurfaceVariant }]}
               >
                 {formatQuantity(quantity)}
               </Text>
@@ -179,7 +174,6 @@ const styles = StyleSheet.create({
   },
   name: { flexShrink: 1 },
   quantity: typeOverrides.quantity,
-  ticked: { textDecorationLine: 'line-through' },
   actions: { flexDirection: 'row' },
   // The mockups' 48 dp icon buttons (FR-034).
   action: { width: 48, height: 48, margin: 0 },
