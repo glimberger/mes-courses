@@ -66,7 +66,7 @@ picks the actual file on both platforms.
 - `ScreenState` remains `loading | empty | error | success`; `ScreenStateView`, `LoadingState`,
   `EmptyState`, `ErrorState` stay the single components for those states (Principle IX). Only
   their visuals change: themed surface, soft brand icon, hierarchy.
-- `ListItemRow` keeps `inCart` strikethrough/muted and gains a rounded card shell; its
+- `ListItemRow` keeps `inCart` muted (no strikethrough since #134) and gains a rounded card shell; its
   accessible label and actions are unchanged.
 - `ArticleRow` keeps the `onList` accessibility label and gains the green indicator chip.
 - `ScreenFab` keeps `colors.primaryContainer`/`colors.onPrimaryContainer`, which now resolve

@@ -60,7 +60,7 @@ highest impact on daily use.
 
 **Independent Test**: Open a list containing several articles across categories and verify
 that each article is a rounded, elevated card with wrapping text, that checked articles keep
-their strikethrough and muted treatment, and that category headings and the remaining-count
+their muted treatment (no strikethrough), and that category headings and the remaining-count
 indicator are clearly styled.
 
 **Acceptance Scenarios**:
@@ -70,7 +70,7 @@ indicator are clearly styled.
 2. **Given** an article whose text is long, **When** it is displayed, **Then** its name wraps
    onto multiple lines and the row keeps a comfortable height instead of clipping.
 3. **Given** a checked article, **When** it is displayed, **Then** its name keeps a
-   strikethrough and muted treatment and the selection marker is filled with the brand yellow.
+   muted treatment (no strikethrough) and the selection marker is filled with the brand yellow.
 4. **Given** articles grouped by category, **When** they are displayed, **Then** category
    headings are bold and muted, introduced by a small brand-yellow accent.
 5. **Given** the floating action button on this screen, **When** it is displayed, **Then** it
@@ -305,8 +305,8 @@ startup screen show the basket on a cream background in both appearance and stag
   typeface.
 - **FR-003**: Shopping lists, articles, list entries and settings sections MUST be
   presented as rounded, elevated cards when a multi-item layout applies.
-- **FR-004**: Checked articles MUST retain their strikethrough and muted treatment, with a
-  brand-yellow selection marker.
+- **FR-004**: Checked articles MUST keep a muted treatment and a brand-yellow selection marker, and MUST NOT be
+  struck through (removed in #134).
 - **FR-005**: Category headings on a shopping list MUST be bold and muted, introduced by a
   small brand-yellow accent.
 - **FR-006**: Articles already in a list on the add-articles screen MUST be marked with a

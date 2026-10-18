@@ -43,6 +43,10 @@ const renderRow = ({
   return { onToggle };
 };
 
+/** The text decoration a rendered text carries, none for the plain and the ticked rows alike. */
+const decorationOf = (text: string) =>
+  StyleSheet.flatten(screen.getByText(text).props.style)?.textDecorationLine;
+
 /** Every host element from `node` down, `node` included. */
 const subtree = (node: ReactTestInstance): ReactTestInstance[] => [
   node,
@@ -91,26 +95,22 @@ describe('ListItemRow', () => {
     expect(screen.getByText('2 L')).toBeOnTheScreen();
   });
 
-  it('FR-035 shows a ticked item with a check mark and struck-through text, not only a color', () => {
+  it('FR-035 shows a ticked item with a check mark and no strikethrough, not only a color', () => {
     renderRow({ inCart: true, quantity: { amount: 2, unit: 'L' } });
 
     // The marked box: the weight-700 check mark of the mockups.
     expect(
       screen.UNSAFE_queryAllByProps({ name: 'check', weight: 700 }),
     ).not.toHaveLength(0);
-    expect(screen.getByText('Lait')).toHaveStyle({
-      textDecorationLine: 'line-through',
-    });
-    expect(screen.getByText('2 L')).toHaveStyle({
-      textDecorationLine: 'line-through',
-    });
+    expect(decorationOf('Lait')).toBeUndefined();
+    expect(decorationOf('2 L')).toBeUndefined();
   });
 
   it.each([
     ['light', lightTheme],
     ['dark', darkTheme],
   ] as const)(
-    'FR-035 shows a ticked item with a check mark and struck-through text under the %s theme',
+    'FR-035 shows a ticked item with a check mark and no strikethrough under the %s theme',
     (scheme, theme) => {
       mockColorScheme = scheme;
       renderRow({ inCart: true, quantity: { amount: 2, unit: 'L' } });
@@ -122,12 +122,8 @@ describe('ListItemRow', () => {
       expect(
         screen.UNSAFE_queryAllByProps({ name: 'check', weight: 700 }),
       ).not.toHaveLength(0);
-      expect(screen.getByText('Lait')).toHaveStyle({
-        textDecorationLine: 'line-through',
-      });
-      expect(screen.getByText('2 L')).toHaveStyle({
-        textDecorationLine: 'line-through',
-      });
+      expect(decorationOf('Lait')).toBeUndefined();
+      expect(decorationOf('2 L')).toBeUndefined();
     },
   );
 
@@ -137,9 +133,7 @@ describe('ListItemRow', () => {
     expect(
       screen.UNSAFE_queryAllByProps({ name: 'check', weight: 700 }),
     ).toHaveLength(0);
-    expect(screen.getByText('Lait')).not.toHaveStyle({
-      textDecorationLine: 'line-through',
-    });
+    expect(decorationOf('Lait')).toBeUndefined();
   });
 
   it('FR-036 draws a ticked item in onSurfaceVariant, with no opacity, so its contrast is the one the theme checks', () => {
@@ -222,9 +216,7 @@ describe('ListItemRow', () => {
         />
       </ThemeProvider>
     );
-    const struck = { textDecorationLine: 'line-through' } as const;
-
-    it('FR-035 FR-036 strikes the name and the quantity through, as a tap does', async () => {
+    it('FR-035 FR-036 draws the name and the quantity in onSurfaceVariant, as a tap does', async () => {
       jest.useFakeTimers();
       try {
         const { rerender } = render(synced(false));
@@ -233,14 +225,19 @@ describe('ListItemRow', () => {
           jest.runAllTimers();
         });
 
-        expect(screen.getByText('Lait')).toHaveStyle(struck);
-        expect(screen.getByText('2 L')).toHaveStyle(struck);
+        expect(screen.getByText('Lait')).toHaveStyle({
+          color: lightTheme.colors.onSurfaceVariant,
+        });
+        expect(screen.getByText('2 L')).toHaveStyle({
+          color: lightTheme.colors.onSurfaceVariant,
+        });
+        expect(decorationOf('Lait')).toBeUndefined();
       } finally {
         jest.useRealTimers();
       }
     });
 
-    it('FR-035 shows the name and the quantity as not struck through again when unticked', async () => {
+    it('FR-035 shows the name in onSurface again when unticked', async () => {
       jest.useFakeTimers();
       try {
         const { rerender } = render(synced(true));
@@ -249,8 +246,9 @@ describe('ListItemRow', () => {
           jest.runAllTimers();
         });
 
-        expect(screen.getByText('Lait')).not.toHaveStyle(struck);
-        expect(screen.getByText('2 L')).not.toHaveStyle(struck);
+        expect(screen.getByText('Lait')).toHaveStyle({
+          color: lightTheme.colors.onSurface,
+        });
       } finally {
         jest.useRealTimers();
       }
