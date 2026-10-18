@@ -1,3 +1,4 @@
+import { View } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
@@ -15,6 +16,14 @@ const renderRow = (theme: AppTheme, props: Partial<SettingsRowProps> = {}) => {
       />
     </PaperProvider>,
   );
+};
+
+type Node = { parent: Node | null };
+
+const ancestors = (node: Node): Node[] => {
+  const found: Node[] = [];
+  for (let up = node.parent; up; up = up.parent) found.push(up);
+  return found;
 };
 
 describe.each([
@@ -66,5 +75,27 @@ describe.each([
       screen.getByText('Un nom de compte très long qui passe à la ligne').props
         .numberOfLines,
     ).toBeUndefined();
+  });
+
+  it('#129 draws the footer in the text column, not the trailing element', () => {
+    renderRow(theme, {
+      footer: <View testID="footer" />,
+      trailing: <View testID="trailing" />,
+    });
+    const title = ancestors(screen.getByText('Marie') as Node);
+    const footer = ancestors(screen.getByTestId('footer') as Node);
+    const trailing = ancestors(screen.getByTestId('trailing') as Node);
+    // The first ancestor the footer shares with the title is the text column; the trailing
+    // element sits next to it, not inside.
+    const column = footer.find((node) => title.includes(node));
+    expect(column !== undefined && !trailing.includes(column)).toBe(true);
+  });
+
+  it('#129 keeps a title on the requested lines, ellipsized in the middle', () => {
+    renderRow(theme, { titleNumberOfLines: 1 });
+    expect(screen.getByText('Marie').props).toMatchObject({
+      numberOfLines: 1,
+      ellipsizeMode: 'middle',
+    });
   });
 });
