@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { useTheme } from 'react-native-paper';
 import * as Font from 'expo-font';
 import {
   initialWindowMetrics,
   SafeAreaProvider,
 } from 'react-native-safe-area-context';
 
+import { KvAppearanceStore } from './src/adapters/preferences/kv-appearance-store';
 import { DataFromNewerVersion } from './src/application/ports/data-from-newer-version';
 import { AppErrorBoundary } from './src/adapters/ui/components/app-error-boundary';
 import { Navigation } from './src/adapters/ui/navigation';
@@ -27,6 +29,14 @@ type Startup =
   | { status: 'ready'; app: ComposedApp }
   | { status: 'failed' }
   | { status: 'tooOld' };
+
+// Read synchronously by the ThemeProvider on its first render, before the database opens.
+const appearanceStore = new KvAppearanceStore();
+
+/** The status bar icons follow the theme in use, not only the system scheme. */
+const ThemedStatusBar = () => (
+  <StatusBar style={useTheme().dark ? 'light' : 'dark'} />
+);
 
 /**
  * The composition root is the only readiness gate: starting lasts until
@@ -98,8 +108,8 @@ export default function App() {
   };
 
   return (
-    <ThemeProvider>
-      <StatusBar style="auto" />
+    <ThemeProvider appearanceStore={appearanceStore}>
+      <ThemedStatusBar />
       {renderStartup(startup, reporter, restart)}
     </ThemeProvider>
   );
