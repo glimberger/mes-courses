@@ -305,8 +305,8 @@ startup screen show the basket on a cream background in both appearance and stag
   typeface.
 - **FR-003**: Shopping lists, articles, list entries and settings sections MUST be
   presented as rounded, elevated cards when a multi-item layout applies.
-- **FR-004**: Checked articles MUST retain their muted treatment, with no strikethrough (removed in #134), with a
-  brand-yellow selection marker.
+- **FR-004**: Checked articles MUST keep a muted treatment and a brand-yellow selection marker, and MUST NOT be
+  struck through (removed in #134).
 - **FR-005**: Category headings on a shopping list MUST be bold and muted, introduced by a
   small brand-yellow accent.
 - **FR-006**: Articles already in a list on the add-articles screen MUST be marked with a
