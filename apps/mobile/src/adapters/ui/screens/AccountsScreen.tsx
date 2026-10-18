@@ -223,37 +223,36 @@ const AccountRow = ({
         icon="account_circle"
         title={account.email}
         subtitle={`Dernière synchronisation : ${formatLastSync(account.lastSyncAt, new Date())}`}
+        // The chip goes under the text: a wide one would squeeze the email to a few characters.
+        footer={<Chip tone="secondary">{stateLabel(account)}</Chip>}
         trailing={
-          <View style={styles.trailing}>
-            <Chip tone="secondary">{stateLabel(account)}</Chip>
-            {onAction !== undefined && (
-              <Menu
-                visible={open}
-                onDismiss={() => setOpen(false)}
-                overlayAccessibilityLabel="Fermer le menu"
-                anchor={
-                  <AppbarIconAction
-                    icon="more_vert"
-                    accessibilityLabel={`Actions de ${account.email}`}
-                    onPress={() => setOpen(true)}
-                  />
-                }
-              >
-                {account.state === 'suspended' ? (
-                  <Menu.Item title="Réactiver" onPress={choose('reactivate')} />
-                ) : (
-                  <Menu.Item title="Suspendre" onPress={choose('suspend')} />
-                )}
-                {account.state === 'invited' && (
-                  <Menu.Item
-                    title="Renvoyer les identifiants"
-                    onPress={choose('resend')}
-                  />
-                )}
-                <Menu.Item title="Supprimer" onPress={choose('delete')} />
-              </Menu>
-            )}
-          </View>
+          onAction !== undefined && (
+            <Menu
+              visible={open}
+              onDismiss={() => setOpen(false)}
+              overlayAccessibilityLabel="Fermer le menu"
+              anchor={
+                <AppbarIconAction
+                  icon="more_vert"
+                  accessibilityLabel={`Actions de ${account.email}`}
+                  onPress={() => setOpen(true)}
+                />
+              }
+            >
+              {account.state === 'suspended' ? (
+                <Menu.Item title="Réactiver" onPress={choose('reactivate')} />
+              ) : (
+                <Menu.Item title="Suspendre" onPress={choose('suspend')} />
+              )}
+              {account.state === 'invited' && (
+                <Menu.Item
+                  title="Renvoyer les identifiants"
+                  onPress={choose('resend')}
+                />
+              )}
+              <Menu.Item title="Supprimer" onPress={choose('delete')} />
+            </Menu>
+          )
         }
       />
     </SettingsCard>
@@ -271,5 +270,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     gap: CARD_GAP,
   },
-  trailing: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });
