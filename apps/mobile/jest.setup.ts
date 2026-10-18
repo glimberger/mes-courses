@@ -12,3 +12,9 @@ jest.mock('expo-sqlite', () => ({
   openDatabaseAsync: () =>
     Promise.reject(new Error('expo-sqlite is not loaded in UI tests')),
 }));
+
+// The key-value store is native too; UI tests that import it get an empty one.
+jest.mock('expo-sqlite/kv-store', () => ({
+  __esModule: true,
+  default: { getItemSync: () => null, setItemSync: () => undefined },
+}));

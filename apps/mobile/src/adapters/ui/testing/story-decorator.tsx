@@ -4,6 +4,8 @@ import {
   SafeAreaProvider,
 } from 'react-native-safe-area-context';
 
+import type { AppearanceStore } from '../../../application/ports/appearance-store';
+import type { AppearanceSetting } from '../../../domain/appearance-setting';
 import type { AppStore } from '../state/app-store';
 import { AppStoreProvider } from '../state/app-store-provider';
 import { ThemeProvider } from '../theme/theme-provider';
@@ -23,10 +25,27 @@ export type AppStoryParameters = {
   routeParams?: object;
   /** The appearance the story is drawn in; the system scheme when none is given. */
   appearance?: 'light' | 'dark';
+  /** The appearance setting the story starts with; `system` when none is given. */
+  appearanceSetting?: AppearanceSetting;
 };
 
 // One object, so a story without a scenario keeps its store when the decorator renders again.
 const EMPTY_SCENARIO: StoryScenario = {};
+
+const storyAppearanceStores = new Map<AppearanceSetting, AppearanceStore>();
+
+/**
+ * A store that holds the setting a story starts with and keeps nothing. One per setting, so its
+ * identity is stable across renders.
+ */
+const storyAppearanceStore = (setting: AppearanceSetting) => {
+  let store = storyAppearanceStores.get(setting);
+  if (store === undefined) {
+    store = { read: () => setting, write: () => undefined };
+    storyAppearanceStores.set(setting, store);
+  }
+  return store;
+};
 
 /** Renders its children once the scenario's store is built, nothing before. */
 const WithStoryStore = ({
@@ -65,7 +84,14 @@ export const withAppProviders = (
   Story: ComponentType,
   { parameters }: { parameters: AppStoryParameters },
 ) => (
-  <ThemeProvider appearance={parameters.appearance}>
+  <ThemeProvider
+    appearance={parameters.appearance}
+    appearanceStore={
+      parameters.appearanceSetting === undefined
+        ? undefined
+        : storyAppearanceStore(parameters.appearanceSetting)
+    }
+  >
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       {parameters.withoutStore ? (
         <Story />

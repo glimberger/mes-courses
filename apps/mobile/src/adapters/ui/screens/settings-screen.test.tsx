@@ -187,3 +187,31 @@ describe('Settings', () => {
     });
   });
 });
+
+describe('Settings, appearance', () => {
+  it('offers Système, Clair and Sombre, Système being chosen by default', async () => {
+    await openSettings();
+
+    expect(screen.getByRole('radio', { name: 'Système' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Clair' })).not.toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Sombre' })).not.toBeChecked();
+  });
+
+  it('shows the choice once connected too', async () => {
+    await openSettings({
+      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+    });
+
+    expect(await screen.findByText('Apparence')).toBeOnTheScreen();
+    expect(screen.getByRole('radio', { name: 'Système' })).toBeChecked();
+  });
+
+  it('applies the chosen appearance at once', async () => {
+    await openSettings();
+
+    fireEvent.press(screen.getByRole('radio', { name: 'Sombre' }));
+
+    expect(screen.getByRole('radio', { name: 'Sombre' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Système' })).not.toBeChecked();
+  });
+});

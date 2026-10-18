@@ -1,12 +1,14 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { Text } from 'react-native';
+import { Appearance, Pressable, Text } from 'react-native';
 import { IconButton, useTheme } from 'react-native-paper';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import type { AppearanceStore } from '../../../application/ports/appearance-store';
+import type { AppearanceSetting } from '../../../domain/appearance-setting';
 import { darkTheme, lightTheme } from './theme';
-import { ThemeProvider } from './theme-provider';
+import { ThemeProvider, useAppearanceSetting } from './theme-provider';
 
 // The Material Symbols glyph of `search` (e.g. Paper's `magnify`), from the generated glyph map.
 const SEARCH_GLYPH = String.fromCodePoint(0xef7a);
@@ -73,6 +75,165 @@ describe('an appearance given to the provider', () => {
       expect(screen.getByText(expected)).toBeOnTheScreen();
     },
   );
+});
+
+const memoryStore = (setting: AppearanceSetting) => {
+  const store: AppearanceStore & { setting: AppearanceSetting } = {
+    setting,
+    read: jest.fn(() => store.setting),
+    write: jest.fn((next: AppearanceSetting) => {
+      store.setting = next;
+    }),
+  };
+  return store;
+};
+
+describe('the appearance setting', () => {
+  it('hands the choice to the native scheme, and system back to the device', () => {
+    const setColorScheme = jest
+      .spyOn(Appearance, 'setColorScheme')
+      .mockImplementation(() => undefined);
+    const Probe = () => {
+      const { setSetting } = useAppearanceSetting();
+      return (
+        <Pressable
+          accessibilityLabel="Système"
+          onPress={() => setSetting('system')}
+        />
+      );
+    };
+
+    render(
+      <ThemeProvider appearanceStore={memoryStore('dark')} syncNativeScheme>
+        <Probe />
+      </ThemeProvider>,
+    );
+    expect(setColorScheme).toHaveBeenLastCalledWith('dark');
+    fireEvent.press(screen.getByLabelText('Système'));
+
+    expect(setColorScheme).toHaveBeenLastCalledWith('unspecified');
+    setColorScheme.mockRestore();
+  });
+
+  it('leaves the native scheme alone unless asked to sync it', () => {
+    const setColorScheme = jest
+      .spyOn(Appearance, 'setColorScheme')
+      .mockImplementation(() => undefined);
+
+    render(
+      <ThemeProvider appearanceStore={memoryStore('dark')}>
+        <Text>story</Text>
+      </ThemeProvider>,
+    );
+
+    expect(setColorScheme).not.toHaveBeenCalled();
+    setColorScheme.mockRestore();
+  });
+
+  it('reads the setting again when it is given another store', () => {
+    mockColorScheme = 'light';
+    const view = (store: AppearanceStore) => (
+      <ThemeProvider appearanceStore={store}>
+        <ThemeName />
+      </ThemeProvider>
+    );
+    const { rerender } = render(view(memoryStore('light')));
+
+    rerender(view(memoryStore('dark')));
+
+    expect(screen.getByText('dark')).toBeOnTheScreen();
+  });
+
+  it.each([
+    ['system', 'dark', 'dark'],
+    ['system', 'light', 'light'],
+    ['light', 'dark', 'light'],
+    ['dark', 'light', 'dark'],
+  ] as const)(
+    'with %s and a %s device shows the %s theme on the first render',
+    (setting, scheme, expected) => {
+      mockColorScheme = scheme;
+
+      render(
+        <ThemeProvider appearanceStore={memoryStore(setting)}>
+          <ThemeName />
+        </ThemeProvider>,
+      );
+
+      expect(screen.getByText(expected)).toBeOnTheScreen();
+    },
+  );
+
+  it('is system when nothing is stored', () => {
+    mockColorScheme = 'dark';
+    const Probe = () => (
+      <Text>{`setting:${useAppearanceSetting().setting}`}</Text>
+    );
+
+    render(
+      <ThemeProvider>
+        <Probe />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByText('setting:system')).toBeOnTheScreen();
+  });
+
+  it('applies a change at once and stores it', () => {
+    mockColorScheme = 'light';
+    const store = memoryStore('system');
+    const Probe = () => {
+      const { setSetting } = useAppearanceSetting();
+      return (
+        <>
+          <ThemeName />
+          <Pressable
+            accessibilityLabel="Sombre"
+            onPress={() => setSetting('dark')}
+          />
+        </>
+      );
+    };
+    render(
+      <ThemeProvider appearanceStore={store}>
+        <Probe />
+      </ThemeProvider>,
+    );
+    expect(screen.getByText('light')).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByLabelText('Sombre'));
+
+    expect(screen.getByText('dark')).toBeOnTheScreen();
+    expect(store.write).toHaveBeenCalledWith('dark');
+  });
+
+  it('keeps following the device while the setting is system', () => {
+    mockColorScheme = 'light';
+    const store = memoryStore('system');
+    const view = () => (
+      <ThemeProvider appearanceStore={store}>
+        <ThemeName />
+      </ThemeProvider>
+    );
+    const { rerender } = render(view());
+
+    mockColorScheme = 'dark';
+    rerender(view());
+
+    expect(screen.getByText('dark')).toBeOnTheScreen();
+  });
+
+  it('is overridden by an appearance given to the provider', () => {
+    mockColorScheme = 'light';
+
+    render(
+      <ThemeProvider appearance="dark" appearanceStore={memoryStore('light')}>
+        <ThemeName />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByText('dark')).toBeOnTheScreen();
+  });
 });
 
 describe('the Material Symbols icons', () => {

@@ -138,3 +138,11 @@ export const PendingSync: Story = {
     scenario: { seed: fixture, connected, prepare: waitingToSend },
   },
 };
+
+/** The "Apparence" choice with Sombre selected: the screen is drawn in the dark theme. */
+export const DarkAppearance: Story = {
+  parameters: {
+    scenario: { seed: fixture, connected },
+    appearanceSetting: 'dark',
+  },
+};

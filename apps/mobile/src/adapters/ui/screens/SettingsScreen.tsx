@@ -5,11 +5,16 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { DeviceInfo } from '../../../application/use-cases/list-devices';
+import {
+  APPEARANCE_SETTINGS,
+  type AppearanceSetting,
+} from '../../../domain/appearance-setting';
 import { Button } from '../components/Button';
 import { CategoryHeader } from '../components/CategoryHeader';
 import { ErrorState } from '../components/ErrorState';
 import { formatLastSync } from '../components/format-last-sync';
 import { LoadingState } from '../components/LoadingState';
+import { RadioItem } from '../components/RadioItem';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsRow } from '../components/SettingsRow';
@@ -17,6 +22,7 @@ import { SyncStatusBar } from '../components/SyncStatusBar';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
+import { useAppearanceSetting } from '../theme/theme-provider';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
 import { DeleteMyAccountDialog } from './DeleteMyAccountDialog';
 import { DeviceRow } from './DeviceRow';
@@ -267,16 +273,20 @@ export const SettingsView = ({
     <SyncStatusBar variant="strip" />
     <ScrollView contentContainerStyle={styles.content}>
       {server === null ? (
-        <View style={styles.cards}>
-          <SettingsCard>
-            <Text variant="bodyLarge">
-              Connectez-vous pour retrouver vos listes sur vos autres appareils.
-            </Text>
-            <Button mode="brand" onPress={onConnect}>
-              Se connecter
-            </Button>
-          </SettingsCard>
-        </View>
+        <>
+          <View style={styles.cards}>
+            <SettingsCard>
+              <Text variant="bodyLarge">
+                Connectez-vous pour retrouver vos listes sur vos autres
+                appareils.
+              </Text>
+              <Button mode="brand" onPress={onConnect}>
+                Se connecter
+              </Button>
+            </SettingsCard>
+          </View>
+          <AppearanceSection />
+        </>
       ) : (
         <>
           <Section title="Compte">
@@ -316,6 +326,8 @@ export const SettingsView = ({
             />
           </Section>
 
+          <AppearanceSection />
+
           <Section title="Actions" dense>
             <Button mode="outlined" icon="logout" onPress={onSignOut}>
               Se déconnecter de cet appareil
@@ -352,6 +364,31 @@ const Section = ({
     </View>
   </>
 );
+
+const APPEARANCE_LABELS: Record<AppearanceSetting, string> = {
+  system: 'Système',
+  light: 'Clair',
+  dark: 'Sombre',
+};
+
+/** The theme choice: it applies at once and is kept for the next opening. */
+const AppearanceSection = () => {
+  const { setting, setSetting } = useAppearanceSetting();
+  return (
+    <Section title="Apparence" dense>
+      <View accessibilityRole="radiogroup" accessibilityLabel="Apparence">
+        {APPEARANCE_SETTINGS.map((choice) => (
+          <RadioItem
+            key={choice}
+            label={APPEARANCE_LABELS[choice]}
+            selected={setting === choice}
+            onPress={() => setSetting(choice)}
+          />
+        ))}
+      </View>
+    </Section>
+  );
+};
 
 const AccountSection = ({
   account,
