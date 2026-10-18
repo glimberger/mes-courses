@@ -43,11 +43,11 @@ const renderRow = ({
   return { onToggle };
 };
 
-/** Every host element from `node` down, `node` included. */
 /** The text decoration a rendered text carries, none for the plain and the ticked rows alike. */
 const decorationOf = (text: string) =>
   StyleSheet.flatten(screen.getByText(text).props.style)?.textDecorationLine;
 
+/** Every host element from `node` down, `node` included. */
 const subtree = (node: ReactTestInstance): ReactTestInstance[] => [
   node,
   ...node.children.flatMap((child) =>

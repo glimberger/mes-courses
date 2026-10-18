@@ -109,7 +109,6 @@ export const ListItemRow = memo(function ListItemRow({
             </Text>
             {quantity !== null && (
               <Text
-                key={`quantity-${inCart}`}
                 style={[styles.quantity, { color: colors.onSurfaceVariant }]}
               >
                 {formatQuantity(quantity)}

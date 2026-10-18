@@ -53,7 +53,7 @@ remain in force and are restyled, not replaced.
 ### Current list
 
 - Each article is a rounded, elevated card with generous vertical spacing.
-- Checked articles keep strikethrough + muted text (`onSurfaceVariant`) and a brand-yellow
+- Checked articles keep muted text, with no strikethrough (removed in #134), (`onSurfaceVariant`) and a brand-yellow
   checked marker.
 - Category headings are bold, muted and preceded by a 4 dp brand-yellow bar.
 - The remaining-count indicator uses brand-typography styling; wrapping allowed.
