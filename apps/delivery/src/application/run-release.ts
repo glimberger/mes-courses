@@ -1,10 +1,13 @@
 import { parseManifest } from '../domain/manifest';
 import {
+  checkNewVersion,
+  checkPrerequisites,
   decideStep,
   nextVersion,
   parseTarget,
   validateExplicitVersion,
   type ReleaseState,
+  type BumpPullRequest,
   type ReleaseStep,
   type ReleaseTarget,
 } from '../domain/release-plan';
@@ -31,6 +34,8 @@ export type ReleaseRequest = {
   target: ReleaseTarget;
   /** Skips only the `current -> next` confirmation. */
   assumeYes: boolean;
+  /** Observes and prints what would be done; every mutating call is replaced by a "would" line. */
+  dryRun?: boolean;
 };
 
 export type ReleaseResult =
@@ -40,7 +45,55 @@ export type ReleaseResult =
 
 const POLL_MS = 30_000;
 const WAIT_LIMIT_MS = 90 * 60_000;
+const RESUME_AFTER_ERROR = 'Run the same command again to resume.';
 const RESUME = 'run the same command again to resume';
+
+/** Everything that changes the repository or GitHub goes through here, so a dry run cannot leak. */
+type Steps = {
+  commitBump(version: string, branch: string): Promise<void>;
+  openPullRequest(branch: string, title: string): Promise<BumpPullRequest>;
+  enableAutoMerge(pr: BumpPullRequest): Promise<void>;
+  tag(tag: string, sha: string | null): Promise<void>;
+};
+
+const realSteps = (deps: ReleaseDeps): Steps => ({
+  commitBump: (version) => deps.repository.commitBump(version),
+  openPullRequest: (branch, title) => deps.pullRequests.open(branch, title),
+  enableAutoMerge: (pr) => deps.pullRequests.enableAutoMerge(pr),
+  async tag(tag, sha) {
+    if (sha === null) throw new Error('Found no release commit to tag');
+    await deps.repository.createTag(tag, sha);
+    await deps.repository.pushTag(tag);
+  },
+});
+
+const wouldSteps = (output: Output): Steps => ({
+  async commitBump(_version, branch) {
+    output.line(`would commit the bump to ${branch} and push it`);
+  },
+  async openPullRequest(_branch, title) {
+    output.line(`would open the pull request "${title}"`);
+    return {
+      state: 'open',
+      url: '(pull request not opened)',
+      mergeCommit: null,
+      checksFailed: false,
+    };
+  },
+  async enableAutoMerge() {
+    output.line('would enable auto-merge (squash) on it');
+  },
+  async tag(tag) {
+    output.line(`would tag ${tag} on the bump commit and push the tag`);
+  },
+});
+
+/** What a dry run assumes happens after each step, since it does not wait for it. */
+const NEXT_STEP: Partial<Record<ReleaseStep['step'], ReleaseStep>> = {
+  'open-bump': { step: 'wait-merge' },
+  'wait-merge': { step: 'wait-runs' },
+  'wait-runs': { step: 'tag' },
+};
 
 const stopped = (message: string): ReleaseResult => ({
   outcome: 'stopped',
@@ -122,25 +175,68 @@ export const runRelease = async (
   deps: ReleaseDeps,
   request: ReleaseRequest,
 ): Promise<ReleaseResult> => {
-  const { repository, pullRequests, runs, prompter, output, sleep } = deps;
+  try {
+    return await execute(deps, request);
+  } catch (error) {
+    // A missing tool, an unauthenticated `gh` or a network error: stop with the reason, no crash.
+    return stopped(
+      `${error instanceof Error ? error.message : String(error)}\n${RESUME_AFTER_ERROR}`,
+    );
+  }
+};
+
+const execute = async (
+  deps: ReleaseDeps,
+  request: ReleaseRequest,
+): Promise<ReleaseResult> => {
+  const { repository, runs, prompter, output, sleep } = deps;
+  const dryRun = request.dryRun === true;
+  const steps = dryRun ? wouldSteps(output) : realSteps(deps);
 
   await repository.fetch();
   const current = await repository.appVersionAt('origin/main');
+  // The version already on main is a resume of an interrupted run, not a new release.
+  const resuming =
+    request.target.kind === 'version' && request.target.version === current;
+  const problems = checkPrerequisites({
+    branch: await repository.currentBranch(),
+    clean: await repository.isClean(),
+    upToDate: resuming || (await repository.isUpToDate()),
+  });
+  if (problems.length > 0) return stopped(problems.join('\n'));
+
   const resolved = await resolveVersion(deps, request.target, current);
   if ('errors' in resolved) return stopped(resolved.errors.join('\n'));
   const { version } = resolved;
   const tag = `v${version}`;
   const branch = `chore/release-${version}`;
 
+  if (version !== current) {
+    const tags = await repository.tagCommit(tag);
+    const refused = checkNewVersion({
+      version,
+      mainVersion: current,
+      productionVersion: await productionVersion(deps.source),
+      tagExists: tags.local !== null || tags.remote !== null,
+    });
+    if (refused.length > 0) return stopped(refused.join('\n'));
+  }
+
   output.line(`${current} -> ${version}`);
-  if (!request.assumeYes && !(await prompter.confirm(`Release ${version}?`)))
+  if (
+    !dryRun &&
+    !request.assumeYes &&
+    !(await prompter.confirm(`Release ${version}?`))
+  )
     return { outcome: 'declined' };
 
   let waitingFor: ReleaseStep['step'] | null = null;
   let waitedMs = 0;
+  let assumed: ReleaseStep | null = null;
   for (;;) {
     const state = await observe(deps, version, branch);
-    const step = decideStep(version, state);
+    const step: ReleaseStep = assumed ?? decideStep(version, state);
+    if (dryRun) assumed = NEXT_STEP[step.step] ?? null;
 
     const message = stopMessage(step);
     if (message !== null) return stopped(message);
@@ -156,19 +252,23 @@ export const runRelease = async (
         return stopped(
           `origin/main changed while preparing the release (was ${current}). Check it, then ${RESUME}`,
         );
-      await repository.commitBump(version);
-      const pr = await pullRequests.open(
+      await steps.commitBump(version, branch);
+      const pr = await steps.openPullRequest(
         branch,
         `chore(release): bump the app version to ${version}`,
       );
-      await pullRequests.enableAutoMerge(pr);
-      output.line(`bump pull request: ${pr.url}`);
+      await steps.enableAutoMerge(pr);
+      if (!dryRun) output.line(`bump pull request: ${pr.url}`);
       waitingFor = null;
       continue;
     }
 
     if (step.step === 'tag') {
       const sha = state.releaseCommit;
+      if (dryRun) {
+        await steps.tag(tag, sha);
+        return { outcome: 'released' };
+      }
       if (sha === null) return stopped('Found no release commit to tag');
       const failures = evaluateRelease({
         tag,
@@ -180,14 +280,21 @@ export const runRelease = async (
         productionVersion: state.productionVersion,
       });
       if (failures.length > 0) return stopped(failures.join('\n'));
-      await repository.createTag(tag, sha);
-      await repository.pushTag(tag);
+      await steps.tag(tag, sha);
       output.line(`tagged ${tag} on ${sha}`);
       output.line(`Release run: ${await runs.releaseRunUrl(sha)}`);
       return { outcome: 'released' };
     }
 
     // wait-merge or wait-runs
+    if (dryRun) {
+      output.line(
+        step.step === 'wait-merge'
+          ? 'would wait for the pull request to merge'
+          : `would wait for ${REQUIRED_WORKFLOWS.join(', ')} on the bump commit`,
+      );
+      continue;
+    }
     if (waitingFor !== step.step) {
       waitingFor = step.step;
       waitedMs = 0;

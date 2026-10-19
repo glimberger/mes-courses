@@ -1,3 +1,4 @@
+import type { ChannelManifest } from '../domain/manifest';
 import { REQUIRED_WORKFLOWS } from '../domain/release-rules';
 import type { RunOutcome } from '../domain/release-plan';
 import { runRelease, type ReleaseDeps } from './run-release';
@@ -11,6 +12,27 @@ import {
   ScriptedPrompter,
 } from './testing/in-memory-doubles';
 import { Recorder } from './testing/recorder';
+
+const productionManifest = (version: string): string =>
+  JSON.stringify({
+    schema: 1,
+    environment: 'production',
+    sequence: 20,
+    commit: 'a'.repeat(40),
+    version,
+    createdAt: '2026-10-01T08:00:00.000Z',
+    run: { id: 1, url: 'https://github.com/o/r/actions/runs/1' },
+    minAgentVersion: '1.0.0',
+    server: {
+      commit: 'a'.repeat(40),
+      sequence: 20,
+      version,
+      asset: `server-${'a'.repeat(40)}.tar.gz`,
+      sha256: 'f'.repeat(64),
+      nixpkgsRev: '1'.repeat(40),
+    },
+    fdroid: null,
+  } satisfies ChannelManifest);
 
 const runs = (state: RunOutcome['state']): RunOutcome[] =>
   REQUIRED_WORKFLOWS.map((workflow) => ({
@@ -33,6 +55,7 @@ const setup = (prompter = new ScriptedPrompter([], [true])) => {
   const pullRequests = new InMemoryReleasePullRequests(recorder);
   const releaseRuns = new InMemoryReleaseRuns(recorder);
   const output = new RecordedOutput();
+  const source = new InMemoryChannelSource(recorder);
   const fakeSleep = new FakeSleep();
   /** The bump lands on origin/main during the first wait. */
   const landBump = () => {
@@ -44,7 +67,7 @@ const setup = (prompter = new ScriptedPrompter([], [true])) => {
     repository,
     pullRequests,
     runs: releaseRuns,
-    source: new InMemoryChannelSource(recorder),
+    source,
     prompter,
     output,
     sleep: async (ms) => {
@@ -66,6 +89,7 @@ const setup = (prompter = new ScriptedPrompter([], [true])) => {
     output,
     fakeSleep,
     deps,
+    source,
     landBump,
   };
 };
@@ -242,5 +266,161 @@ describe('runRelease', () => {
 
     expect(result).toEqual({ outcome: 'released' });
     expect(mutations(recorder.calls)).toEqual([]);
+  });
+
+  describe('early refusals (US2)', () => {
+    const minor = {
+      target: { kind: 'bump' as const, bump: 'minor' as const },
+      assumeYes: false,
+    };
+    const refused = (recorder: Recorder) =>
+      recorder.calls.filter((call) =>
+        /commitBump|\.open |enableAutoMerge|createTag|pushTag|Sleep/.test(call),
+      );
+
+    it.each([
+      ['not on main', (r: InMemoryReleaseRepository) => (r.branch = 'feat/x')],
+      [
+        'uncommitted changes',
+        (r: InMemoryReleaseRepository) => (r.clean = false),
+      ],
+      [
+        'behind origin/main',
+        (r: InMemoryReleaseRepository) => (r.upToDate = false),
+      ],
+    ])(
+      'refuses a checkout that is %s, before asking anything (2.1)',
+      async (_, break_) => {
+        const { deps, repository, recorder } = setup(new ScriptedPrompter());
+        break_(repository);
+
+        const result = await runRelease(deps, minor);
+
+        expect(result.outcome).toBe('stopped');
+        expect(refused(recorder)).toEqual([]);
+      },
+    );
+
+    it('reports every reason of a bad checkout together', async () => {
+      const { deps, repository } = setup(new ScriptedPrompter());
+      repository.branch = 'feat/x';
+      repository.clean = false;
+      repository.upToDate = false;
+
+      const result = await runRelease(deps, minor);
+
+      expect(result).toMatchObject({ outcome: 'stopped' });
+      expect(
+        result.outcome === 'stopped' && result.message.split('\n'),
+      ).toHaveLength(3);
+    });
+
+    it('rejects an explicit version that is not higher (2.2)', async () => {
+      const { deps, recorder } = setup(new ScriptedPrompter());
+
+      const result = await runRelease(deps, {
+        target: { kind: 'version', version: '1.1.0' },
+        assumeYes: true,
+      });
+
+      expect(result).toMatchObject({
+        outcome: 'stopped',
+        message: expect.stringContaining('not higher'),
+      });
+      expect(refused(recorder)).toEqual([]);
+    });
+
+    it('refuses a version whose tag exists on the remote (2.3)', async () => {
+      const { deps, repository, recorder } = setup(new ScriptedPrompter());
+      repository.tags.set('v1.3.0', { local: null, remote: 'other' });
+
+      const result = await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: true,
+      });
+
+      expect(result).toMatchObject({
+        outcome: 'stopped',
+        message: expect.stringContaining('v1.3.0 already exists'),
+      });
+      expect(refused(recorder)).toEqual([]);
+    });
+
+    it('refuses a version not above production (2.3)', async () => {
+      const { deps, source, recorder } = setup(new ScriptedPrompter());
+      source.channels.set('production', {
+        manifest: productionManifest('1.3.0'),
+        signature: 'sig',
+      });
+
+      const result = await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: true,
+      });
+
+      expect(result).toMatchObject({
+        outcome: 'stopped',
+        message: expect.stringContaining('which production already runs'),
+      });
+      expect(refused(recorder)).toEqual([]);
+    });
+
+    it('stops with a message when a tool fails during the checks', async () => {
+      const { deps, recorder } = setup(new ScriptedPrompter());
+      recorder.failNext(
+        'ReleaseRepository.isClean',
+        new Error('git is not installed'),
+      );
+
+      const result = await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: true,
+      });
+
+      expect(result).toMatchObject({
+        outcome: 'stopped',
+        message: expect.stringContaining('git is not installed'),
+      });
+    });
+  });
+
+  describe('dry run (2.4)', () => {
+    it('prints the steps it would take and changes nothing', async () => {
+      const { deps, recorder, output, fakeSleep } = setup(
+        new ScriptedPrompter(),
+      );
+
+      const result = await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: false,
+        dryRun: true,
+      });
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(mutations(recorder.calls)).toEqual([]);
+      expect(fakeSleep.durations).toEqual([]);
+      expect(output.lines[0]).toBe('1.2.0 -> 1.3.0');
+      expect(output.lines.filter((l) => l.startsWith('would '))).toEqual([
+        'would commit the bump to chore/release-1.3.0 and push it',
+        'would open the pull request "chore(release): bump the app version to 1.3.0"',
+        'would enable auto-merge (squash) on it',
+        'would wait for the pull request to merge',
+        `would wait for ${REQUIRED_WORKFLOWS.join(', ')} on the bump commit`,
+        'would tag v1.3.0 on the bump commit and push the tag',
+      ]);
+    });
+
+    it('still refuses a bad checkout', async () => {
+      const { deps, repository } = setup(new ScriptedPrompter());
+      repository.clean = false;
+
+      const result = await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: true,
+        dryRun: true,
+      });
+
+      expect(result.outcome).toBe('stopped');
+    });
   });
 });

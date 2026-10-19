@@ -95,11 +95,6 @@ const ROOT = resolve(__dirname, '../../../..');
 
 const main = async (argv: string[]): Promise<number> => {
   const command = parseReleaseArgs(argv);
-  if (command.dryRun) {
-    // The dry run is added with the early refusals; never fall through to a real release.
-    console.error('--dry-run is not available yet');
-    return 1;
-  }
   const runner = createCommandRunner();
   const { repository, token } = await deriveGithubAccess(
     runner,
@@ -117,7 +112,7 @@ const main = async (argv: string[]): Promise<number> => {
       output: { line: (text) => console.log(text) },
       sleep,
     },
-    { target: command.target, assumeYes: command.assumeYes },
+    command,
   );
   if (result.outcome === 'stopped') console.error(result.message);
   return exitCodeOf(result);
