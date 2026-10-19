@@ -50,7 +50,7 @@ description: "Task list for the one-command release (yarn release)"
 **Goal**: never tag a commit the gate would reject; stop with a link.
 **Independent test**: scripted run states with one failed required run -> the use case ends with the run URL and no `createTag`/`pushTag` call.
 
-- [ ] T013 [US3] Use case: in `application/run-release.ts` and its test, cover the waiting paths: PR check fails or PR closed unmerged -> stop with the PR link (3.1); runs pending then success -> tag (3.2); one of `CI`, `E2E Android`, `Deliver staging` failed -> stop with that run link, no tag (3.3, SC-003); wait limit reached -> stop with "run it again to resume"; tag goes on the bump commit even when `origin/main` has moved on (edge case); `gh`/network error mid-wait -> stop with a message, no crash.
+- [x] T013 [US3] Use case: in `application/run-release.ts` and its test, cover the waiting paths: PR check fails or PR closed unmerged -> stop with the PR link (3.1); runs pending then success -> tag (3.2); one of `CI`, `E2E Android`, `Deliver staging` failed -> stop with that run link, no tag (3.3, SC-003); wait limit reached -> stop with "run it again to resume"; tag goes on the bump commit even when `origin/main` has moved on (edge case); `gh`/network error mid-wait -> stop with a message, no crash.
 
 ## Phase 6: User Story 4 - Resume after an interruption (P2)
 

@@ -125,7 +125,8 @@ export const decideStep = (
       : { step: 'stop-tag-elsewhere', tag, commit: existing };
   }
 
-  if (state.mainVersion === version) {
+  // The bump is on main once a commit of main set the version, even if main moved on since.
+  if (state.releaseCommit !== null) {
     const failed = state.runs.find((run) => run.state === 'failed');
     if (failed !== undefined)
       return { step: 'stop-run-failed', url: failed.url };

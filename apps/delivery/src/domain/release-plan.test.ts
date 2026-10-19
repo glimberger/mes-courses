@@ -177,6 +177,12 @@ describe('decideStep', () => {
     expect(decideStep('1.3.0', landed)).toEqual({ step: 'tag' });
   });
 
+  it('tags the release commit even when main has moved on to a later version', () => {
+    expect(decideStep('1.3.0', { ...landed, mainVersion: '1.4.0' })).toEqual({
+      step: 'tag',
+    });
+  });
+
   it('waits for runs that are pending', () => {
     expect(
       decideStep('1.3.0', {

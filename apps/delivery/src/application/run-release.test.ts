@@ -423,4 +423,97 @@ describe('runRelease', () => {
       expect(result.outcome).toBe('stopped');
     });
   });
+
+  describe('waiting paths and failure stops (US3)', () => {
+    const minor = {
+      target: { kind: 'bump' as const, bump: 'minor' as const },
+      assumeYes: true,
+    };
+
+    it('stops with the pull request link when it is closed unmerged (3.1)', async () => {
+      const { deps, pullRequests, recorder } = setup();
+      pullRequests.scriptFound([null, { ...openPr, state: 'closed' }]);
+
+      const result = await runRelease(deps, minor);
+
+      expect(result).toMatchObject({
+        outcome: 'stopped',
+        message: expect.stringContaining(openPr.url),
+      });
+      expect(mutations(recorder.calls)).not.toContain(
+        'ReleaseRepository.createTag v1.3.0 sha-1',
+      );
+    });
+
+    it('tags once the pending runs have succeeded (3.2)', async () => {
+      const { deps, releaseRuns, recorder, fakeSleep } = setup();
+      releaseRuns.scriptRuns([
+        runs('pending'),
+        runs('pending'),
+        runs('success'),
+      ]);
+
+      const result = await runRelease(deps, minor);
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(recorder.calls).toContain('ReleaseRepository.pushTag v1.3.0');
+      expect(fakeSleep.durations.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it.each(REQUIRED_WORKFLOWS)(
+      'stops with the link of the failed %s run and does not tag (3.3)',
+      async (failing) => {
+        const { deps, releaseRuns, recorder } = setup();
+        releaseRuns.scriptRuns([
+          runs('success').map((run) =>
+            run.workflow === failing
+              ? { ...run, state: 'failed' as const }
+              : run,
+          ),
+        ]);
+
+        const result = await runRelease(deps, minor);
+
+        expect(result).toMatchObject({
+          outcome: 'stopped',
+          message: expect.stringContaining(
+            `https://github.test/runs/${failing}`,
+          ),
+        });
+        expect(recorder.calls.join('\n')).not.toMatch(/createTag|pushTag/);
+      },
+    );
+
+    it('tags the bump commit even when origin/main has moved on', async () => {
+      const { deps, repository, recorder } = setup();
+      const sleep = deps.sleep;
+      deps.sleep = async (ms) => {
+        await sleep(ms);
+        repository.appVersions.set('origin/main', '1.4.0');
+      };
+
+      const result = await runRelease(deps, minor);
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(recorder.calls).toContain(
+        'ReleaseRepository.createTag v1.3.0 sha-1',
+      );
+    });
+
+    it('stops with the reason and a resume hint when gh fails mid-wait', async () => {
+      const { deps, recorder } = setup();
+      recorder.failNext(
+        'ReleaseRuns.requiredRuns',
+        new Error('gh run list failed: network down'),
+      );
+
+      const result = await runRelease(deps, minor);
+
+      expect(result).toMatchObject({
+        outcome: 'stopped',
+        message: expect.stringMatching(/network down[\s\S]*again to resume/),
+      });
+      expect(recorder.calls.join('\n')).not.toMatch(/createTag|pushTag/);
+    });
+  });
 });

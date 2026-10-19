@@ -11,6 +11,7 @@ import {
   type ReleaseStep,
   type ReleaseTarget,
 } from '../domain/release-plan';
+import { compareSemver } from '../domain/semver';
 import { evaluateRelease, REQUIRED_WORKFLOWS } from '../domain/release-rules';
 import type { ChannelSource } from './ports/channel-source';
 import type { Output } from './ports/output';
@@ -139,7 +140,7 @@ const observe = async (
   const mainVersion = await repository.appVersionAt('origin/main');
   const tags = await repository.tagCommit(`v${version}`);
   const bumpPr = await pullRequests.findBump(branch);
-  const landed = mainVersion === version;
+  const landed = compareSemver(mainVersion, version) >= 0;
   const releaseCommit = landed ? await repository.releaseCommit(version) : null;
   return {
     mainVersion,
