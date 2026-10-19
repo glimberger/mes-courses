@@ -144,12 +144,22 @@ export const chooseList = async (rowLabel: string, name: string) => {
 };
 
 /**
+ * From AddArticles, searches the catalog for this article, so its row moves to the top of the
+ * screen: lower down, the snackbar of the last action can cover it and take the tap.
+ */
+const searchCatalog = (name: string) => typeInto('Rechercher un article', name);
+
+/**
  * From AddArticles, taps the catalog row of this article and waits for the quantity dialog
  * ("Ajouter"): the dialog mounts in a portal after the tap.
  */
 export const openQuantityDialog = async (name: string) => {
-  // The row and the name inside it match: tapping either opens the dialog.
-  await element(by.label(name)).atIndex(0).tap();
+  await searchCatalog(name);
+  // The row and the name inside it match: tapping either opens the dialog. The search field
+  // holds the name too, so the match is kept inside the list.
+  await element(by.label(name).withAncestor(by.label('Articles du catalogue')))
+    .atIndex(0)
+    .tap();
   await waitFor(element(by.label('Ajouter')))
     .toBeVisible()
     .withTimeout(2000);
@@ -160,6 +170,7 @@ export const openQuantityDialog = async (name: string) => {
  * (e.g. "Modifier" or "Supprimer"): the menu mounts in a portal after the tap.
  */
 export const openRowMenu = async (name: string, entry: string) => {
+  await searchCatalog(name);
   await element(by.label(`Plus d'actions pour « ${name} »`)).tap();
   await waitFor(element(by.text(entry)))
     .toBeVisible()
