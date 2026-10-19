@@ -6,7 +6,8 @@
     "build": "tsc -p tsconfig.json",
     "test": "jest --passWithNoTests",
     "typecheck": "tsc --noEmit",
-    "ci": "tsx src/composition/ci.ts"
+    "ci": "tsx src/composition/ci.ts",
+    "release": "tsx src/composition/release.ts"
   },
   "dependencies": {
     "@sentry/node": "^11.5.0"
