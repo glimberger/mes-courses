@@ -1,4 +1,6 @@
 import {
+  checkNewVersion,
+  checkPrerequisites,
   decideStep,
   nextVersion,
   parseTarget,
@@ -228,5 +230,89 @@ describe('decideStep', () => {
     expect(
       decideStep('1.3.0', before(pr({ state: 'merged', mergeCommit: SHA }))),
     ).toEqual({ step: 'wait-runs' });
+  });
+});
+
+describe('checkPrerequisites', () => {
+  const fine = { branch: 'main', clean: true, upToDate: true };
+
+  it('accepts a clean main that matches origin/main', () => {
+    expect(checkPrerequisites(fine)).toEqual([]);
+  });
+
+  it('refuses a branch other than main, naming it', () => {
+    const [reason, ...others] = checkPrerequisites({
+      ...fine,
+      branch: 'feat/x',
+    });
+    expect(reason).toContain('feat/x');
+    expect(others).toEqual([]);
+  });
+
+  it('refuses uncommitted changes', () => {
+    expect(checkPrerequisites({ ...fine, clean: false })).toEqual([
+      expect.stringContaining('uncommitted changes'),
+    ]);
+  });
+
+  it('refuses a main that differs from origin/main', () => {
+    expect(checkPrerequisites({ ...fine, upToDate: false })).toEqual([
+      expect.stringContaining('origin/main'),
+    ]);
+  });
+
+  it('reports every reason at once', () => {
+    expect(
+      checkPrerequisites({ branch: 'x', clean: false, upToDate: false }),
+    ).toHaveLength(3);
+  });
+});
+
+describe('checkNewVersion', () => {
+  const fine = {
+    version: '1.3.0',
+    mainVersion: '1.2.0',
+    productionVersion: '1.2.0' as string | null,
+    tagExists: false,
+  };
+
+  it('accepts a version above main and production with no tag', () => {
+    expect(checkNewVersion(fine)).toEqual([]);
+    expect(checkNewVersion({ ...fine, productionVersion: null })).toEqual([]);
+  });
+
+  it('refuses a version that is not higher than main', () => {
+    expect(
+      checkNewVersion({
+        ...fine,
+        version: '1.2.0',
+        productionVersion: null,
+      }),
+    ).toEqual([
+      expect.stringContaining('not higher than the current version 1.2.0'),
+    ]);
+  });
+
+  it('refuses a version whose tag exists', () => {
+    expect(checkNewVersion({ ...fine, tagExists: true })).toEqual([
+      expect.stringContaining('v1.3.0 already exists'),
+    ]);
+  });
+
+  it('refuses a version not above production, with the gate wording', () => {
+    expect(checkNewVersion({ ...fine, productionVersion: '1.4.0' })).toEqual([
+      expect.stringContaining('which production already runs'),
+    ]);
+  });
+
+  it('reports every reason at once', () => {
+    expect(
+      checkNewVersion({
+        version: '1.1.0',
+        mainVersion: '1.2.0',
+        productionVersion: '1.2.0',
+        tagExists: true,
+      }),
+    ).toHaveLength(3);
   });
 });

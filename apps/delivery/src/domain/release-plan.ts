@@ -1,4 +1,4 @@
-import { REQUIRED_WORKFLOWS } from './release-rules';
+import { checkAboveProduction, REQUIRED_WORKFLOWS } from './release-rules';
 import { compareSemver } from './semver';
 
 export type Bump = 'major' | 'minor' | 'patch';
@@ -143,4 +143,41 @@ export const decideStep = (
   if (pr.state === 'closed') return { step: 'stop-pr-closed', url: pr.url };
   if (pr.checksFailed) return { step: 'stop-pr-failed', url: pr.url };
   return { step: 'wait-merge' };
+};
+
+/** Every reason the checkout cannot start a release, so one fix-up covers them all (FR-001). */
+export const checkPrerequisites = (facts: {
+  branch: string;
+  clean: boolean;
+  upToDate: boolean;
+}): string[] => {
+  const reasons: string[] = [];
+  if (facts.branch !== 'main')
+    reasons.push(`You are on ${facts.branch}: switch to main`);
+  if (!facts.clean)
+    reasons.push('There are uncommitted changes: commit or stash them');
+  if (!facts.upToDate)
+    reasons.push('main differs from origin/main: pull or push it first');
+  return reasons;
+};
+
+/** Every reason a version cannot be started as a new release (FR-004, FR-006). */
+export const checkNewVersion = (facts: {
+  version: string;
+  mainVersion: string;
+  productionVersion: string | null;
+  tagExists: boolean;
+}): string[] => {
+  const reasons: string[] = [];
+  if (compareSemver(facts.version, facts.mainVersion) <= 0)
+    reasons.push(
+      `The version ${facts.version} is not higher than the current version ${facts.mainVersion}`,
+    );
+  if (facts.tagExists) reasons.push(`The tag v${facts.version} already exists`);
+  const belowProduction = checkAboveProduction(
+    facts.version,
+    facts.productionVersion,
+  );
+  if (belowProduction !== null) reasons.push(belowProduction);
+  return reasons;
 };
