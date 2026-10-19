@@ -62,7 +62,7 @@ description: "Task list for the one-command release (yarn release)"
 ## Phase 7: Polish and cross-cutting
 
 - [x] T015 [P] README: in `README.md`, section "Releases", replace steps 1 to 3 with `yarn release` usage (arguments, `--yes`, `--dry-run`), list what it waits for (`CI`, `E2E Android` about 20 minutes, `Deliver staging`), what it creates (branch, PR with auto-merge, annotated tag), how to resume (run the same command again), and that the manual checks of step 1 still come first. Keep the fallback manual tag command as a note. Run `yarn format:check`.
-- [ ] T016 Final checks from the repository root: `yarn typecheck`, `yarn lint`, `yarn format:check`, `yarn test`, `yarn test:architecture` all green; confirm no shell script was added (shellcheck not applicable); run the quickstart steps 2 to 4 by hand (refusals, dry run, decline); step 5 stays for the next real release. The Android device suite is run before pushing, per the Quality Gates, because `apps/delivery` and the root manifest change.
+- [x] T016 Final checks from the repository root: `yarn typecheck`, `yarn lint`, `yarn format:check`, `yarn test`, `yarn test:architecture` all green; confirm no shell script was added (shellcheck not applicable); run the quickstart steps 2 to 4 by hand (refusals, dry run, decline); step 5 stays for the next real release. The Android device suite is run before pushing, per the Quality Gates, because `apps/delivery` and the root manifest change.
 
 ## Dependencies and order
 
