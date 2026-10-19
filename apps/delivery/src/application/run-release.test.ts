@@ -1,6 +1,6 @@
 import type { ChannelManifest } from '../domain/manifest';
 import { REQUIRED_WORKFLOWS } from '../domain/release-rules';
-import type { RunOutcome } from '../domain/release-plan';
+import type { BumpPullRequest, RunOutcome } from '../domain/release-plan';
 import { runRelease, type ReleaseDeps } from './run-release';
 import {
   FakeSleep,
@@ -46,6 +46,7 @@ const openPr = {
   url: 'https://github.test/pull/1',
   mergeCommit: null,
   checksFailed: false,
+  autoMergeEnabled: true,
 };
 const mergedPr = { ...openPr, state: 'merged' as const, mergeCommit: 'sha-1' };
 
@@ -515,5 +516,252 @@ describe('runRelease', () => {
       });
       expect(recorder.calls.join('\n')).not.toMatch(/createTag|pushTag/);
     });
+  });
+
+  describe('resuming after an interruption (US4)', () => {
+    const target = { kind: 'version' as const, version: '1.3.0' };
+    const resume = { target, assumeYes: true };
+    const creating = (calls: string[]) =>
+      calls.filter((call) => /commitBump|\.open |createTag/.test(call));
+
+    it('reuses an open pull request with auto-merge: no second PR or commit (4.1)', async () => {
+      const { deps, pullRequests, recorder } = setup();
+      pullRequests.scriptFound([openPr]);
+
+      const result = await runRelease(deps, resume);
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(mutations(recorder.calls)).toEqual([
+        'ReleaseRepository.createTag v1.3.0 sha-1',
+        'ReleaseRepository.pushTag v1.3.0',
+      ]);
+    });
+
+    it('enables auto-merge once on an open pull request that lacks it', async () => {
+      const { deps, pullRequests, recorder } = setup();
+      pullRequests.scriptFound([{ ...openPr, autoMergeEnabled: false }]);
+
+      await runRelease(deps, resume);
+
+      expect(
+        recorder.calls.filter((call) => call.includes('enableAutoMerge')),
+      ).toEqual([
+        'ReleasePullRequests.enableAutoMerge https://github.test/pull/1',
+      ]);
+      expect(creating(recorder.calls)).toEqual([
+        'ReleaseRepository.createTag v1.3.0 sha-1',
+      ]);
+    });
+
+    it('goes to the runs when the bump is already on origin/main (4.2)', async () => {
+      const { deps, repository, pullRequests, recorder, landBump } = setup();
+      landBump();
+      pullRequests.scriptFound([mergedPr]);
+
+      const result = await runRelease(deps, resume);
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(mutations(recorder.calls)).toEqual([
+        'ReleaseRepository.createTag v1.3.0 sha-1',
+        'ReleaseRepository.pushTag v1.3.0',
+      ]);
+      expect(repository.tags.get('v1.3.0')).toEqual({
+        local: 'sha-1',
+        remote: 'sha-1',
+      });
+    });
+
+    it('only pushes a tag that was created but not pushed', async () => {
+      const { deps, repository, recorder, output, landBump } = setup();
+      landBump();
+      repository.tags.set('v1.3.0', { local: 'sha-1', remote: null });
+
+      const result = await runRelease(deps, resume);
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(mutations(recorder.calls)).toEqual([
+        'ReleaseRepository.pushTag v1.3.0',
+      ]);
+      expect(output.lines).toContain('pushed v1.3.0 on sha-1');
+    });
+
+    it('reports an already tagged release and creates nothing (4.3)', async () => {
+      const { deps, repository, recorder, output, landBump } = setup();
+      landBump();
+      repository.tags.set('v1.3.0', { local: 'sha-1', remote: 'sha-1' });
+
+      const result = await runRelease(deps, resume);
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(output.lines).toContain('v1.3.0 is already released');
+      expect(mutations(recorder.calls)).toEqual([]);
+    });
+
+    it('refuses a tag that is on another commit', async () => {
+      const { deps, repository, recorder, landBump } = setup();
+      landBump();
+      repository.tags.set('v1.3.0', { local: null, remote: 'other' });
+
+      const result = await runRelease(deps, resume);
+
+      expect(result).toMatchObject({
+        outcome: 'stopped',
+        message: expect.stringContaining('other'),
+      });
+      expect(mutations(recorder.calls)).toEqual([]);
+    });
+
+    it('resumes from a main that is behind origin/main once the bump merged', async () => {
+      const { deps, repository, landBump } = setup();
+      landBump();
+      repository.upToDate = false;
+
+      const result = await runRelease(deps, resume);
+
+      expect(result).toEqual({ outcome: 'released' });
+    });
+  });
+});
+
+/**
+ * A small stateful world, so that an interrupted run can be rerun against what the first run left
+ * behind. The effects list holds each change that really happened; a second PR, a second auto-merge
+ * or a second tag throws, like a duplicate would in the real world.
+ */
+const world = () => {
+  const effects: string[] = [];
+  const state = {
+    main: '1.2.0',
+    branchPushed: false,
+    pr: null as null | { autoMerge: boolean; merged: boolean },
+    localTag: null as string | null,
+    remoteTag: null as string | null,
+    runPolls: 0,
+    crashAfter: Infinity,
+  };
+  const effect = (name: string) => {
+    effects.push(name);
+    if (effects.length >= state.crashAfter) throw new Error('interrupted');
+  };
+  const pull = (): BumpPullRequest | null =>
+    state.pr === null
+      ? null
+      : {
+          state: state.pr.merged ? 'merged' : 'open',
+          url: 'https://github.test/pull/1',
+          mergeCommit: state.pr.merged ? 'sha-1' : null,
+          checksFailed: false,
+          autoMergeEnabled: state.pr.autoMerge,
+        };
+  const deps: ReleaseDeps = {
+    repository: {
+      currentBranch: async () => 'main',
+      isClean: async () => true,
+      fetch: async () => undefined,
+      isUpToDate: async () => true,
+      appVersionAt: async (ref) =>
+        ref === 'sha-1'
+          ? '1.3.0'
+          : ref === 'origin/main'
+            ? state.main
+            : '1.2.0',
+      tagCommit: async () => ({
+        local: state.localTag,
+        remote: state.remoteTag,
+      }),
+      async commitBump() {
+        // Like the real adapter: a branch already pushed is left alone.
+        if (state.branchPushed) return;
+        state.branchPushed = true;
+        effect('commit');
+      },
+      async createTag(_tag, sha) {
+        if (state.localTag !== null) throw new Error('second tag');
+        state.localTag = sha;
+        effect('tag');
+      },
+      async pushTag() {
+        if (state.remoteTag !== null) throw new Error('second tag push');
+        state.remoteTag = state.localTag;
+        effect('push-tag');
+      },
+      releaseCommit: async () => (state.main === '1.3.0' ? 'sha-1' : null),
+    },
+    pullRequests: {
+      findBump: async () => pull(),
+      async open() {
+        if (state.pr !== null) throw new Error('second pull request');
+        state.pr = { autoMerge: false, merged: false };
+        effect('open');
+        return pull() as BumpPullRequest;
+      },
+      async enableAutoMerge() {
+        if (state.pr?.autoMerge) throw new Error('second auto-merge');
+        if (state.pr) state.pr.autoMerge = true;
+        effect('auto-merge');
+      },
+    },
+    runs: {
+      async requiredRuns() {
+        state.runPolls += 1;
+        return runs(state.runPolls < 2 ? 'pending' : 'success');
+      },
+      releaseRunUrl: async () => 'https://github.test/actions/runs/release',
+    },
+    source: new InMemoryChannelSource(),
+    prompter: new ScriptedPrompter(),
+    output: new RecordedOutput(),
+    async sleep() {
+      // Auto-merge lands the bump during the wait.
+      if (state.pr?.autoMerge) {
+        state.pr.merged = true;
+        state.main = '1.3.0';
+      }
+    },
+  };
+  return { deps, state, effects };
+};
+
+describe('runRelease interrupted at every step (SC-004)', () => {
+  const request = {
+    target: { kind: 'version' as const, version: '1.3.0' },
+    assumeYes: true,
+  };
+  const HAPPY = ['commit', 'open', 'auto-merge', 'tag', 'push-tag'];
+
+  /** The explicit version 1.3.0 is higher than main 1.2.0 on the first run, equal after the merge. */
+  it('does the five changes exactly once in one uninterrupted run', async () => {
+    const { deps, effects } = world();
+
+    expect(await runRelease(deps, request)).toEqual({ outcome: 'released' });
+    expect(effects).toEqual(HAPPY);
+  });
+
+  it.each([1, 2, 3, 4, 5])(
+    'makes the same five changes in total when interrupted after change %i',
+    async (crashAfter) => {
+      const { deps, state, effects } = world();
+      state.crashAfter = crashAfter;
+
+      const first = await runRelease(deps, request);
+      expect(first.outcome).toBe('stopped');
+
+      state.crashAfter = Infinity;
+      expect(await runRelease(deps, request)).toEqual({ outcome: 'released' });
+      expect(effects).toEqual(HAPPY);
+      expect(state.remoteTag).toBe('sha-1');
+    },
+  );
+
+  it('survives an interruption at every change in a row', async () => {
+    const { deps, state, effects } = world();
+    for (let crashAfter = 1; crashAfter <= 5; crashAfter += 1) {
+      state.crashAfter = crashAfter;
+      await runRelease(deps, request);
+    }
+    state.crashAfter = Infinity;
+
+    expect(await runRelease(deps, request)).toEqual({ outcome: 'released' });
+    expect(effects).toEqual(HAPPY);
   });
 });

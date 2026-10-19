@@ -84,6 +84,7 @@ export type BumpPullRequest = {
   url: string;
   mergeCommit: string | null;
   checksFailed: boolean;
+  autoMergeEnabled: boolean;
 };
 
 /** What the world looks like right now; observed on every run, never stored. */
@@ -104,6 +105,8 @@ export type ReleaseState = {
 export type ReleaseStep =
   | { step: 'done' }
   | { step: 'tag' }
+  | { step: 'push-tag' }
+  | { step: 'enable-auto-merge' }
   | { step: 'wait-runs' }
   | { step: 'wait-merge' }
   | { step: 'open-bump' }
@@ -120,9 +123,10 @@ export const decideStep = (
   const tag = `v${version}`;
   const existing = state.remoteTag ?? state.localTag;
   if (existing !== null) {
-    return existing === state.releaseCommit
-      ? { step: 'done' }
-      : { step: 'stop-tag-elsewhere', tag, commit: existing };
+    if (existing !== state.releaseCommit)
+      return { step: 'stop-tag-elsewhere', tag, commit: existing };
+    // Created locally but never pushed: only the push is left.
+    return { step: state.remoteTag === null ? 'push-tag' : 'done' };
   }
 
   // The bump is on main once a commit of main set the version, even if main moved on since.
@@ -143,6 +147,7 @@ export const decideStep = (
   if (pr.state === 'merged') return { step: 'wait-runs' };
   if (pr.state === 'closed') return { step: 'stop-pr-closed', url: pr.url };
   if (pr.checksFailed) return { step: 'stop-pr-failed', url: pr.url };
+  if (!pr.autoMergeEnabled) return { step: 'enable-auto-merge' };
   return { step: 'wait-merge' };
 };
 

@@ -405,6 +405,7 @@ export class InMemoryReleasePullRequests implements ReleasePullRequests {
       url: `https://github.test/pull/1`,
       mergeCommit: null,
       checksFailed: false,
+      autoMergeEnabled: false,
     };
   }
   async enableAutoMerge(pr: BumpPullRequest) {

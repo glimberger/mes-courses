@@ -138,6 +138,7 @@ const pr = (patch: Partial<NonNullable<ReleaseState['bumpPr']>> = {}) => ({
   url: 'https://example.test/pull/1',
   mergeCommit: null,
   checksFailed: false,
+  autoMergeEnabled: true,
   ...patch,
 });
 
@@ -162,6 +163,12 @@ describe('decideStep', () => {
       step: 'stop-tag-elsewhere',
       tag: 'v1.3.0',
       commit: OTHER,
+    });
+  });
+
+  it('pushes the tag when it exists only locally, on the release commit', () => {
+    expect(decideStep('1.3.0', { ...landed, localTag: SHA })).toEqual({
+      step: 'push-tag',
     });
   });
 
@@ -216,6 +223,21 @@ describe('decideStep', () => {
 
   it('waits for an open pull request', () => {
     expect(decideStep('1.3.0', before(pr()))).toEqual({ step: 'wait-merge' });
+  });
+
+  it('enables auto-merge on an open pull request that lacks it', () => {
+    expect(
+      decideStep('1.3.0', before(pr({ autoMergeEnabled: false }))),
+    ).toEqual({ step: 'enable-auto-merge' });
+  });
+
+  it('stops on failed checks before enabling auto-merge', () => {
+    expect(
+      decideStep(
+        '1.3.0',
+        before(pr({ autoMergeEnabled: false, checksFailed: true })),
+      ),
+    ).toMatchObject({ step: 'stop-pr-failed' });
   });
 
   it('stops when the checks of the pull request failed', () => {

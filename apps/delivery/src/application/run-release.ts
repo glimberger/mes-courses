@@ -55,6 +55,7 @@ type Steps = {
   openPullRequest(branch: string, title: string): Promise<BumpPullRequest>;
   enableAutoMerge(pr: BumpPullRequest): Promise<void>;
   tag(tag: string, sha: string | null): Promise<void>;
+  pushTag(tag: string): Promise<void>;
 };
 
 const realSteps = (deps: ReleaseDeps): Steps => ({
@@ -66,6 +67,7 @@ const realSteps = (deps: ReleaseDeps): Steps => ({
     await deps.repository.createTag(tag, sha);
     await deps.repository.pushTag(tag);
   },
+  pushTag: (tag) => deps.repository.pushTag(tag),
 });
 
 const wouldSteps = (output: Output): Steps => ({
@@ -79,6 +81,7 @@ const wouldSteps = (output: Output): Steps => ({
       url: '(pull request not opened)',
       mergeCommit: null,
       checksFailed: false,
+      autoMergeEnabled: false,
     };
   },
   async enableAutoMerge() {
@@ -87,11 +90,15 @@ const wouldSteps = (output: Output): Steps => ({
   async tag(tag) {
     output.line(`would tag ${tag} on the bump commit and push the tag`);
   },
+  async pushTag(tag) {
+    output.line(`would push the tag ${tag}`);
+  },
 });
 
 /** What a dry run assumes happens after each step, since it does not wait for it. */
 const NEXT_STEP: Partial<Record<ReleaseStep['step'], ReleaseStep>> = {
   'open-bump': { step: 'wait-merge' },
+  'enable-auto-merge': { step: 'wait-merge' },
   'wait-merge': { step: 'wait-runs' },
   'wait-runs': { step: 'tag' },
 };
@@ -233,10 +240,11 @@ const execute = async (
 
   let waitingFor: ReleaseStep['step'] | null = null;
   let waitedMs = 0;
+  let autoMergeAsked = false;
   let assumed: ReleaseStep | null = null;
   for (;;) {
     const state = await observe(deps, version, branch);
-    const step: ReleaseStep = assumed ?? decideStep(version, state);
+    let step: ReleaseStep = assumed ?? decideStep(version, state);
     if (dryRun) assumed = NEXT_STEP[step.step] ?? null;
 
     const message = stopMessage(step);
@@ -262,6 +270,25 @@ const execute = async (
       if (!dryRun) output.line(`bump pull request: ${pr.url}`);
       waitingFor = null;
       continue;
+    }
+
+    if (step.step === 'enable-auto-merge') {
+      // Asked once per run: if GitHub does not report it back, wait for the merge instead of looping.
+      if (!autoMergeAsked && state.bumpPr !== null) {
+        autoMergeAsked = true;
+        await steps.enableAutoMerge(state.bumpPr);
+        continue;
+      }
+      step = { step: 'wait-merge' };
+    }
+
+    if (step.step === 'push-tag') {
+      const sha = state.releaseCommit;
+      await steps.pushTag(tag);
+      output.line(`pushed ${tag} on ${sha}`);
+      if (sha !== null && !dryRun)
+        output.line(`Release run: ${await runs.releaseRunUrl(sha)}`);
+      return { outcome: 'released' };
     }
 
     if (step.step === 'tag') {

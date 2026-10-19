@@ -31,6 +31,7 @@ const pr = (
   url: `https://github.com/o/r/pull/${number}`,
   mergeCommit: null,
   statusCheckRollup: [],
+  autoMergeRequest: null,
   ...extra,
 });
 
@@ -52,7 +53,7 @@ describe('github release pull requests', () => {
         '--state',
         'all',
         '--json',
-        'number,state,url,mergeCommit,statusCheckRollup',
+        'number,state,url,mergeCommit,statusCheckRollup,autoMergeRequest',
       ],
       cwd: '/repo',
     });
@@ -75,7 +76,22 @@ describe('github release pull requests', () => {
       url: 'https://github.com/o/r/pull/2',
       mergeCommit: null,
       checksFailed: false,
+      autoMergeEnabled: false,
     });
+  });
+
+  it('tells whether auto-merge is already enabled on the pull request', async () => {
+    const { runner } = scripted([
+      {
+        stdout: JSON.stringify([
+          pr(2, 'OPEN', { autoMergeRequest: { mergeMethod: 'SQUASH' } }),
+        ]),
+      },
+    ]);
+    expect(
+      (await createGithubReleasePullRequests(runner, '/repo').findBump(BRANCH))
+        ?.autoMergeEnabled,
+    ).toBe(true);
   });
 
   it('else takes the merged one, with its merge commit', async () => {
@@ -94,6 +110,7 @@ describe('github release pull requests', () => {
       url: 'https://github.com/o/r/pull/3',
       mergeCommit: 'abc',
       checksFailed: false,
+      autoMergeEnabled: false,
     });
   });
 
@@ -165,6 +182,7 @@ describe('github release pull requests', () => {
       url: 'https://github.com/o/r/pull/9',
       mergeCommit: null,
       checksFailed: false,
+      autoMergeEnabled: false,
     });
     expect(calls[0].args).toEqual([
       'pr',

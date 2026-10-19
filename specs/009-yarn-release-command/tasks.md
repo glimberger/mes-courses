@@ -57,7 +57,7 @@ description: "Task list for the one-command release (yarn release)"
 **Goal**: rerunning with the same version continues at the next step with no duplicate PR or commit.
 **Independent test**: start the use case in each of the states (PR open, bump merged, runs green, tag exists) and assert only the remaining steps run.
 
-- [ ] T014 [US4] Use case: in `application/run-release.ts` and its test, drive the loop only from the observed state: PR already open -> reuse it (no second PR, no second commit, no second auto-merge enable if already on); remote branch `chore/release-X.Y.Z` exists -> reuse it; bump already on `origin/main` -> no commit, go to the runs; tag exists on the right commit -> print "already tagged" and create nothing, exit 0 (4.1 to 4.3, SC-004); tag exists on another commit -> refuse. Add a table test that interrupts after each step of the happy path and reruns, asserting the total mutating calls equal one uninterrupted run.
+- [x] T014 [US4] Use case: in `application/run-release.ts` and its test, drive the loop only from the observed state: PR already open -> reuse it (no second PR, no second commit, no second auto-merge enable if already on); remote branch `chore/release-X.Y.Z` exists -> reuse it; bump already on `origin/main` -> no commit, go to the runs; tag exists on the right commit -> print "already tagged" and create nothing, exit 0 (4.1 to 4.3, SC-004); tag exists on another commit -> refuse. Add a table test that interrupts after each step of the happy path and reruns, asserting the total mutating calls equal one uninterrupted run.
 
 ## Phase 7: Polish and cross-cutting
 

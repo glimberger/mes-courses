@@ -10,6 +10,7 @@ type GhPullRequest = {
   url: string;
   mergeCommit: { oid: string } | null;
   statusCheckRollup: { conclusion?: string }[] | null;
+  autoMergeRequest?: object | null;
 };
 
 const toBump = (pr: GhPullRequest): BumpPullRequest => ({
@@ -20,6 +21,7 @@ const toBump = (pr: GhPullRequest): BumpPullRequest => ({
   checksFailed: (pr.statusCheckRollup ?? []).some((check) =>
     FAILED_CONCLUSIONS.includes(check.conclusion ?? ''),
   ),
+  autoMergeEnabled: pr.autoMergeRequest != null,
 });
 
 /** The pull request of a release bump, through `gh` run in the repository at `cwd`. */
@@ -49,7 +51,7 @@ export const createGithubReleasePullRequests = (
       '--state',
       'all',
       '--json',
-      'number,state,url,mergeCommit,statusCheckRollup',
+      'number,state,url,mergeCommit,statusCheckRollup,autoMergeRequest',
     ]);
     const all = (JSON.parse(out) as GhPullRequest[]).map(toBump);
     // Open first, then merged; a closed one is reported so that the run can stop on it.
