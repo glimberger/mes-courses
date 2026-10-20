@@ -82,6 +82,7 @@ The maintainer may interrupt the command (for example Ctrl-C during the 20-minut
 - The app version on the remote main branch changes between the confirmation and the bump (another release landed): the command detects it and stops rather than bumping from a stale base.
 - The branch `chore/release-X.Y.Z` already exists on the remote: it is reused, not recreated.
 - The bump pull request is closed without merging: the command stops and reports it.
+- A bump pull request closed (and its branch deleted) before the command started is treated as abandoned and the command starts over; one closed while the command is running, or that the command opened itself, stops it and is never reopened.
 - The bump pull request was merged but its commit is no longer on `origin/main` (reverted): the command stops and reports it, instead of waiting for runs that will never come.
 - The network or the GitHub API is unavailable mid-run: the command stops with a message and can be resumed.
 - Another commit lands on main after the bump: the tag goes on the bump commit, not on the new head, and the gate is evaluated for that commit.

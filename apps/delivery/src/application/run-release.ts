@@ -155,7 +155,10 @@ const createObserver = (deps: ReleaseDeps, version: string, branch: string) => {
   let tags: { local: string | null; remote: string | null } | undefined;
   let production: { version: string | null } | undefined;
   let found: string | null = null;
-  return async (): Promise<ReleaseState> => {
+  // Once this run has seen the pull request (or opened it), a closed one is a decision made while
+  // it waited: it stops the run instead of being reopened.
+  let seenPr = false;
+  const observe = async (): Promise<ReleaseState> => {
     await repository.fetch();
     const mainVersion = await repository.appVersionAt('origin/main');
     tags ??= await repository.tagCommit(`v${version}`);
@@ -167,12 +170,14 @@ const createObserver = (deps: ReleaseDeps, version: string, branch: string) => {
       await repository.fetch();
       currentMain = await repository.appVersionAt('origin/main');
     }
-    // A closed pull request whose branch is gone was abandoned on purpose: start over.
+    // A closed pull request whose branch is gone was abandoned before this run: start over.
     if (
+      !seenPr &&
       bumpPr?.state === 'closed' &&
       !(await repository.remoteBranchExists(branch))
     )
       bumpPr = null;
+    if (bumpPr !== null) seenPr = true;
     if (found === null && compareSemver(currentMain, version) >= 0)
       found = await repository.releaseCommit(version);
     return {
@@ -185,6 +190,12 @@ const createObserver = (deps: ReleaseDeps, version: string, branch: string) => {
       productionVersion: production.version,
     };
   };
+  return Object.assign(observe, {
+    /** The run opened the pull request itself: a closure from now on is not a leftover. */
+    openedBump: () => {
+      seenPr = true;
+    },
+  });
 };
 
 /** True when the version on main has no tag and is above production: a release left unfinished. */
@@ -331,6 +342,7 @@ const execute = async (
       );
       await steps.enableAutoMerge(pr);
       autoMergeAsked = true;
+      observe.openedBump();
       if (!dryRun) output.line(`bump pull request: ${pr.url}`);
       waitingFor = null;
       continue;

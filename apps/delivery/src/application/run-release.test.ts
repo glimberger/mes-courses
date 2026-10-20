@@ -494,6 +494,39 @@ describe('runRelease', () => {
       );
     });
 
+    it('stops, and does not reopen it, when the pull request is closed with its branch while the run waits', async () => {
+      const { deps, pullRequests, recorder } = setup();
+      // The bump never lands: the pull request is closed during the wait.
+      deps.sleep = async () => undefined;
+      pullRequests.scriptFound([null, openPr, { ...openPr, state: 'closed' }]);
+
+      const result = await runRelease(deps, minor);
+
+      expect(result).toMatchObject({
+        outcome: 'stopped',
+        message: expect.stringContaining(openPr.url),
+      });
+      expect(
+        recorder.calls.filter((call) =>
+          call.startsWith('ReleaseRepository.commitBump'),
+        ),
+      ).toHaveLength(1);
+    });
+
+    it('stops when the pull request this run opened is closed with its branch', async () => {
+      const { deps, pullRequests, recorder } = setup();
+      pullRequests.scriptFound([null, { ...openPr, state: 'closed' }]);
+
+      const result = await runRelease(deps, minor);
+
+      expect(result.outcome).toBe('stopped');
+      expect(
+        recorder.calls.filter((call) =>
+          call.startsWith('ReleaseRepository.commitBump'),
+        ),
+      ).toHaveLength(1);
+    });
+
     it('tags once the pending runs have succeeded (3.2)', async () => {
       const { deps, releaseRuns, recorder, fakeSleep } = setup();
       releaseRuns.scriptRuns([
