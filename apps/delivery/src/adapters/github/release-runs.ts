@@ -3,8 +3,8 @@ import type { ReleaseRuns } from '../../application/ports/release-runs';
 import type { Sleep } from '../../application/ports/sleep';
 import type { RunOutcome } from '../../domain/release-plan';
 import { REQUIRED_WORKFLOWS } from '../../domain/release-rules';
+import { createGh } from './gh';
 
-const GH_LIMIT_MS = 60_000;
 const RELEASE_POLL_MS = 3_000;
 const RELEASE_POLL_TRIES = 10;
 
@@ -16,18 +16,7 @@ export const createGithubReleaseRuns = (
   cwd: string,
   sleep: Sleep,
 ): ReleaseRuns => {
-  const gh = async (args: string[]): Promise<string> => {
-    const result = await runner.run('gh', args, {
-      cwd,
-      timeoutMs: GH_LIMIT_MS,
-    });
-    if (result.exitCode !== 0) {
-      throw new Error(
-        `gh ${args[0]} ${args[1]} failed (${result.exitCode}): ${result.stderr.trim()}`,
-      );
-    }
-    return result.stdout;
-  };
+  const gh = createGh(runner, cwd);
 
   /** The runs of a workflow on a commit, newest first. */
   const listRuns = async (sha: string, workflow: string): Promise<GhRun[]> =>
@@ -47,24 +36,28 @@ export const createGithubReleaseRuns = (
     ) as GhRun[];
 
   return {
-    async requiredRuns(sha) {
-      const outcomes: RunOutcome[] = [];
-      for (const workflow of REQUIRED_WORKFLOWS) {
-        const [newest] = await listRuns(sha, workflow);
-        if (newest === undefined) {
-          outcomes.push({ workflow, state: 'pending', url: null });
-          continue;
-        }
-        const state =
-          newest.status !== 'completed'
-            ? 'pending'
-            : newest.conclusion === 'success'
-              ? 'success'
-              : 'failed';
-        outcomes.push({ workflow, state, url: newest.url });
-      }
-      return outcomes;
-    },
+    /**
+     * The rule of the Release gate (`run-history`): a workflow passes as soon as one of its runs on
+     * the commit succeeded, so a later re-run that fails does not undo it.
+     */
+    requiredRuns: (sha) =>
+      Promise.all(
+        REQUIRED_WORKFLOWS.map(async (workflow): Promise<RunOutcome> => {
+          const list = await listRuns(sha, workflow);
+          const succeeded = list.find(
+            (run) => run.status === 'completed' && run.conclusion === 'success',
+          );
+          if (succeeded !== undefined)
+            return { workflow, state: 'success', url: succeeded.url };
+          const [newest] = list;
+          if (newest === undefined)
+            return { workflow, state: 'pending', url: null };
+          const open = list.find((run) => run.status !== 'completed');
+          return open !== undefined
+            ? { workflow, state: 'pending', url: open.url }
+            : { workflow, state: 'failed', url: newest.url };
+        }),
+      ),
 
     async releaseRunUrl(sha) {
       for (let attempt = 0; attempt < RELEASE_POLL_TRIES; attempt += 1) {

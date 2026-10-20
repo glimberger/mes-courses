@@ -1,15 +1,23 @@
 import type { CommandRunner } from '../../application/ports/command-runner';
 import type { ReleasePullRequests } from '../../application/ports/release-pull-requests';
 import type { BumpPullRequest } from '../../domain/release-plan';
+import { createGh } from './gh';
 
-const GH_LIMIT_MS = 60_000;
-const FAILED_CONCLUSIONS = ['FAILURE', 'TIMED_OUT', 'STARTUP_FAILURE'];
+const FAILED_CONCLUSIONS = [
+  'FAILURE',
+  'TIMED_OUT',
+  'STARTUP_FAILURE',
+  'CANCELLED',
+  'ACTION_REQUIRED',
+];
+// A commit status (not a check run) has a `state` and no `conclusion`.
+const FAILED_STATES = ['FAILURE', 'ERROR'];
 
 type GhPullRequest = {
   state: string;
   url: string;
   mergeCommit: { oid: string } | null;
-  statusCheckRollup: { conclusion?: string }[] | null;
+  statusCheckRollup: { conclusion?: string; state?: string }[] | null;
   autoMergeRequest?: object | null;
 };
 
@@ -18,8 +26,10 @@ const toBump = (pr: GhPullRequest): BumpPullRequest => ({
     pr.state === 'OPEN' ? 'open' : pr.state === 'MERGED' ? 'merged' : 'closed',
   url: pr.url,
   mergeCommit: pr.mergeCommit?.oid ?? null,
-  checksFailed: (pr.statusCheckRollup ?? []).some((check) =>
-    FAILED_CONCLUSIONS.includes(check.conclusion ?? ''),
+  checksFailed: (pr.statusCheckRollup ?? []).some(
+    (check) =>
+      FAILED_CONCLUSIONS.includes(check.conclusion ?? '') ||
+      FAILED_STATES.includes(check.state ?? ''),
   ),
   autoMergeEnabled: pr.autoMergeRequest != null,
 });
@@ -29,18 +39,7 @@ export const createGithubReleasePullRequests = (
   runner: CommandRunner,
   cwd: string,
 ): ReleasePullRequests => {
-  const gh = async (args: string[]): Promise<string> => {
-    const result = await runner.run('gh', args, {
-      cwd,
-      timeoutMs: GH_LIMIT_MS,
-    });
-    if (result.exitCode !== 0) {
-      throw new Error(
-        `gh ${args[0]} ${args[1]} failed (${result.exitCode}): ${result.stderr.trim()}`,
-      );
-    }
-    return result.stdout;
-  };
+  const gh = createGh(runner, cwd);
 
   const findBump = async (branch: string) => {
     const out = await gh([

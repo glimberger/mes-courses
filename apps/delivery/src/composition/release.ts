@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { setTimeout as sleepFor } from 'node:timers/promises';
 
 import { createGithubChannelSource } from '../adapters/github/channel-source';
+import { createGh } from '../adapters/github/gh';
 import { createGithubReleasePullRequests } from '../adapters/github/release-pull-requests';
 import { createGithubReleaseRuns } from '../adapters/github/release-runs';
 import { createGitReleaseRepository } from '../adapters/git/release-repository';
@@ -53,22 +54,6 @@ export const parseReleaseArgs = (argv: string[]): ReleaseCommand => {
 export const exitCodeOf = (result: ReleaseResult): 0 | 1 =>
   result.outcome === 'stopped' ? 1 : 0;
 
-const GH_LIMIT_MS = 30_000;
-
-const gh = async (
-  runner: CommandRunner,
-  cwd: string,
-  args: string[],
-): Promise<string> => {
-  const result = await runner.run('gh', args, { cwd, timeoutMs: GH_LIMIT_MS });
-  if (result.exitCode !== 0) {
-    throw new Error(
-      `gh ${args.slice(0, 2).join(' ')} failed: ${result.stderr.trim() || `exit ${result.exitCode}`}`,
-    );
-  }
-  return result.stdout.trim();
-};
-
 /**
  * The repository and the read token of the production channel: from the environment when set (CI),
  * else from the maintainer's `gh` session.
@@ -77,19 +62,23 @@ export const deriveGithubAccess = async (
   runner: CommandRunner,
   cwd: string,
   env: Record<string, string | undefined> = {},
-): Promise<{ repository: string; token: string }> => ({
-  repository:
-    env.GITHUB_REPOSITORY ||
-    (await gh(runner, cwd, [
-      'repo',
-      'view',
-      '--json',
-      'nameWithOwner',
-      '--jq',
-      '.nameWithOwner',
-    ])),
-  token: env.GITHUB_TOKEN || (await gh(runner, cwd, ['auth', 'token'])),
-});
+): Promise<{ repository: string; token: string }> => {
+  const gh = async (args: string[]) =>
+    (await createGh(runner, cwd)(args)).trim();
+  return {
+    repository:
+      env.GITHUB_REPOSITORY ||
+      (await gh([
+        'repo',
+        'view',
+        '--json',
+        'nameWithOwner',
+        '--jq',
+        '.nameWithOwner',
+      ])),
+    token: env.GITHUB_TOKEN || (await gh(['auth', 'token'])),
+  };
+};
 
 const ROOT = resolve(__dirname, '../../../..');
 

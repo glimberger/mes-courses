@@ -60,26 +60,25 @@ describe('github release runs', () => {
     ]);
   });
 
-  it('lets the newest run decide: success, failed, pending', async () => {
+  it('follows the Release gate: any successful run passes, else pending, else failed', async () => {
     const { runner } = scripted([
       {
         stdout: runs(
+          { status: 'completed', conclusion: 'failure', url: 'https://x/new' },
           { status: 'completed', conclusion: 'success', url: 'https://x/ci' },
-          { status: 'completed', conclusion: 'failure' },
         ),
       },
       {
         stdout: runs(
           { status: 'completed', conclusion: 'failure', url: 'https://x/e2e' },
-          { status: 'completed', conclusion: 'success' },
+          { status: 'completed', conclusion: 'cancelled' },
         ),
       },
       {
-        stdout: runs({
-          status: 'in_progress',
-          conclusion: '',
-          url: 'https://x/d',
-        }),
+        stdout: runs(
+          { status: 'in_progress', conclusion: '', url: 'https://x/d' },
+          { status: 'completed', conclusion: 'failure' },
+        ),
       },
     ]);
     expect(
@@ -89,6 +88,22 @@ describe('github release runs', () => {
       { workflow: 'E2E Android', state: 'failed', url: 'https://x/e2e' },
       { workflow: 'Deliver staging', state: 'pending', url: 'https://x/d' },
     ]);
+  });
+
+  it('looks the three workflows up at the same time', async () => {
+    let running = 0;
+    let peak = 0;
+    const runner: CommandRunner = {
+      async run() {
+        running += 1;
+        peak = Math.max(peak, running);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        running -= 1;
+        return { exitCode: 0, stdout: '[]', stderr: '', timedOut: false };
+      },
+    };
+    await createGithubReleaseRuns(runner, '/repo', sleep).requiredRuns(SHA);
+    expect(peak).toBe(3);
   });
 
   it('counts a workflow without a run as pending, without a link', async () => {

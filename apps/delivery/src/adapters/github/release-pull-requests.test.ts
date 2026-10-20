@@ -153,6 +153,37 @@ describe('github release pull requests', () => {
     expect((await adapter.findBump(BRANCH))?.checksFailed).toBe(false);
   });
 
+  it.each([
+    { conclusion: 'CANCELLED', status: 'COMPLETED' },
+    { conclusion: 'ACTION_REQUIRED', status: 'COMPLETED' },
+    { state: 'FAILURE' },
+    { state: 'ERROR' },
+  ])('flags the failed check %j', async (check) => {
+    const { runner } = scripted([
+      {
+        stdout: JSON.stringify([pr(2, 'OPEN', { statusCheckRollup: [check] })]),
+      },
+    ]);
+    expect(
+      (await createGithubReleasePullRequests(runner, '/repo').findBump(BRANCH))
+        ?.checksFailed,
+    ).toBe(true);
+  });
+
+  it('does not flag a pending commit status', async () => {
+    const { runner } = scripted([
+      {
+        stdout: JSON.stringify([
+          pr(2, 'OPEN', { statusCheckRollup: [{ state: 'PENDING' }] }),
+        ]),
+      },
+    ]);
+    expect(
+      (await createGithubReleasePullRequests(runner, '/repo').findBump(BRANCH))
+        ?.checksFailed,
+    ).toBe(false);
+  });
+
   it('opens a pull request, then reads it back', async () => {
     const { calls, runner } = scripted([
       { stdout: 'https://github.com/o/r/pull/9\n' },
