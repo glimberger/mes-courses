@@ -1,15 +1,3 @@
-<!--
-Sync Impact Report
-Version change: 2.5.0 -> 2.6.0 (MINOR: materially expanded guidance on where French text may live)
-Modified principles: X (French Interface, No Internationalization): a message-delivering driven
-  adapter, such as the server's email adapter, may hold the French text it sends
-Modified sections: none
-Migration note: no existing code changes; feature 004 puts its two French emails in the
-  server's adapters/mail/ and relies on this clause
-Added/removed sections: none
-Deferred TODOs: none
--->
-
 # Mes Courses Constitution
 
 ## Core Principles
@@ -241,6 +229,10 @@ workspace, a shared package, the end-to-end tests or the root toolchain (package
 lockfile, the Nix flake, the shared TypeScript, lint and format configuration, the CI workflow)
 is not documentation-only.
 
+A **release-bump pull request** changes nothing but the application's `version` value in
+`apps/mobile/app.config.ts`, the semantic version set by hand before a release. It is not
+documentation-only, but a version string changes no journey the device suite drives.
+
 Before any commit:
 
 - The fast suite is green; no test is skipped or disabled without a linked, documented reason.
@@ -283,11 +275,13 @@ Continuous integration is blocking for every pull request:
   directly.
 - A pull request MUST NOT be merged while any automatic CI job is failing, pending or skipped.
   A pull request that is not documentation-only MUST NOT be merged unless a run of the Android
-  device suite in CI is green on its latest commit. The repository is private on a GitHub plan
+  device suite in CI is green on its latest commit, unless it is a release-bump pull request:
+  its diff (for example `gh pr diff`) MUST show the `version` line as its only change, and the
+  device suite still runs on the default branch once it is merged. The repository is private on a GitHub plan
   without branch protection, so GitHub cannot enforce these rules: whoever merges (the
   maintainer or an agent) checks the CI status of the pull request (for example with
   `gh pr checks`) and the device suite run of its latest commit right before merging, and no
-  one makes an exception.
+  one makes an exception beyond the release-bump exemption.
 - If the repository gains branch protection (a paid plan or a public repository), the CI jobs
   become required status checks on the default branch, with no exception, administrators
   included.
@@ -331,4 +325,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 2.6.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-12
+**Version**: 2.7.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-19
