@@ -20,6 +20,13 @@ import type { ServiceManager } from '../ports/service-manager';
 import type { SignatureVerifier } from '../ports/signature-verifier';
 import type { Signer } from '../ports/signer';
 import { StateCorruptError, type StateStore } from '../ports/state-store';
+import type { BumpPullRequest, RunOutcome } from '../../domain/release-plan';
+import type { Output } from '../ports/output';
+import type { Prompter } from '../ports/prompter';
+import type { ReleasePullRequests } from '../ports/release-pull-requests';
+import type { ReleaseRepository } from '../ports/release-repository';
+import type { ReleaseRuns } from '../ports/release-runs';
+import type { Sleep } from '../ports/sleep';
 import { Recorder } from './recorder';
 
 /** Each double records `Port.method args` in the shared recorder and can be scripted to fail. */
@@ -302,5 +309,169 @@ export class ScriptedCommandRunner implements CommandRunner {
       timedOut: false,
       ...this.results.shift(),
     };
+  }
+}
+
+/** A sequence of answers: each call returns the next one, the last one repeats. */
+export const scripted = <T>(steps: T[]): (() => T) => {
+  let index = 0;
+  return () => {
+    if (steps.length === 0) throw new Error('No scripted step');
+    const step = steps[Math.min(index, steps.length - 1)];
+    index += 1;
+    return step as T;
+  };
+};
+
+export class InMemoryReleaseRepository implements ReleaseRepository {
+  branch = 'main';
+  clean = true;
+  upToDate = true;
+  /** App version per ref; defaults to `1.2.0` for any ref. */
+  readonly appVersions = new Map<string, string>();
+  readonly tags = new Map<
+    string,
+    { local: string | null; remote: string | null }
+  >();
+  /** Successive answers of `releaseCommit`; null until the bump lands. */
+  releaseCommits: (string | null)[] = [null];
+  private nextReleaseCommit = scripted(this.releaseCommits);
+  constructor(private readonly recorder = new Recorder()) {}
+  scriptReleaseCommits(commits: (string | null)[]) {
+    this.releaseCommits = commits;
+    this.nextReleaseCommit = scripted(commits);
+  }
+  async currentBranch() {
+    this.recorder.record('ReleaseRepository.currentBranch');
+    return this.branch;
+  }
+  async isClean() {
+    this.recorder.record('ReleaseRepository.isClean');
+    return this.clean;
+  }
+  async fetch() {
+    this.recorder.record('ReleaseRepository.fetch');
+  }
+  async isUpToDate() {
+    this.recorder.record('ReleaseRepository.isUpToDate');
+    return this.upToDate;
+  }
+  async appVersionAt(ref: string) {
+    this.recorder.record('ReleaseRepository.appVersionAt', ref);
+    return this.appVersions.get(ref) ?? '1.2.0';
+  }
+  /** Branches present on the remote; empty by default. */
+  readonly remoteBranches = new Set<string>();
+  async remoteBranchExists(branch: string) {
+    this.recorder.record('ReleaseRepository.remoteBranchExists', branch);
+    return this.remoteBranches.has(branch);
+  }
+  async tagCommit(tag: string) {
+    this.recorder.record('ReleaseRepository.tagCommit', tag);
+    return this.tags.get(tag) ?? { local: null, remote: null };
+  }
+  async commitBump(version: string, branch: string) {
+    this.recorder.record('ReleaseRepository.commitBump', version, branch);
+  }
+  async createTag(tag: string, commit: string) {
+    this.recorder.record('ReleaseRepository.createTag', tag, commit);
+    this.tags.set(tag, {
+      local: commit,
+      remote: this.tags.get(tag)?.remote ?? null,
+    });
+  }
+  async pushTag(tag: string) {
+    this.recorder.record('ReleaseRepository.pushTag', tag);
+    const current = this.tags.get(tag) ?? { local: null, remote: null };
+    this.tags.set(tag, { ...current, remote: current.local });
+  }
+  async releaseCommit(version: string) {
+    this.recorder.record('ReleaseRepository.releaseCommit', version);
+    return this.nextReleaseCommit();
+  }
+}
+
+export class InMemoryReleasePullRequests implements ReleasePullRequests {
+  /** Successive answers of `findBump`; the last one repeats. */
+  found: (BumpPullRequest | null)[] = [null];
+  private nextFound = scripted(this.found);
+  constructor(private readonly recorder = new Recorder()) {}
+  scriptFound(steps: (BumpPullRequest | null)[]) {
+    this.found = steps;
+    this.nextFound = scripted(steps);
+  }
+  async findBump(branch: string) {
+    this.recorder.record('ReleasePullRequests.findBump', branch);
+    return this.nextFound();
+  }
+  async open(branch: string, title: string) {
+    this.recorder.record('ReleasePullRequests.open', branch, title);
+    return {
+      state: 'open' as const,
+      url: `https://github.test/pull/1`,
+      mergeCommit: null,
+      checksFailed: false,
+      autoMergeEnabled: false,
+    };
+  }
+  async enableAutoMerge(pr: BumpPullRequest) {
+    this.recorder.record('ReleasePullRequests.enableAutoMerge', pr.url);
+  }
+}
+
+export class InMemoryReleaseRuns implements ReleaseRuns {
+  /** Successive answers of `requiredRuns`; the last one repeats. */
+  runs: RunOutcome[][] = [[]];
+  releaseUrl = 'https://github.test/actions/runs/release';
+  private nextRuns = scripted(this.runs);
+  constructor(private readonly recorder = new Recorder()) {}
+  scriptRuns(steps: RunOutcome[][]) {
+    this.runs = steps;
+    this.nextRuns = scripted(steps);
+  }
+  async requiredRuns(commit: string) {
+    this.recorder.record('ReleaseRuns.requiredRuns', commit);
+    return this.nextRuns();
+  }
+  async releaseRunUrl(commit: string) {
+    this.recorder.record('ReleaseRuns.releaseRunUrl', commit);
+    return this.releaseUrl;
+  }
+}
+
+export class ScriptedPrompter implements Prompter {
+  readonly questions: string[] = [];
+  constructor(
+    private readonly answers: string[] = [],
+    private readonly confirmations: boolean[] = [],
+  ) {}
+  async ask(question: string) {
+    this.questions.push(question);
+    const answer = this.answers.shift();
+    if (answer === undefined)
+      throw new Error(`No scripted answer: ${question}`);
+    return answer;
+  }
+  async confirm(question: string) {
+    this.questions.push(question);
+    const answer = this.confirmations.shift();
+    if (answer === undefined)
+      throw new Error(`No scripted answer: ${question}`);
+    return answer;
+  }
+}
+
+export class FakeSleep {
+  readonly durations: number[] = [];
+  /** Bound so it can be passed as a `Sleep`. */
+  readonly sleep: Sleep = async (ms) => {
+    this.durations.push(ms);
+  };
+}
+
+export class RecordedOutput implements Output {
+  readonly lines: string[] = [];
+  line(text: string) {
+    this.lines.push(text);
   }
 }

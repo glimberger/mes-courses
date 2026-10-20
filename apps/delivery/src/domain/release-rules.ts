@@ -23,6 +23,15 @@ export const tagVersion = (tag: string): string | null => {
   return match === null ? null : `${match[1]}.${match[2]}.${match[3]}`;
 };
 
+/** The failure when `version` is not above what production already runs, else null. */
+export const checkAboveProduction = (
+  version: string,
+  productionVersion: string | null,
+): string | null =>
+  productionVersion !== null && compareSemver(version, productionVersion) <= 0
+    ? `The version ${version} is not higher than ${productionVersion}, which production already runs: fixes go forward, tag a higher version`
+    : null;
+
 /** Every release rule that fails, not only the first, so one fix-up covers them all. */
 export const evaluateRelease = (facts: ReleaseFacts): string[] => {
   const failures: string[] = [];
@@ -37,14 +46,11 @@ export const evaluateRelease = (facts: ReleaseFacts): string[] => {
         `The tag ${facts.tag} does not match the app version ${facts.appVersion} at this commit: expected tag v${facts.appVersion}, or set the version to ${version} in a pull request first`,
       );
     }
-    if (
-      facts.productionVersion !== null &&
-      compareSemver(version, facts.productionVersion) <= 0
-    ) {
-      failures.push(
-        `The version ${version} is not higher than ${facts.productionVersion}, which production already runs: fixes go forward, tag a higher version`,
-      );
-    }
+    const belowProduction = checkAboveProduction(
+      version,
+      facts.productionVersion,
+    );
+    if (belowProduction !== null) failures.push(belowProduction);
   }
   if (!facts.onMain) {
     failures.push('The tagged commit is not on main');
