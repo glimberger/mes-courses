@@ -26,14 +26,14 @@ describe('release doubles', () => {
     const repository = new InMemoryReleaseRepository(recorder);
     const pulls = new InMemoryReleasePullRequests(recorder);
     const runs = new InMemoryReleaseRuns(recorder);
-    await repository.commitBump('1.3.0');
+    await repository.commitBump('1.3.0', 'chore/release-1.3.0');
     const pr = await pulls.open('chore/release-1.3.0', 'title');
     await pulls.enableAutoMerge(pr);
     await runs.requiredRuns('abc');
     await repository.createTag('v1.3.0', 'abc');
     await repository.pushTag('v1.3.0');
     expect(recorder.calls).toEqual([
-      'ReleaseRepository.commitBump 1.3.0',
+      'ReleaseRepository.commitBump 1.3.0 chore/release-1.3.0',
       'ReleasePullRequests.open chore/release-1.3.0 title',
       `ReleasePullRequests.enableAutoMerge ${pr.url}`,
       'ReleaseRuns.requiredRuns abc',

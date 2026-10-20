@@ -114,6 +114,7 @@ export type ReleaseStep =
   | { step: 'stop-run-cancelled'; url: string | null }
   | { step: 'stop-pr-failed'; url: string }
   | { step: 'stop-pr-closed'; url: string }
+  | { step: 'stop-bump-gone'; url: string }
   | { step: 'stop-tag-elsewhere'; tag: string; commit: string };
 
 /** The next thing to do for `version`, derived only from what is observed (resumable by design). */
@@ -149,7 +150,8 @@ export const decideStep = (
 
   const pr = state.bumpPr;
   if (pr === null) return { step: 'open-bump' };
-  if (pr.state === 'merged') return { step: 'wait-runs' };
+  // Merged, yet no commit of main sets the version (observed after a fresh fetch): it was reverted.
+  if (pr.state === 'merged') return { step: 'stop-bump-gone', url: pr.url };
   if (pr.state === 'closed') return { step: 'stop-pr-closed', url: pr.url };
   if (pr.checksFailed) return { step: 'stop-pr-failed', url: pr.url };
   if (!pr.autoMergeEnabled) return { step: 'enable-auto-merge' };

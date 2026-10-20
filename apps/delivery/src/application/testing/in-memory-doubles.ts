@@ -370,8 +370,8 @@ export class InMemoryReleaseRepository implements ReleaseRepository {
     this.recorder.record('ReleaseRepository.tagCommit', tag);
     return this.tags.get(tag) ?? { local: null, remote: null };
   }
-  async commitBump(version: string) {
-    this.recorder.record('ReleaseRepository.commitBump', version);
+  async commitBump(version: string, branch: string) {
+    this.recorder.record('ReleaseRepository.commitBump', version, branch);
   }
   async createTag(tag: string, commit: string) {
     this.recorder.record('ReleaseRepository.createTag', tag, commit);

@@ -14,8 +14,8 @@ export interface ReleaseRepository {
   tagCommit(
     tag: string,
   ): Promise<{ local: string | null; remote: string | null }>;
-  /** Branch `chore/release-<version>`, bump commit, push; leaves the repository on `main`. */
-  commitBump(version: string): Promise<void>;
+  /** Branch `branch` from `origin/main`, bump commit to `version`, push; leaves the repository on `main`. */
+  commitBump(version: string, branch: string): Promise<void>;
   /** Creates the annotated tag `tag` on `sha`. */
   createTag(tag: string, sha: string): Promise<void>;
   pushTag(tag: string): Promise<void>;

@@ -92,8 +92,7 @@ export const createGitReleaseRepository = (
       return { local: await localTag(tag), remote: await remoteTag(tag) };
     },
 
-    async commitBump(version) {
-      const branch = `chore/release-${version}`;
+    async commitBump(version, branch) {
       // Already pushed by an earlier run: nothing to redo.
       if (await remoteBranchExists(branch)) return;
 

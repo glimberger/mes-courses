@@ -17,7 +17,7 @@ All types live in `apps/delivery/src/domain/release-plan.ts` unless noted. No pe
 - `productionVersion: string | null` (existing `ChannelSource` + `parseManifest`)
 
 ## ReleaseStep (result of `decideStep(version, state)`)
-`done` (tag already on the right commit) | `tag` | `wait-runs` | `stop-run-failed {url}` | `wait-merge` | `stop-pr-failed {url}` | `stop-pr-closed {url}` | `open-bump`.
+`done` (tag already on the right commit) | `tag` | `wait-runs` | `stop-run-failed {url}` | `wait-merge` | `stop-pr-failed {url}` | `stop-pr-closed {url}` | `stop-bump-gone {url}` | `open-bump`.
 Transitions: `open-bump -> wait-merge -> wait-runs -> tag -> done`; any `stop-*` ends the run, a rerun re-derives the step.
 
 ## Rules
@@ -26,7 +26,7 @@ Transitions: `open-bump -> wait-merge -> wait-runs -> tag -> done`; any `stop-*`
 - `readAppVersion(source)` / `setAppVersion(source, next)` on the text of `app.config.ts`.
 
 ## Ports (application/ports)
-- `ReleaseRepository`: `currentBranch`, `isClean`, `fetch`, `isUpToDate`, `appVersionAt(ref)`, `tagCommit(tag)`, `commitBump(version)` (branch, commit, push), `createTag(tag, sha)`, `pushTag(tag)`, `releaseCommit(version)`.
+- `ReleaseRepository`: `currentBranch`, `isClean`, `fetch`, `isUpToDate`, `appVersionAt(ref)`, `tagCommit(tag)`, `commitBump(version, branch)` (branch, commit, push), `createTag(tag, sha)`, `pushTag(tag)`, `releaseCommit(version)`.
 - `ReleasePullRequests`: `findBump(branch)`, `open(branch, title)`, `enableAutoMerge(pr)`.
 - `ReleaseRuns`: `requiredRuns(sha)`, `releaseRunUrl(sha)`.
 - `Prompter`: `ask(question)`, `confirm(question)`.

@@ -275,10 +275,10 @@ describe('decideStep', () => {
     });
   });
 
-  it('waits and re-observes when the pull request is merged but main is old', () => {
+  it('stops when the pull request is merged but its commit is no longer on main', () => {
     expect(
       decideStep('1.3.0', before(pr({ state: 'merged', mergeCommit: SHA }))),
-    ).toEqual({ step: 'wait-runs' });
+    ).toEqual({ step: 'stop-bump-gone', url: 'https://example.test/pull/1' });
   });
 });
 

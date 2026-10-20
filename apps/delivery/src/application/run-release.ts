@@ -59,7 +59,7 @@ type Steps = {
 };
 
 const realSteps = (deps: ReleaseDeps): Steps => ({
-  commitBump: (version) => deps.repository.commitBump(version),
+  commitBump: (version, branch) => deps.repository.commitBump(version, branch),
   openPullRequest: (branch, title) => deps.pullRequests.open(branch, title),
   enableAutoMerge: (pr) => deps.pullRequests.enableAutoMerge(pr),
   async tag(tag, sha) {
@@ -161,16 +161,22 @@ const createObserver = (deps: ReleaseDeps, version: string, branch: string) => {
     tags ??= await repository.tagCommit(`v${version}`);
     production ??= { version: await productionVersion(deps.source) };
     let bumpPr = await pullRequests.findBump(branch);
+    // Merged on GitHub but not yet fetched: look again before concluding that main lost the bump.
+    let currentMain = mainVersion;
+    if (bumpPr?.state === 'merged' && compareSemver(currentMain, version) < 0) {
+      await repository.fetch();
+      currentMain = await repository.appVersionAt('origin/main');
+    }
     // A closed pull request whose branch is gone was abandoned on purpose: start over.
     if (
       bumpPr?.state === 'closed' &&
       !(await repository.remoteBranchExists(branch))
     )
       bumpPr = null;
-    if (found === null && compareSemver(mainVersion, version) >= 0)
+    if (found === null && compareSemver(currentMain, version) >= 0)
       found = await repository.releaseCommit(version);
     return {
-      mainVersion,
+      mainVersion: currentMain,
       localTag: tags.local,
       remoteTag: tags.remote,
       bumpPr,
@@ -204,6 +210,8 @@ const stopMessage = (step: ReleaseStep): string | null => {
       return `The bump pull request has a failed check: ${step.url}. Fix it, then ${RESUME}`;
     case 'stop-pr-closed':
       return `The bump pull request was closed without merging: ${step.url}. Reopen it, or delete its branch to start over, then ${RESUME}`;
+    case 'stop-bump-gone':
+      return `The bump pull request was merged but its commit is no longer on origin/main (reverted?): ${step.url}. Restore the bump on main, or choose another version (for example by passing it explicitly), then ${RESUME}`;
     case 'stop-tag-elsewhere':
       return `The tag ${step.tag} already points to ${step.commit}, which is not the release commit. Choose another version`;
     default:

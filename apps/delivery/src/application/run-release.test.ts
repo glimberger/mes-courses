@@ -114,7 +114,7 @@ describe('runRelease', () => {
     expect(result).toEqual({ outcome: 'released' });
     expect(output.lines[0]).toBe('1.2.0 -> 1.3.0');
     expect(mutations(recorder.calls)).toEqual([
-      'ReleaseRepository.commitBump 1.3.0',
+      'ReleaseRepository.commitBump 1.3.0 chore/release-1.3.0',
       'ReleasePullRequests.open chore/release-1.3.0 chore(release): bump the app version to 1.3.0',
       'ReleasePullRequests.enableAutoMerge https://github.test/pull/1',
       'ReleaseRepository.createTag v1.3.0 sha-1',
@@ -140,7 +140,9 @@ describe('runRelease', () => {
     });
 
     expect(output.lines[0]).toBe('1.2.0 -> 2.0.0');
-    expect(recorder.calls).toContain('ReleaseRepository.commitBump 2.0.0');
+    expect(recorder.calls).toContain(
+      'ReleaseRepository.commitBump 2.0.0 chore/release-2.0.0',
+    );
   });
 
   it('asks for the bump type when there is no target (scenario 1.3)', async () => {
@@ -221,9 +223,35 @@ describe('runRelease', () => {
     });
   });
 
+  it('stops when the merged bump is no longer on main instead of waiting for runs', async () => {
+    const { deps, repository, pullRequests, releaseRuns, fakeSleep, recorder } =
+      setup();
+    repository.scriptReleaseCommits([null]);
+    pullRequests.scriptFound([null, mergedPr]);
+    releaseRuns.scriptRuns([runs('pending')]);
+    // The first wait never lands the bump: main stays at 1.2.0 (bump merged, then reverted).
+    deps.sleep = async (ms) => {
+      recorder.record('Sleep', ms);
+      await fakeSleep.sleep(ms);
+    };
+
+    const result = await runRelease(deps, {
+      target: { kind: 'bump', bump: 'minor' },
+      assumeYes: true,
+    });
+
+    expect(result).toMatchObject({
+      outcome: 'stopped',
+      message: expect.stringMatching(
+        /no longer on origin\/main.*https:\/\/github\.test\/pull\/1/s,
+      ),
+    });
+    expect(fakeSleep.durations.length).toBeLessThan(5);
+  });
+
   it('stops after 90 minutes of waiting and says to run the command again', async () => {
     const { deps, pullRequests, releaseRuns, fakeSleep } = setup();
-    pullRequests.scriptFound([null, mergedPr]);
+    pullRequests.scriptFound([null, openPr, mergedPr]);
     releaseRuns.scriptRuns([runs('pending')]);
 
     const result = await runRelease(deps, {
@@ -235,7 +263,7 @@ describe('runRelease', () => {
       outcome: 'stopped',
       message: expect.stringContaining('run the same command again'),
     });
-    expect(fakeSleep.durations).toHaveLength(180);
+    expect(fakeSleep.durations).toHaveLength(181);
   });
 
   it('stops when the remote main version changed before the commit', async () => {
@@ -461,7 +489,9 @@ describe('runRelease', () => {
       const result = await runRelease(deps, minor);
 
       expect(result).toEqual({ outcome: 'released' });
-      expect(recorder.calls).toContain('ReleaseRepository.commitBump 1.3.0');
+      expect(recorder.calls).toContain(
+        'ReleaseRepository.commitBump 1.3.0 chore/release-1.3.0',
+      );
     });
 
     it('tags once the pending runs have succeeded (3.2)', async () => {
@@ -659,7 +689,9 @@ describe('runRelease', () => {
         assumeYes: true,
       });
 
-      expect(recorder.calls).toContain('ReleaseRepository.commitBump 1.4.0');
+      expect(recorder.calls).toContain(
+        'ReleaseRepository.commitBump 1.4.0 chore/release-1.4.0',
+      );
     });
 
     it('asks GitHub for auto-merge only once when it does not report it back', async () => {

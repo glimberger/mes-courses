@@ -93,7 +93,7 @@ describe('git release repository', () => {
   });
 
   it('commits the bump on chore/release-X.Y.Z, pushes it and returns to main', async () => {
-    await repo().commitBump('1.3.0');
+    await repo().commitBump('1.3.0', 'chore/release-1.3.0');
     expect(git(work, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('main');
     expect(git(work, 'branch', '--list', 'chore/release-1.3.0')).toBe('');
     expect(readFileSync(join(work, 'apps/mobile/app.config.ts'), 'utf8')).toBe(
@@ -109,9 +109,9 @@ describe('git release repository', () => {
   });
 
   it('does nothing more when the bump branch is already on the remote', async () => {
-    await repo().commitBump('1.3.0');
+    await repo().commitBump('1.3.0', 'chore/release-1.3.0');
     const pushed = git(origin, 'rev-parse', 'chore/release-1.3.0');
-    await repo().commitBump('1.3.0');
+    await repo().commitBump('1.3.0', 'chore/release-1.3.0');
     expect(git(origin, 'rev-parse', 'chore/release-1.3.0')).toBe(pushed);
     expect(git(work, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('main');
   });
@@ -121,7 +121,9 @@ describe('git release repository', () => {
     writeFileSync(hook, '#!/bin/sh\necho refused >&2\nexit 1\n', {
       mode: 0o755,
     });
-    await expect(repo().commitBump('1.3.0')).rejects.toThrow(/commit failed/);
+    await expect(
+      repo().commitBump('1.3.0', 'chore/release-1.3.0'),
+    ).rejects.toThrow(/commit failed/);
     expect(git(work, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('main');
     expect(git(work, 'status', '--porcelain')).toBe('');
     expect(git(work, 'branch', '--list', 'chore/release-1.3.0')).toBe('');
@@ -140,14 +142,14 @@ describe('git release repository', () => {
       },
     };
     const subject = createGitReleaseRepository(spy, work);
-    await subject.commitBump('1.3.0');
+    await subject.commitBump('1.3.0', 'chore/release-1.3.0');
     expect(limits.push).toBeGreaterThanOrEqual(5 * 60_000);
     expect(limits.status ?? 0).toBeLessThan(5 * 60_000);
   });
 
   it('reports whether a branch is on the remote', async () => {
     expect(await repo().remoteBranchExists('chore/release-1.3.0')).toBe(false);
-    await repo().commitBump('1.3.0');
+    await repo().commitBump('1.3.0', 'chore/release-1.3.0');
     expect(await repo().remoteBranchExists('chore/release-1.3.0')).toBe(true);
   });
 
