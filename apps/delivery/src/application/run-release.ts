@@ -112,6 +112,7 @@ const resolveVersion = async (
   deps: ReleaseDeps,
   target: ReleaseTarget,
   current: string,
+  unreleased: () => Promise<boolean>,
 ): Promise<{ version: string } | { errors: string[] }> => {
   let resolved = target;
   if (resolved.kind === 'ask') {
@@ -123,7 +124,12 @@ const resolveVersion = async (
       return { errors: ['No bump type or version given'] };
   }
   if (resolved.kind === 'bump')
-    return { version: nextVersion(current, resolved.bump) };
+    // A version on main that was never released is an interrupted run: finish it, do not bump again.
+    return {
+      version: (await unreleased())
+        ? current
+        : nextVersion(current, resolved.bump),
+    };
   // The version already on main is a resume of an interrupted run, not a new release.
   if (resolved.version === current) return { version: resolved.version };
   const errors = validateExplicitVersion(resolved.version, current);
@@ -137,27 +143,50 @@ const productionVersion = async (
   return channel === null ? null : parseManifest(channel.manifest).version;
 };
 
-const observe = async (
-  deps: ReleaseDeps,
-  version: string,
-  branch: string,
-): Promise<ReleaseState> => {
+/**
+ * Looks at the world for one version. What cannot change while the command waits (the tag, the
+ * production version, the commit once found) is read once; the rest is read on every pass.
+ */
+const createObserver = (deps: ReleaseDeps, version: string, branch: string) => {
   const { repository, pullRequests, runs } = deps;
-  await repository.fetch();
-  const mainVersion = await repository.appVersionAt('origin/main');
-  const tags = await repository.tagCommit(`v${version}`);
-  const bumpPr = await pullRequests.findBump(branch);
-  const landed = compareSemver(mainVersion, version) >= 0;
-  const releaseCommit = landed ? await repository.releaseCommit(version) : null;
-  return {
-    mainVersion,
-    localTag: tags.local,
-    remoteTag: tags.remote,
-    bumpPr,
-    releaseCommit,
-    runs: releaseCommit === null ? [] : await runs.requiredRuns(releaseCommit),
-    productionVersion: await productionVersion(deps.source),
+  let tags: { local: string | null; remote: string | null } | undefined;
+  let production: { version: string | null } | undefined;
+  let found: string | null = null;
+  return async (): Promise<ReleaseState> => {
+    await repository.fetch();
+    const mainVersion = await repository.appVersionAt('origin/main');
+    tags ??= await repository.tagCommit(`v${version}`);
+    production ??= { version: await productionVersion(deps.source) };
+    let bumpPr = await pullRequests.findBump(branch);
+    // A closed pull request whose branch is gone was abandoned on purpose: start over.
+    if (
+      bumpPr?.state === 'closed' &&
+      !(await repository.remoteBranchExists(branch))
+    )
+      bumpPr = null;
+    if (found === null && compareSemver(mainVersion, version) >= 0)
+      found = await repository.releaseCommit(version);
+    return {
+      mainVersion,
+      localTag: tags.local,
+      remoteTag: tags.remote,
+      bumpPr,
+      releaseCommit: found,
+      runs: found === null ? [] : await runs.requiredRuns(found),
+      productionVersion: production.version,
+    };
   };
+};
+
+/** True when the version on main has no tag and is above production: a release left unfinished. */
+const unreleasedOnMain = async (
+  deps: ReleaseDeps,
+  current: string,
+): Promise<boolean> => {
+  const tags = await deps.repository.tagCommit(`v${current}`);
+  if (tags.local !== null || tags.remote !== null) return false;
+  const production = await productionVersion(deps.source);
+  return production === null || compareSemver(current, production) > 0;
 };
 
 const stopMessage = (step: ReleaseStep): string | null => {
@@ -167,7 +196,7 @@ const stopMessage = (step: ReleaseStep): string | null => {
     case 'stop-pr-failed':
       return `The bump pull request has a failed check: ${step.url}. Fix it, then ${RESUME}`;
     case 'stop-pr-closed':
-      return `The bump pull request was closed without merging: ${step.url}. Reopen it or close it for good, then ${RESUME}`;
+      return `The bump pull request was closed without merging: ${step.url}. Reopen it, or delete its branch to start over, then ${RESUME}`;
     case 'stop-tag-elsewhere':
       return `The tag ${step.tag} already points to ${step.commit}, which is not the release commit. Choose another version`;
     default:
@@ -204,8 +233,13 @@ const execute = async (
   await repository.fetch();
   const current = await repository.appVersionAt('origin/main');
   // The version already on main is a resume of an interrupted run, not a new release.
+  let unreleasedAnswer: Promise<boolean> | undefined;
+  const unreleased = () =>
+    (unreleasedAnswer ??= unreleasedOnMain(deps, current));
   const resuming =
-    request.target.kind === 'version' && request.target.version === current;
+    request.target.kind === 'bump'
+      ? await unreleased()
+      : request.target.kind === 'version' && request.target.version === current;
   const problems = checkPrerequisites({
     branch: await repository.currentBranch(),
     clean: await repository.isClean(),
@@ -213,7 +247,12 @@ const execute = async (
   });
   if (problems.length > 0) return stopped(problems.join('\n'));
 
-  const resolved = await resolveVersion(deps, request.target, current);
+  const resolved = await resolveVersion(
+    deps,
+    request.target,
+    current,
+    unreleased,
+  );
   if ('errors' in resolved) return stopped(resolved.errors.join('\n'));
   const { version } = resolved;
   const tag = `v${version}`;
@@ -242,8 +281,10 @@ const execute = async (
   let waitedMs = 0;
   let autoMergeAsked = false;
   let assumed: ReleaseStep | null = null;
+  const observe = createObserver(deps, version, branch);
   for (;;) {
-    const state = await observe(deps, version, branch);
+    const state = await observe();
+    const hypothetical = assumed !== null;
     let step: ReleaseStep = assumed ?? decideStep(version, state);
     if (dryRun) assumed = NEXT_STEP[step.step] ?? null;
 
@@ -267,6 +308,7 @@ const execute = async (
         `chore(release): bump the app version to ${version}`,
       );
       await steps.enableAutoMerge(pr);
+      autoMergeAsked = true;
       if (!dryRun) output.line(`bump pull request: ${pr.url}`);
       waitingFor = null;
       continue;
@@ -293,24 +335,26 @@ const execute = async (
 
     if (step.step === 'tag') {
       const sha = state.releaseCommit;
-      if (dryRun) {
-        await steps.tag(tag, sha);
-        return { outcome: 'released' };
+      // A dry run that only assumes the earlier steps went well has nothing real to check yet.
+      if (sha !== null || !(dryRun && hypothetical)) {
+        if (sha === null) return stopped('Found no release commit to tag');
+        if (!hypothetical) {
+          const failures = evaluateRelease({
+            tag,
+            appVersion: await repository.appVersionAt(sha),
+            onMain: true,
+            successfulWorkflows: state.runs
+              .filter((run) => run.state === 'success')
+              .map((run) => run.workflow),
+            productionVersion: state.productionVersion,
+          });
+          if (failures.length > 0) return stopped(failures.join('\n'));
+        }
       }
-      if (sha === null) return stopped('Found no release commit to tag');
-      const failures = evaluateRelease({
-        tag,
-        appVersion: await repository.appVersionAt(sha),
-        onMain: true,
-        successfulWorkflows: state.runs
-          .filter((run) => run.state === 'success')
-          .map((run) => run.workflow),
-        productionVersion: state.productionVersion,
-      });
-      if (failures.length > 0) return stopped(failures.join('\n'));
       await steps.tag(tag, sha);
+      if (dryRun) return { outcome: 'released' };
       output.line(`tagged ${tag} on ${sha}`);
-      output.line(`Release run: ${await runs.releaseRunUrl(sha)}`);
+      output.line(`Release run: ${await runs.releaseRunUrl(sha as string)}`);
       return { outcome: 'released' };
     }
 

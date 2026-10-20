@@ -79,6 +79,8 @@ const setup = (prompter = new ScriptedPrompter([], [true])) => {
     },
   };
   repository.appVersions.set('origin/main', '1.2.0');
+  // The version on main was released: its tag exists.
+  repository.tags.set('v1.2.0', { local: 'sha-0', remote: 'sha-0' });
   repository.scriptReleaseCommits(['sha-1']);
   pullRequests.scriptFound([null, openPr, openPr, mergedPr]);
   releaseRuns.scriptRuns([runs('pending'), runs('success')]);
@@ -432,7 +434,8 @@ describe('runRelease', () => {
     };
 
     it('stops with the pull request link when it is closed unmerged (3.1)', async () => {
-      const { deps, pullRequests, recorder } = setup();
+      const { deps, pullRequests, repository, recorder } = setup();
+      repository.remoteBranches.add('chore/release-1.3.0');
       pullRequests.scriptFound([null, { ...openPr, state: 'closed' }]);
 
       const result = await runRelease(deps, minor);
@@ -444,6 +447,21 @@ describe('runRelease', () => {
       expect(mutations(recorder.calls)).not.toContain(
         'ReleaseRepository.createTag v1.3.0 sha-1',
       );
+    });
+
+    it('starts over when the closed pull request lost its branch', async () => {
+      const { deps, pullRequests, recorder } = setup();
+      pullRequests.scriptFound([
+        { ...openPr, state: 'closed' },
+        openPr,
+        openPr,
+        mergedPr,
+      ]);
+
+      const result = await runRelease(deps, minor);
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(recorder.calls).toContain('ReleaseRepository.commitBump 1.3.0');
     });
 
     it('tags once the pending runs have succeeded (3.2)', async () => {
@@ -611,6 +629,100 @@ describe('runRelease', () => {
       expect(mutations(recorder.calls)).toEqual([]);
     });
 
+    it('resumes the version on main when the same bump type is run again', async () => {
+      const { deps, repository, pullRequests, landBump, recorder, output } =
+        setup();
+      landBump();
+      repository.upToDate = false;
+      pullRequests.scriptFound([mergedPr]);
+
+      const result = await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: true,
+      });
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(output.lines[0]).toBe('1.3.0 -> 1.3.0');
+      expect(mutations(recorder.calls)).toEqual([
+        'ReleaseRepository.createTag v1.3.0 sha-1',
+        'ReleaseRepository.pushTag v1.3.0',
+      ]);
+    });
+
+    it('starts a new release from a main version that is already tagged', async () => {
+      const { deps, repository, recorder } = setup();
+      repository.appVersions.set('origin/main', '1.3.0');
+      repository.tags.set('v1.3.0', { local: 'sha-1', remote: 'sha-1' });
+
+      await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: true,
+      });
+
+      expect(recorder.calls).toContain('ReleaseRepository.commitBump 1.4.0');
+    });
+
+    it('asks GitHub for auto-merge only once when it does not report it back', async () => {
+      const { deps, pullRequests, recorder } = setup();
+      const lacking = { ...openPr, autoMergeEnabled: false };
+      pullRequests.scriptFound([null, lacking, lacking, lacking, mergedPr]);
+
+      await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: true,
+      });
+
+      expect(
+        recorder.calls.filter((call) => call.includes('enableAutoMerge')),
+      ).toHaveLength(1);
+    });
+
+    it('does not read the fixed facts again on every poll', async () => {
+      const { deps, releaseRuns, recorder } = setup();
+      releaseRuns.scriptRuns([
+        runs('pending'),
+        runs('pending'),
+        runs('pending'),
+        runs('success'),
+      ]);
+
+      await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: true,
+      });
+
+      const count = (prefix: string) =>
+        recorder.calls.filter((call) => call.startsWith(prefix)).length;
+      expect(count('Sleep')).toBeGreaterThanOrEqual(3);
+      expect(count('ChannelSource.fetchChannel')).toBeLessThanOrEqual(3);
+      expect(count('ReleaseRepository.tagCommit')).toBeLessThanOrEqual(3);
+      expect(count('ReleaseRepository.releaseCommit')).toBe(1);
+    });
+
+    it('applies the release rules in a dry run too', async () => {
+      const { deps, repository, source, pullRequests, releaseRuns, recorder } =
+        setup();
+      repository.appVersions.set('origin/main', '1.3.0');
+      repository.appVersions.set('sha-1', '1.3.0');
+      pullRequests.scriptFound([mergedPr]);
+      releaseRuns.scriptRuns([runs('success')]);
+      source.channels.set('production', {
+        manifest: productionManifest('1.3.0'),
+        signature: 'sig',
+      });
+      const request = {
+        target: { kind: 'version' as const, version: '1.3.0' },
+        assumeYes: true,
+      };
+
+      const real = await runRelease(deps, request);
+      const dry = await runRelease(deps, { ...request, dryRun: true });
+
+      expect(real.outcome).toBe('stopped');
+      expect(dry).toEqual(real);
+      expect(mutations(recorder.calls)).toEqual([]);
+    });
+
     it('resumes from a main that is behind origin/main once the bump merged', async () => {
       const { deps, repository, landBump } = setup();
       landBump();
@@ -666,10 +778,10 @@ const world = () => {
             ? state.main
             : '1.2.0',
       remoteBranchExists: async () => state.branchPushed,
-      tagCommit: async () => ({
-        local: state.localTag,
-        remote: state.remoteTag,
-      }),
+      tagCommit: async (tag) =>
+        tag === 'v1.2.0'
+          ? { local: 'sha-0', remote: 'sha-0' }
+          : { local: state.localTag, remote: state.remoteTag },
       async commitBump() {
         // Like the real adapter: a branch already pushed is left alone.
         if (state.branchPushed) return;
