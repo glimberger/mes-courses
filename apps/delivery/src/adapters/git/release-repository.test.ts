@@ -9,6 +9,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import type { CommandRunner } from '../../application/ports/command-runner';
 import { createCommandRunner } from '../process/command-runner';
 import { createGitReleaseRepository } from './release-repository';
 
@@ -19,8 +20,28 @@ let dir: string;
 let work: string;
 let origin: string;
 
+// A Git hook (pre-push) exports GIT_DIR and friends. They would point every git call below at
+// the real repository instead of the temporary one, so they are dropped from the environment of
+// every git process the test starts.
+const gitEnv = () =>
+  Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+  );
+
 const git = (cwd: string, ...args: string[]) =>
-  execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+  execFileSync('git', args, { cwd, encoding: 'utf8', env: gitEnv() }).trim();
+
+// The production runner inherits the real environment, so `env -u` drops the GIT_* variables.
+const runnerWithoutGitEnv = (): CommandRunner => {
+  const real = createCommandRunner();
+  const unset = Object.keys(process.env)
+    .filter((key) => key.startsWith('GIT_'))
+    .flatMap((key) => ['-u', key]);
+  return {
+    run: (command, args, options) =>
+      real.run('env', [...unset, command, ...args], options),
+  };
+};
 
 const commitVersion = (version: string, message: string) => {
   writeFileSync(join(work, 'apps/mobile/app.config.ts'), CONFIG(version));
@@ -29,7 +50,7 @@ const commitVersion = (version: string, message: string) => {
   return git(work, 'rev-parse', 'HEAD');
 };
 
-const repo = () => createGitReleaseRepository(createCommandRunner(), work);
+const repo = () => createGitReleaseRepository(runnerWithoutGitEnv(), work);
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'mes-courses-release-repo-'));
