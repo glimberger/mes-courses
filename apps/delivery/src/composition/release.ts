@@ -27,7 +27,10 @@ export const USAGE =
 const TARGET = /^(major|minor|patch|\d+\.\d+\.\d+)$/;
 
 /** Parses the command line of `yarn release` (contracts/cli.md). */
-export const parseReleaseArgs = (argv: string[]): ReleaseCommand => {
+export const parseReleaseArgs = (
+  argv: string[],
+  { interactive = true }: { interactive?: boolean } = {},
+): ReleaseCommand => {
   let assumeYes = false;
   let dryRun = false;
   let argument: string | undefined;
@@ -46,6 +49,10 @@ export const parseReleaseArgs = (argv: string[]): ReleaseCommand => {
       );
     else argument = arg;
   }
+  if (argument === undefined && !interactive)
+    throw new UsageError(
+      `Give a bump type or a version: there is no terminal to ask on\n${USAGE}`,
+    );
   const target: ReleaseTarget = parseTarget(argument);
   return { target, assumeYes, dryRun };
 };
@@ -83,7 +90,9 @@ export const deriveGithubAccess = async (
 const ROOT = resolve(__dirname, '../../../..');
 
 const main = async (argv: string[]): Promise<number> => {
-  const command = parseReleaseArgs(argv);
+  const command = parseReleaseArgs(argv, {
+    interactive: process.stdin.isTTY === true,
+  });
   const runner = createCommandRunner();
   const { repository, token } = await deriveGithubAccess(
     runner,

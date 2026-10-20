@@ -22,8 +22,23 @@ describe('parseReleaseArgs', () => {
     });
   });
 
-  it('asks when there is no target', () => {
-    expect(parseReleaseArgs([]).target).toEqual({ kind: 'ask' });
+  it('asks when there is no target on a terminal', () => {
+    expect(parseReleaseArgs([], { interactive: true }).target).toEqual({
+      kind: 'ask',
+    });
+  });
+
+  it('is a usage error to give no target without a terminal (exit 2)', () => {
+    expect(() => parseReleaseArgs([], { interactive: false })).toThrow(
+      UsageError,
+    );
+    expect(() => parseReleaseArgs([], { interactive: false })).toThrow(
+      /terminal/,
+    );
+    expect(parseReleaseArgs(['minor'], { interactive: false }).target).toEqual({
+      kind: 'bump',
+      bump: 'minor',
+    });
   });
 
   it('reads --yes, -y and --dry-run in any position', () => {
