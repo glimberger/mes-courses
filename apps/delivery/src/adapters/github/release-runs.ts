@@ -55,7 +55,13 @@ export const createGithubReleaseRuns = (
           const open = list.find((run) => run.status !== 'completed');
           return open !== undefined
             ? { workflow, state: 'pending', url: open.url }
-            : { workflow, state: 'failed', url: newest.url };
+            : {
+                workflow,
+                // A later push to main cancels the runs of an older commit: that is not a failure.
+                state:
+                  newest.conclusion === 'cancelled' ? 'cancelled' : 'failed',
+                url: newest.url,
+              };
         }),
       ),
 

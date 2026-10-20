@@ -205,6 +205,27 @@ describe('decideStep', () => {
     ).toEqual({ step: 'wait-runs' });
   });
 
+  it('stops with the link of a cancelled run, apart from a failure', () => {
+    expect(
+      decideStep('1.3.0', {
+        ...landed,
+        runs: runs(['pending', 'cancelled', 'success']),
+      }),
+    ).toEqual({
+      step: 'stop-run-cancelled',
+      url: 'https://example.test/runs/E2E Android',
+    });
+  });
+
+  it('reports a failure before a cancellation', () => {
+    expect(
+      decideStep('1.3.0', {
+        ...landed,
+        runs: runs(['cancelled', 'failed', 'success']),
+      }).step,
+    ).toBe('stop-run-failed');
+  });
+
   it('stops with the link of a failed run, even if others are pending', () => {
     expect(
       decideStep('1.3.0', {

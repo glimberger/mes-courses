@@ -90,6 +90,36 @@ describe('github release runs', () => {
     ]);
   });
 
+  it('reports a run cancelled by a later push as cancelled, not failed', async () => {
+    const { runner } = scripted([
+      {
+        stdout: runs({
+          status: 'completed',
+          conclusion: 'cancelled',
+          url: 'https://x/ci',
+        }),
+      },
+      {
+        stdout: runs(
+          { status: 'completed', conclusion: 'failure', url: 'https://x/e2e' },
+          { status: 'completed', conclusion: 'cancelled' },
+        ),
+      },
+      { stdout: '[]' },
+    ]);
+    const outcomes = await createGithubReleaseRuns(
+      runner,
+      '/repo',
+      sleep,
+    ).requiredRuns(SHA);
+    expect(outcomes.map((o) => o.state)).toEqual([
+      'cancelled',
+      'failed',
+      'pending',
+    ]);
+    expect(outcomes[0]?.url).toBe('https://x/ci');
+  });
+
   it('looks the three workflows up at the same time', async () => {
     let running = 0;
     let peak = 0;

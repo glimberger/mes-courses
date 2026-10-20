@@ -75,7 +75,7 @@ export const setAppVersion = (source: string, next: string): string => {
 
 export type RunOutcome = {
   workflow: string;
-  state: 'success' | 'failed' | 'pending';
+  state: 'success' | 'failed' | 'cancelled' | 'pending';
   url: string | null;
 };
 
@@ -111,6 +111,7 @@ export type ReleaseStep =
   | { step: 'wait-merge' }
   | { step: 'open-bump' }
   | { step: 'stop-run-failed'; url: string | null }
+  | { step: 'stop-run-cancelled'; url: string | null }
   | { step: 'stop-pr-failed'; url: string }
   | { step: 'stop-pr-closed'; url: string }
   | { step: 'stop-tag-elsewhere'; tag: string; commit: string };
@@ -134,6 +135,10 @@ export const decideStep = (
     const failed = state.runs.find((run) => run.state === 'failed');
     if (failed !== undefined)
       return { step: 'stop-run-failed', url: failed.url };
+    // Cancelled by a later push to main (cancel-in-progress): nothing is broken, it needs a re-run.
+    const cancelled = state.runs.find((run) => run.state === 'cancelled');
+    if (cancelled !== undefined)
+      return { step: 'stop-run-cancelled', url: cancelled.url };
     const succeeded = REQUIRED_WORKFLOWS.every((workflow) =>
       state.runs.some(
         (run) => run.workflow === workflow && run.state === 'success',

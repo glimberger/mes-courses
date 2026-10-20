@@ -123,13 +123,16 @@ const resolveVersion = async (
     if (resolved.kind === 'ask')
       return { errors: ['No bump type or version given'] };
   }
-  if (resolved.kind === 'bump')
+  if (resolved.kind === 'bump') {
     // A version on main that was never released is an interrupted run: finish it, do not bump again.
-    return {
-      version: (await unreleased())
-        ? current
-        : nextVersion(current, resolved.bump),
-    };
+    if (await unreleased()) {
+      deps.output.line(
+        `${current} is on main but not released yet: resuming it instead of applying ${resolved.bump}`,
+      );
+      return { version: current };
+    }
+    return { version: nextVersion(current, resolved.bump) };
+  }
   // The version already on main is a resume of an interrupted run, not a new release.
   if (resolved.version === current) return { version: resolved.version };
   const errors = validateExplicitVersion(resolved.version, current);
@@ -193,6 +196,10 @@ const stopMessage = (step: ReleaseStep): string | null => {
   switch (step.step) {
     case 'stop-run-failed':
       return `A required run failed${step.url === null ? '' : `: ${step.url}`}. Fix it, then ${RESUME}`;
+    case 'stop-run-cancelled': {
+      const id = step.url === null ? null : /\/runs\/(\d+)/.exec(step.url)?.[1];
+      return `A required run was cancelled, probably by a later push to main${step.url === null ? '' : `: ${step.url}`}. Re-run it${id == null ? '' : ` with \`gh run rerun ${id}\``}, then ${RESUME}`;
+    }
     case 'stop-pr-failed':
       return `The bump pull request has a failed check: ${step.url}. Fix it, then ${RESUME}`;
     case 'stop-pr-closed':
@@ -236,10 +243,11 @@ const execute = async (
   let unreleasedAnswer: Promise<boolean> | undefined;
   const unreleased = () =>
     (unreleasedAnswer ??= unreleasedOnMain(deps, current));
+  // An interactive run does not know its target yet: it may resume, which is checked once it is known.
   const resuming =
-    request.target.kind === 'bump'
+    request.target.kind === 'bump' || request.target.kind === 'ask'
       ? await unreleased()
-      : request.target.kind === 'version' && request.target.version === current;
+      : request.target.version === current;
   const problems = checkPrerequisites({
     branch: await repository.currentBranch(),
     clean: await repository.isClean(),
@@ -255,6 +263,12 @@ const execute = async (
   );
   if ('errors' in resolved) return stopped(resolved.errors.join('\n'));
   const { version } = resolved;
+  if (resuming && version !== current && !(await repository.isUpToDate()))
+    return stopped(
+      checkPrerequisites({ branch: 'main', clean: true, upToDate: false }).join(
+        '\n',
+      ),
+    );
   const tag = `v${version}`;
   const branch = `chore/release-${version}`;
 
@@ -327,7 +341,7 @@ const execute = async (
     if (step.step === 'push-tag') {
       const sha = state.releaseCommit;
       await steps.pushTag(tag);
-      output.line(`pushed ${tag} on ${sha}`);
+      if (!dryRun) output.line(`pushed ${tag} on ${sha}`);
       if (sha !== null && !dryRun)
         output.line(`Release run: ${await runs.releaseRunUrl(sha)}`);
       return { outcome: 'released' };

@@ -642,7 +642,7 @@ describe('runRelease', () => {
       });
 
       expect(result).toEqual({ outcome: 'released' });
-      expect(output.lines[0]).toBe('1.3.0 -> 1.3.0');
+      expect(output.lines).toContain('1.3.0 -> 1.3.0');
       expect(mutations(recorder.calls)).toEqual([
         'ReleaseRepository.createTag v1.3.0 sha-1',
         'ReleaseRepository.pushTag v1.3.0',
@@ -731,6 +731,112 @@ describe('runRelease', () => {
       const result = await runRelease(deps, resume);
 
       expect(result).toEqual({ outcome: 'released' });
+    });
+
+    it('says it is resuming when an explicit bump type meets an unreleased main', async () => {
+      const { deps, repository, pullRequests, landBump, output } = setup();
+      landBump();
+      repository.upToDate = false;
+      pullRequests.scriptFound([mergedPr]);
+
+      await runRelease(deps, {
+        target: { kind: 'bump', bump: 'patch' },
+        assumeYes: true,
+      });
+
+      expect(output.lines[0]).toMatch(/1\.3\.0.*not released.*resuming.*patch/);
+      expect(output.lines[1]).toBe('1.3.0 -> 1.3.0');
+    });
+
+    it('resumes when asked interactively, with a main behind origin/main', async () => {
+      const prompter = new ScriptedPrompter(['minor'], []);
+      const { deps, repository, landBump } = setup(prompter);
+      landBump();
+      repository.upToDate = false;
+
+      const result = await runRelease(deps, {
+        target: { kind: 'ask' },
+        assumeYes: true,
+      });
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(prompter.questions).toHaveLength(1);
+    });
+
+    it('still refuses an explicit new version from a main behind origin/main, once asked', async () => {
+      const prompter = new ScriptedPrompter(['2.0.0'], []);
+      const { deps, repository, landBump, recorder } = setup(prompter);
+      landBump();
+      repository.upToDate = false;
+
+      const result = await runRelease(deps, {
+        target: { kind: 'ask' },
+        assumeYes: true,
+      });
+
+      expect(result).toMatchObject({
+        outcome: 'stopped',
+        message: expect.stringContaining('main differs from origin/main'),
+      });
+      expect(mutations(recorder.calls)).toEqual([]);
+    });
+  });
+
+  describe('a cancelled run', () => {
+    it('stops with the rerun command instead of reporting a failure', async () => {
+      const { deps, releaseRuns, recorder } = setup();
+      releaseRuns.scriptRuns([
+        runs('pending'),
+        runs('success').map((run, index) =>
+          index === 1
+            ? {
+                ...run,
+                state: 'cancelled' as const,
+                url: 'https://github.test/o/r/actions/runs/4242',
+              }
+            : run,
+        ),
+      ]);
+
+      const result = await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: true,
+      });
+
+      expect(result).toMatchObject({
+        outcome: 'stopped',
+        message: expect.stringMatching(
+          /cancelled[\s\S]*runs\/4242[\s\S]*gh run rerun 4242[\s\S]*again to resume/,
+        ),
+      });
+      expect(result).toMatchObject({
+        message: expect.not.stringContaining('failed'),
+      });
+      expect(mutations(recorder.calls)).not.toContain(
+        'ReleaseRepository.createTag v1.3.0 sha-1',
+      );
+    });
+  });
+
+  describe('a dry run that finds the tag only local', () => {
+    it('does not claim to have pushed it', async () => {
+      const { deps, repository, pullRequests, output } = setup();
+      repository.appVersions.set('origin/main', '1.3.0');
+      repository.appVersions.set('sha-1', '1.3.0');
+      repository.tags.set('v1.3.0', { local: 'sha-1', remote: null });
+      pullRequests.scriptFound([mergedPr]);
+
+      const result = await runRelease(deps, {
+        target: { kind: 'version', version: '1.3.0' },
+        assumeYes: true,
+        dryRun: true,
+      });
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(output.lines).toContain('would push the tag v1.3.0');
+      expect(output.lines.some((line) => line.startsWith('pushed '))).toBe(
+        false,
+      );
     });
   });
 });
