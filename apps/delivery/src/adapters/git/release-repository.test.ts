@@ -116,6 +116,41 @@ describe('git release repository', () => {
     expect(git(work, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('main');
   });
 
+  it('leaves a clean checkout on main when the commit hook fails', async () => {
+    const hook = join(work, '.git/hooks/pre-commit');
+    writeFileSync(hook, '#!/bin/sh\necho refused >&2\nexit 1\n', {
+      mode: 0o755,
+    });
+    await expect(repo().commitBump('1.3.0')).rejects.toThrow(/commit failed/);
+    expect(git(work, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('main');
+    expect(git(work, 'status', '--porcelain')).toBe('');
+    expect(git(work, 'branch', '--list', 'chore/release-1.3.0')).toBe('');
+    expect(await repo().isClean()).toBe(true);
+  });
+
+  it('gives the pushes the time the pre-push hook needs', async () => {
+    const real = runnerWithoutGitEnv();
+    const limits: Record<string, number | undefined> = {};
+    const spy: CommandRunner = {
+      run: (command, args, options) => {
+        const git = args.indexOf('git');
+        const name = args[git + 1] ?? '';
+        limits[name] = options?.timeoutMs;
+        return real.run(command, args, options);
+      },
+    };
+    const subject = createGitReleaseRepository(spy, work);
+    await subject.commitBump('1.3.0');
+    expect(limits.push).toBeGreaterThanOrEqual(5 * 60_000);
+    expect(limits.status ?? 0).toBeLessThan(5 * 60_000);
+  });
+
+  it('reports whether a branch is on the remote', async () => {
+    expect(await repo().remoteBranchExists('chore/release-1.3.0')).toBe(false);
+    await repo().commitBump('1.3.0');
+    expect(await repo().remoteBranchExists('chore/release-1.3.0')).toBe(true);
+  });
+
   it('creates and pushes an annotated tag, and does it again without error', async () => {
     const sha = git(work, 'rev-parse', 'HEAD');
     expect(await repo().tagCommit('v1.2.0')).toEqual({
@@ -150,5 +185,14 @@ describe('git release repository', () => {
     await repo().fetch();
     expect(await repo().releaseCommit('1.3.0')).toBe(bump);
     expect(await repo().releaseCommit('9.9.9')).toBeNull();
+  });
+
+  it('finds the newest commit that set the version after a revert and a re-merge', async () => {
+    commitVersion('1.3.0', 'chore(release): bump to 1.3.0');
+    commitVersion('1.2.0', 'revert: bump to 1.3.0');
+    const again = commitVersion('1.3.0', 'chore(release): bump to 1.3.0 again');
+    git(work, 'push', '-q', 'origin', 'main');
+    await repo().fetch();
+    expect(await repo().releaseCommit('1.3.0')).toBe(again);
   });
 });

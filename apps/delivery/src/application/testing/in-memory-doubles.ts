@@ -360,6 +360,12 @@ export class InMemoryReleaseRepository implements ReleaseRepository {
     this.recorder.record('ReleaseRepository.appVersionAt', ref);
     return this.appVersions.get(ref) ?? '1.2.0';
   }
+  /** Branches present on the remote; empty by default. */
+  readonly remoteBranches = new Set<string>();
+  async remoteBranchExists(branch: string) {
+    this.recorder.record('ReleaseRepository.remoteBranchExists', branch);
+    return this.remoteBranches.has(branch);
+  }
   async tagCommit(tag: string) {
     this.recorder.record('ReleaseRepository.tagCommit', tag);
     return this.tags.get(tag) ?? { local: null, remote: null };

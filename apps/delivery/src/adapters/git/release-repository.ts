@@ -6,6 +6,8 @@ import type { ReleaseRepository } from '../../application/ports/release-reposito
 import { readAppVersion, setAppVersion } from '../../domain/release-plan';
 
 const GIT_LIMIT_MS = 60_000;
+// A push runs the pre-push hook of the repository (whole-repo typecheck, tests, architecture).
+const PUSH_LIMIT_MS = 15 * 60_000;
 const CONFIG_PATH = 'apps/mobile/app.config.ts';
 
 const escapeRegExp = (text: string) =>
@@ -17,7 +19,10 @@ export const createGitReleaseRepository = (
   cwd: string,
 ): ReleaseRepository => {
   const run = (args: string[]) =>
-    runner.run('git', args, { cwd, timeoutMs: GIT_LIMIT_MS });
+    runner.run('git', args, {
+      cwd,
+      timeoutMs: args[0] === 'push' ? PUSH_LIMIT_MS : GIT_LIMIT_MS,
+    });
 
   const git = async (...args: string[]): Promise<string> => {
     const result = await run(args);
@@ -58,6 +63,9 @@ export const createGitReleaseRepository = (
     return direct;
   };
 
+  const remoteBranchExists = async (branch: string) =>
+    (await git('ls-remote', '--heads', 'origin', branch)) !== '';
+
   return {
     currentBranch: () => git('rev-parse', '--abbrev-ref', 'HEAD'),
 
@@ -78,15 +86,16 @@ export const createGitReleaseRepository = (
 
     appVersionAt,
 
+    remoteBranchExists,
+
     async tagCommit(tag) {
       return { local: await localTag(tag), remote: await remoteTag(tag) };
     },
 
     async commitBump(version) {
       const branch = `chore/release-${version}`;
-      const remote = await git('ls-remote', '--heads', 'origin', branch);
       // Already pushed by an earlier run: nothing to redo.
-      if (remote !== '') return;
+      if (await remoteBranchExists(branch)) return;
 
       await git('switch', '-C', branch, 'origin/main');
       try {
@@ -103,6 +112,8 @@ export const createGitReleaseRepository = (
         );
         await git('push', '--set-upstream', 'origin', branch);
       } finally {
+        // A failed hook or push leaves the edit in the tree: drop it so that main stays clean.
+        await run(['reset', '--hard', 'HEAD']);
         const back = await run(['switch', 'main']);
         if (back.exitCode === 0) await run(['branch', '-D', branch]);
       }
@@ -125,13 +136,13 @@ export const createGitReleaseRepository = (
       const out = await git(
         'log',
         'origin/main',
-        '--reverse',
         '--format=%H',
         `-Gversion: '${escapeRegExp(version)}'`,
         '--',
         CONFIG_PATH,
       );
-      // -G also matches the commits that move away from the version: keep the first that set it.
+      // -G also matches the commits that move away from the version: keep the newest one that set
+      // it, so that a revert followed by a new merge picks the commit on main today.
       for (const sha of out.split('\n').filter(Boolean)) {
         if ((await appVersionAt(sha)) === version) return sha;
       }

@@ -665,6 +665,7 @@ const world = () => {
           : ref === 'origin/main'
             ? state.main
             : '1.2.0',
+      remoteBranchExists: async () => state.branchPushed,
       tagCommit: async () => ({
         local: state.localTag,
         remote: state.remoteTag,
