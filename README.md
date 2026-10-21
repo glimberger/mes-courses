@@ -26,7 +26,7 @@ Features are specified and built with [Spec Kit](https://github.com/github/spec-
 Everything else is under [`docs/`](docs/README.md), which indexes it:
 
 - **Explanations**: the [architecture](docs/architecture.md), the [repository layout](docs/repository-layout.md), the [sync server](docs/sync-server.md),
-  the [icons](docs/icons.md), the [agent guardrails](docs/agent-guardrails.md),
+  the [design](docs/design.md), the [agent guardrails](docs/agent-guardrails.md),
   the [build-time flags](docs/build-time-flags.md), the [story screenshots](docs/story-screenshots.md),
   the [store privacy details](docs/store-privacy-details.md), [privacy and security](docs/privacy-and-security.md)
   and the [delivery agent](docs/delivery-agent.md).
