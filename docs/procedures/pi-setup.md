@@ -12,7 +12,7 @@ step by step, is in [the delivery agent](../delivery-agent.md).
 
 The full steps, with their checks, are in [005 quickstart](../../specs/005-continuous-delivery/quickstart.md).
 
-1. **Keys and secrets** (quickstart §2): the APK upload key, the F-Droid repository key and the
+1. **Keys and secrets** (005 quickstart §2): the APK upload key, the F-Droid repository key and the
    manifest signing key, each stored in the password manager and set with `gh secret set`
    (`ANDROID_KEYSTORE_*`, `FDROID_KEYSTORE_*`, `DEPLOY_SIGNING_KEY`). The public part of the
    signing key is committed as `deploy/allowed_signers`. The variables `SENTRY_ORG`,
@@ -23,11 +23,10 @@ The full steps, with their checks, are in [005 quickstart](../../specs/005-conti
    _Contents: read_ and nothing else, expiring after one year. It goes in
    `/etc/mes-courses/agent.env`. **Renew it every year**: when it expires the agent gets a `401`,
    reports it to Sentry, and both instances keep running on their current release.
-4. **The Pi** (quickstart §3): one system user per instance, `/etc/mes-courses/<env>.env`
+4. **The Pi** (005 quickstart §3): one system user per instance, `/etc/mes-courses/<env>.env`
    (from `deploy/mes-courses.env.example`, mode 600), `deploy/mes-courses@.service`,
    `deploy/mes-courses-agent.{service,timer}` and `deploy/allowed_signers`; the blocks of
    `deploy/Caddyfile` are added to the existing Caddyfile, not copied over it.
    An existing single-instance Pi is migrated by the steps of §3, which include the back-out.
 5. **Sentry**: the alert rule on the tag `component:delivery-agent` (see [Sentry alerts](sentry-alerts.md)).
-6. **The agent** is installed from a release (§7 of the quickstart, and [Updating the agent](updating-the-agent.md)
-   below).
+6. **The agent** is installed from a release (§7 of the 005 quickstart, and [Updating the agent](updating-the-agent.md)).

@@ -1,7 +1,7 @@
 # Upgrading a Pi that ran 004
 
 Before 005 the Pi ran `mes-courses` from a git checkout and deployed with `git pull`. That
-workflow, and the Pi's deploy key, are gone. Migrate with quickstart §3 step 4, which moves the
+workflow, and the Pi's deploy key, are gone. Migrate with [005 quickstart](../../specs/005-continuous-delivery/quickstart.md) §3 step 4, which moves the
 database and the environment file under the `production` instance and has its own back-out:
 
 - **Back-out**: the old unit `mes-courses` and a copy of the database (`~/pre-005.db`) stay untouched

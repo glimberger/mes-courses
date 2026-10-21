@@ -5,7 +5,7 @@ Pi. `staging` and `development` builds are not releases. iOS is not delivered: i
 Apple Developer Program.
 
 1. Do the manual checks first. Record in the test plan of the last pull request every manual check
-   of quickstart §6 and the [device checks](device-checks.md). These checks are a precondition of a release: the
+   of [quickstart §6](../../specs/001-shopping-lists/quickstart.md) and the [device checks](device-checks.md). These checks are a precondition of a release: the
    pipeline does not run them, and `yarn release` does not either.
 2. From a clean `main` that matches `origin/main`, run `yarn release`:
 
