@@ -7,22 +7,16 @@ the list of files under `design/` are described in [`design/README.md`](../desig
 ## Material 3 theme
 
 [`design/material-theme.json`](../design/material-theme.json) is the Material 3 theme export and
-the single source of every color. It holds six schemes: `light`, `light-medium-contrast`,
-`light-high-contrast`, `dark`, `dark-medium-contrast` and `dark-high-contrast`. The `brandSoft`
-custom role is in each of them.
+the single source of the theme colors. It holds six schemes, but the app reads only `schemes.light`
+and `schemes.dark`: the medium- and high-contrast schemes are not used. To change a color, edit
+those two, not `seed`, `coreColors` or `palettes`, which the app ignores. The one color outside the
+file is the Android adaptive icon background in
+[`app.config.ts`](../apps/mobile/app.config.ts).
 
-The theme is built in code under `apps/mobile/src/adapters/ui/theme/`:
-
-- [`theme.ts`](../apps/mobile/src/adapters/ui/theme/theme.ts) builds the light and dark themes
-  from `material-theme.json`.
-- [`typography.ts`](../apps/mobile/src/adapters/ui/theme/typography.ts) holds the type scale and
-  the mockup sizes that differ from it.
-- [`elevation.ts`](../apps/mobile/src/adapters/ui/theme/elevation.ts) holds the shadow tokens.
-- [`shape.ts`](../apps/mobile/src/adapters/ui/theme/shape.ts) and
-  [`spacing.ts`](../apps/mobile/src/adapters/ui/theme/spacing.ts) hold the radii and the spacing
-  scale.
-
-To change a color, edit `material-theme.json`: no color is written anywhere else.
+[`theme.ts`](../apps/mobile/src/adapters/ui/theme/theme.ts) builds the light and dark themes from
+those schemes. The rest of the design tokens (typography, the Nunito fonts in `fonts.ts`,
+elevation, shape, spacing) sit next to it in `apps/mobile/src/adapters/ui/theme/`;
+[`design/README.md`](../design/README.md) lists them.
 
 ## Icons
 
@@ -37,6 +31,7 @@ glyph table, then commit the result:
 design/icons/build-symbols.sh   # needs network access and nix
 ```
 
-The script rewrites the two font files in `apps/mobile/assets/fonts/` and
+The script rewrites `MaterialSymbolsRounded_500.ttf` and `MaterialSymbolsRounded_700.ttf` in
+`apps/mobile/assets/fonts/` and
 [`symbols-glyphs.json`](../apps/mobile/src/adapters/ui/icons/symbols-glyphs.json). Rerunning it
 without a change leaves no diff.
