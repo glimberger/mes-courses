@@ -22,6 +22,7 @@ flowchart TB
     mcomp --> mui
     mcomp --> mout
     mcomp --> mapp
+    mcomp --> mdom
     mui --> mapp
     mout --> mapp
     mui --> mdom
@@ -54,6 +55,7 @@ flowchart TB
   mout --> core
   sdom --> core
   sapp --> core
+  scomp --> core
   sin --> core
   sout --> core
   mout -. "HTTPS" .-> sin
@@ -65,8 +67,8 @@ flowchart TB
   quantities, articles, categories, shopping lists and their views. On the server: accounts,
   devices, login attempts, and how a change is applied or merged by name.
 - **Application** (`application/`): one file per use case (`add-article-to-list`,
-  `synchronize`, `sign-in`, ...), plus the ports those use cases need. It imports the domain and
-  itself only.
+  `synchronize`, `sign-in`, ...), plus the ports those use cases need. It imports the domain, itself and
+  `packages/sync-core` only.
 - **Ports** (`application/ports/`): interfaces the application defines and the edge implements:
   repositories, unit of work, clock, id generator, error reporter, and the sync, account and admin
   servers on the app side; store, mailer, password hasher and pairing crypto on the server side. A
@@ -76,7 +78,8 @@ flowchart TB
   The French text of the app exists only in the UI adapter, and so does Zustand.
 - **Composition** (`composition/`): the one module that knows every adapter. It builds them at
   startup and hands them to the use cases ([app](../apps/mobile/src/composition/composition-root.ts),
-  [server](../apps/server/src/composition/wiring.ts)). Only the entry point imports it.
+  [server](../apps/server/src/composition/wiring.ts)). Only the entry point imports it (enforced by the dependency rules
+  for the app, a convention on the server).
 - **`packages/sync-core`**: the sync protocol types and the merge rules, shared by the app and the
   server so that both converge on the same result. It is pure and depends on nothing; it is the
   only workspace package the domain and the application may import.
