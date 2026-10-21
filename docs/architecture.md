@@ -8,7 +8,7 @@ enforce it: `yarn test:architecture` fails when a layer imports something it mus
 
 ## The layers and the direction of dependencies
 
-An arrow reads "imports". Dependencies point inward: nothing in the middle imports the edge.
+An arrow reads "imports". Dependencies point inward: nothing in the middle imports the edge. The composition sits outside everything and imports every layer it wires.
 
 ```mermaid
 flowchart TB
@@ -21,6 +21,7 @@ flowchart TB
     mdom["domain/<br/>rules"]
     mcomp --> mui
     mcomp --> mout
+    mcomp --> mapp
     mui --> mapp
     mout --> mapp
     mapp --> mdom
@@ -35,6 +36,8 @@ flowchart TB
     sdom["domain/<br/>rules"]
     scomp --> sin
     scomp --> sout
+    scomp --> sapp
+    scomp --> sdom
     sin --> sapp
     sout --> sapp
     sapp --> sdom
@@ -43,9 +46,11 @@ flowchart TB
   core["packages/sync-core<br/>protocol + merge rules, no dependency"]
   mdom --> core
   mapp --> core
+  mui --> core
   mout --> core
   sdom --> core
   sapp --> core
+  sin --> core
   sout --> core
   mout -. "HTTPS" .-> sin
 ```
