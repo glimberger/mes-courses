@@ -57,6 +57,7 @@ edit 2 'edit LEFTHOOK.yml (case-insensitive file system)' LEFTHOOK.yml
 edit 2 'edit .Claude/hooks (case-insensitive file system)' .Claude/hooks/stop.sh
 edit 2 'edit a Git hook' .git/hooks/pre-commit
 edit 2 'edit the Git config' .git/config
+edit 0 'edit the PR loop state' .git/gl-pr-loop/state.json
 
 git -C "$repo" switch -q -c feat/003-sync
 echo '# On feat/003-sync (scope applies)'
@@ -150,6 +151,14 @@ bash_cmd 2 'rm -rf .claude' 'rm -rf .claude'
 bash_cmd 2 'mv the workflows folder' 'mv .github/workflows /tmp/x'
 bash_cmd 2 'chmod a hook' 'chmod -x .claude/hooks/pre-tool-use.sh'
 bash_cmd 2 'redirect with no space into .git' "echo 'exit 0' >.git/hooks/pre-commit"
+bash_cmd 0 'rm the PR loop state (relative)' 'rm -f .git/gl-pr-loop/*-12-coder.json'
+bash_cmd 0 'rm the PR loop state (absolute)' "rm -f $repo/.git/gl-pr-loop/a-12-coder.json && git status"
+bash_cmd 2 'rm the PR loop state and a hook' 'rm -f .git/gl-pr-loop/a.json .git/hooks/pre-commit'
+bash_cmd 2 'rm the PR loop state, then a hook' 'rm .git/gl-pr-loop/a.json; rm .git/hooks/pre-commit'
+bash_cmd 2 'rm the PR loop state and redirect into the config' 'rm .git/gl-pr-loop/a.json > .git/config'
+bash_cmd 2 'rm through ..' 'rm .git/gl-pr-loop/../hooks/pre-commit'
+bash_cmd 2 'mv in the PR loop state' 'mv .git/gl-pr-loop/a.json .git/gl-pr-loop/b.json'
+bash_cmd 2 'touch in the PR loop state' 'touch .git/gl-pr-loop/a.json'
 bash_cmd 2 'push --all' 'git push --all origin'
 bash_cmd 2 'push --mirror' 'git push --mirror origin'
 bash_cmd 0 'yarn install' 'yarn install && git status'
