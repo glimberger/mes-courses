@@ -34,7 +34,7 @@ sign-in screen, then chooses their own password. A forgotten password is reset f
 screen, by email; with no mail relay, `set-password` on the Pi does it.
 
 The diagram follows the server's use cases (`invite-account`, `sign-in`, `choose-password`,
-`request-password-reset`) and the `set-password` command; the choices behind them are in
+`request-password-reset`, `resend-credentials`) and the `set-password` command; the choices behind them are in
 [ADR 0005](adr/0005-accounts-and-authentication.md). A reset does not replace the current password:
 it issues a new temporary password, and the current one keeps working until the new one is used.
 
@@ -49,13 +49,20 @@ flowchart TD
   mail --> signin["Sign-in screen:<br/>server address, email, password"]
 
   signin --> which{"Which password<br/>was typed?"}
-  which -- "current password" --> device["The server creates the device<br/>and the app is signed in"]
-  which -- "temporary password" --> valid{"Valid, not expired,<br/>not suspended?"}
+  which -- "current password" --> susp1{"Suspended?"}
+  susp1 -- "no" --> device["The server creates the device<br/>and the app is signed in"]
+  susp1 -- "yes" --> suspended["Refused: suspended.<br/>The administrator reactivates the account"]
+  suspended --> signin
+  which -- "temporary password" --> exp{"Expired?"}
   which -- "anything else" --> refused["Refused, counted against<br/>the attempt limit"]
   refused --> signin
-  valid -- "no" --> expired["Refused: expired or suspended.<br/>The administrator resends the credentials"]
-  expired --> mail
-  valid -- "yes" --> choose["Choose-password screen:<br/>new password, typed twice"]
+  exp -- "yes" --> expired{"Did the person already<br/>choose a password?"}
+  expired -- "no (invitation)" --> resend["The administrator resends<br/>the credentials"]
+  resend --> mail
+  expired -- "yes (reset)" --> reset
+  exp -- "no" --> susp2{"Suspended?"}
+  susp2 -- "yes" --> suspended
+  susp2 -- "no" --> choose["Choose-password screen:<br/>new password, typed twice"]
   choose --> rules{"Rules met and<br/>both entries equal?"}
   rules -- "no" --> choose
   rules -- "yes" --> save["The server stores the password,<br/>clears the temporary one<br/>and creates the device"]
