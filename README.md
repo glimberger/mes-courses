@@ -19,13 +19,13 @@ change is saved on the device first and reaches the server when it can.
 Its governing principles are in [`.specify/memory/constitution.md`](.specify/memory/constitution.md),
 its lasting technical decisions are in [`docs/adr/`](docs/adr/README.md),
 and its Material 3 color theme is in [`design/material-theme.json`](design/material-theme.json).
+Features are specified and built with [Spec Kit](https://github.com/github/spec-kit).
 
 ## Documentation
 
 Everything else is under [`docs/`](docs/README.md), which indexes it:
 
-- **Explanations**: the [architecture](docs/architecture.md), the [development workflow](docs/development-workflow.md),
-  the [repository layout](docs/repository-layout.md), the [sync server](docs/sync-server.md),
+- **Explanations**: the [architecture](docs/architecture.md), the [repository layout](docs/repository-layout.md), the [sync server](docs/sync-server.md),
   the [icons](docs/icons.md), the [agent guardrails](docs/agent-guardrails.md),
   the [build-time flags](docs/build-time-flags.md), the [story screenshots](docs/story-screenshots.md),
   the [store privacy details](docs/store-privacy-details.md), [privacy and security](docs/privacy-and-security.md)
