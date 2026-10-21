@@ -42,7 +42,7 @@ Everything else is under [`docs/`](docs/README.md), which indexes it:
 - For the end-to-end journeys: an Android emulator named `Pixel_API_35` (or the name in
   `DETOX_AVD_NAME`) and a JDK 17; on macOS, for iOS, Xcode and
   [`applesimutils`](https://github.com/wix/AppleSimulatorUtils)
-  (`brew tap wix/brew && brew install applesimutils`).
+  (`brew tap wix/brew && brew install applesimutils`). Running them: [End-to-end tests](docs/procedures/e2e-tests.md).
 
 These last tools stay outside Nix.
 

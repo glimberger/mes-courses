@@ -9,7 +9,7 @@ is the identity of the app.
   again. Nothing else changes.
 - _Lost with no backup, or compromised_: the installed apps cannot be updated by a build signed
   with a new key. Create a new key, set the secrets and `ANDROID_CERT_SHA256`, release, and every
-  Android user uninstalls and reinstalls as in "Passer de Google Play à F-Droid" below (their
+  Android user uninstalls and reinstalls as in [Passer de Google Play à F-Droid](google-play-to-fdroid.md) (their
   data is on the server, after a last sync). If it was compromised, delete the old key's secrets
   from GitHub first and check the releases for builds you did not make.
 

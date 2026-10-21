@@ -28,6 +28,6 @@ The full steps, with their checks, are in [005 quickstart](../../specs/005-conti
    `deploy/mes-courses-agent.{service,timer}` and `deploy/allowed_signers`; the blocks of
    `deploy/Caddyfile` are added to the existing Caddyfile, not copied over it.
    An existing single-instance Pi is migrated by the steps of §3, which include the back-out.
-5. **Sentry**: the alert rule on the tag `component:delivery-agent` (see "Sentry alerts").
-6. **The agent** is installed from a release (§7 of the quickstart, and "Updating the agent"
+5. **Sentry**: the alert rule on the tag `component:delivery-agent` (see [Sentry alerts](sentry-alerts.md)).
+6. **The agent** is installed from a release (§7 of the quickstart, and [Updating the agent](updating-the-agent.md)
    below).

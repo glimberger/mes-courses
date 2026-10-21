@@ -5,7 +5,7 @@ Pi. `staging` and `development` builds are not releases. iOS is not delivered: i
 Apple Developer Program.
 
 1. Do the manual checks first. Record in the test plan of the last pull request every manual check
-   of quickstart §6 and the device checks below. These checks are a precondition of a release: the
+   of quickstart §6 and the [device checks](device-checks.md). These checks are a precondition of a release: the
    pipeline does not run them, and `yarn release` does not either.
 2. From a clean `main` that matches `origin/main`, run `yarn release`:
 
@@ -55,5 +55,5 @@ is not lost: once the agent is back, _Re-run failed jobs_ on the same run, with 
 
 A faulty release is fixed forward, never rolled back by hand: a new pull request with the fix, then
 these steps again with the next version. The agent already rolls back a deployment that fails to
-start (see "Rollback and failed deployments"). An older version does not open data saved by a
+start (see [Rollback and failed deployments](rollback.md)). An older version does not open data saved by a
 newer one (FR-040).
