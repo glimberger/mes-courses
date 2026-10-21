@@ -24,6 +24,8 @@ flowchart TB
     mcomp --> mapp
     mui --> mapp
     mout --> mapp
+    mui --> mdom
+    mout --> mdom
     mapp --> mdom
   end
 
@@ -40,6 +42,8 @@ flowchart TB
     scomp --> sdom
     sin --> sapp
     sout --> sapp
+    sin --> sdom
+    sout --> sdom
     sapp --> sdom
   end
 
