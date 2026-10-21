@@ -9,7 +9,6 @@ and procedures, which are runbooks to follow step by step.
 | Document                                          | What it covers                                                       |
 | ------------------------------------------------- | -------------------------------------------------------------------- |
 | [Architecture](architecture.md)                   | The hexagonal layers of the app and the server                       |
-| [Development workflow](development-workflow.md)   | Specifying and building features with Spec Kit                       |
 | [Repository layout](repository-layout.md)         | The monorepo folders and what each holds                             |
 | [Sync server](sync-server.md)                     | Running the server in development, signing in, environment variables |
 | [Icons](icons.md)                                 | The Material Symbols font subset and how to regenerate it            |
