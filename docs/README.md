@@ -11,7 +11,7 @@ and procedures, which are runbooks to follow step by step.
 | [Architecture](architecture.md)                   | The hexagonal layers of the app and the server                       |
 | [Repository layout](repository-layout.md)         | The monorepo folders and what each holds                             |
 | [Sync server](sync-server.md)                     | Running the server in development, signing in, environment variables |
-| [Icons](icons.md)                                 | The Material Symbols font subset and how to regenerate it            |
+| [Design](design.md)                               | The Material 3 theme and the icon font, and how to change them       |
 | [Agent guardrails](agent-guardrails.md)           | What the Claude Code rules and hooks allow in this repository        |
 | [Build-time flags](build-time-flags.md)           | The test-only flags, refused by production builds                    |
 | [Story screenshots](story-screenshots.md)         | Capturing every Storybook story in light and dark                    |
