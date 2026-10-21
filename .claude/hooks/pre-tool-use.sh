@@ -33,6 +33,10 @@ check_file() {
   file="$(cd "$dir" && pwd -P)${file#"$dir"}"
   dir=$(existing_dir "$file")
   # The Git directory holds the hooks and the config: an edit there would switch them off.
+  # The PR loop state (cursors, step results, logs) holds no hook and no config: it is the exception.
+  case "$file" in
+    "$project_common"/gl-pr-loop/* | */.git/gl-pr-loop/*) return 0 ;;
+  esac
   case "$file" in
     "$project_common" | "$project_common"/* | */.git | */.git/*)
       block "$file is inside a .git directory. Only the user edits it."
@@ -77,7 +81,7 @@ check_file() {
 }
 
 check_bash() {
-  local cmd=$1 workdir dest branch default git push mutators cp_targets bash_protected
+  local cmd=$1 workdir dest branch default git push mutators cp_targets bash_protected scan loop_arg
   # Where the command runs: a "cd <dir>" or "git -C <dir>" in it wins over the session directory.
   workdir=$cwd
   dest=$(grep -Eo -- '(^|[;&|[:space:]])(cd|git[[:space:]]+-C)[[:space:]]+[^[:space:];&|]+' <<<"$cmd" | tail -n 1 | awk '{print $NF}' | tr -d "\"'")
@@ -123,12 +127,20 @@ check_bash() {
   # A redirection or tee into a guardrail file (or inside a .git directory), or a file-changing
   # command that names one. For cp only the destination, the last argument, counts.
   bash_protected="$PROTECTED_REGEX|(^|[[:space:]/>])\.git/|(^|[[:space:]/])\.claude([[:space:]]|\$)"
-  mutators=$(grep -Eo -- "(sed[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*-i|perl[[:space:]]+-[a-zA-Z]*i|\b(mv|rm|truncate|chmod|chown|ln|install|touch)[[:space:]]|${git}(checkout|restore|rm|mv)[[:space:]])[^|;&]*" <<<"$cmd" || true)
-  cp_targets=$(grep -Eo -- '\bcp[[:space:]][^|;&]*' <<<"$cmd" | awk '{print $NF}' || true)
+  # Exception: an rm whose every argument is inside .git/gl-pr-loop/ (the PR loop state, which holds
+  # no hook and no config) is dropped from the text checked below. Anything else in the command,
+  # including another path given to the same rm, is still checked.
+  scan=$cmd
+  if ! grep -Fq -- '..' <<<"$cmd"; then
+    loop_arg='[^[:space:];&|<>`$"'"'"']*\.git/gl-pr-loop/[^[:space:];&|<>`$"'"'"']*'
+    scan=$(sed -E "s#(^|[;&|[:space:]])rm([[:space:]]+-[a-zA-Z]+)*([[:space:]]+$loop_arg)+[[:space:]]*([;&|]|\$)#\1;#g" <<<"$cmd")
+  fi
+  mutators=$(grep -Eo -- "(sed[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*-i|perl[[:space:]]+-[a-zA-Z]*i|\b(mv|rm|truncate|chmod|chown|ln|install|touch)[[:space:]]|${git}(checkout|restore|rm|mv)[[:space:]])[^|;&]*" <<<"$scan" || true)
+  cp_targets=$(grep -Eo -- '\bcp[[:space:]][^|;&]*' <<<"$scan" | awk '{print $NF}' || true)
   if grep -Eq 'lefthook[[:space:]]+uninstall' <<<"$cmd"; then
     block "lefthook uninstall removes the Git hooks: they must always run."
   fi
-  if grep -Eiq "(>|\btee([[:space:]]+-a)?)[[:space:]]*[^[:space:]]*($bash_protected|\.git/)" <<<"$cmd" ||
+  if grep -Eiq "(>|\btee([[:space:]]+-a)?)[[:space:]]*[^[:space:]]*($bash_protected|\.git/)" <<<"$scan" ||
     grep -Eiq "$bash_protected" <<<"$mutators" ||
     grep -Eiq "$bash_protected" <<<"$cp_targets"; then
     block "this command looks like it changes a guardrail file. Only the user edits those: propose the change instead."

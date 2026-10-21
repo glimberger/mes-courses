@@ -10,7 +10,9 @@ and hooks apply to every session started here; the hooks need `git`, `jq` (in th
   allowed), no skipping the Git hooks (`--no-verify`, `-n`, `LEFTHOOK=0`, `core.hooksPath`), no PR
   merge, and no change to the guardrail files: `.claude/settings.json`, `.claude/settings.local.json`, `.claude/hooks/`,
   `lefthook.yml`, `.github/workflows/`, `.dependency-cruiser.cjs` and the
-  feature scope files. Only you edit those.
+  feature scope files. Only you edit those. Anything inside a `.git` directory is covered too,
+  except `.git/gl-pr-loop/`, where the PR review loop keeps its state (no hook, no config): an
+  agent may edit files there, and `rm` them as long as every path of that `rm` is in the folder.
 - **Feature scope**: on a Spec Kit feature branch (`feat/003-...` for `specs/003-...`), if the
   feature folder holds an `agent-scope.txt`, edits are limited to that folder and the paths it
   lists, one glob per line (`*` also matches `/`, `#` starts a comment):
