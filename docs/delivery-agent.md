@@ -6,7 +6,7 @@ How the program that deploys the server on the Pi works. The decisions behind it
 [ADR-0010](adr/0010-two-instances-on-one-pi.md) and
 [ADR-0011](adr/0011-stop-copy-validate-rollback.md); the paths and units are in
 [the Pi layout](../specs/005-continuous-delivery/contracts/pi-layout.md), and the set-up steps in
-the [README](../README.md#on-the-pi).
+the [Pi set-up procedure](procedures/pi-setup.md).
 
 ## In one paragraph
 
