@@ -10,7 +10,7 @@ const build = (commands, env = '-u STORYBOOK_ENABLED') =>
   `cd ${APP_DIR} && env -u EXPO_PUBLIC_SENTRY_DSN ${env} DETOX_BUILD=1 SENTRY_DISABLE_AUTO_UPLOAD=true sh -c '${commands}'`;
 
 // The screenshot builds show the stories one by one (apps/mobile/index.ts, STORY_SHOTS). They
-// replace the release build at the same paths: `yarn test:e2e:*` builds again before it runs.
+// replace the release build at the same paths: `pnpm test:e2e:*` builds again before it runs.
 const SHOTS_ENV = 'STORYBOOK_ENABLED=true STORY_SHOTS=true';
 
 /** @type {Detox.DetoxConfig} */
@@ -40,7 +40,7 @@ module.exports = {
       // Only the app module: assembleAndroidTest at the root also builds every library's debug
       // test APK, which fails on duplicate native libraries since React Native 0.88.
       build: build(
-        'yarn expo prebuild --platform android && cd android && ./gradlew :app:assembleRelease :app:assembleAndroidTest -DtestBuildType=release',
+        'pnpm expo prebuild --platform android && cd android && ./gradlew :app:assembleRelease :app:assembleAndroidTest -DtestBuildType=release',
       ),
       binaryPath: `${APP_DIR}/android/app/build/outputs/apk/release/app-release.apk`,
       testBinaryPath: `${APP_DIR}/android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk`,
@@ -48,7 +48,7 @@ module.exports = {
     'android.shots': {
       type: 'android.apk',
       build: build(
-        'yarn expo prebuild --platform android && cd android && ./gradlew :app:assembleRelease :app:assembleAndroidTest -DtestBuildType=release',
+        'pnpm expo prebuild --platform android && cd android && ./gradlew :app:assembleRelease :app:assembleAndroidTest -DtestBuildType=release',
         SHOTS_ENV,
       ),
       binaryPath: `${APP_DIR}/android/app/build/outputs/apk/release/app-release.apk`,
@@ -57,7 +57,7 @@ module.exports = {
     'ios.shots': {
       type: 'ios.app',
       build: build(
-        `yarn expo prebuild --platform ios && xcodebuild -workspace ios/${IOS_PROJECT}.xcworkspace -scheme ${IOS_PROJECT} -configuration Release -sdk iphonesimulator -derivedDataPath ios/build`,
+        `pnpm expo prebuild --platform ios && xcodebuild -workspace ios/${IOS_PROJECT}.xcworkspace -scheme ${IOS_PROJECT} -configuration Release -sdk iphonesimulator -derivedDataPath ios/build`,
         SHOTS_ENV,
       ),
       binaryPath: `${APP_DIR}/ios/build/Build/Products/Release-iphonesimulator/${IOS_PROJECT}.app`,
@@ -65,7 +65,7 @@ module.exports = {
     'ios.release': {
       type: 'ios.app',
       build: build(
-        `yarn expo prebuild --platform ios && xcodebuild -workspace ios/${IOS_PROJECT}.xcworkspace -scheme ${IOS_PROJECT} -configuration Release -sdk iphonesimulator -derivedDataPath ios/build`,
+        `pnpm expo prebuild --platform ios && xcodebuild -workspace ios/${IOS_PROJECT}.xcworkspace -scheme ${IOS_PROJECT} -configuration Release -sdk iphonesimulator -derivedDataPath ios/build`,
       ),
       binaryPath: `${APP_DIR}/ios/build/Build/Products/Release-iphonesimulator/${IOS_PROJECT}.app`,
     },

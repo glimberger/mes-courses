@@ -22,11 +22,11 @@ export type ReleaseCommand = ReleaseRequest & { dryRun: boolean };
 export class UsageError extends Error {}
 
 export const USAGE =
-  'Usage: yarn release [major|minor|patch|X.Y.Z] [--yes|-y] [--dry-run]';
+  'Usage: pnpm release [major|minor|patch|X.Y.Z] [--yes|-y] [--dry-run]';
 
 const TARGET = /^(major|minor|patch|\d+\.\d+\.\d+)$/;
 
-/** Parses the command line of `yarn release` (contracts/cli.md). */
+/** Parses the command line of `pnpm release` (contracts/cli.md). */
 export const parseReleaseArgs = (
   argv: string[],
   { interactive = true }: { interactive?: boolean } = {},

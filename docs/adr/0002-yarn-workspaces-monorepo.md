@@ -1,6 +1,6 @@
 # ADR-0002: Yarn workspaces monorepo
 
-- **Status**: Accepted
+- **Status**: Superseded by ADR-0013
 - **Date**: 2026-10-06
 - **Decided by**: maintainer
 - **Supersedes**: none
@@ -22,7 +22,7 @@ We use one Git repository organized as Yarn 4 workspaces, set up before any code
 - Yarn is pinned by `packageManager` and run through the Corepack shims of the Nix dev shell, so
   every machine and CI use the same version;
 - `nodeLinker: node-modules`, because React Native and Expo do not support Plug'n'Play;
-- one `yarn.lock` and one `yarn install` at the root; workspaces depend on each other with
+- one `pnpm-lock.yaml` and one `pnpm install` at the root; workspaces depend on each other with
   `workspace:*` and only through public entry points, which the architecture test enforces.
 
 ## Consequences

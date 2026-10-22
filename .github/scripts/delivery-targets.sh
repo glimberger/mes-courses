@@ -12,7 +12,7 @@ while IFS= read -r path || [ -n "$path" ]; do
     deploy/fdroid/*) app=true ;;
     apps/server/* | deploy/*) server=true ;;
     apps/mobile/*) app=true ;;
-    packages/* | package.json | yarn.lock | .yarnrc.yml | .yarn/* | flake.*)
+    packages/* | package.json | pnpm-lock.yaml | pnpm-workspace.yaml | .npmrc | flake.*)
       server=true
       app=true
       ;;

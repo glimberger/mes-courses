@@ -5,8 +5,8 @@
 From the repository root:
 
 ```sh
-yarn workspace @mes-courses/server dev           # http://127.0.0.1:3000, database in apps/server/.data/
-yarn workspace @mes-courses/server create-admin:dev you@example.org  # asks for the password twice
+pnpm workspace @mes-courses/server dev           # http://127.0.0.1:3000, database in apps/server/.data/
+pnpm workspace @mes-courses/server create-admin:dev you@example.org  # asks for the password twice
 ```
 
 `create-admin` (without `:dev`) completes the first account, the one that owns the data already on

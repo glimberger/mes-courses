@@ -1,4 +1,4 @@
-# Git hooks, installed by `yarn install` (the postinstall script runs `lefthook install`).
+# Git hooks, installed by `pnpm install` (the postinstall script runs `lefthook install`).
 #
 # pre-commit only looks at the staged files, so it stays fast and a file still being written
 # elsewhere in the tree never blocks a commit. Jobs run in order: Prettier formats the staged
@@ -9,21 +9,21 @@
 pre-commit:
   jobs:
     - name: prettier
-      run: yarn prettier --write --ignore-unknown {staged_files}
+      run: pnpm prettier --write --ignore-unknown {staged_files}
       stage_fixed: true
 
     - name: eslint
       glob: '*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}'
-      run: yarn eslint --no-warn-ignored {staged_files}
+      run: pnpm eslint --no-warn-ignored {staged_files}
 
 pre-push:
   parallel: true
   jobs:
     - name: typecheck
-      run: yarn typecheck
+      run: pnpm typecheck
 
     - name: test
-      run: yarn test
+      run: pnpm test
 
     - name: architecture
-      run: yarn test:architecture
+      run: pnpm test:architecture

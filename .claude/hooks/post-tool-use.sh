@@ -19,7 +19,7 @@ top=$(git -C "$(dirname "$file")" rev-parse --show-toplevel 2>/dev/null) || exit
 [ -d "$top/node_modules" ] || exit 0
 
 errors=""
-if ! out=$(cd "$top" && yarn eslint --no-warn-ignored "$file" 2>&1); then
+if ! out=$(cd "$top" && pnpm eslint --no-warn-ignored "$file" 2>&1); then
   errors+="ESLint:"$'\n'"$(tail -n 30 <<<"$out")"$'\n'
 fi
 
@@ -27,7 +27,7 @@ fi
 dir=$(dirname "$file")
 while [ "$dir" != "$top" ] && [ "$dir" != / ]; do
   if [ -f "$dir/package.json" ] && jq -e '.scripts.typecheck' "$dir/package.json" >/dev/null; then
-    if ! out=$(cd "$dir" && yarn typecheck 2>&1); then
+    if ! out=$(cd "$dir" && pnpm typecheck 2>&1); then
       errors+="TypeScript ($(jq -r .name "$dir/package.json")):"$'\n'"$(tail -n 30 <<<"$out")"$'\n'
     fi
     break

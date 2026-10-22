@@ -59,12 +59,12 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('yarn.lock', 'apps/mobile/app.config.ts') }}-${{ github.run_id }}
+          key: gradle-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/app.config.ts') }}-${{ github.run_id }}
           restore-keys: |
-            gradle-${{ runner.os }}-${{ hashFiles('yarn.lock', 'apps/mobile/app.config.ts') }}-
+            gradle-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/app.config.ts') }}-
             gradle-${{ runner.os }}-
       # No secret reaches a step that runs the install scripts.
-      - run: nix develop --command yarn install --immutable
+      - run: nix develop --command pnpm install --frozen-lockfile
       - name: Generate the native project
         working-directory: apps/mobile
         env:
@@ -73,7 +73,7 @@ jobs:
           EXPO_PUBLIC_DEFAULT_SERVER_URL: ${{ inputs.server-url }}
           EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
           ANDROID_VERSION_CODE: ${{ inputs.sequence }}
-        run: nix develop --command yarn expo prebuild --platform android --clean
+        run: nix develop --command pnpm expo prebuild --platform android --clean
       # The Sentry Gradle step uploads source maps and native debug files during the build.
       - name: Build the release APK
         working-directory: apps/mobile/android

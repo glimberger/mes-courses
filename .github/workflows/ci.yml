@@ -24,8 +24,8 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - run: nix develop --command yarn install --immutable
-      - run: nix develop --command yarn typecheck
+      - run: nix develop --command pnpm install --frozen-lockfile
+      - run: nix develop --command pnpm typecheck
 
   lint:
     runs-on: ubuntu-latest
@@ -37,9 +37,9 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - run: nix develop --command yarn install --immutable
-      - run: nix develop --command yarn lint
-      - run: nix develop --command yarn format:check
+      - run: nix develop --command pnpm install --frozen-lockfile
+      - run: nix develop --command pnpm lint
+      - run: nix develop --command pnpm format:check
       - run: nix develop --command actionlint
 
   test:
@@ -52,11 +52,11 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - run: nix develop --command yarn install --immutable
-      - run: nix develop --command yarn test
-      - run: nix develop --command yarn test:architecture
-      - run: nix develop --command yarn test:hooks
-      - run: nix develop --command yarn test:scripts
+      - run: nix develop --command pnpm install --frozen-lockfile
+      - run: nix develop --command pnpm test
+      - run: nix develop --command pnpm test:architecture
+      - run: nix develop --command pnpm test:hooks
+      - run: nix develop --command pnpm test:scripts
 
   build:
     runs-on: ubuntu-latest
@@ -68,6 +68,6 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - run: nix develop --command yarn install --immutable
-      - run: nix develop --command yarn build
+      - run: nix develop --command pnpm install --frozen-lockfile
+      - run: nix develop --command pnpm build
       - run: nix develop --command sh .github/scripts/server-smoke.sh

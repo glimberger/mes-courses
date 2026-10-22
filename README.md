@@ -35,8 +35,7 @@ Everything else is under [`docs/`](docs/README.md), which indexes it:
 
 ## Prerequisites
 
-- [Nix](https://nixos.org/download) with flakes enabled. The dev shell provides Node.js 24, Yarn 4
-  (through Corepack, the version comes from `packageManager`) and watchman. Optionally
+- [Nix](https://nixos.org/download) with flakes enabled. The dev shell provides Node.js 24, pnpm (the version comes from `packageManager`) and watchman. Optionally
   [`direnv`](https://direnv.net) with `nix-direnv`, so the shell loads when you enter the folder.
 - For device builds: Android Studio (Android) or Xcode (iOS, macOS only).
 - For the end-to-end journeys: an Android emulator named `Pixel_API_35` (or the name in
@@ -50,21 +49,21 @@ These last tools stay outside Nix.
 
 ```sh
 direnv allow     # or: nix develop
-yarn install     # at the repository root, installs every workspace
+pnpm install     # at the repository root, installs every workspace
 ```
 
-Yarn only installs a version that was published at least a day ago (`npmMinimalAgeGate`), so a
+pnpm only installs a version that was published at least a day ago (`minimumReleaseAge`), so a
 brand-new release is ignored until then.
 
-React Native Paper carries one Yarn patch (`.yarn/patches/`): its `Dialog` passes
+React Native Paper carries patches (`.pnpm/patches/`): its `Dialog` passes
 `overlayAccessibilityLabel` on to its `Modal`, so screen readers read the dialog backdrop in
 French. Check it still applies when Paper is upgraded, and drop it once Paper does this itself.
 A second patch adds a `labelFloated` prop to its `TextInput`, which keeps the label in the outline of an
 empty field as the mockups draw it (FR-009); drop it if Paper gains such a prop.
 
-`yarn install` also installs the Git hooks ([Lefthook](https://lefthook.dev), `lefthook.yml`).
+`pnpm install` also installs the Git hooks ([Lefthook](https://lefthook.dev), `lefthook.yml`).
 Before each commit, Prettier formats the staged files and stages the result, ESLint checks
-them. Before each push, `yarn typecheck`, `yarn test` and `yarn test:architecture` run in
+them. Before each push, `pnpm typecheck`, `pnpm test` and `pnpm test:architecture` run in
 parallel on the whole repository (about 20 seconds), so uncommitted work in the tree can block
 a push. The E2E suites never run from a hook.
 
@@ -73,13 +72,13 @@ a push. The E2E suites never run from a hook.
 Run these from the repository root; they are the same checks as CI.
 
 ```sh
-yarn typecheck          # tsc --noEmit in every workspace
-yarn lint               # ESLint
-yarn format:check       # Prettier (yarn format fixes)
-yarn test               # Jest: the fast suite, no device and no network
-yarn test:architecture  # dependency-cruiser layer and workspace rules
-yarn test:hooks         # the Claude Code guardrail hooks (.claude/hooks)
-yarn build              # expo export for Android and iOS
+pnpm typecheck          # tsc --noEmit in every workspace
+pnpm lint               # ESLint
+pnpm format:check       # Prettier (pnpm format fixes)
+pnpm test               # Jest: the fast suite, no device and no network
+pnpm test:architecture  # dependency-cruiser layer and workspace rules
+pnpm test:hooks         # the Claude Code guardrail hooks (.claude/hooks)
+pnpm build              # expo export for Android and iOS
 ```
 
 ## Run
@@ -87,20 +86,20 @@ yarn build              # expo export for Android and iOS
 From `apps/mobile/`, with a development build on an emulator, a simulator or a phone:
 
 ```sh
-yarn android             # or: yarn ios
-yarn storybook           # starts Metro with Storybook instead of the app
+pnpm android             # or: pnpm ios
+pnpm storybook           # starts Metro with Storybook instead of the app
 ```
 
-`yarn android` and `yarn ios` build with `SENTRY_DISABLE_AUTO_UPLOAD=true`: a local build sends no
-source maps to Sentry, which only EAS builds do. A bare `yarn expo run:ios` fails at the "Bundle
+`pnpm android` and `pnpm ios` build with `SENTRY_DISABLE_AUTO_UPLOAD=true`: a local build sends no
+source maps to Sentry, which only EAS builds do. A bare `pnpm expo run:ios` fails at the "Bundle
 React Native code and images" step with "An organization ID or slug is required" unless
 `SENTRY_ORG` and `SENTRY_PROJECT` are set (see [EAS builds and error tracking](docs/procedures/eas-builds.md)).
 
-`yarn storybook` is the on-device catalog of the screens. A bundle built without
+`pnpm storybook` is the on-device catalog of the screens. A bundle built without
 `STORYBOOK_ENABLED` holds no Storybook code. To review a pull request that changes the UI, open
 each story it lists ([quickstart §2](specs/001-shopping-lists/quickstart.md#2-review-the-screens-in-storybook)):
 the text is French, colors come from the theme in light and dark mode, and at 200% system text
-the long names wrap without being cut. `yarn start` brings the app back.
+the long names wrap without being cut. `pnpm start` brings the app back.
 
 `EXPO_PUBLIC_SENTRY_DSN` is optional: it sends error reports to Sentry. Without it, errors go to
 the console only.

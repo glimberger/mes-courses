@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "MES_COURSES_DB=.data/mes-courses.db tsx watch --clear-screen=false src/composition/main.ts",
-    "build": "yarn workspace @mes-courses/sync-core build && tsc -p tsconfig.json",
+    "build": "pnpm --filter @mes-courses/sync-core run build && tsc -p tsconfig.json",
     "start": "node --conditions=production dist/composition/main.js",
     "create-admin": "node dist/composition/create-admin.js",
     "create-admin:dev": "MES_COURSES_DB=.data/mes-courses.db tsx src/composition/create-admin.ts",

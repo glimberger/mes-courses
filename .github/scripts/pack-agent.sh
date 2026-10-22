@@ -3,7 +3,7 @@
 # Builds delivery-<version>.tar.gz, the bundle of the agent that runs on the Pi (research R6):
 # the built workspace, its production dependencies, and `nixpkgs-rev`, the revision to build the
 # Node runtime from. <version> must be the delivery workspace's own version (what the manifests'
-# `minAgentVersion` is compared to). Run after `yarn build`. It modifies node_modules; run it on a
+# `minAgentVersion` is compared to). Run after `pnpm build`. It modifies node_modules; run it on a
 # CI checkout or a throwaway copy.
 set -eu
 
@@ -37,7 +37,7 @@ if [ "$actual" != "$version" ]; then
   exit 1
 fi
 if [ ! -f apps/delivery/dist/composition/main.js ]; then
-  echo "apps/delivery/dist/composition/main.js does not exist: run yarn build first" >&2
+  echo "apps/delivery/dist/composition/main.js does not exist: run pnpm build first" >&2
   exit 1
 fi
 
@@ -49,7 +49,7 @@ case "$rev" in
     ;;
 esac
 
-yarn workspaces focus --production @mes-courses/delivery
+pnpm prune --prod
 # @sentry/node pulls in oxc-parser through @sentry/bundler-plugins. Only the bundler entry points
 # (@sentry/node/bundler-plugin/*) load it, never the agent, and its platform binaries are native:
 # left out of the artifact, as in pack-server.sh.

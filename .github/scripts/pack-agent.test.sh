@@ -1,5 +1,5 @@
 #!/bin/sh
-# Tests of the argument and precondition checks of pack-agent.sh. They all fail before `yarn` runs.
+# Tests of the argument and precondition checks of pack-agent.sh. They all fail before `pnpm` runs.
 dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -25,6 +25,6 @@ expect_failure "no arguments" "usage" sh "$dir/pack-agent.sh"
 expect_failure "not a version" "X.Y.Z" sh "$dir/pack-agent.sh" latest
 expect_failure "path in the version" "X.Y.Z" sh "$dir/pack-agent.sh" 1.0.0/../x
 expect_failure "version differs from the workspace" "not '1.2.0'" sh "$dir/pack-agent.sh" 1.2.0
-expect_failure "nothing built" "yarn build" sh "$dir/pack-agent.sh" 1.0.0
+expect_failure "nothing built" "pnpm build" sh "$dir/pack-agent.sh" 1.0.0
 
 [ "$failures" -eq 0 ] || exit 1

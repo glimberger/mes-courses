@@ -1,7 +1,7 @@
 #!/bin/sh
 # Starts the compiled server the way the Pi does (node --conditions=production
 # dist/composition/main.js), checks /v1/health, then signs in an administrator created with the compiled
-# script. Run after `yarn build`. Catches a dist/ that only works under tsx or Jest.
+# script. Run after `pnpm build`. Catches a dist/ that only works under tsx or Jest.
 set -eu
 
 dir=$(mktemp -d)

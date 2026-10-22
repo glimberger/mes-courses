@@ -1,0 +1,20 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+  - 'tests/*'
+
+allowBuilds:
+  '@parcel/watcher': true
+  '@sentry/cli': true
+  detox: true
+  dtrace-provider: true
+  esbuild: true
+  lefthook: true
+  unrs-resolver: true
+
+patchedDependencies:
+  'detox@20.51.4': patches/detox-npm-20.51.4-f0776917eb.patch
+  'react-native-paper@5.15.3': patches/react-native-paper-5.15.3.patch
+
+overrides:
+  cookie: 1.1.1

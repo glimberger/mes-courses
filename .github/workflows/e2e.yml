@@ -55,13 +55,13 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('yarn.lock', 'apps/mobile/app.config.ts') }}-${{ github.run_id }}
+          key: gradle-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/app.config.ts') }}-${{ github.run_id }}
           restore-keys: |
-            gradle-${{ runner.os }}-${{ hashFiles('yarn.lock', 'apps/mobile/app.config.ts') }}-
+            gradle-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/app.config.ts') }}-
             gradle-${{ runner.os }}-
-      - run: nix develop --command yarn install --immutable
+      - run: nix develop --command pnpm install --frozen-lockfile
       # The emulator is x86_64: building one ABI instead of four keeps the job well under its limit.
-      - run: nix develop --command yarn workspace @mes-courses/e2e-tests e2e:build:android
+      - run: nix develop --command pnpm --filter @mes-courses/e2e-tests e2e:build:android
         env:
           ORG_GRADLE_PROJECT_reactNativeArchitectures: x86_64
       - uses: reactivecircus/android-emulator-runner@v2
@@ -71,7 +71,7 @@ jobs:
           arch: x86_64
           avd-name: Pixel_API_35
           disable-animations: true
-          script: nix develop --command yarn workspace @mes-courses/e2e-tests e2e:test:android
+          script: nix develop --command pnpm --filter @mes-courses/e2e-tests e2e:test:android
       - if: always()
         uses: actions/cache/save@v6
         with:

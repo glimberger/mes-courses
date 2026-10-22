@@ -2,7 +2,7 @@
 # Usage: pack-server.sh <version> <commit> <sequence> [output folder]
 # Builds server-<commit>.tar.gz from a built workspace (research R3): production dependencies
 # only, no native addon, build-info.json next to the server's package.json.
-# Run after `yarn build`. It modifies node_modules; run it on a CI checkout or a throwaway copy.
+# Run after `pnpm build`. It modifies node_modules; run it on a CI checkout or a throwaway copy.
 set -eu
 
 if [ "$#" -lt 3 ]; then
@@ -17,7 +17,7 @@ output=${4:-.}
 root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd "$root"
 
-yarn workspaces focus --production @mes-courses/server
+pnpm prune --prod
 # @sentry/node pulls in oxc-parser through @sentry/bundler-plugins. Only the bundler entry points
 # (@sentry/node/bundler-plugin/*) load it, never the server, and its platform binaries are
 # native: left out of the artifact, so the native check below stays strict for everything else.

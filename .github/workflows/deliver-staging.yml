@@ -94,8 +94,8 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - run: nix develop --command yarn install --immutable
-      - run: nix develop --command yarn build
+      - run: nix develop --command pnpm install --frozen-lockfile
+      - run: nix develop --command pnpm build
       - name: Pack the server
         env:
           SEQUENCE: ${{ needs.plan.outputs.sequence }}
@@ -172,7 +172,7 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - run: nix develop --command yarn install --immutable
+      - run: nix develop --command pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v8
         with:
           name: server-staging
@@ -186,7 +186,7 @@ jobs:
           set -eu
           server=$(find "$RUNNER_TEMP/artifacts" -name "server-$SHA.tar.gz" | head -1)
           [ -n "$server" ]
-          nix develop --command yarn workspace @mes-courses/delivery ci write-manifest \
+          nix develop --command pnpm --filter @mes-courses/delivery ci write-manifest \
             --env staging --commit "$SHA" --server "$server"
           echo "### Published the server to the staging channel" >> "$GITHUB_STEP_SUMMARY"
       - name: Summarize this job
@@ -212,7 +212,7 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - run: nix develop --command yarn install --immutable
+      - run: nix develop --command pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v8
         with:
           name: fdroid-staging
@@ -226,7 +226,7 @@ jobs:
           set -eu
           fdroid=$(find "$RUNNER_TEMP/artifacts" -name "fdroid-staging-$SHA.tar.gz" | head -1)
           [ -n "$fdroid" ]
-          nix develop --command yarn workspace @mes-courses/delivery ci write-manifest \
+          nix develop --command pnpm --filter @mes-courses/delivery ci write-manifest \
             --env staging --commit "$SHA" --fdroid "$fdroid"
           echo "### Published the Android repository to the staging channel" >> "$GITHUB_STEP_SUMMARY"
       - name: Summarize this job

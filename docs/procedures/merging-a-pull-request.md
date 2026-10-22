@@ -22,10 +22,10 @@ gh run list --workflow e2e.yml --branch <branch> --limit 1 --json headSha,conclu
 
 `.github/scripts/app-changed.sh` decides whether a branch is documentation-only (`specs/`,
 `.specify/`, Markdown files); the same rule tells you when a branch needs
-`yarn test:e2e:android` before it is pushed:
+`pnpm test:e2e:android` before it is pushed:
 
 ```sh
 git diff --name-only "$(git merge-base origin/main HEAD)" HEAD | .github/scripts/app-changed.sh
-# app=true  -> run yarn test:e2e:android first, and the e2e workflow before merging
+# app=true  -> run pnpm test:e2e:android first, and the e2e workflow before merging
 # app=false -> documentation only, the device suite is not needed
 ```

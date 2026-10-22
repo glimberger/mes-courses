@@ -34,9 +34,9 @@ check "packages" "$BOTH" "packages/sync-core/src/x.ts
 "
 check "root package.json" "$BOTH" "package.json
 "
-check "yarn.lock" "$BOTH" "yarn.lock
+check "pnpm-lock.yaml" "$BOTH" "pnpm-lock.yaml
 "
-check ".yarnrc.yml" "$BOTH" ".yarnrc.yml
+check "pnpm-workspace.yaml" "$BOTH" "pnpm-workspace.yaml
 "
 check "pack-server.sh" "$SERVER" ".github/scripts/pack-server.sh
 "
@@ -46,7 +46,7 @@ check "build-fdroid-repo.sh" "$APP" ".github/scripts/build-fdroid-repo.sh
 "
 check "android-apk.yml" "$APP" ".github/workflows/android-apk.yml
 "
-check ".yarn folder" "$BOTH" ".yarn/releases/yarn.cjs
+check ".npmrc" "$BOTH" ".npmrc
 "
 check "flake.nix" "$BOTH" "flake.nix
 "
