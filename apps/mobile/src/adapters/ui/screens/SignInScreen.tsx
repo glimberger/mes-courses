@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   View,
@@ -185,7 +184,9 @@ export const SignInForm = ({
   const field = fieldStyle('screen', theme);
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      // Android draws edge to edge: the window no longer resizes for the keyboard, so it needs
+      // the padding too.
+      behavior="padding"
       style={styles.screen}
     >
       <ScrollView
