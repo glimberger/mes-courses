@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { KeyboardAvoidingView, StyleSheet } from 'react-native';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import type { AccountServer } from '../../../application/ports/account-server';
@@ -59,6 +59,14 @@ const submit = () =>
 const signedIn: SignIn = ok({ type: 'signedIn', pairing, account });
 
 describe('SignIn', () => {
+  it('keeps the password field above the keyboard, on iOS and on Android', async () => {
+    await renderSignIn();
+
+    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).props.behavior).toBe(
+      'padding',
+    );
+  });
+
   it('shows the four fields, the buttons and the device model', async () => {
     await renderSignIn();
 
@@ -239,6 +247,15 @@ describe('ChoosePassword', () => {
       screen.getByRole('button', { name: 'Enregistrer et continuer' }),
     );
   };
+
+  it('keeps the new password field above the keyboard, on iOS and on Android', async () => {
+    await openChoose();
+
+    // The sign-in screen stays mounted under it.
+    expect(
+      screen.UNSAFE_getAllByType(KeyboardAvoidingView).at(-1)?.props.behavior,
+    ).toBe('padding');
+  });
 
   it('004 US2-2 saves the password and goes to the current list with a welcome', async () => {
     const choosePassword = jest.fn(async (): Promise<Choose> => ok(pairing));
