@@ -18,3 +18,25 @@ jest.mock('expo-sqlite/kv-store', () => ({
   __esModule: true,
   default: { getItemSync: () => null, setItemSync: () => undefined },
 }));
+
+// expo-asset 58.0.17 reads assets through `AssetRegistry` exported by `react-native`,
+// while jest-expo only mocks the `react-native/asset-registry` entry point. Provide
+// the same fake metadata so icon/image assets resolve in tests.
+jest.mock('react-native/src/private/assets/AssetRegistry', () => ({
+  AssetRegistry: {
+    registerAsset: jest.fn(() => 1),
+    getAssetByID: jest.fn(() => ({
+      fileSystemLocation: '/full/path/to/directory',
+      httpServerLocation: '/assets/full/path/to/directory',
+      scales: [1],
+      fileHashes: ['md5'],
+      name: 'name',
+      exists: true,
+      type: 'type',
+      hash: 'md5',
+      uri: 'uri',
+      width: 1,
+      height: 1,
+    })),
+  },
+}));

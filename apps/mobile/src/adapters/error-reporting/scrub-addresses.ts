@@ -4,7 +4,7 @@ const AT = '(?:@|%40)';
 // Each run is capped at the 254 characters of the longest address: unbounded runs made a long text
 // without an address cost quadratic time.
 const ADDRESS = new RegExp(
-  `${ADDRESS_CHARACTERS}{1,254}${AT}${ADDRESS_CHARACTERS}{1,254}\\.${ADDRESS_CHARACTERS}{1,254}(?<!\\.)`,
+  `${ADDRESS_CHARACTERS}{1,254}${AT}${ADDRESS_CHARACTERS}{1,254}\\.[a-zA-Z]{2,}(?<!\\.)`,
   'gi',
 );
 
