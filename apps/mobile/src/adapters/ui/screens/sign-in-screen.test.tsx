@@ -306,6 +306,41 @@ describe('ChoosePassword', () => {
     );
   });
 
+  it('004 US2-2 lands on the current list at the root of Courses, even when AddArticles was open', async () => {
+    await renderSignIn({
+      signIn: async () => ok({ type: 'passwordChangeRequired' }),
+      choosePassword: async (): Promise<Choose> => ok(pairing),
+    });
+    fireEvent.press(screen.getByRole('tab', { name: 'Courses' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Ajouter' }));
+    await screen.findByRole('header', { name: 'Ajouter des articles' });
+    fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
+    await screen.findByRole('header', { name: 'Connexion' });
+    // AddArticles is still mounted in the Courses stack, behind the tab.
+    expect(
+      screen.queryAllByPlaceholderText('Rechercher un article', {
+        includeHiddenElements: true,
+      }),
+    ).toHaveLength(1);
+    fill('courses.example.fr', 'marie@example.org', 'ABCD-EFGH-JKMN-PQRS');
+    submit();
+    await screen.findByRole('header', { name: 'Choisir votre mot de passe' });
+
+    choose('a brand new password');
+
+    expect(
+      await screen.findByText('Mot de passe enregistré. Bienvenue !'),
+    ).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Ma liste' })).toBeOnTheScreen();
+    await waitFor(() =>
+      expect(
+        screen.queryAllByPlaceholderText('Rechercher un article', {
+          includeHiddenElements: true,
+        }),
+      ).toHaveLength(0),
+    );
+  });
+
   it.each([
     ['short', 'short', 'Le mot de passe doit contenir au moins 12 caractères.'],
     [

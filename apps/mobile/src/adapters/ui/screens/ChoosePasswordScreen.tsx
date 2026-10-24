@@ -100,10 +100,12 @@ export const ChoosePasswordScreen = () => {
     setSaving(false);
     if (outcome.ok) {
       // Past SignIn and this screen, then to the current list, in the Courses tab.
+      // `pop: true` pops back to CurrentList instead of pushing a second one
+      // over a screen the Courses stack still holds, such as AddArticles.
       navigation.popToTop();
       navigation
         .getParent<AppNavigation>()
-        ?.navigate('CoursesTab', { screen: 'CurrentList' });
+        ?.navigate('CoursesTab', { screen: 'CurrentList', pop: true });
       return;
     }
     setError(chooseErrorText(outcome.error));
