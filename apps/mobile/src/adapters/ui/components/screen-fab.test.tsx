@@ -70,6 +70,6 @@ describe.each([
   });
 });
 
-it('exports the space snackbars keep above the fab: 24 + 56 + 12 = 92 dp', () => {
-  expect(ABOVE_SCREEN_FAB.bottom).toBe(92);
+it('exports the space snackbars keep above the tab bar and the fab: 80 + 24 + 56 + 12 = 172 dp', () => {
+  expect(ABOVE_SCREEN_FAB.bottom).toBe(172);
 });

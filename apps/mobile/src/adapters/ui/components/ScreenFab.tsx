@@ -8,6 +8,7 @@ import { shape } from '../theme/shape';
 import { spacing } from '../theme/spacing';
 import type { AppTheme } from '../theme/theme';
 import { paperRef } from './paper-ref';
+import { TAB_BAR_HEIGHT } from './TabBar';
 
 export type ScreenFabProps = {
   icon: string;
@@ -82,11 +83,11 @@ export const ScreenFab = ({
 };
 
 /**
- * Where the app-wide snackbars sit: above the FAB, as Material places them, and above a screen's
- * bottom button, so neither is ever covered (24 + 56 + 12 dp).
+ * Where the app-wide snackbars sit: above the tab bar, the FAB, as Material places them, and a
+ * screen's bottom button, so none is ever covered (80 + 24 + 56 + 12 dp).
  */
 export const ABOVE_SCREEN_FAB = {
-  bottom: FAB_BOTTOM + FAB_HEIGHT + SNACKBAR_GAP,
+  bottom: TAB_BAR_HEIGHT + FAB_BOTTOM + FAB_HEIGHT + SNACKBAR_GAP,
 };
 
 /** The bottom padding a list needs so the FAB never covers its last row. */
