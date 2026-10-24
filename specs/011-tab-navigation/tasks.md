@@ -25,7 +25,7 @@ Paths are under `apps/mobile/src/adapters/ui/` unless stated.
 - [X] T001 Write `specs/011-tab-navigation/spec.md` and its quality checklist
 - [X] T002 Write `plan.md`, `research.md`, `data-model.md`, `quickstart.md` and `contracts/ui-screens.md`
 - [X] T003 Write this `tasks.md`
-- [ ] T004 [P] Update `design/mockups/` with the four tab screens (Courses, add screen, Listes, Articles) and the new dialogs (row menus, article edit, delete confirmation), linked from `design/mockups/index.html`
+- [x] T004 [P] Update `design/mockups/` with the four tab screens (Courses, add screen, Listes, Articles) and the new dialogs (row menus, article edit, delete confirmation), linked from `design/mockups/index.html`
 
 ---
 
