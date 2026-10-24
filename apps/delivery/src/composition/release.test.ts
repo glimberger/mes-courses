@@ -22,6 +22,22 @@ describe('parseReleaseArgs', () => {
     });
   });
 
+  it('reads promote, with its options and without a terminal', () => {
+    expect(
+      parseReleaseArgs(['promote', '--dry-run'], { interactive: false }),
+    ).toEqual({
+      target: { kind: 'promote' },
+      assumeYes: false,
+      dryRun: true,
+    });
+    expect(parseReleaseArgs(['-y', 'promote']).assumeYes).toBe(true);
+  });
+
+  it('rejects promote with a bump or a version', () => {
+    expect(() => parseReleaseArgs(['promote', 'minor'])).toThrow(UsageError);
+    expect(() => parseReleaseArgs(['1.3.0', 'promote'])).toThrow(UsageError);
+  });
+
   it('asks when there is no target on a terminal', () => {
     expect(parseReleaseArgs([], { interactive: true }).target).toEqual({
       kind: 'ask',
@@ -66,8 +82,9 @@ describe('parseReleaseArgs', () => {
 });
 
 describe('exitCodeOf', () => {
-  it('is 0 for released and declined, 1 for stopped', () => {
+  it('is 0 for released, staged and declined, 1 for stopped', () => {
     expect(exitCodeOf({ outcome: 'released' })).toBe(0);
+    expect(exitCodeOf({ outcome: 'staged' })).toBe(0);
     expect(exitCodeOf({ outcome: 'declined' })).toBe(0);
     expect(exitCodeOf({ outcome: 'stopped', message: 'x' })).toBe(1);
   });

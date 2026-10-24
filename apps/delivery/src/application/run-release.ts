@@ -32,8 +32,9 @@ export type ReleaseDeps = {
 };
 
 export type ReleaseRequest = {
+  /** A bump or a version delivers to staging; `promote` sends what staging runs to production. */
   target: ReleaseTarget;
-  /** Skips only the `current -> next` confirmation. */
+  /** Skips only the confirmation (`current -> next`, or the promotion). */
   assumeYes: boolean;
   /** Observes and prints what would be done; every mutating call is replaced by a "would" line. */
   dryRun?: boolean;
@@ -41,6 +42,8 @@ export type ReleaseRequest = {
 
 export type ReleaseResult =
   | { outcome: 'released' }
+  /** The version runs on staging and waits for `yarn release promote`. */
+  | { outcome: 'staged' }
   | { outcome: 'declined' }
   | { outcome: 'stopped'; message: string };
 
@@ -48,6 +51,7 @@ const POLL_MS = 30_000;
 const WAIT_LIMIT_MS = 90 * 60_000;
 const RESUME_AFTER_ERROR = 'Run the same command again to resume.';
 const RESUME = 'run the same command again to resume';
+const PROMOTE = '`yarn release promote`';
 
 /** Everything that changes the repository or GitHub goes through here, so a dry run cannot leak. */
 type Steps = {
@@ -87,8 +91,8 @@ const wouldSteps = (output: Output): Steps => ({
   async enableAutoMerge() {
     output.line('would enable auto-merge (squash) on it');
   },
-  async tag(tag) {
-    output.line(`would tag ${tag} on the bump commit and push the tag`);
+  async tag(tag, sha) {
+    output.line(`would tag ${tag} on ${sha} and push the tag`);
   },
   async pushTag(tag) {
     output.line(`would push the tag ${tag}`);
@@ -123,6 +127,8 @@ const resolveVersion = async (
     if (resolved.kind === 'ask')
       return { errors: ['No bump type or version given'] };
   }
+  if (resolved.kind === 'promote')
+    return { errors: [`Run ${PROMOTE} on its own`] };
   if (resolved.kind === 'bump') {
     // A version on main that was never released is an interrupted run: finish it, do not bump again.
     if (await unreleased()) {
@@ -144,6 +150,12 @@ const productionVersion = async (
 ): Promise<string | null> => {
   const channel = await source.fetchChannel('production');
   return channel === null ? null : parseManifest(channel.manifest).version;
+};
+
+/** The last commit delivered to staging, or null when the channel is empty. */
+const stagingCommit = async (source: ChannelSource): Promise<string | null> => {
+  const channel = await source.fetchChannel('staging');
+  return channel === null ? null : parseManifest(channel.manifest).commit;
 };
 
 /**
@@ -248,25 +260,25 @@ export const runRelease = async (
   }
 };
 
-const execute = async (
+/**
+ * The checks and the confirmation before a delivery to staging: the version to deliver, or the
+ * result that ends the run.
+ */
+const prepareStaging = async (
   deps: ReleaseDeps,
   request: ReleaseRequest,
-): Promise<ReleaseResult> => {
-  const { repository, runs, prompter, output, sleep } = deps;
-  const dryRun = request.dryRun === true;
-  const steps = dryRun ? wouldSteps(output) : realSteps(deps);
-
-  await repository.fetch();
-  const current = await repository.appVersionAt('origin/main');
+  current: string,
+): Promise<{ version: string } | ReleaseResult> => {
+  const { repository, prompter, output } = deps;
   // The version already on main is a resume of an interrupted run, not a new release.
   let unreleasedAnswer: Promise<boolean> | undefined;
   const unreleased = () =>
     (unreleasedAnswer ??= unreleasedOnMain(deps, current));
   // An interactive run does not know its target yet: it may resume, which is checked once it is known.
   const resuming =
-    request.target.kind === 'bump' || request.target.kind === 'ask'
-      ? await unreleased()
-      : request.target.version === current;
+    request.target.kind === 'version'
+      ? request.target.version === current
+      : await unreleased();
   const problems = checkPrerequisites({
     branch: await repository.currentBranch(),
     clean: await repository.isClean(),
@@ -288,11 +300,9 @@ const execute = async (
         '\n',
       ),
     );
-  const tag = `v${version}`;
-  const branch = `chore/release-${version}`;
 
   if (version !== current) {
-    const tags = await repository.tagCommit(tag);
+    const tags = await repository.tagCommit(`v${version}`);
     const refused = checkNewVersion({
       version,
       mainVersion: current,
@@ -304,11 +314,34 @@ const execute = async (
 
   output.line(`${current} -> ${version}`);
   if (
-    !dryRun &&
+    request.dryRun !== true &&
     !request.assumeYes &&
-    !(await prompter.confirm(`Release ${version}?`))
+    !(await prompter.confirm(`Deliver ${version} to staging?`))
   )
     return { outcome: 'declined' };
+  return { version };
+};
+
+const execute = async (
+  deps: ReleaseDeps,
+  request: ReleaseRequest,
+): Promise<ReleaseResult> => {
+  const { repository, runs, prompter, output, sleep } = deps;
+  const dryRun = request.dryRun === true;
+  const promote = request.target.kind === 'promote';
+  const steps = dryRun ? wouldSteps(output) : realSteps(deps);
+
+  await repository.fetch();
+  const current = await repository.appVersionAt('origin/main');
+  // A promotion only tags a commit of origin/main: the local checkout does not matter.
+  const prepared = promote
+    ? { version: current }
+    : await prepareStaging(deps, request, current);
+  if (!('version' in prepared)) return prepared;
+  const { version } = prepared;
+  const tag = `v${version}`;
+  const branch = `chore/release-${version}`;
+  if (promote) output.line(`${version}: staging -> production`);
 
   let waitingFor: ReleaseStep['step'] | null = null;
   let waitedMs = 0;
@@ -317,9 +350,9 @@ const execute = async (
   const observe = createObserver(deps, version, branch);
   for (;;) {
     const state = await observe();
-    const hypothetical = assumed !== null;
     let step: ReleaseStep = assumed ?? decideStep(version, state);
-    if (dryRun) assumed = NEXT_STEP[step.step] ?? null;
+    // A promotion assumes nothing in a dry run: what staging has is already there to read.
+    if (dryRun && !promote) assumed = NEXT_STEP[step.step] ?? null;
 
     const message = stopMessage(step);
     if (message !== null) return stopped(message);
@@ -327,6 +360,27 @@ const execute = async (
     if (step.step === 'done') {
       output.line(`${tag} is already released`);
       return { outcome: 'released' };
+    }
+
+    const tagging = step.step === 'tag' || step.step === 'push-tag';
+
+    // Only a version that staging received can be promoted.
+    if (promote && !tagging)
+      return stopped(
+        `${version} is not delivered to staging yet${state.releaseCommit === null ? '' : ` (${state.releaseCommit})`}: run \`yarn release ${version}\` to wait for it, validate it on staging, then run ${PROMOTE}`,
+      );
+
+    // The staging half stops where the tag would go: production waits for the promotion.
+    if (!promote && tagging) {
+      if (dryRun) {
+        output.line(`would stop with ${version} on staging, for ${PROMOTE}`);
+        return { outcome: 'staged' };
+      }
+      output.line(`${version} is on staging (${state.releaseCommit})`);
+      output.line(
+        `Validate it there, then run ${PROMOTE} to release it to production.`,
+      );
+      return { outcome: 'staged' };
     }
 
     if (step.step === 'open-bump') {
@@ -358,37 +412,43 @@ const execute = async (
       step = { step: 'wait-merge' };
     }
 
-    if (step.step === 'push-tag') {
+    if (step.step === 'tag' || step.step === 'push-tag') {
       const sha = state.releaseCommit;
-      await steps.pushTag(tag);
-      if (!dryRun) output.line(`pushed ${tag} on ${sha}`);
-      if (sha !== null && !dryRun)
+      if (sha === null) return stopped('Found no release commit to tag');
+      const failures = evaluateRelease({
+        tag,
+        appVersion: await repository.appVersionAt(sha),
+        onMain: true,
+        successfulWorkflows: state.runs
+          .filter((run) => run.state === 'success')
+          .map((run) => run.workflow),
+        productionVersion: state.productionVersion,
+      });
+      if (failures.length > 0) return stopped(failures.join('\n'));
+      // Production gets the release commit; staging may have moved on to later merges since.
+      const staging = await stagingCommit(deps.source);
+      if (staging !== null && staging !== sha)
+        output.line(
+          `staging now runs ${staging}, not ${sha}: production gets ${sha}`,
+        );
+      if (
+        !dryRun &&
+        !request.assumeYes &&
+        !(await prompter.confirm(`Promote ${version} (${sha}) to production?`))
+      )
+        return { outcome: 'declined' };
+      if (step.step === 'push-tag') {
+        // The tag already exists locally: it still goes through the same checks and confirmation.
+        await steps.pushTag(tag);
+        if (dryRun) return { outcome: 'released' };
+        output.line(`pushed ${tag} on ${sha}`);
         output.line(`Release run: ${await runs.releaseRunUrl(sha)}`);
-      return { outcome: 'released' };
-    }
-
-    if (step.step === 'tag') {
-      const sha = state.releaseCommit;
-      // A dry run that only assumes the earlier steps went well has nothing real to check yet.
-      if (sha !== null || !(dryRun && hypothetical)) {
-        if (sha === null) return stopped('Found no release commit to tag');
-        if (!hypothetical) {
-          const failures = evaluateRelease({
-            tag,
-            appVersion: await repository.appVersionAt(sha),
-            onMain: true,
-            successfulWorkflows: state.runs
-              .filter((run) => run.state === 'success')
-              .map((run) => run.workflow),
-            productionVersion: state.productionVersion,
-          });
-          if (failures.length > 0) return stopped(failures.join('\n'));
-        }
+        return { outcome: 'released' };
       }
       await steps.tag(tag, sha);
       if (dryRun) return { outcome: 'released' };
       output.line(`tagged ${tag} on ${sha}`);
-      output.line(`Release run: ${await runs.releaseRunUrl(sha as string)}`);
+      output.line(`Release run: ${await runs.releaseRunUrl(sha)}`);
       return { outcome: 'released' };
     }
 
