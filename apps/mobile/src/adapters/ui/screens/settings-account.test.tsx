@@ -24,7 +24,7 @@ const openSettings = async (getAccount: () => Promise<unknown>) => {
     },
   );
   await screen.findByText('Ma liste');
-  fireEvent.press(screen.getByRole('button', { name: 'Réglages' }));
+  fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
   await screen.findByRole('header', { name: 'Réglages' });
   return rendered;
 };
@@ -63,7 +63,7 @@ describe('Settings, Compte section', () => {
     role = 'user';
     fireEvent.press(screen.getByRole('button', { name: 'Retour' }));
     await screen.findByText('Ma liste');
-    fireEvent.press(screen.getByRole('button', { name: 'Réglages' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
 
     expect(await screen.findByText('lea@example.org')).toBeOnTheScreen();
     expect(screen.queryByText('Administrateur')).toBeNull();
@@ -95,7 +95,7 @@ describe('Settings, Compte section', () => {
       { seed: fixture, asScreen: false },
     );
     await screen.findByText('Ma liste');
-    fireEvent.press(screen.getByRole('button', { name: 'Réglages' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
     await screen.findByRole('header', { name: 'Réglages' });
 
     expect(screen.queryByText('Compte')).toBeNull();

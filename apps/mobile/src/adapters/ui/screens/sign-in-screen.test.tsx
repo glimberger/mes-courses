@@ -41,7 +41,7 @@ const renderSignIn = async (
     { seed: fixture, asScreen: false, syncServer, accountServer },
   );
   await screen.findByText('Ma liste');
-  fireEvent.press(screen.getByRole('button', { name: 'Réglages' }));
+  fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
   fireEvent.press(await screen.findByRole('button', { name: 'Se connecter' }));
   await screen.findByRole('header', { name: 'Connexion' });
   return rendered;

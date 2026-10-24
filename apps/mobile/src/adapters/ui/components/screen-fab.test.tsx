@@ -44,11 +44,11 @@ describe.each([
     expect(StyleSheet.flatten(fab.props.style).elevation).toBeUndefined();
   });
 
-  it('sits 16 dp from the end and 24 dp from the bottom plus the bottom inset', () => {
+  it('sits 16 dp from the end and 24 dp from the bottom, whatever the bottom inset: the tab bar handles it', () => {
     const { fab } = renderFab(theme);
     expect(fab).toHaveStyle({
       end: 16,
-      bottom: 24 + BOTTOM_INSET,
+      bottom: 24,
     });
   });
 

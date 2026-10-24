@@ -32,7 +32,7 @@ const openSettings = async (
     },
   );
   await screen.findByText('Ma liste');
-  fireEvent.press(screen.getByRole('button', { name: 'Réglages' }));
+  fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
   await screen.findByText(ready);
   return rendered;
 };

@@ -1,7 +1,6 @@
 import type { Ref } from 'react';
 import { StyleSheet, View, type HostInstance } from 'react-native';
 import { Icon, Text, TouchableRipple, useTheme } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { shadows } from '../theme/elevation';
 import { shape } from '../theme/shape';
@@ -31,7 +30,7 @@ const ICON_SIZE = 24;
 
 /**
  * A screen's main action, floating at the bottom end: a 56 dp extended button on primaryContainer
- * with the soft fab shadow. Its ref is the button itself, so screen reader focus can be moved back
+ * with the soft fab shadow, 24 dp above the tab bar (which already handles the bottom inset). Its ref is the button itself, so screen reader focus can be moved back
  * to it (FR-037). The screen's list leaves room for it below its last row (`SCREEN_FAB_CLEARANCE`).
  */
 export const ScreenFab = ({
@@ -43,14 +42,13 @@ export const ScreenFab = ({
 }: ScreenFabProps) => {
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
-  const insets = useSafeAreaInsets();
   return (
     <View
       testID={testID}
       style={[
         styles.fab,
         {
-          bottom: FAB_BOTTOM + insets.bottom,
+          bottom: FAB_BOTTOM,
           backgroundColor: colors.primaryContainer,
           boxShadow: shadows(theme).fab,
         },

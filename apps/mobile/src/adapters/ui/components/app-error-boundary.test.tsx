@@ -51,7 +51,7 @@ describe('AppErrorBoundary', () => {
     const recording = await renderApp();
     mockListsFail = true;
 
-    fireEvent.press(screen.getByRole('button', { name: 'Mes listes' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'Listes' }));
 
     expect(await screen.findByText(crashed)).toBeOnTheScreen();
     expect(recording.reports).toEqual([
