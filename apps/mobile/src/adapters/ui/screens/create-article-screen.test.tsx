@@ -7,6 +7,10 @@ import type { ListId } from '../../../domain/shopping-list';
 import { Navigation } from '../navigation';
 import { seed as appSeed } from '../seed';
 import { fixture } from '../testing/fixtures';
+import {
+  BOTTOM_INSET,
+  expectNoBottomInsetPadding,
+} from '../testing/bottom-inset';
 import { renderWithStore } from '../testing/render-with-store';
 import type { Fixture, StoryScenario } from '../testing/story-store';
 import { CreateArticleScreen } from './CreateArticleScreen';
@@ -27,7 +31,7 @@ const fewCategories: Fixture = {
 /** CreateArticle alone, opened with no name and no category. */
 const renderScreen = async (
   seed: Fixture = fixture,
-  scenario: StoryScenario = {},
+  scenario: StoryScenario & { bottomInset?: number } = {},
 ) => {
   const rendered = await renderWithStore(<CreateArticleScreen />, {
     seed,
@@ -323,6 +327,12 @@ describe('CreateArticle', () => {
     expect(await stored(beurre)).toMatchObject({
       quantity: { amount: 250, unit: 'g' },
     });
+  });
+
+  it('does not pad its footer with the bottom inset: the tab bar handles it', async () => {
+    await renderScreen(fixture, { bottomInset: BOTTOM_INSET });
+
+    expectNoBottomInsetPadding();
   });
 
   it('keeps "Créer et ajouter" in sight on iOS while the user types', async () => {

@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SectionList, StyleSheet, View, type HostInstance } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { ArticleId } from '../../../domain/article';
 import type { CurrentListView } from '../../../domain/current-list-view';
@@ -14,7 +13,7 @@ import { SCREEN_FAB_CLEARANCE, ScreenFab } from '../components/ScreenFab';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenStateView } from '../components/ScreenStateView';
 import { SyncStatusBar } from '../components/SyncStatusBar';
-import type { RootStackParamList } from '../routes';
+import type { AppNavigation } from '../routes';
 import { spacing } from '../theme/spacing';
 import type { AppState } from '../state/app-store';
 import { useAppStoreApi } from '../state/app-store-provider';
@@ -101,8 +100,7 @@ const articleIdsOf = (view: CurrentListView | null): ArticleId[] =>
  * and "Terminer les courses" once an item is in the cart.
  */
 export const CurrentListScreen = () => {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<AppNavigation>();
   const currentList = useAppStore((state) => state.currentList);
   const loadCurrentList = useAppStore((state) => state.loadCurrentList);
   const toggleItem = useAppStore((state) => state.toggleItem);
@@ -272,16 +270,6 @@ export const CurrentListScreen = () => {
                 onPress={() => setFinishing(true)}
               />
             )}
-            <AppbarIconAction
-              icon="format_list_bulleted"
-              accessibilityLabel="Mes listes"
-              onPress={() => navigation.navigate('Lists')}
-            />
-            <AppbarIconAction
-              icon="settings"
-              accessibilityLabel="Réglages"
-              onPress={() => navigation.navigate('Settings')}
-            />
           </>
         }
       />

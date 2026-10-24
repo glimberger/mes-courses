@@ -1,9 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 import { Icon, Text, TouchableRipple, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import type { RootStackParamList } from '../routes';
+import type { AppNavigation } from '../routes';
 import type { SyncSlice } from '../state/store-kit';
 import { useAppStore } from '../state/use-app-store';
 import type { AppTheme } from '../theme/theme';
@@ -95,8 +94,7 @@ export const SyncStatusBar = ({
 }: {
   variant?: 'bar' | 'strip';
 }) => {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<AppNavigation>();
   const sync = useAppStore((state) => state.sync);
   const retry = useAppStore((state) => state.retry);
   const shown = display(sync);
@@ -117,7 +115,11 @@ export const SyncStatusBar = ({
       <TouchableRipple
         accessibilityRole="button"
         accessibilityLabel={label ?? text}
-        onPress={() => navigation.navigate('Settings')}
+        // `pop: true` pops back to the Settings root instead of pushing a second one over
+        // SignIn or Accounts, which the Réglages stack keeps while another tab is shown.
+        onPress={() =>
+          navigation.navigate('SettingsTab', { screen: 'Settings', pop: true })
+        }
         style={styles.status}
       >
         <View style={[styles.row, strip && styles.stripRow]}>
@@ -139,7 +141,11 @@ export const SyncStatusBar = ({
           onPress={() =>
             action.target === 'retry'
               ? void retry()
-              : navigation.navigate('SignIn')
+              : // `initial: false` keeps the Settings root under SignIn when the tab was never opened.
+                navigation.navigate('SettingsTab', {
+                  screen: 'SignIn',
+                  initial: false,
+                })
           }
         >
           {action.label}

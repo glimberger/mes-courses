@@ -29,6 +29,11 @@ const press = async (name: string) => {
   fireEvent.press(button);
 };
 
+/** A tab of the bottom bar. */
+const pressTab = async (name: string) => {
+  fireEvent.press(await screen.findByRole('tab', { name }));
+};
+
 const header = (name: string) =>
   screen
     .findAllByRole('header', { name }, slow)
@@ -69,7 +74,7 @@ const connected: StoryScenario = {
 
 const openSettings = async (scenario: StoryScenario = connected) => {
   await openApp(scenario);
-  await press('Réglages');
+  await pressTab('Réglages');
   await header('Réglages');
 };
 
@@ -106,7 +111,7 @@ const views: Record<string, () => Promise<void>> = {
   CurrentList: openApp,
   Lists: async () => {
     await openApp();
-    await press('Mes listes');
+    await pressTab('Listes');
     await screen.findByRole('button', { name: 'Barbecue, 0 articles' });
   },
   AddArticles: async () => {
@@ -142,7 +147,7 @@ const views: Record<string, () => Promise<void>> = {
   },
   CreateListDialog: async () => {
     await openApp();
-    await press('Mes listes');
+    await pressTab('Listes');
     await press('Nouvelle liste');
     await screen.findByRole('button', { name: 'Créer' });
   },

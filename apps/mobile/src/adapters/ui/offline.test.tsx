@@ -65,6 +65,9 @@ const row = (name: string) => screen.findByRole('checkbox', { name });
 const press = async (name: string) =>
   fireEvent.press(await screen.findByRole('button', { name }));
 
+const pressTab = async (name: string) =>
+  fireEvent.press(await screen.findByRole('tab', { name }));
+
 /** Presses the last button so named: a dialog's, drawn in a portal, comes after the screen's. */
 const pressLast = async (name: string) => {
   await screen.findAllByRole('button', { name });
@@ -233,7 +236,7 @@ describe.each(networks)(
       expect(await row('Farine, 1,5 kg, pas dans le caddie')).toBeOnTheScreen();
 
       // 9. See all lists.
-      await press('Mes listes');
+      await pressTab('Listes');
       expect(
         await screen.findByRole('button', {
           name: 'Ma liste, 6 articles, liste actuelle',

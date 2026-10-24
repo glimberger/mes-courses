@@ -7,6 +7,10 @@ import { err, ok } from '../../../domain/result';
 import { Navigation } from '../navigation';
 import { fixture } from '../testing/fixtures';
 import { lightTheme } from '../theme/theme';
+import {
+  BOTTOM_INSET,
+  expectNoBottomInsetPadding,
+} from '../testing/bottom-inset';
 import { renderWithStore } from '../testing/render-with-store';
 
 jest.mock('expo-device', () => ({ modelName: 'Pixel 8' }), { virtual: true });
@@ -35,13 +39,20 @@ type Choose = Awaited<ReturnType<AccountServer['choosePassword']>>;
 const renderSignIn = async (
   accountServer: Partial<AccountServer> = {},
   syncServer: object = reachable,
+  bottomInset = 0,
 ) => {
   const rendered = await renderWithStore(
     <Navigation errorReporter={new RecordingErrorReporter()} />,
-    { seed: fixture, asScreen: false, syncServer, accountServer },
+    {
+      seed: fixture,
+      asScreen: false,
+      syncServer,
+      accountServer,
+      bottomInset,
+    },
   );
   await screen.findByText('Ma liste');
-  fireEvent.press(screen.getByRole('button', { name: 'Réglages' }));
+  fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
   fireEvent.press(await screen.findByRole('button', { name: 'Se connecter' }));
   await screen.findByRole('header', { name: 'Connexion' });
   return rendered;
@@ -65,6 +76,12 @@ describe('SignIn', () => {
     expect(screen.UNSAFE_getByType(KeyboardAvoidingView).props.behavior).toBe(
       'padding',
     );
+  });
+
+  it('does not pad its footer with the bottom inset: the tab bar handles it', async () => {
+    await renderSignIn({}, reachable, BOTTOM_INSET);
+
+    expectNoBottomInsetPadding();
   });
 
   it('shows the four fields, the buttons and the device model', async () => {
@@ -234,6 +251,19 @@ describe('ChoosePassword', () => {
     return rendered;
   };
 
+  it('does not pad its footer with the bottom inset: the tab bar handles it', async () => {
+    await renderSignIn(
+      { signIn: async () => ok({ type: 'passwordChangeRequired' }) },
+      reachable,
+      BOTTOM_INSET,
+    );
+    fill('courses.example.fr', 'marie@example.org', 'ABCD-EFGH-JKMN-PQRS');
+    submit();
+    await screen.findByRole('header', { name: 'Choisir votre mot de passe' });
+
+    expectNoBottomInsetPadding();
+  });
+
   const choose = (password: string, confirmation = password) => {
     fireEvent.changeText(
       screen.getByLabelText('Nouveau mot de passe'),
@@ -273,6 +303,41 @@ describe('ChoosePassword', () => {
       'ABCD-EFGH-JKMN-PQRS',
       'a brand new password',
       'Pixel 8',
+    );
+  });
+
+  it('004 US2-2 lands on the current list at the root of Courses, even when AddArticles was open', async () => {
+    await renderSignIn({
+      signIn: async () => ok({ type: 'passwordChangeRequired' }),
+      choosePassword: async (): Promise<Choose> => ok(pairing),
+    });
+    fireEvent.press(screen.getByRole('tab', { name: 'Courses' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Ajouter' }));
+    await screen.findByRole('header', { name: 'Ajouter des articles' });
+    fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
+    await screen.findByRole('header', { name: 'Connexion' });
+    // AddArticles is still mounted in the Courses stack, behind the tab.
+    expect(
+      screen.queryAllByPlaceholderText('Rechercher un article', {
+        includeHiddenElements: true,
+      }),
+    ).toHaveLength(1);
+    fill('courses.example.fr', 'marie@example.org', 'ABCD-EFGH-JKMN-PQRS');
+    submit();
+    await screen.findByRole('header', { name: 'Choisir votre mot de passe' });
+
+    choose('a brand new password');
+
+    expect(
+      await screen.findByText('Mot de passe enregistré. Bienvenue !'),
+    ).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Ma liste' })).toBeOnTheScreen();
+    await waitFor(() =>
+      expect(
+        screen.queryAllByPlaceholderText('Rechercher un article', {
+          includeHiddenElements: true,
+        }),
+      ).toHaveLength(0),
     );
   });
 

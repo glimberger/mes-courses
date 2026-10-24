@@ -8,7 +8,6 @@ import {
   type HostInstance,
 } from 'react-native';
 import { HelperText } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
   useRoute,
@@ -220,7 +219,6 @@ export const CreateArticleForm = ({
   saving,
   onSubmit,
 }: CreateArticleFormProps) => {
-  const insets = useSafeAreaInsets();
   useAnnouncement(categoryMissing ? NO_CATEGORY : null);
   return (
     // On iOS, typing covers the bottom of the window: the form is pushed up so "Créer et ajouter"
@@ -264,7 +262,7 @@ export const CreateArticleForm = ({
           disabled={saving}
         />
       </ScrollView>
-      <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
+      <View style={styles.footer}>
         <Button
           mode="brand"
           disabled={saving}

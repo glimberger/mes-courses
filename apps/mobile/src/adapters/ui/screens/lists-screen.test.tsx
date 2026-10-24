@@ -103,7 +103,7 @@ describe('Lists', () => {
 
   it('US3-3 FR-002 tapping a list makes it current and goes back to CurrentList, which shows it', async () => {
     const { unitOfWork } = await renderApp();
-    fireEvent.press(screen.getByRole('button', { name: 'Mes listes' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'Listes' }));
 
     fireEvent.press(await row('Barbecue, 0 articles'));
 
@@ -120,7 +120,7 @@ describe('Lists', () => {
     const setCurrentList = jest.spyOn(useCases, 'setCurrentList');
     await act(() => store.getState().removeItem(lait));
     await screen.findByText('« Lait » retiré de la liste');
-    fireEvent.press(screen.getByRole('button', { name: 'Mes listes' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'Listes' }));
 
     fireEvent.press(await row('Ma liste, 3 articles, liste actuelle'));
 
@@ -136,7 +136,7 @@ describe('Lists', () => {
   it('US3-3 a second tap while the first choice is being saved changes nothing', async () => {
     const { useCases } = await renderApp();
     const setCurrentList = jest.spyOn(useCases, 'setCurrentList');
-    fireEvent.press(screen.getByRole('button', { name: 'Mes listes' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'Listes' }));
     const barbecueRow = await row('Barbecue, 0 articles');
 
     fireEvent.press(barbecueRow);
@@ -146,10 +146,25 @@ describe('Lists', () => {
     expect(setCurrentList).toHaveBeenCalledTimes(1);
   });
 
-  it('SC-005 chooses another list in two taps from CurrentList: "Mes listes", then the list', async () => {
+  it('US3-4 chooses a list again on a later visit, the screen staying mounted behind the Courses tab', async () => {
+    const { unitOfWork } = await renderApp();
+    fireEvent.press(screen.getByRole('tab', { name: 'Listes' }));
+    fireEvent.press(await row('Barbecue, 0 articles'));
+    await screen.findByText('Votre liste est vide');
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Listes' }));
+    fireEvent.press(await row('Ma liste, 4 articles'));
+
+    expect(await screen.findByText('Ma liste')).toBeOnTheScreen();
+    expect(
+      await unitOfWork.run((repos) => repos.appState.currentListId()),
+    ).not.toBe(barbecue);
+  });
+
+  it('SC-005 chooses another list in two taps from CurrentList: the "Listes" tab, then the list', async () => {
     await renderApp();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Mes listes' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'Listes' }));
     fireEvent.press(await row('Barbecue, 0 articles'));
 
     expect(await screen.findByText('Votre liste est vide')).toBeOnTheScreen();

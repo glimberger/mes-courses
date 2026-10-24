@@ -158,4 +158,7 @@ export const requiredStories: readonly string[] = [
   'Components/Button/Danger',
   'Components/Button/DangerFilled',
   'Components/Button/Text',
+  // 011 Tab navigation
+  'Components/TabBar/Courses',
+  'Components/TabBar/Articles',
 ];

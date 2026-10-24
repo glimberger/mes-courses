@@ -44,11 +44,11 @@ describe.each([
     expect(StyleSheet.flatten(fab.props.style).elevation).toBeUndefined();
   });
 
-  it('sits 16 dp from the end and 24 dp from the bottom plus the bottom inset', () => {
+  it('sits 16 dp from the end and 24 dp from the bottom, whatever the bottom inset: the tab bar handles it', () => {
     const { fab } = renderFab(theme);
     expect(fab).toHaveStyle({
       end: 16,
-      bottom: 24 + BOTTOM_INSET,
+      bottom: 24,
     });
   });
 
@@ -70,6 +70,6 @@ describe.each([
   });
 });
 
-it('exports the space snackbars keep above the fab: 24 + 56 + 12 = 92 dp', () => {
-  expect(ABOVE_SCREEN_FAB.bottom).toBe(92);
+it('exports the space snackbars keep above the tab bar and the fab: 80 + 24 + 56 + 12 = 172 dp', () => {
+  expect(ABOVE_SCREEN_FAB.bottom).toBe(172);
 });

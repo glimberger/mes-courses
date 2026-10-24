@@ -31,7 +31,7 @@ describe('several lists', () => {
     ).toBeVisible();
   });
 
-  it('US3-3 makes "Barbecue" current from "Mes listes", and US2-5 adds "Lait" to it, unticked', async () => {
+  it('US3-3 makes "Barbecue" current from the "Listes" tab, and US2-5 adds "Lait" to it, unticked', async () => {
     await chooseList('Barbecue, 0 articles', 'Barbecue');
     await expect(element(by.text('Votre liste est vide'))).toBeVisible();
 

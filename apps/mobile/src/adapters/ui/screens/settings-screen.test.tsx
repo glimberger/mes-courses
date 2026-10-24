@@ -19,7 +19,7 @@ const renderApp = async (scenario: StoryScenario = {}) => {
 
 const openSettings = async (scenario: StoryScenario = {}) => {
   const rendered = await renderApp(scenario);
-  fireEvent.press(screen.getByRole('button', { name: 'Réglages' }));
+  fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
   await screen.findByRole('header', { name: 'Réglages' });
   return rendered;
 };
@@ -98,13 +98,13 @@ describe('Settings', () => {
     ).toBeOnTheScreen();
   });
 
-  it('US4-1 adds an Appbar action "Réglages" to CurrentList', async () => {
+  it('US4-1 adds a "Réglages" tab to the bar', async () => {
     await renderApp();
 
-    expect(screen.getByRole('button', { name: 'Réglages' })).toBeOnTheScreen();
+    expect(screen.getByRole('tab', { name: 'Réglages' })).toBeOnTheScreen();
   });
 
-  it('US4-1 opens Settings titled "Réglages" from that action', async () => {
+  it('US4-1 opens Settings titled "Réglages" from that tab', async () => {
     await openSettings();
 
     expect(screen.getByRole('header', { name: 'Réglages' })).toBeOnTheScreen();

@@ -6,7 +6,6 @@ import {
   View,
 } from 'react-native';
 import { HelperText, Text } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
   useRoute,
@@ -19,7 +18,7 @@ import { useAnnouncement } from '../accessibility/announce';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { Button } from '../components/Button';
 import { PasswordField } from '../components/PasswordField';
-import type { RootStackParamList } from '../routes';
+import type { AppNavigation, RootStackParamList } from '../routes';
 import type { AppState } from '../state/app-store';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
@@ -100,8 +99,13 @@ export const ChoosePasswordScreen = () => {
     );
     setSaving(false);
     if (outcome.ok) {
-      // Past SignIn and this screen, to the current list.
+      // Past SignIn and this screen, then to the current list, in the Courses tab.
+      // `pop: true` pops back to CurrentList instead of pushing a second one
+      // over a screen the Courses stack still holds, such as AddArticles.
       navigation.popToTop();
+      navigation
+        .getParent<AppNavigation>()
+        ?.navigate('CoursesTab', { screen: 'CurrentList', pop: true });
       return;
     }
     setError(chooseErrorText(outcome.error));
@@ -148,7 +152,6 @@ export const ChoosePasswordForm = ({
   saving,
   onSubmit,
 }: ChoosePasswordFormProps) => {
-  const insets = useSafeAreaInsets();
   useAnnouncement(error);
   return (
     <KeyboardAvoidingView
@@ -191,7 +194,7 @@ export const ChoosePasswordForm = ({
           </Button>
         )}
       </ScrollView>
-      <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
+      <View style={styles.footer}>
         <Button
           mode="brand"
           disabled={saving}

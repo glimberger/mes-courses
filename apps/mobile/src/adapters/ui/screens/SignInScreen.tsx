@@ -254,7 +254,7 @@ export const SignInForm = ({
       {/* Out of the scroll view, so the button is on screen without scrolling (and so a
           selector on its label finds it, not the hidden title). The error sits above it: at the
           end of the form, it would be below the fold. */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
+      <View style={styles.footer}>
         {error !== null && <HelperText type="error">{error}</HelperText>}
         <Button
           mode="brand"

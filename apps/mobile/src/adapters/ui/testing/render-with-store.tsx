@@ -7,11 +7,11 @@ import { ThemeProvider } from '../theme/theme-provider';
 import { AsScreen } from './as-screen';
 import { buildStoryStore, type StoryScenario } from './story-store';
 
-// Jest has no window to measure: a phone-sized frame with no insets.
-const metrics = {
+// Jest has no window to measure: a phone-sized frame with no insets, unless a test asks for one.
+const metricsWith = (bottomInset: number) => ({
   frame: { x: 0, y: 0, width: 390, height: 844 },
-  insets: { top: 0, left: 0, right: 0, bottom: 0 },
-};
+  insets: { top: 0, left: 0, right: 0, bottom: bottomInset },
+});
 
 /**
  * Renders `ui` under the theme and a store built from the scenario as stories build theirs
@@ -24,15 +24,21 @@ export const renderWithStore = async (
   {
     asScreen = true,
     routeParams,
+    bottomInset = 0,
     ...scenario
-  }: StoryScenario & { asScreen?: boolean; routeParams?: object } = {},
+  }: StoryScenario & {
+    asScreen?: boolean;
+    routeParams?: object;
+    /** A bottom safe-area inset, for the tests of what must not add it twice. */
+    bottomInset?: number;
+  } = {},
 ) => {
   const built = await buildStoryStore(scenario);
 
   const Providers = ({ children }: { children: ReactNode }) => (
     <ThemeProvider>
       <AppStoreProvider store={built.store}>
-        <SafeAreaProvider initialMetrics={metrics}>
+        <SafeAreaProvider initialMetrics={metricsWith(bottomInset)}>
           {asScreen ? (
             <AsScreen params={routeParams}>{children}</AsScreen>
           ) : (
