@@ -5,6 +5,7 @@ import {
   createArticle,
   expectRow,
   openAddArticles,
+  openTab,
   typeInto,
 } from '../support/app';
 
@@ -23,8 +24,8 @@ describe('signing in to a server that cannot be reached', () => {
     ).not.toExist();
   });
 
-  it('US4-1 "Réglages" explains synchronization and offers "Se connecter"', async () => {
-    await element(by.label('Réglages')).tap();
+  it('US4-1 the "Réglages" tab explains synchronization and offers "Se connecter"', async () => {
+    await openTab('Réglages');
 
     await expect(
       element(
@@ -62,8 +63,8 @@ describe('signing in to a server that cannot be reached', () => {
       // restart ends it, and the data of the device is kept.
       await device.launchApp({ newInstance: true });
     } else {
-      await element(by.label('Retour')).tap();
-      await element(by.label('Retour')).tap();
+      // Back to the Courses tab of the bottom bar, which still shows the current list.
+      await openTab('Courses');
     }
     await openAddArticles(true);
     await createArticle('Lait', 'Crèmerie');

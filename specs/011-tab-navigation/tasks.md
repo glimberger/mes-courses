@@ -42,9 +42,9 @@ Paths are under `apps/mobile/src/adapters/ui/` unless stated.
 - [x] T009 [US1] Test first, then implement `TabBar` (Material 3, labels, icons from T006: `shopping_cart`, `format_list_bulleted`, `grocery`, `settings`, selected state, accessible labels) in `components/TabBar.tsx` with a story
 - [x] T010 [US1] Test first, then implement the tab navigator in `navigation.tsx`: Courses (`CurrentList` -> `AddArticles` -> `CreateArticle`), Listes (`Lists`), Articles (`Catalog` placeholder showing today's catalog), Réglages (`Settings` -> `Accounts`, `SignIn`, `ChoosePassword`); opens on Courses; re-tap returns to the stack root
 - [x] T011 [US1] Keep `UndoSnackbar`, `NoticeSnackbar`, `SyncAnnouncer`, `SignedOutNotice` and the per-screen `ScreenErrorBoundary` working above the tab bar; `errorReporter.setScreen` still receives the visible route name (`navigation.tsx`, `screen-tracking-reporter.ts`, tests)
-- [ ] T012 [US1] Remove the "Mes listes" and "Réglages" header icons from `screens/CurrentListScreen.tsx` ("Terminer les courses" stays); update its test and stories
-- [ ] T013 [US1] Update every `navigate` call to the nested routes (`screens/*.tsx`, `navigation.test.tsx`) and `required-stories.ts`
-- [ ] T014 [US1] Update Detox suites in `apps/mobile/tests/e2e` (or the e2e folder in use) and story screenshots for the tab bar; run the Android suite
+- [x] T012 [US1] Remove the "Mes listes" and "Réglages" header icons from `screens/CurrentListScreen.tsx` ("Terminer les courses" stays); update its test and stories
+- [x] T013 [US1] Update every `navigate` call to the nested routes (`screens/*.tsx`, `navigation.test.tsx`) and `required-stories.ts`
+- [x] T014 [US1] Update Detox suites in `apps/mobile/tests/e2e` (or the e2e folder in use) and story screenshots for the tab bar; run the Android suite
 
 **Checkpoint**: the app works as before, behind four tabs.
 

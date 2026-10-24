@@ -69,6 +69,8 @@ export const ListsScreen = () => {
       }
       // Courses is another tab: its stack shows the list again (the reset is T021).
       navigation.navigate('CoursesTab', { screen: 'CurrentList' });
+      // The screen stays mounted behind the Courses tab: the next visit can choose again.
+      choosing.current = false;
     },
     [navigation, setCurrentList],
   );

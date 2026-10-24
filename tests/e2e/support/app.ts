@@ -116,9 +116,13 @@ export const removeRow = (rowLabel: string) =>
     device.getPlatform() === 'ios' ? 'Retirer de la liste' : 'remove',
   );
 
-/** From the current list, opens Lists with the Appbar action "Mes listes". */
+/** Taps a tab of the bottom bar. The tab and the label inside it match: either one opens it. */
+export const openTab = (name: 'Courses' | 'Listes' | 'Articles' | 'Réglages') =>
+  element(by.label(name)).atIndex(0).tap();
+
+/** Opens Lists with the "Listes" tab of the bottom bar. */
 export const openLists = async () => {
-  await element(by.label('Mes listes')).tap();
+  await openTab('Listes');
   await expect(element(by.text('Nouvelle liste'))).toBeVisible();
 };
 
@@ -136,9 +140,10 @@ export const createList = async (name: string) => {
  */
 export const chooseList = async (rowLabel: string, name: string) => {
   await element(by.label(rowLabel)).tap();
-  // Lists shows the name too: the current list is shown once Lists and its FAB are gone.
+  // Lists shows the name too: the current list is shown once Lists and its FAB are hidden (the
+  // Lists tab stays mounted behind the Courses tab).
   await waitFor(element(by.text('Nouvelle liste')))
-    .not.toExist()
+    .not.toBeVisible()
     .withTimeout(2000);
   await expect(element(by.text(name))).toBeVisible();
 };

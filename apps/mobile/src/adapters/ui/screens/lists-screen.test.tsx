@@ -146,6 +146,21 @@ describe('Lists', () => {
     expect(setCurrentList).toHaveBeenCalledTimes(1);
   });
 
+  it('US3-4 chooses a list again on a later visit, the screen staying mounted behind the Courses tab', async () => {
+    const { unitOfWork } = await renderApp();
+    fireEvent.press(screen.getByRole('tab', { name: 'Listes' }));
+    fireEvent.press(await row('Barbecue, 0 articles'));
+    await screen.findByText('Votre liste est vide');
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Listes' }));
+    fireEvent.press(await row('Ma liste, 4 articles'));
+
+    expect(await screen.findByText('Ma liste')).toBeOnTheScreen();
+    expect(
+      await unitOfWork.run((repos) => repos.appState.currentListId()),
+    ).not.toBe(barbecue);
+  });
+
   it('SC-005 chooses another list in two taps from CurrentList: the "Listes" tab, then the list', async () => {
     await renderApp();
 
