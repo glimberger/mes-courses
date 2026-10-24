@@ -6,7 +6,6 @@ import {
   View,
 } from 'react-native';
 import { HelperText, Text } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
   useRoute,
@@ -151,7 +150,6 @@ export const ChoosePasswordForm = ({
   saving,
   onSubmit,
 }: ChoosePasswordFormProps) => {
-  const insets = useSafeAreaInsets();
   useAnnouncement(error);
   return (
     <KeyboardAvoidingView
@@ -194,7 +192,7 @@ export const ChoosePasswordForm = ({
           </Button>
         )}
       </ScrollView>
-      <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
+      <View style={styles.footer}>
         <Button
           mode="brand"
           disabled={saving}

@@ -7,7 +7,6 @@ import {
   View,
 } from 'react-native';
 import { Text } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useNavigation,
   useRoute,
@@ -193,7 +192,6 @@ export const EditArticleForm = ({
   saving,
   onSubmit,
 }: EditArticleFormProps) => {
-  const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -221,7 +219,7 @@ export const EditArticleForm = ({
           disabled={saving}
         />
       </ScrollView>
-      <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
+      <View style={styles.footer}>
         <Button
           mode="brand"
           disabled={saving}

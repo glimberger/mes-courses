@@ -7,6 +7,10 @@ import { err, ok } from '../../../domain/result';
 import { Navigation } from '../navigation';
 import { fixture } from '../testing/fixtures';
 import { lightTheme } from '../theme/theme';
+import {
+  BOTTOM_INSET,
+  expectNoBottomInsetPadding,
+} from '../testing/bottom-inset';
 import { renderWithStore } from '../testing/render-with-store';
 
 jest.mock('expo-device', () => ({ modelName: 'Pixel 8' }), { virtual: true });
@@ -35,10 +39,17 @@ type Choose = Awaited<ReturnType<AccountServer['choosePassword']>>;
 const renderSignIn = async (
   accountServer: Partial<AccountServer> = {},
   syncServer: object = reachable,
+  bottomInset = 0,
 ) => {
   const rendered = await renderWithStore(
     <Navigation errorReporter={new RecordingErrorReporter()} />,
-    { seed: fixture, asScreen: false, syncServer, accountServer },
+    {
+      seed: fixture,
+      asScreen: false,
+      syncServer,
+      accountServer,
+      bottomInset,
+    },
   );
   await screen.findByText('Ma liste');
   fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
@@ -65,6 +76,12 @@ describe('SignIn', () => {
     expect(screen.UNSAFE_getByType(KeyboardAvoidingView).props.behavior).toBe(
       'padding',
     );
+  });
+
+  it('does not pad its footer with the bottom inset: the tab bar handles it', async () => {
+    await renderSignIn({}, reachable, BOTTOM_INSET);
+
+    expectNoBottomInsetPadding();
   });
 
   it('shows the four fields, the buttons and the device model', async () => {
@@ -233,6 +250,19 @@ describe('ChoosePassword', () => {
     await screen.findByRole('header', { name: 'Choisir votre mot de passe' });
     return rendered;
   };
+
+  it('does not pad its footer with the bottom inset: the tab bar handles it', async () => {
+    await renderSignIn(
+      { signIn: async () => ok({ type: 'passwordChangeRequired' }) },
+      reachable,
+      BOTTOM_INSET,
+    );
+    fill('courses.example.fr', 'marie@example.org', 'ABCD-EFGH-JKMN-PQRS');
+    submit();
+    await screen.findByRole('header', { name: 'Choisir votre mot de passe' });
+
+    expectNoBottomInsetPadding();
+  });
 
   const choose = (password: string, confirmation = password) => {
     fireEvent.changeText(

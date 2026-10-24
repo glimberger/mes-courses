@@ -11,6 +11,10 @@ import {
   OTHER_DEVICE_HLC,
   pullingSyncServer,
 } from '../testing/pulling-sync-server';
+import {
+  BOTTOM_INSET,
+  expectNoBottomInsetPadding,
+} from '../testing/bottom-inset';
 import { renderWithStore } from '../testing/render-with-store';
 import type { Fixture, StoryScenario } from '../testing/story-store';
 
@@ -27,7 +31,9 @@ const seed: Fixture = {
 };
 
 /** The app, opened on EditArticle for "Lait" through the row menu of AddArticles. */
-const openEditLait = async (scenario: StoryScenario = {}) => {
+const openEditLait = async (
+  scenario: StoryScenario & { bottomInset?: number } = {},
+) => {
   const rendered = await renderWithStore(
     <Navigation errorReporter={new RecordingErrorReporter()} />,
     { seed, asScreen: false, ...scenario },
@@ -266,6 +272,14 @@ describe('EditArticle category (US3)', () => {
 
     await screen.findByText('Ajouter des articles');
     expect(await storedCategory(rendered)).toBe('Boissons');
+  });
+});
+
+describe('EditArticle footer', () => {
+  it('does not pad its footer with the bottom inset: the tab bar handles it', async () => {
+    await openEditLait({ bottomInset: BOTTOM_INSET });
+
+    expectNoBottomInsetPadding();
   });
 });
 

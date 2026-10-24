@@ -45,7 +45,7 @@ Paths are under `apps/mobile/src/adapters/ui/` unless stated.
 - [x] T012 [US1] Remove the "Mes listes" and "Réglages" header icons from `screens/CurrentListScreen.tsx` ("Terminer les courses" stays); update its test and stories
 - [x] T013 [US1] Update every `navigate` call to the nested routes (`screens/*.tsx`, `navigation.test.tsx`) and `required-stories.ts`
 - [x] T014 [US1] Update Detox suites in `apps/mobile/tests/e2e` (or the e2e folder in use) and story screenshots for the tab bar; run the Android suite
-- [ ] T043 [US1] Test first, then drop the `insets.bottom` padding from the footers of `screens/SignInScreen.tsx`, `ChoosePasswordScreen.tsx`, `CreateArticleScreen.tsx` and `EditArticleScreen.tsx`: these screens now sit above the tab bar, which already handles the bottom inset (as `ScreenFab` does); keep the top inset of `SignInScreen`; update their tests and check the stories and screenshots
+- [x] T043 [US1] Test first, then drop the `insets.bottom` padding from the footers of `screens/SignInScreen.tsx`, `ChoosePasswordScreen.tsx`, `CreateArticleScreen.tsx` and `EditArticleScreen.tsx`: these screens now sit above the tab bar, which already handles the bottom inset (as `ScreenFab` does); keep the top inset of `SignInScreen`; update their tests and check the stories and screenshots
 
 **Checkpoint**: the app works as before, behind four tabs.
 
