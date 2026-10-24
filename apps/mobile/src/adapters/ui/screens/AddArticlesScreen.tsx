@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { SectionList, StyleSheet, View, type HostInstance } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { ArticleId, ArticleUsage } from '../../../domain/article';
@@ -16,6 +16,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenStateView } from '../components/ScreenStateView';
 import { SearchField } from '../components/SearchField';
 import { SyncStatusBar } from '../components/SyncStatusBar';
+import { hasScreenBelow } from '../navigation-history';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
@@ -81,7 +82,6 @@ export const AddArticlesScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const catalog = useAppStore((state) => state.catalog.view);
-  const query = useAppStore((state) => state.catalog.query);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
   const searchCatalog = useAppStore((state) => state.searchCatalog);
   const getArticleUsage = useAppStore((state) => state.getArticleUsage);
@@ -93,11 +93,21 @@ export const AddArticlesScreen = () => {
   // A second tap while the usage is being read would open the dialog for the wrong row.
   const reading = useRef(false);
 
-  // Leaving clears the search, so the screen opens on the whole catalog the next time.
+  // The catalog is loaded once per screen, the search is kept per screen: the store holds one
+  // query only, shared by the copies of this screen (AddArticles in Courses, and the Articles
+  // tab), so each copy puts its own back in the store whenever it is shown, which also repairs the
+  // store after another copy left. Leaving the screen drops its search, so it opens on the whole
+  // catalog the next time.
+  const [query, setQuery] = useState('');
   useEffect(() => {
     void loadCatalog();
     return () => searchCatalog('');
   }, [searchCatalog, loadCatalog]);
+  useFocusEffect(
+    useCallback(() => {
+      searchCatalog(query);
+    }, [query, searchCatalog]),
+  );
 
   const open = useCallback((article: CatalogArticle) => {
     opener.current = article.id;
@@ -171,7 +181,9 @@ export const AddArticlesScreen = () => {
         title="Ajouter des articles"
         titleVariant="titleLarge"
         titleRef={titleRef}
-        onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined}
+        onBack={
+          hasScreenBelow(navigation) ? () => navigation.goBack() : undefined
+        }
         actions={
           <AppbarIconAction
             icon="add"
@@ -184,7 +196,7 @@ export const AddArticlesScreen = () => {
       <SearchField
         placeholder="Rechercher un article"
         value={query}
-        onChangeText={searchCatalog}
+        onChangeText={setQuery}
       />
       <ScreenStateView
         state={catalog}

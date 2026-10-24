@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import type { ListSummary } from '../../../domain/list-summary';
 import { focusOn } from '../accessibility/focus';
+import { hasScreenBelow } from '../navigation-history';
 import { ListSummaryRow } from '../components/ListSummaryRow';
 import { ScreenFab, SCREEN_FAB_CLEARANCE } from '../components/ScreenFab';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -89,7 +90,9 @@ export const ListsScreen = () => {
       <ScreenHeader
         variant="center"
         title="Mes listes"
-        onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined}
+        onBack={
+          hasScreenBelow(navigation) ? () => navigation.goBack() : undefined
+        }
       />
       <SyncStatusBar />
       <ScreenStateView

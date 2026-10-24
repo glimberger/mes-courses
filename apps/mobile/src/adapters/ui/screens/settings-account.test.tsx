@@ -61,7 +61,7 @@ describe('Settings, Compte section', () => {
     await screen.findByText('Administrateur');
 
     role = 'user';
-    fireEvent.press(screen.getByRole('button', { name: 'Retour' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'Courses' }));
     await screen.findByText('Ma liste');
     fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
 

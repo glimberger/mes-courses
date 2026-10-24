@@ -139,7 +139,11 @@ export const SyncStatusBar = ({
           onPress={() =>
             action.target === 'retry'
               ? void retry()
-              : navigation.navigate('SettingsTab', { screen: 'SignIn' })
+              : // `initial: false` keeps the Settings root under SignIn when the tab was never opened.
+                navigation.navigate('SettingsTab', {
+                  screen: 'SignIn',
+                  initial: false,
+                })
           }
         >
           {action.label}

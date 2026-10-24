@@ -93,4 +93,107 @@ describe('Navigation', () => {
     await screen.findByText('Apparence');
     expect(errorReporter.screens).toEqual(['CurrentList', 'Lists', 'Settings']);
   });
+
+  it('shows no "Retour" on the root of the Listes, Articles and Réglages tabs', async () => {
+    await renderNavigation();
+    await screen.findByText('Ma liste');
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Listes' }));
+    await screen.findByText('Barbecue');
+    expect(screen.queryByRole('button', { name: 'Retour' })).toBeNull();
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Articles' }));
+    await screen.findByText('Beurre');
+    expect(screen.queryByRole('button', { name: 'Retour' })).toBeNull();
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
+    await screen.findByText('Apparence');
+    expect(screen.queryByRole('button', { name: 'Retour' })).toBeNull();
+  });
+
+  it('shows "Retour" on a screen pushed in a stack, going back to the screen below', async () => {
+    await renderNavigation();
+    await screen.findByText('Ma liste');
+    fireEvent.press(screen.getByRole('button', { name: 'Ajouter' }));
+    await screen.findByText('Ajouter des articles');
+
+    fireEvent.press(screen.getByRole('button', { name: 'Retour' }));
+
+    expect(await screen.findByText('Ma liste')).toBeOnTheScreen();
+  });
+
+  it('opens SignIn above the Settings root when the Réglages tab was never opened, so back lands on Settings', async () => {
+    const { store } = await renderNavigation();
+    await screen.findByText('Ma liste');
+    act(() =>
+      store.setState({
+        sync: {
+          ...store.getState().sync,
+          connection: 'signedOut',
+          signedOutReason: 'revoked',
+        },
+      }),
+    );
+
+    fireEvent.press(screen.getByRole('button', { name: 'Se reconnecter' }));
+    await screen.findByLabelText('Adresse e-mail');
+    fireEvent.press(screen.getByRole('button', { name: 'Retour' }));
+
+    expect(await screen.findByText('Apparence')).toBeOnTheScreen();
+  });
+
+  it('keeps the search of the Articles tab apart from the one of AddArticles', async () => {
+    await renderNavigation();
+    await screen.findByText('Ma liste');
+    fireEvent.press(screen.getByRole('button', { name: 'Ajouter' }));
+    await screen.findByText('Beurre');
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Rechercher un article'),
+      'Lait',
+    );
+    await waitFor(() => expect(screen.queryByText('Beurre')).toBeNull());
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Articles' }));
+    expect(await screen.findByText('Beurre')).toBeOnTheScreen();
+    expect(screen.getByPlaceholderText('Rechercher un article')).toHaveProp(
+      'value',
+      '',
+    );
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Rechercher un article'),
+      'Farine',
+    );
+    await waitFor(() => expect(screen.queryByText('Beurre')).toBeNull());
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Courses' }));
+    expect(await screen.findByText('Lait')).toBeOnTheScreen();
+    expect(screen.queryByText('Farine')).toBeNull();
+    expect(screen.queryByText('Beurre')).toBeNull();
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Articles' }));
+    expect(await screen.findByText('Farine')).toBeOnTheScreen();
+    expect(screen.queryByText('Lait')).toBeNull();
+  });
+
+  it('clears the search of AddArticles when it is left, without clearing the one of the Articles tab', async () => {
+    await renderNavigation();
+    await screen.findByText('Ma liste');
+    fireEvent.press(screen.getByRole('tab', { name: 'Articles' }));
+    await screen.findByText('Beurre');
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Rechercher un article'),
+      'Farine',
+    );
+    await waitFor(() => expect(screen.queryByText('Beurre')).toBeNull());
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Courses' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Ajouter' }));
+    expect(await screen.findByText('Beurre')).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole('button', { name: 'Retour' }));
+    await screen.findByText('Ma liste');
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Articles' }));
+    expect(await screen.findByText('Farine')).toBeOnTheScreen();
+    expect(screen.queryByText('Beurre')).toBeNull();
+  });
 });

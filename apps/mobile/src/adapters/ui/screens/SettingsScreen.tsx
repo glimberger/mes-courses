@@ -19,6 +19,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsRow } from '../components/SettingsRow';
 import { SyncStatusBar } from '../components/SyncStatusBar';
+import { hasScreenBelow } from '../navigation-history';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
@@ -175,7 +176,7 @@ export const SettingsScreen = () => {
   return (
     <>
       <SettingsView
-        onBack={navigation.canGoBack() ? () => navigation.goBack() : null}
+        onBack={hasScreenBelow(navigation) ? () => navigation.goBack() : null}
         onConnect={() => navigation.navigate('SignIn')}
         onSyncNow={() => void syncNow()}
         server={
