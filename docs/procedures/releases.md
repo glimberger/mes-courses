@@ -7,7 +7,7 @@ Apple Developer Program.
 1. Do the manual checks first. Record in the test plan of the last pull request every manual check
    of [quickstart §6](../../specs/001-shopping-lists/quickstart.md) and the [device checks](device-checks.md). These checks are a precondition of a release: the
    pipeline does not run them, and `yarn release` does not either.
-2. From a clean `main` that matches `origin/main`, run `yarn release`:
+2. Deliver the version to staging. From a clean `main` that matches `origin/main`, run:
 
    ```sh
    yarn release [major|minor|patch|X.Y.Z] [--yes|-y] [--dry-run]
@@ -26,29 +26,43 @@ Apple Developer Program.
    Then it takes the steps itself: branch `chore/release-X.Y.Z`, commit
    `chore(release): bump the app version to X.Y.Z`, push, and a pull request with auto-merge
    (squash, delete branch). It waits for that pull request to merge, then for `CI`, `E2E Android`
-   (about 20 minutes) and `Deliver staging` to be green on the squash commit. It checks the rules
-   of `Release` again on that commit, creates the annotated tag `vX.Y.Z` and pushes it, then prints
-   the link of the `Release` run.
+   (about 20 minutes) and `Deliver staging` to be green on the squash commit. It stops there:
+   staging now runs `X.Y.Z-staging.<n>`, the version production will get, and the command prints
+   `X.Y.Z is on staging (<sha>)`.
 
-   Try the change on staging while it waits.
+3. Validate the version on staging: install "Mes courses (test)" from the staging F-Droid
+   repository and try the change.
 
-   If it stops (a failed or closed pull request, a failed run, a network error, Ctrl+C), the
-   message gives the link and the cause. Fix it and run the same command again: it looks at the
-   current state and resumes where it stopped. A version that is already tagged ends with
+4. Promote it to production, from any checkout:
+
+   ```sh
+   yarn release promote [--yes|-y] [--dry-run]
+   ```
+
+   It takes the version on `origin/main`, checks that its runs (`Deliver staging` included) are
+   green on its commit and the rules of `Release`, asks `Promote X.Y.Z (<sha>) to production?`,
+   then creates the annotated tag `vX.Y.Z` on that commit, pushes it and prints the link of the
+   `Release` run. Nothing is merged or waited for again. It refuses a version that has not reached
+   staging yet. When pull requests merged after the bump have reached staging since, it says so:
+   production gets the bump commit, not what staging runs now.
+
+   If a command stops (a failed or closed pull request, a failed run, a network error, Ctrl+C),
+   the message gives the link and the cause. Fix it and run the same command again: it looks at
+   the current state and resumes where it stopped. A version that is already tagged ends with
    "already released".
 
-   Exit codes: `0` released, already released, dry run done or declined; `1` refused or stopped;
-   `2` usage error.
+   Exit codes: `0` delivered to staging, released, already released, dry run done or declined;
+   `1` refused or stopped; `2` usage error.
 
    Fallback, if the command is unusable: wait for the three runs yourself, then tag the squash
    commit by hand with `git tag vX.Y.Z <sha> && git push origin vX.Y.Z`.
 
-3. `Release` checks the rules (the tag matches `version` in `app.config.ts`, the commit is on
+5. `Release` checks the rules (the tag matches `version` in `app.config.ts`, the commit is on
    `main` with a green `E2E Android` run, the version is new), builds the production server, the
    APK, the F-Droid repository and the agent bundle, and publishes the release and the
    `channel-production` manifest. The agent deploys it like a staging delivery, and the run waits
    for the production health to report the commit.
-4. Install the update on the phones from the F-Droid client and check the lists are still there.
+6. Install the update on the phones from the F-Droid client and check the lists are still there.
 
 If the health check times out (for example the agent was stopped), the run fails but the delivery
 is not lost: once the agent is back, _Re-run failed jobs_ on the same run, with no new tag.
