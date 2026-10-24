@@ -13,9 +13,12 @@ python3 -m http.server 8931
 # then open http://localhost:8931/
 ```
 
-`index.html` is a gallery of every screen (Écrans · Dialogues · Démarrage). Each mockup
+`index.html` is a gallery of every screen (Écrans · Navigation par onglets · Dialogues · Démarrage). Each mockup
 also opens directly (`1-liste.html`, `7-dialog-quantite.html`, …).
 
+- `14`–`24` show the tab navigation (issue #170, epic #169): the four tabs with the bottom
+  tab bar, the add screen and its states, and the row menus, article edit and delete dialogs.
+  Screens `1`–`3` are the previous header-based navigation.
 - Everything is relative: the folder is self-contained (`assets/` holds the splash image,
   the dialog backdrops are iframes of the screen mockups).
 - Nunito and the Material Symbols icons load from Google Fonts: view them with a network
