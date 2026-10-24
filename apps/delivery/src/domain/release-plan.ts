@@ -6,7 +6,9 @@ export type Bump = 'major' | 'minor' | 'patch';
 export type ReleaseTarget =
   | { kind: 'bump'; bump: Bump }
   | { kind: 'version'; version: string }
-  | { kind: 'ask' };
+  | { kind: 'ask' }
+  /** The version already delivered to staging, sent on to production. */
+  | { kind: 'promote' };
 
 const RELEASE_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
@@ -26,6 +28,7 @@ export const nextVersion = (current: string, bump: Bump): string => {
 /** What the command argument asks for; anything but a bump type is an explicit version to validate. */
 export const parseTarget = (arg: string | undefined): ReleaseTarget => {
   if (arg === undefined) return { kind: 'ask' };
+  if (arg === 'promote') return { kind: 'promote' };
   if (arg === 'major' || arg === 'minor' || arg === 'patch')
     return { kind: 'bump', bump: arg };
   return { kind: 'version', version: arg };
