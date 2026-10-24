@@ -26,14 +26,14 @@ Replace the single native stack of `apps/mobile` with a bottom tab navigator of 
 
 **Constraints**: offline first (Principle VII); French UI text (X); Material 3 tokens only (V); all screens implement explicit states (IX)
 
-**Scale/Scope**: 4 tabs, 5 screens touched, 2 dialogs new, 1 route removed
+**Scale/Scope**: 4 tabs, 5 screens touched, 1 dialog new (`EditArticleDialog`) and 1 changed (`DeleteArticleDialog`), 1 route removed, 2 small use cases (`create-article`, `get-article-usage-counts`) and 1 store action (`removeItemQuietly`)
 
 ## Constitution Check
 
 | Principle | Verdict |
 | --- | --- |
 | I Test-First / II / III | Pass. Each task writes its test first; navigation tests use in-memory doubles; Detox journeys per story. |
-| IV Simplicity | Pass with one justified dependency (`@react-navigation/bottom-tabs`); no new store, no new use case unless tap-to-add proves it needs one. |
+| IV Simplicity | Pass with one justified dependency (`@react-navigation/bottom-tabs`); no new store; three small application additions, each required by a checked gap: `create-article` (catalog-only creation, the existing one always adds to the list), `get-article-usage-counts` (one batch read instead of one transaction per article) and the store action `removeItemQuietly` (un-tap without the undo offer). |
 | V Single design system | Pass. Tab bar, round toggle, usage badge, chip and FAB reuse or extend the shared UI module and tokens; mockups updated first. |
 | VI Hexagonal | Pass. Changes are in the UI adapter; the architecture test still applies. |
 | VII Offline first | Pass. Every action goes through existing use cases on the local replica. |
@@ -69,19 +69,22 @@ apps/mobile/src/adapters/ui/
 ├── routes.ts                          # RootTabParamList + per-stack param lists; EditArticle removed
 ├── required-stories.ts                # new story ids
 ├── components/                        # TabBar, AddToggle (round), UsageBadge, RowMenu if not shared yet
+├── state/edit-list-actions.ts         # removeItemQuietly, createArticle
 └── screens/
     ├── CurrentListScreen.tsx          # no header icons, FAB "Ajouter", row menu
     ├── ListsScreen.tsx                # "en cours" chip, tap to make current
-    ├── CatalogScreen.tsx              # new: Articles tab
+    ├── CatalogScreen.tsx              # new: Articles tab (badges from one batch read)
+    ├── CreateArticleScreen.tsx        # addToList param: catalog-only mode
     ├── EditArticleDialog.tsx          # replaces EditArticleScreen
     ├── DeleteArticleDialog.tsx        # adds the affected-lists count
     └── AddArticlesScreen.tsx          # tap-to-add
+apps/mobile/src/application/use-cases/   # create-article, get-article-usage-counts (+ tests)
 apps/mobile/package.json               # @react-navigation/bottom-tabs
 tests/e2e/                             # Detox suites per story
 design/mockups/                        # delivered by #170, before the code
 ```
 
-**Structure Decision**: stay in the existing UI adapter folders; one new screen (`CatalogScreen`) and one dialog (`EditArticleDialog`).
+**Structure Decision**: stay in the existing UI adapter folders; one new screen (`CatalogScreen`) and one new dialog (`EditArticleDialog`); `DeleteArticleDialog` and `CreateArticleScreen` are changed.
 
 ## Delivery Phases (one sub-issue of epic #169 each)
 
@@ -91,7 +94,7 @@ design/mockups/                        # delivered by #170, before the code
 | 2 | #171 | 2 | Tab navigation: four tabs with nested stacks |
 | 3 | #172 | 3 | Courses tab: row menu, FAB, bottom inset |
 | 4 | #173 | 3 | Listes tab: chip and tap to make current |
-| 5 | #174 | 3 | Articles tab: global catalog management |
+| 5 | #174 | 3 | Articles tab: global catalog management, catalog-only creation, batch usage counts |
 | 6 | #175 | 4 | Tap-to-add on the add screen |
 
 Phases 3, 4 and 5 can run in parallel after phase 2; phase 6 waits for phase 5 (both edit `AddArticlesScreen`, and management must exist in the Articles tab before leaving the add screen).

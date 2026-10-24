@@ -79,14 +79,14 @@ Adding several articles used to need one quantity dialog per article. The shoppe
 **Acceptance Scenarios**:
 
 1. **Given** the add screen is open (back arrow ← to the list), **When** the shopper taps an article, **Then** it is added to the current list at once, with no quantity and no dialog, and its row shows the added mark.
-2. **Given** an article added during this visit, **When** the shopper taps it again, **Then** it is taken off the list and shows the not-added mark.
+2. **Given** an article added during this visit, **When** the shopper taps it again, **Then** it is taken off the list and shows the not-added mark, with no "Annuler" snackbar and nothing left held for an undo (a removal path of its own, distinct from the row menu of the Courses tab).
 3. **Given** the screen has no confirm button, **When** the shopper presses the back arrow, **Then** the list shows what was added.
 4. **Given** articles already on the list when the screen opened, **When** the catalog is shown, **Then** they are hidden; those added during the visit stay shown, marked as added.
-5. **Given** the search field on top, **When** the shopper types text matching shown articles, **Then** only those are listed.
-6. **Given** the search matches no article, **When** the result is shown, **Then** a "Créer « xyz »" row opens article creation with the name filled in, and on return the new article is on the list.
+5. **Given** the search field on top, **When** the shopper types text matching shown articles, **Then** only those are listed, still under their category headers (a row shows the name only, not the category).
+6. **Given** the search matches no article, **When** the result is shown, **Then** a "Créer « xyz »" row opens article creation with the name filled in, and on return the new article is on the list, shown in the add screen marked as added (it joins the visit set) and can be tapped again to take it off.
 7. **Given** the search matches only an article hidden because it is already on the list, **When** the result is shown, **Then** the text "« Lait » est déjà dans la liste" is shown with no action.
 8. **Given** a row, **When** it is shown, **Then** the added mark is a round toggle on the right (`add_circle` outline, then `check_circle` filled), with a tinted card and border once added, distinct from the square cart checkbox, and no cart icon starts the row.
-9. **Given** a screen reader, **When** a row is focused, **Then** it reads "Ajouter Carotte", or "Carotte ajoutée, toucher pour retirer" once added.
+9. **Given** a screen reader, **When** a row is focused, **Then** it reads "Ajouter Carotte", or "Carotte, dans la liste, toucher pour retirer" once added (a form without gender agreement, since the gender of an article name is unknown).
 10. **Given** the add screen, **When** it is shown, **Then** it offers no edit and no delete of an article.
 
 ---
@@ -120,8 +120,8 @@ Editing or deleting an article changes it on every list, so it belongs on a dedi
 **Acceptance Scenarios**:
 
 1. **Given** the Articles tab, **When** it is shown, **Then** a search field is on top and the articles are grouped by category; categories with no article are hidden.
-2. **Given** an article held by N lists (N > 0), **When** its row is shown, **Then** a badge shows N, and the badge is part of the row's accessible label; at 0 no badge is shown.
-3. **Given** the extended FAB "Nouvel article", **When** tapped, **Then** article creation opens in the Articles stack.
+2. **Given** an article held by N lists (N > 0), **When** its row is shown, **Then** a badge shows N, and the badge is part of the row's accessible label ("Pommes, dans 1 liste", "Beurre, dans 3 listes"); at 0 no badge is shown. The badges of all rows come from one batch read, not one read per article.
+3. **Given** the extended FAB "Nouvel article", **When** tapped, **Then** article creation opens in the Articles stack; it creates the article in the catalog only (it is not added to the current list, and the form has no quantity fields), and a name already used is refused with the existing message and no offer to add the existing article to a list.
 4. **Given** a row, **When** the shopper opens its ⋮ menu, **Then** it offers "Modifier" and "Supprimer".
 5. **Given** "Modifier", **When** chosen, **Then** a dialog with the name and the category opens and says how many lists are affected; saving applies the change to every list.
 6. **Given** "Supprimer", **When** chosen, **Then** a confirmation says how many lists are affected; on confirmation the article leaves the catalog and every list, and the existing "Annuler" restores it.
@@ -155,14 +155,14 @@ Editing or deleting an article changes it on every list, so it belongs on a dedi
 - **FR-007**: The current list MUST show an extended FAB "Ajouter" that opens the add screen.
 - **FR-008**: Each row of the current list MUST have a ⋮ menu with "Quantité…" (the existing quantity dialog: amount and unit) and "Retirer de la liste" (this list only, existing "Annuler" snackbar, no confirmation); it MUST NOT offer rename or category.
 - **FR-009**: Items in the cart MUST show a square checkbox on the left and a struck-through name.
-- **FR-010**: On the add screen, tapping an article MUST add it to the current list at once with no quantity; tapping an article added during the visit MUST take it off; there MUST be no confirm button and no quantity dialog.
-- **FR-011**: The add screen MUST hide the articles that were on the list when it opened, and keep the ones added during the visit shown and marked.
-- **FR-012**: The add screen MUST have a search field on top; with no match it MUST offer "Créer « xyz »" that opens article creation with the name filled in and adds the new article to the list on return; when the search matches a hidden article it MUST show "« name » est déjà dans la liste" with no action.
-- **FR-013**: The add mark MUST be a round toggle on the right (`add_circle` outline, `check_circle` filled), with a tinted card and border once added, and no cart icon at the start of the row; its accessible label MUST be "Ajouter <name>" and, once added, "<name> ajoutée, toucher pour retirer".
+- **FR-010**: On the add screen, tapping an article MUST add it to the current list at once with no quantity; tapping an article added during the visit MUST take it off without opening the undo snackbar and without leaving any change held for an undo; there MUST be no confirm button and no quantity dialog.
+- **FR-011**: The add screen MUST hide the articles that were on the list when it opened, and keep the ones added during the visit shown and marked, including an article created from the search through "Créer « xyz »"; the rows MUST be grouped under category headers and show the name only.
+- **FR-012**: The add screen MUST have a search field on top; with no match it MUST offer "Créer « xyz »" that opens article creation with the name filled in and adds the new article to the list; on return the new article MUST be shown marked as added; when the search matches a hidden article it MUST show "« name » est déjà dans la liste" with no action.
+- **FR-013**: The add mark MUST be a round toggle on the right (`add_circle` outline, `check_circle` filled), with a tinted card and border once added, and no cart icon at the start of the row; its accessible label MUST be "Ajouter <name>" and, once added, "<name>, dans la liste, toucher pour retirer".
 - **FR-014**: The add screen MUST NOT offer editing or deleting an article.
 - **FR-015**: The Listes tab MUST show an "en cours" chip on the current list only (announced to screen readers), MUST make a tapped list current and switch to the Courses tab, MUST have no ⋮ menu, and MUST keep the extended FAB "Nouvelle liste".
-- **FR-016**: The Articles tab MUST have a search field, group articles by category with empty categories hidden, show on each row a badge counting the lists holding the article (none at 0, included in the accessible label), and an extended FAB "Nouvel article".
-- **FR-017**: The Articles row menu MUST offer "Modifier" (dialog with name and category, applies to every list, says how many lists are affected) and "Supprimer" (global, confirmation saying how many lists are affected, existing undo).
+- **FR-016**: The Articles tab MUST have a search field, group articles by category with empty categories hidden, show on each row a badge counting the lists holding the article (none at 0, included in the accessible label, singular "dans 1 liste" and plural "dans <n> listes"), read for all rows in one batch, and an extended FAB "Nouvel article" whose creation form adds the article to the catalog only.
+- **FR-017**: The Articles row menu MUST offer "Modifier" (dialog with name and category, applies to every list, says how many lists are affected) and "Supprimer" (global, confirmation saying how many lists are affected, existing undo); the French texts, singular and plural, are those of contracts/ui-screens.md only.
 - **FR-018**: The category picker of article creation and of "Modifier" MUST end with "+ Nouvelle catégorie", which opens the existing category creation dialog and selects the new category.
 - **FR-019**: Every scrolling list under an extended FAB (current list, Listes, Articles) MUST have a bottom inset so the last row scrolls fully above the FAB.
 - **FR-020**: Every screen and dialog added or changed MUST work offline and with the server unreachable, use the shared UI components and tokens, French text and the explicit screen states (Principles V, VII, IX, X), and have stories, tests and a Detox journey covering it.
@@ -174,7 +174,7 @@ Editing or deleting an article changes it on every list, so it belongs on a dedi
 - **Current list**: the shopping list shown by the Courses tab; chosen from the Listes tab.
 - **List item**: an article on a list, with an optional quantity (amount and unit) and a cart tick; removed from one list only by "Retirer de la liste".
 - **Article**: a catalog entry with a name and a category; editing or deleting it applies to every list.
-- **Visit set**: the articles added during one visit of the add screen; they stay shown and marked until the screen closes.
+- **Visit set**: the articles added during one visit of the add screen, including one created through "Créer « xyz »"; they stay shown and marked until the screen closes.
 - **List usage**: the number of lists holding an article, shown as the badge and in the edit and delete texts.
 
 ## Success Criteria *(mandatory)*
@@ -189,7 +189,7 @@ Editing or deleting an article changes it on every list, so it belongs on a dedi
 
 ## Assumptions
 
-- Features 001, 002 and 008 are in place; their use cases (`set-current-list`, `add-article-to-list`, `change-item-quantity`, `remove-item-from-list`, `restore-removed-item`, `edit-article`, `delete-article`, `restore-deleted-article`, `get-article-usage`, `get-categories`, `create-category`, `create-article-and-add-to-list`) are reused; new behavior in the application layer is limited to what tap-to-add needs.
+- Features 001, 002 and 008 are in place; their use cases (`set-current-list`, `add-article-to-list`, `change-item-quantity`, `remove-item-from-list`, `restore-removed-item`, `edit-article`, `delete-article`, `restore-deleted-article`, `get-article-usage`, `get-categories`, `create-category`, `create-article-and-add-to-list`) are reused; new behavior in the application layer is limited to three gaps found in the code: `create-article` (create without adding to a list), `get-article-usage-counts` (one batch read for the badges) and a store action that removes an item without the undo offer.
 - Renaming an article on one list only, and a menu on "Mes listes" (rename or delete a list), are out of scope.
 - The iOS build is not delivered (see project memory); navigation is verified on Android and in stories.
 - Screen text is French as given in this document; this specification is in English.
