@@ -33,6 +33,7 @@ import {
   type SettingsStackParamList,
 } from './routes';
 import { SyncAnnouncer } from './components/SyncAnnouncer';
+import { useAndroidKeyboardShown } from './keyboard';
 import { useNavigationTheme } from './theme/navigation-theme';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -112,10 +113,13 @@ const NAVIGATORS = {
 /**
  * The bar for the navigator: it tells the tab pressed, as the stock bar does, so a press on the
  * selected tab lets its stack return to its root, and a press on another tab shows it with the
- * history it had.
+ * history it had. On Android it gives way to the keyboard while the user types, as the stock
+ * bar's `tabBarHideOnKeyboard` would.
  */
 const NavigationTabBar = ({ state, navigation }: BottomTabBarProps) => {
+  const keyboardShown = useAndroidKeyboardShown();
   const selected = state.routes[state.index];
+  if (keyboardShown) return null;
   return (
     <TabBar
       tabs={TABS.map(({ name, label, icon }) => ({ key: name, label, icon }))}
@@ -166,7 +170,8 @@ export const Navigation = ({
         <Tab.Navigator
           initialRouteName="CoursesTab"
           screenOptions={{ headerShown: false }}
-          tabBar={NavigationTabBar}
+          // Rendered as a component, not called as a function, so it may use hooks.
+          tabBar={(props) => <NavigationTabBar {...props} />}
         >
           {TABS.map(({ name }) => (
             <Tab.Screen key={name} name={name} component={NAVIGATORS[name]} />

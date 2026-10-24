@@ -1,3 +1,4 @@
+import { Keyboard, Platform } from 'react-native';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../application/testing/recording-error-reporter';
@@ -92,6 +93,49 @@ describe('Navigation', () => {
     fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
     await screen.findByText('Apparence');
     expect(errorReporter.screens).toEqual(['CurrentList', 'Lists', 'Settings']);
+  });
+
+  describe('while the keyboard is open', () => {
+    const listeners = new Map<string, () => void>();
+    const emit = (event: string) => act(() => listeners.get(event)?.());
+
+    beforeEach(() => {
+      listeners.clear();
+      jest
+        .spyOn(Keyboard, 'addListener')
+        .mockImplementation((event, listener) => {
+          listeners.set(event, listener as () => void);
+          return { remove: () => listeners.delete(event) } as ReturnType<
+            typeof Keyboard.addListener
+          >;
+        });
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('hides the tab bar on Android, and shows it again when the keyboard closes', async () => {
+      jest.replaceProperty(Platform, 'OS', 'android');
+      await renderNavigation();
+      await screen.findByText('Ma liste');
+
+      emit('keyboardDidShow');
+      expect(screen.queryByRole('tab', { name: 'Courses' })).toBeNull();
+
+      emit('keyboardDidHide');
+      expect(screen.getByRole('tab', { name: 'Courses' })).toBeOnTheScreen();
+    });
+
+    it('keeps the tab bar on iOS', async () => {
+      jest.replaceProperty(Platform, 'OS', 'ios');
+      await renderNavigation();
+      await screen.findByText('Ma liste');
+
+      emit('keyboardDidShow');
+
+      expect(screen.getByRole('tab', { name: 'Courses' })).toBeOnTheScreen();
+    });
   });
 
   it('shows no "Retour" on the root of the Listes, Articles and Réglages tabs', async () => {
