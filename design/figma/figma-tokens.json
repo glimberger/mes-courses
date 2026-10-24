@@ -1,0 +1,265 @@
+{
+  "$description": "Mes Courses design tokens (non-couleur). Les couleurs viennent du plugin Material Theme Builder (material-theme.json). Typo/spacing/shape/elevation depuis apps/mobile/src/adapters/ui/theme.",
+  "typography": {
+    "scale": {
+      "displayLarge": {
+        "$value": {
+          "fontSize": 57,
+          "lineHeight": 64,
+          "letterSpacing": -0.25,
+          "fontFamily": "Nunito_800ExtraBold"
+        },
+        "$type": "typography"
+      },
+      "displayMedium": {
+        "$value": {
+          "fontSize": 45,
+          "lineHeight": 52,
+          "letterSpacing": 0,
+          "fontFamily": "Nunito_800ExtraBold"
+        },
+        "$type": "typography"
+      },
+      "displaySmall": {
+        "$value": {
+          "fontSize": 36,
+          "lineHeight": 44,
+          "letterSpacing": 0,
+          "fontFamily": "Nunito_800ExtraBold"
+        },
+        "$type": "typography"
+      },
+      "headlineLarge": {
+        "$value": {
+          "fontSize": 32,
+          "lineHeight": 40,
+          "fontFamily": "Nunito_800ExtraBold"
+        },
+        "$type": "typography"
+      },
+      "headlineMedium": {
+        "$value": {
+          "fontSize": 28,
+          "lineHeight": 35,
+          "letterSpacing": -0.2,
+          "fontFamily": "Nunito_800ExtraBold"
+        },
+        "$type": "typography"
+      },
+      "headlineSmall": {
+        "$value": {
+          "fontSize": 24,
+          "lineHeight": 30,
+          "fontFamily": "Nunito_800ExtraBold"
+        },
+        "$type": "typography"
+      },
+      "titleLarge": {
+        "$value": {
+          "fontSize": 22,
+          "lineHeight": 28,
+          "letterSpacing": -0.2,
+          "fontFamily": "Nunito_800ExtraBold"
+        },
+        "$type": "typography"
+      },
+      "titleMedium": {
+        "$value": {
+          "fontSize": 16.5,
+          "lineHeight": 21,
+          "fontFamily": "Nunito_700Bold"
+        },
+        "$type": "typography"
+      },
+      "titleSmall": {
+        "$value": {
+          "fontSize": 14,
+          "lineHeight": 18,
+          "letterSpacing": 0.2,
+          "fontFamily": "Nunito_800ExtraBold"
+        },
+        "$type": "typography"
+      },
+      "bodyLarge": {
+        "$value": {
+          "fontSize": 16,
+          "lineHeight": 20,
+          "fontFamily": "Nunito_600SemiBold"
+        },
+        "$type": "typography"
+      },
+      "bodyMedium": {
+        "$value": {
+          "fontSize": 15,
+          "lineHeight": 21.75,
+          "fontFamily": "Nunito_600SemiBold"
+        },
+        "$type": "typography"
+      },
+      "bodySmall": {
+        "$value": {
+          "fontSize": 13,
+          "lineHeight": 16,
+          "fontFamily": "Nunito_600SemiBold"
+        },
+        "$type": "typography"
+      },
+      "labelLarge": {
+        "$value": {
+          "fontSize": 15.5,
+          "lineHeight": 19,
+          "fontFamily": "Nunito_800ExtraBold"
+        },
+        "$type": "typography"
+      },
+      "labelMedium": {
+        "$value": {
+          "fontSize": 13,
+          "lineHeight": 16,
+          "fontFamily": "Nunito_700Bold"
+        },
+        "$type": "typography"
+      },
+      "labelSmall": {
+        "$value": {
+          "fontSize": 12.5,
+          "lineHeight": 16,
+          "fontFamily": "Nunito_700Bold"
+        },
+        "$type": "typography"
+      }
+    },
+    "overrides": {
+      "quantity": {
+        "$value": {
+          "fontSize": 13.5,
+          "lineHeight": 16,
+          "fontFamily": "Nunito_700Bold"
+        },
+        "$type": "typography"
+      },
+      "compactLabel": {
+        "$value": {
+          "fontSize": 14.5,
+          "lineHeight": 19,
+          "fontFamily": "Nunito_800ExtraBold"
+        },
+        "$type": "typography"
+      },
+      "snackbarMessage": {
+        "$value": {
+          "fontSize": 15,
+          "lineHeight": 21.75,
+          "fontFamily": "Nunito_700Bold"
+        },
+        "$type": "typography"
+      },
+      "syncStrip": {
+        "$value": {
+          "fontSize": 14,
+          "lineHeight": 16,
+          "fontFamily": "Nunito_700Bold"
+        },
+        "$type": "typography"
+      },
+      "emptyCategory": {
+        "$value": {
+          "fontSize": 14,
+          "lineHeight": 16,
+          "fontFamily": "Nunito_600SemiBold"
+        },
+        "$type": "typography"
+      }
+    },
+    "fontFamily": {
+      "$value": "Nunito",
+      "$type": "fontFamily"
+    }
+  },
+  "spacing": {
+    "xs": {
+      "$value": 4,
+      "$type": "dimension"
+    },
+    "sm": {
+      "$value": 8,
+      "$type": "dimension"
+    },
+    "md": {
+      "$value": 16,
+      "$type": "dimension"
+    },
+    "lg": {
+      "$value": 24,
+      "$type": "dimension"
+    },
+    "xl": {
+      "$value": 32,
+      "$type": "dimension"
+    }
+  },
+  "borderRadius": {
+    "xs": {
+      "$value": 4,
+      "$type": "dimension"
+    },
+    "sm": {
+      "$value": 8,
+      "$type": "dimension"
+    },
+    "md": {
+      "$value": 12,
+      "$type": "dimension"
+    },
+    "lg": {
+      "$value": 16,
+      "$type": "dimension"
+    },
+    "xl": {
+      "$value": 28,
+      "$type": "dimension"
+    },
+    "pill": {
+      "$value": 9999,
+      "$type": "dimension"
+    },
+    "checkbox": {
+      "$value": 7,
+      "$type": "dimension"
+    },
+    "field": {
+      "$value": 14,
+      "$type": "dimension"
+    },
+    "fab": {
+      "$value": 18,
+      "$type": "dimension"
+    },
+    "bar": {
+      "$value": 2,
+      "$type": "dimension"
+    }
+  },
+  "boxShadow": {
+    "card": {
+      "$value": "0px 1px 2px rgba(30,27,19,0.05), 0px 6px 16px rgba(30,27,19,0.06)",
+      "$type": "boxShadow"
+    },
+    "fab": {
+      "$value": "0px 4px 12px rgba(58,48,0,0.2), 0px 1px 3px rgba(58,48,0,0.14)",
+      "$type": "boxShadow"
+    },
+    "dialog": {
+      "$value": "0px 14px 36px rgba(30,27,19,0.24), 0px 2px 6px rgba(30,27,19,0.12)",
+      "$type": "boxShadow"
+    },
+    "snackbar": {
+      "$value": "0px 6px 18px rgba(20,17,8,0.26), 0px 1px 3px rgba(20,17,8,0.16)",
+      "$type": "boxShadow"
+    },
+    "brandTile": {
+      "$value": "0px 10px 28px rgba(58,48,0,0.14)",
+      "$type": "boxShadow"
+    }
+  }
+}
