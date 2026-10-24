@@ -45,6 +45,8 @@ Apple Developer Program.
    `Release` run. Nothing is merged or waited for again. It refuses a version that has not reached
    staging yet. When pull requests merged after the bump have reached staging since, it says so:
    production gets the bump commit, not what staging runs now.
+   It always targets the version on `origin/main`: once a newer bump has merged, an older version
+   still on staging can no longer be promoted, and the newer one is promoted instead.
 
    If a command stops (a failed or closed pull request, a failed run, a network error, Ctrl+C),
    the message gives the link and the cause. Fix it and run the same command again: it looks at

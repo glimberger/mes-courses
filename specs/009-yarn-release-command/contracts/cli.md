@@ -13,7 +13,7 @@ validates it there; `promote` then tags the commit staging received, which start
 | no argument | asks for the bump type or a version (usage error when stdin is not a terminal) |
 | `major` / `minor` / `patch` | next version from the app version on `origin/main` |
 | `X.Y.Z` | used as is; must be strictly higher than the current version |
-| `promote` | the version on `origin/main`, once its required runs are green on its commit; refused before |
+| `promote` | the version on `origin/main`, once its required runs are green on its commit; refused before; an older version still on staging is skipped once a newer bump has merged |
 | `--yes`, `-y` | skips only the confirmation (`current -> next`, or the promotion) |
 | `--dry-run` | prints the steps it would take; changes nothing (runs `git fetch`, which only updates remote-tracking refs) |
 | anything else | usage message, exit 2 |
