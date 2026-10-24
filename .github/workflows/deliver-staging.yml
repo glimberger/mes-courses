@@ -99,8 +99,9 @@ jobs:
       - name: Pack the server
         env:
           SEQUENCE: ${{ needs.plan.outputs.sequence }}
+        # Named after the app version, like production: the release X.Y.Z is first X.Y.Z-staging.<n>.
         run: |
-          base=$(node -p "require('./apps/server/package.json').version")
+          base=$(nix develop --command yarn workspace @mes-courses/delivery ci app-version)
           nix develop --command sh .github/scripts/pack-server.sh "$base-staging.$SEQUENCE" "$SHA" "$SEQUENCE" "$RUNNER_TEMP/out"
       - uses: actions/upload-artifact@v7
         with:
