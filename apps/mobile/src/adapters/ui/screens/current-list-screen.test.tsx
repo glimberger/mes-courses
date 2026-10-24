@@ -258,14 +258,17 @@ describe('CurrentList', () => {
     ).toBeOnTheScreen();
   });
 
-  it('offers "Mes listes" and "Ajouter"', async () => {
+  it('offers "Ajouter", and no header shortcut to the lists or the settings (the tab bar has them)', async () => {
     await renderScreen();
     await row('Lait, 2 L, pas dans le caddie');
 
-    expect(
-      screen.getByRole('button', { name: 'Mes listes' }),
-    ).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Ajouter' })).toBeOnTheScreen();
+    expect(
+      screen.queryByRole('button', { name: 'Mes listes' }),
+    ).not.toBeOnTheScreen();
+    expect(
+      screen.queryByRole('button', { name: 'Réglages' }),
+    ).not.toBeOnTheScreen();
   });
 
   it('FR-037 keeps the row, and screen reader focus on it, when ticking moves it below the unticked rows', async () => {

@@ -270,20 +270,6 @@ export const CurrentListScreen = () => {
                 onPress={() => setFinishing(true)}
               />
             )}
-            <AppbarIconAction
-              icon="format_list_bulleted"
-              accessibilityLabel="Mes listes"
-              onPress={() =>
-                navigation.navigate('ListsTab', { screen: 'Lists' })
-              }
-            />
-            <AppbarIconAction
-              icon="settings"
-              accessibilityLabel="Réglages"
-              onPress={() =>
-                navigation.navigate('SettingsTab', { screen: 'Settings' })
-              }
-            />
           </>
         }
       />
