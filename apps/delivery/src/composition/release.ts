@@ -55,8 +55,7 @@ export const parseReleaseArgs = (
     throw new UsageError(
       `Give a bump type or a version: there is no terminal to ask on\n${USAGE}`,
     );
-  const target: ReleaseTarget =
-    argument === 'promote' ? { kind: 'promote' } : parseTarget(argument);
+  const target: ReleaseTarget = parseTarget(argument);
   return { target, assumeYes, dryRun };
 };
 

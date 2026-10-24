@@ -640,17 +640,51 @@ describe('runRelease', () => {
     });
 
     it('only pushes a tag that was created but not pushed', async () => {
-      const { deps, repository, recorder, output, landBump } = setup();
+      const prompter = new ScriptedPrompter([], [true]);
+      const { deps, repository, recorder, output, landBump, releaseRuns } =
+        setup(prompter);
       landBump();
+      releaseRuns.scriptRuns([runs('success')]);
       repository.tags.set('v1.3.0', { local: 'sha-1', remote: null });
 
-      const result = await runRelease(deps, promote);
+      const result = await runRelease(deps, { ...promote, assumeYes: false });
 
       expect(result).toEqual({ outcome: 'released' });
+      expect(prompter.questions).toEqual([
+        'Promote 1.3.0 (sha-1) to production?',
+      ]);
       expect(mutations(recorder.calls)).toEqual([
         'ReleaseRepository.pushTag v1.3.0',
       ]);
       expect(output.lines).toContain('pushed v1.3.0 on sha-1');
+    });
+
+    it('does not push a local tag when the promotion is declined', async () => {
+      const { deps, repository, recorder, landBump, releaseRuns } = setup(
+        new ScriptedPrompter([], [false]),
+      );
+      landBump();
+      releaseRuns.scriptRuns([runs('success')]);
+      repository.tags.set('v1.3.0', { local: 'sha-1', remote: null });
+
+      const result = await runRelease(deps, { ...promote, assumeYes: false });
+
+      expect(result).toEqual({ outcome: 'declined' });
+      expect(mutations(recorder.calls)).toEqual([]);
+    });
+
+    it('does not push a local tag whose runs are not green', async () => {
+      const { deps, repository, recorder, landBump, releaseRuns } = setup(
+        new ScriptedPrompter([], [true]),
+      );
+      landBump();
+      releaseRuns.scriptRuns([runs('failed')]);
+      repository.tags.set('v1.3.0', { local: 'sha-1', remote: null });
+
+      const result = await runRelease(deps, { ...promote, assumeYes: false });
+
+      expect(result.outcome).toBe('stopped');
+      expect(mutations(recorder.calls)).toEqual([]);
     });
 
     it('reports an already tagged release and creates nothing (4.3)', async () => {
@@ -949,7 +983,7 @@ describe('runRelease', () => {
 
       expect(result).toEqual({ outcome: 'released' });
       expect(output.lines).toContain(
-        `staging now runs ${'b'.repeat(40)}, delivered after sha-1: production gets sha-1`,
+        `staging now runs ${'b'.repeat(40)}, not sha-1: production gets sha-1`,
       );
     });
 
@@ -981,11 +1015,12 @@ describe('runRelease', () => {
 
   describe('a dry run that finds the tag only local', () => {
     it('does not claim to have pushed it', async () => {
-      const { deps, repository, pullRequests, output } = setup();
+      const { deps, repository, pullRequests, releaseRuns, output } = setup();
       repository.appVersions.set('origin/main', '1.3.0');
       repository.appVersions.set('sha-1', '1.3.0');
       repository.tags.set('v1.3.0', { local: 'sha-1', remote: null });
       pullRequests.scriptFound([mergedPr]);
+      releaseRuns.scriptRuns([runs('success')]);
 
       const result = await runRelease(deps, {
         target: { kind: 'promote' },

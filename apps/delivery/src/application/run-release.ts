@@ -412,16 +412,7 @@ const execute = async (
       step = { step: 'wait-merge' };
     }
 
-    if (step.step === 'push-tag') {
-      const sha = state.releaseCommit;
-      await steps.pushTag(tag);
-      if (!dryRun) output.line(`pushed ${tag} on ${sha}`);
-      if (sha !== null && !dryRun)
-        output.line(`Release run: ${await runs.releaseRunUrl(sha)}`);
-      return { outcome: 'released' };
-    }
-
-    if (step.step === 'tag') {
+    if (step.step === 'tag' || step.step === 'push-tag') {
       const sha = state.releaseCommit;
       if (sha === null) return stopped('Found no release commit to tag');
       const failures = evaluateRelease({
@@ -438,7 +429,7 @@ const execute = async (
       const staging = await stagingCommit(deps.source);
       if (staging !== null && staging !== sha)
         output.line(
-          `staging now runs ${staging}, delivered after ${sha}: production gets ${sha}`,
+          `staging now runs ${staging}, not ${sha}: production gets ${sha}`,
         );
       if (
         !dryRun &&
@@ -446,6 +437,14 @@ const execute = async (
         !(await prompter.confirm(`Promote ${version} (${sha}) to production?`))
       )
         return { outcome: 'declined' };
+      if (step.step === 'push-tag') {
+        // The tag already exists locally: it still goes through the same checks and confirmation.
+        await steps.pushTag(tag);
+        if (dryRun) return { outcome: 'released' };
+        output.line(`pushed ${tag} on ${sha}`);
+        output.line(`Release run: ${await runs.releaseRunUrl(sha)}`);
+        return { outcome: 'released' };
+      }
       await steps.tag(tag, sha);
       if (dryRun) return { outcome: 'released' };
       output.line(`tagged ${tag} on ${sha}`);
