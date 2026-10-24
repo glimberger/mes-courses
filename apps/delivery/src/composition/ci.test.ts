@@ -177,3 +177,14 @@ describe('parseCiArgs wait-health', () => {
     );
   });
 });
+
+describe('parseCiArgs app-version', () => {
+  it('takes no option', () => {
+    expect(parseCiArgs(['app-version'], () => true)).toEqual({
+      command: 'app-version',
+    });
+    expect(() =>
+      parseCiArgs(['app-version', '--env', 'staging'], () => true),
+    ).toThrow(/Unknown option: --env/);
+  });
+});

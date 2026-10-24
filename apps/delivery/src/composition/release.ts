@@ -21,10 +21,12 @@ export type ReleaseCommand = ReleaseRequest & { dryRun: boolean };
 /** A malformed command line; the exit code is 2. */
 export class UsageError extends Error {}
 
-export const USAGE =
-  'Usage: yarn release [major|minor|patch|X.Y.Z] [--yes|-y] [--dry-run]';
+export const USAGE = [
+  'Usage: yarn release [major|minor|patch|X.Y.Z] [--yes|-y] [--dry-run]   deliver to staging',
+  '       yarn release promote [--yes|-y] [--dry-run]                     send staging to production',
+].join('\n');
 
-const TARGET = /^(major|minor|patch|\d+\.\d+\.\d+)$/;
+const TARGET = /^(major|minor|patch|promote|\d+\.\d+\.\d+)$/;
 
 /** Parses the command line of `yarn release` (contracts/cli.md). */
 export const parseReleaseArgs = (
@@ -45,7 +47,7 @@ export const parseReleaseArgs = (
       );
     else if (!TARGET.test(arg))
       throw new UsageError(
-        `${arg} is neither major, minor, patch nor a version X.Y.Z\n${USAGE}`,
+        `${arg} is neither major, minor, patch, promote nor a version X.Y.Z\n${USAGE}`,
       );
     else argument = arg;
   }
@@ -53,11 +55,15 @@ export const parseReleaseArgs = (
     throw new UsageError(
       `Give a bump type or a version: there is no terminal to ask on\n${USAGE}`,
     );
-  const target: ReleaseTarget = parseTarget(argument);
+  const target: ReleaseTarget =
+    argument === 'promote' ? { kind: 'promote' } : parseTarget(argument);
   return { target, assumeYes, dryRun };
 };
 
-/** 0 for a release, an already released version or a declined release; 1 for a refusal or a stop. */
+/**
+ * 0 for a release, a delivery to staging, an already released version or a declined release; 1 for
+ * a refusal or a stop.
+ */
 export const exitCodeOf = (result: ReleaseResult): 0 | 1 =>
   result.outcome === 'stopped' ? 1 : 0;
 

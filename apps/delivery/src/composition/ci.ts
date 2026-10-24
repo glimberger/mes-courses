@@ -13,6 +13,7 @@ import { createCommandRunner } from '../adapters/process/command-runner';
 import { createSshSigner } from '../adapters/ssh-signature/ssh-signature';
 import { createSystemClock } from '../adapters/system/clock';
 import type { Environment } from '../domain/manifest';
+import { readAppVersion } from '../domain/release-plan';
 import { REQUIRED_WORKFLOWS } from '../domain/release-rules';
 
 export type WriteManifestCommand = {
@@ -37,11 +38,17 @@ export type WaitHealthCommand = {
   timeoutSeconds: number;
 };
 
+/** Prints the app version of the checkout, the version both environments are named after. */
+export type AppVersionCommand = { command: 'app-version' };
+
 export type CiCommand =
-  WriteManifestCommand | ReleaseGateCommand | WaitHealthCommand;
+  | WriteManifestCommand
+  | ReleaseGateCommand
+  | WaitHealthCommand
+  | AppVersionCommand;
 
 const OPTIONS = ['--env', '--commit', '--server', '--fdroid', '--version'];
-const COMMANDS = 'write-manifest, release-gate or wait-health';
+const COMMANDS = 'write-manifest, release-gate, wait-health or app-version';
 
 const readOptions = (
   rest: string[],
@@ -102,6 +109,10 @@ export const parseCiArgs = (
   const [command, ...rest] = argv;
   if (command === 'release-gate') return parseReleaseGateArgs(rest);
   if (command === 'wait-health') return parseWaitHealthArgs(rest);
+  if (command === 'app-version') {
+    readOptions(rest, []);
+    return { command };
+  }
   if (command !== 'write-manifest') {
     throw new Error(
       `Unknown command: ${command ?? '(none)'}. Use ${COMMANDS}.`,
@@ -147,15 +158,18 @@ const required = (name: string): string => {
 
 const ROOT = resolve(__dirname, '../../../..');
 
+/** `version` in `apps/mobile/app.config.ts`: staging delivers `X.Y.Z-staging.<n>` of it. */
+const appVersion = (): string =>
+  readAppVersion(
+    readFileSync(resolve(ROOT, 'apps/mobile/app.config.ts'), 'utf8'),
+  );
+
 const runWriteManifest = async (args: WriteManifestCommand) => {
   const base = process.env.INIT_CWD ?? process.cwd();
   const repository = required('GITHUB_REPOSITORY');
   const runner = createCommandRunner();
   const flake = JSON.parse(readFileSync(resolve(ROOT, 'flake.lock'), 'utf8'));
-  const version =
-    args.version ??
-    JSON.parse(readFileSync(resolve(ROOT, 'apps/server/package.json'), 'utf8'))
-      .version;
+  const version = args.version ?? appVersion();
   const asset = async (file?: string) =>
     file === undefined
       ? undefined
@@ -245,6 +259,7 @@ if (require.main === module) {
     );
     if (args.command === 'release-gate') await runReleaseGate(args);
     else if (args.command === 'wait-health') await runWaitHealth(args);
+    else if (args.command === 'app-version') console.log(appVersion());
     else await runWriteManifest(args);
   })().catch((error: unknown) => {
     console.error((error as Error).message);
