@@ -96,7 +96,7 @@ Staging and production are versioned independently, so the version shown on stag
 - Staging has moved on to a later commit than the bump (other merges since): the promotion is allowed and the maintainer is told.
 - The version on the remote main branch is already released: reported as already released, exit code 0.
 - The promote command is used with a main branch whose version was never delivered to staging: refused.
-- The workflow file that names staging deliveries is a guarded folder that only the maintainer edits: the change is handed over as a patch in the pull request.
+- The workflow file that names staging deliveries is a guarded folder that only the maintainer edits: the change was applied by the maintainer and merged with #166.
 
 ## Requirements *(mandatory)*
 
@@ -134,6 +134,6 @@ Staging and production are versioned independently, so the version shown on stag
 
 - Feature 009 (one-command release) is in place; this feature changes where it stops and adds the promotion.
 - The `Release` workflow keeps checking its own rules when the tag is pushed.
-- The staging naming change in the guarded workflow folder is applied by the maintainer; until then the staging server may still report the server package version.
+- The staging naming change in the guarded workflow folder was applied by the maintainer and merged with #166.
 - The manual device checks remain a precondition of a release and are not run by the commands.
 - Output language of the commands is English (developer tooling).

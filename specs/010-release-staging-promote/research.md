@@ -32,4 +32,4 @@ No `NEEDS CLARIFICATION` remained. Decisions taken while building (PR #166):
 
 - **Decision**: a `ci app-version` command prints the version of `apps/mobile/app.config.ts`; `ci write-manifest` defaults `--version` to it; `pack-server.sh` is given it by the workflow.
 - **Rationale**: production is named after the app version; staging must show it (FR-009). One reader of `app.config.ts` (`readAppVersion`) serves the release command and CI.
-- **Constraint**: `.github/workflows/` is maintainer-only; the workflow edit is a patch in the PR, so until applied the staging server reports the server package version.
+- **Constraint**: `.github/workflows/` is maintainer-only; the workflow edit was applied by the maintainer and merged with #166, so the staging server reports the app version.

@@ -75,7 +75,7 @@ description: "Task list for deliver-to-staging-then-promote (retrospective: ever
 **Independent Test**: `ci app-version` prints the app version; `ci write-manifest` without `--version` uses it.
 
 - [X] T011 [US5] Add the `app-version` command (no option) and default `--version` of `write-manifest` to the app version, with tests, in `apps/delivery/src/composition/ci.ts` and `apps/delivery/src/composition/ci.test.ts`
-- [X] T012 [US5] Name the staging server pack after `ci app-version` in `.github/workflows/deliver-staging.yml`, handed to the maintainer as a patch in the PR body (guarded folder)
+- [X] T012 [US5] Name the staging server pack after `ci app-version` in `.github/workflows/deliver-staging.yml`, applied by the maintainer and merged with #166 (guarded folder)
 
 ---
 

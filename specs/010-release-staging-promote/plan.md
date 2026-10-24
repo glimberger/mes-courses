@@ -26,7 +26,7 @@ The release use case of feature 009 (`application/run-release.ts`) gains a secon
 
 **Performance Goals**: unit tests in seconds (injected sleep); `promote` never polls
 
-**Constraints**: the Git hooks always run; no repository setting changed; `.github/workflows/` is edited by the maintainer only, so the workflow change is a patch in the PR
+**Constraints**: the Git hooks always run; no repository setting changed; `.github/workflows/` is edited by the maintainer only, so the workflow change was applied by the maintainer and merged with #166
 
 **Scale/Scope**: one maintainer, one release at a time
 
@@ -81,7 +81,7 @@ apps/delivery/src/
 docs/procedures/releases.md                    # the two-step procedure
 docs/README.md                                 # index
 specs/009-yarn-release-command/contracts/cli.md # the two commands, outputs, exit codes
-.github/workflows/deliver-staging.yml          # pack-server.sh version from `ci app-version` (patch applied by the maintainer)
+.github/workflows/deliver-staging.yml          # pack-server.sh version from `ci app-version` (applied by the maintainer, merged with #166)
 ```
 
 **Structure Decision**: no new file in the code base; the feature extends the use case and the `ci` command of the delivery workspace.
