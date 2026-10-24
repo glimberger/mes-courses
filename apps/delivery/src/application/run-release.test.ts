@@ -103,32 +103,31 @@ const mutations = (calls: string[]) =>
   );
 
 describe('runRelease', () => {
-  it('releases a minor bump, in order, after confirmation (scenario 1.1)', async () => {
-    const { deps, recorder, output } = setup();
+  it('delivers a minor bump to staging, in order, after confirmation, and stops there (scenario 1.1)', async () => {
+    const prompter = new ScriptedPrompter([], [true]);
+    const { deps, recorder, output } = setup(prompter);
 
     const result = await runRelease(deps, {
       target: { kind: 'bump', bump: 'minor' },
       assumeYes: false,
     });
 
-    expect(result).toEqual({ outcome: 'released' });
+    expect(result).toEqual({ outcome: 'staged' });
+    expect(prompter.questions).toEqual(['Deliver 1.3.0 to staging?']);
     expect(output.lines[0]).toBe('1.2.0 -> 1.3.0');
     expect(mutations(recorder.calls)).toEqual([
       'ReleaseRepository.commitBump 1.3.0 chore/release-1.3.0',
       'ReleasePullRequests.open chore/release-1.3.0 chore(release): bump the app version to 1.3.0',
       'ReleasePullRequests.enableAutoMerge https://github.test/pull/1',
-      'ReleaseRepository.createTag v1.3.0 sha-1',
-      'ReleaseRepository.pushTag v1.3.0',
     ]);
     expect(output.lines).toEqual(
       expect.arrayContaining([
         'bump pull request: https://github.test/pull/1',
         `waiting for ${REQUIRED_WORKFLOWS.join(', ')} on sha-1`,
-        'tagged v1.3.0 on sha-1',
-        'Release run: https://github.test/actions/runs/release',
+        '1.3.0 is on staging (sha-1)',
+        'Validate it there, then run `yarn release promote` to release it to production.',
       ]),
     );
-    expect(recorder.calls.at(-1)).toBe('ReleaseRuns.releaseRunUrl sha-1');
   });
 
   it('uses an explicit version without asking for the bump (scenario 1.2)', async () => {
@@ -164,7 +163,7 @@ describe('runRelease', () => {
       assumeYes: true,
     });
 
-    expect(result.outcome).toBe('released');
+    expect(result.outcome).toBe('staged');
     expect(prompter.questions).toEqual([]);
   });
 
@@ -427,7 +426,7 @@ describe('runRelease', () => {
         dryRun: true,
       });
 
-      expect(result).toEqual({ outcome: 'released' });
+      expect(result).toEqual({ outcome: 'staged' });
       expect(mutations(recorder.calls)).toEqual([]);
       expect(fakeSleep.durations).toEqual([]);
       expect(output.lines[0]).toBe('1.2.0 -> 1.3.0');
@@ -437,7 +436,7 @@ describe('runRelease', () => {
         'would enable auto-merge (squash) on it',
         'would wait for the pull request to merge',
         `would wait for ${REQUIRED_WORKFLOWS.join(', ')} on the bump commit`,
-        'would tag v1.3.0 on the bump commit and push the tag',
+        'would stop with 1.3.0 on staging, for `yarn release promote`',
       ]);
     });
 
@@ -488,7 +487,7 @@ describe('runRelease', () => {
 
       const result = await runRelease(deps, minor);
 
-      expect(result).toEqual({ outcome: 'released' });
+      expect(result).toEqual({ outcome: 'staged' });
       expect(recorder.calls).toContain(
         'ReleaseRepository.commitBump 1.3.0 chore/release-1.3.0',
       );
@@ -527,7 +526,7 @@ describe('runRelease', () => {
       ).toHaveLength(1);
     });
 
-    it('tags once the pending runs have succeeded (3.2)', async () => {
+    it('stops on staging once the pending runs have succeeded, without tagging (3.2)', async () => {
       const { deps, releaseRuns, recorder, fakeSleep } = setup();
       releaseRuns.scriptRuns([
         runs('pending'),
@@ -537,8 +536,8 @@ describe('runRelease', () => {
 
       const result = await runRelease(deps, minor);
 
-      expect(result).toEqual({ outcome: 'released' });
-      expect(recorder.calls).toContain('ReleaseRepository.pushTag v1.3.0');
+      expect(result).toEqual({ outcome: 'staged' });
+      expect(recorder.calls.join('\n')).not.toMatch(/createTag|pushTag/);
       expect(fakeSleep.durations.length).toBeGreaterThanOrEqual(3);
     });
 
@@ -566,8 +565,8 @@ describe('runRelease', () => {
       },
     );
 
-    it('tags the bump commit even when origin/main has moved on', async () => {
-      const { deps, repository, recorder } = setup();
+    it('stops on staging even when origin/main has moved on', async () => {
+      const { deps, repository, output } = setup();
       const sleep = deps.sleep;
       deps.sleep = async (ms) => {
         await sleep(ms);
@@ -576,10 +575,8 @@ describe('runRelease', () => {
 
       const result = await runRelease(deps, minor);
 
-      expect(result).toEqual({ outcome: 'released' });
-      expect(recorder.calls).toContain(
-        'ReleaseRepository.createTag v1.3.0 sha-1',
-      );
+      expect(result).toEqual({ outcome: 'staged' });
+      expect(output.lines).toContain('1.3.0 is on staging (sha-1)');
     });
 
     it('stops with the reason and a resume hint when gh fails mid-wait', async () => {
@@ -602,6 +599,7 @@ describe('runRelease', () => {
   describe('resuming after an interruption (US4)', () => {
     const target = { kind: 'version' as const, version: '1.3.0' };
     const resume = { target, assumeYes: true };
+    const promote = { target: { kind: 'promote' as const }, assumeYes: true };
     const creating = (calls: string[]) =>
       calls.filter((call) => /commitBump|\.open |createTag/.test(call));
 
@@ -611,11 +609,8 @@ describe('runRelease', () => {
 
       const result = await runRelease(deps, resume);
 
-      expect(result).toEqual({ outcome: 'released' });
-      expect(mutations(recorder.calls)).toEqual([
-        'ReleaseRepository.createTag v1.3.0 sha-1',
-        'ReleaseRepository.pushTag v1.3.0',
-      ]);
+      expect(result).toEqual({ outcome: 'staged' });
+      expect(mutations(recorder.calls)).toEqual([]);
     });
 
     it('enables auto-merge once on an open pull request that lacks it', async () => {
@@ -629,9 +624,7 @@ describe('runRelease', () => {
       ).toEqual([
         'ReleasePullRequests.enableAutoMerge https://github.test/pull/1',
       ]);
-      expect(creating(recorder.calls)).toEqual([
-        'ReleaseRepository.createTag v1.3.0 sha-1',
-      ]);
+      expect(creating(recorder.calls)).toEqual([]);
     });
 
     it('goes to the runs when the bump is already on origin/main (4.2)', async () => {
@@ -641,15 +634,9 @@ describe('runRelease', () => {
 
       const result = await runRelease(deps, resume);
 
-      expect(result).toEqual({ outcome: 'released' });
-      expect(mutations(recorder.calls)).toEqual([
-        'ReleaseRepository.createTag v1.3.0 sha-1',
-        'ReleaseRepository.pushTag v1.3.0',
-      ]);
-      expect(repository.tags.get('v1.3.0')).toEqual({
-        local: 'sha-1',
-        remote: 'sha-1',
-      });
+      expect(result).toEqual({ outcome: 'staged' });
+      expect(mutations(recorder.calls)).toEqual([]);
+      expect(repository.tags.get('v1.3.0')).toBeUndefined();
     });
 
     it('only pushes a tag that was created but not pushed', async () => {
@@ -657,7 +644,7 @@ describe('runRelease', () => {
       landBump();
       repository.tags.set('v1.3.0', { local: 'sha-1', remote: null });
 
-      const result = await runRelease(deps, resume);
+      const result = await runRelease(deps, promote);
 
       expect(result).toEqual({ outcome: 'released' });
       expect(mutations(recorder.calls)).toEqual([
@@ -704,12 +691,9 @@ describe('runRelease', () => {
         assumeYes: true,
       });
 
-      expect(result).toEqual({ outcome: 'released' });
+      expect(result).toEqual({ outcome: 'staged' });
       expect(output.lines).toContain('1.3.0 -> 1.3.0');
-      expect(mutations(recorder.calls)).toEqual([
-        'ReleaseRepository.createTag v1.3.0 sha-1',
-        'ReleaseRepository.pushTag v1.3.0',
-      ]);
+      expect(mutations(recorder.calls)).toEqual([]);
     });
 
     it('starts a new release from a main version that is already tagged', async () => {
@@ -775,10 +759,7 @@ describe('runRelease', () => {
         manifest: productionManifest('1.3.0'),
         signature: 'sig',
       });
-      const request = {
-        target: { kind: 'version' as const, version: '1.3.0' },
-        assumeYes: true,
-      };
+      const request = promote;
 
       const real = await runRelease(deps, request);
       const dry = await runRelease(deps, { ...request, dryRun: true });
@@ -795,7 +776,7 @@ describe('runRelease', () => {
 
       const result = await runRelease(deps, resume);
 
-      expect(result).toEqual({ outcome: 'released' });
+      expect(result).toEqual({ outcome: 'staged' });
     });
 
     it('says it is resuming when an explicit bump type meets an unreleased main', async () => {
@@ -824,7 +805,7 @@ describe('runRelease', () => {
         assumeYes: true,
       });
 
-      expect(result).toEqual({ outcome: 'released' });
+      expect(result).toEqual({ outcome: 'staged' });
       expect(prompter.questions).toHaveLength(1);
     });
 
@@ -883,6 +864,121 @@ describe('runRelease', () => {
     });
   });
 
+  describe('promoting what staging runs', () => {
+    const promote = { target: { kind: 'promote' as const }, assumeYes: false };
+    const stagingManifest = (commit: string): string =>
+      productionManifest('1.3.0-staging.20')
+        .replace('"environment":"production"', '"environment":"staging"')
+        .replace(/"commit":"a{40}"/, `"commit":"${commit}"`);
+    /** 1.3.0 is merged on main and its runs, staging included, are green. */
+    const staged = (prompter = new ScriptedPrompter([], [true])) => {
+      const world = setup(prompter);
+      world.landBump();
+      world.pullRequests.scriptFound([mergedPr]);
+      world.releaseRuns.scriptRuns([runs('success')]);
+      return world;
+    };
+
+    it('tags the release commit after confirmation and prints the Release run', async () => {
+      const prompter = new ScriptedPrompter([], [true]);
+      const { deps, recorder, output } = staged(prompter);
+
+      const result = await runRelease(deps, promote);
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(prompter.questions).toEqual([
+        'Promote 1.3.0 (sha-1) to production?',
+      ]);
+      expect(output.lines[0]).toBe('1.3.0: staging -> production');
+      expect(mutations(recorder.calls)).toEqual([
+        'ReleaseRepository.createTag v1.3.0 sha-1',
+        'ReleaseRepository.pushTag v1.3.0',
+      ]);
+      expect(output.lines).toEqual(
+        expect.arrayContaining([
+          'tagged v1.3.0 on sha-1',
+          'Release run: https://github.test/actions/runs/release',
+        ]),
+      );
+    });
+
+    it('changes nothing when the promotion is declined', async () => {
+      const { deps, recorder } = staged(new ScriptedPrompter([], [false]));
+
+      const result = await runRelease(deps, promote);
+
+      expect(result).toEqual({ outcome: 'declined' });
+      expect(mutations(recorder.calls)).toEqual([]);
+    });
+
+    it('promotes from any checkout: only a tag is made', async () => {
+      const { deps, repository } = staged();
+      repository.branch = 'feat/x';
+      repository.clean = false;
+      repository.upToDate = false;
+
+      const result = await runRelease(deps, promote);
+
+      expect(result).toEqual({ outcome: 'released' });
+    });
+
+    it('refuses a version whose staging runs are not green yet, without waiting', async () => {
+      const { deps, releaseRuns, recorder, fakeSleep } = staged();
+      releaseRuns.scriptRuns([runs('pending')]);
+
+      const result = await runRelease(deps, promote);
+
+      expect(result).toMatchObject({
+        outcome: 'stopped',
+        message: expect.stringContaining(
+          '1.3.0 is not delivered to staging yet (sha-1): run `yarn release 1.3.0`',
+        ),
+      });
+      expect(fakeSleep.durations).toEqual([]);
+      expect(mutations(recorder.calls)).toEqual([]);
+    });
+
+    it('says so when staging moved on to a later commit', async () => {
+      const { deps, source, output } = staged();
+      source.channels.set('staging', {
+        manifest: stagingManifest('b'.repeat(40)),
+        signature: 'sig',
+      });
+
+      const result = await runRelease(deps, promote);
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(output.lines).toContain(
+        `staging now runs ${'b'.repeat(40)}, delivered after sha-1: production gets sha-1`,
+      );
+    });
+
+    it('reports the version on main as already released when it is tagged', async () => {
+      const { deps, repository, recorder, output } = setup();
+      repository.scriptReleaseCommits(['sha-0']);
+
+      const result = await runRelease(deps, promote);
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(output.lines).toContain('v1.2.0 is already released');
+      expect(mutations(recorder.calls)).toEqual([]);
+    });
+
+    it('prints the tag it would make in a dry run, without asking', async () => {
+      const prompter = new ScriptedPrompter();
+      const { deps, recorder, output } = staged(prompter);
+
+      const result = await runRelease(deps, { ...promote, dryRun: true });
+
+      expect(result).toEqual({ outcome: 'released' });
+      expect(prompter.questions).toEqual([]);
+      expect(output.lines).toContain(
+        'would tag v1.3.0 on sha-1 and push the tag',
+      );
+      expect(mutations(recorder.calls)).toEqual([]);
+    });
+  });
+
   describe('a dry run that finds the tag only local', () => {
     it('does not claim to have pushed it', async () => {
       const { deps, repository, pullRequests, output } = setup();
@@ -892,7 +988,7 @@ describe('runRelease', () => {
       pullRequests.scriptFound([mergedPr]);
 
       const result = await runRelease(deps, {
-        target: { kind: 'version', version: '1.3.0' },
+        target: { kind: 'promote' },
         assumeYes: true,
         dryRun: true,
       });
@@ -1007,17 +1103,35 @@ const world = () => {
 };
 
 describe('runRelease interrupted at every step (SC-004)', () => {
-  const request = {
+  const deliver = {
     target: { kind: 'version' as const, version: '1.3.0' },
     assumeYes: true,
   };
+  const promote = { target: { kind: 'promote' as const }, assumeYes: true };
   const HAPPY = ['commit', 'open', 'auto-merge', 'tag', 'push-tag'];
 
+  /**
+   * Each half is run again until it no longer stops, like the maintainer would after an
+   * interruption; the delivery reports a version tagged by an interrupted promotion as released.
+   */
+  const settle = async (
+    deps: ReleaseDeps,
+    request: typeof deliver | typeof promote,
+  ) => {
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const { outcome } = await runRelease(deps, request);
+      if (outcome !== 'stopped') return outcome;
+    }
+    throw new Error('still stopped');
+  };
+
   /** The explicit version 1.3.0 is higher than main 1.2.0 on the first run, equal after the merge. */
-  it('does the five changes exactly once in one uninterrupted run', async () => {
+  it('does the five changes exactly once in one delivery and one promotion', async () => {
     const { deps, effects } = world();
 
-    expect(await runRelease(deps, request)).toEqual({ outcome: 'released' });
+    expect(await runRelease(deps, deliver)).toEqual({ outcome: 'staged' });
+    expect(effects).toEqual(HAPPY.slice(0, 3));
+    expect(await runRelease(deps, promote)).toEqual({ outcome: 'released' });
     expect(effects).toEqual(HAPPY);
   });
 
@@ -1027,11 +1141,15 @@ describe('runRelease interrupted at every step (SC-004)', () => {
       const { deps, state, effects } = world();
       state.crashAfter = crashAfter;
 
-      const first = await runRelease(deps, request);
-      expect(first.outcome).toBe('stopped');
+      const first = await runRelease(deps, deliver);
+      if (crashAfter <= 3) expect(first.outcome).toBe('stopped');
+      else expect((await runRelease(deps, promote)).outcome).toBe('stopped');
 
       state.crashAfter = Infinity;
-      expect(await runRelease(deps, request)).toEqual({ outcome: 'released' });
+      expect(await settle(deps, deliver)).toBe(
+        crashAfter < 5 ? 'staged' : 'released',
+      );
+      expect(await settle(deps, promote)).toBe('released');
       expect(effects).toEqual(HAPPY);
       expect(state.remoteTag).toBe('sha-1');
     },
@@ -1041,11 +1159,12 @@ describe('runRelease interrupted at every step (SC-004)', () => {
     const { deps, state, effects } = world();
     for (let crashAfter = 1; crashAfter <= 5; crashAfter += 1) {
       state.crashAfter = crashAfter;
-      await runRelease(deps, request);
+      await runRelease(deps, crashAfter <= 3 ? deliver : promote);
     }
     state.crashAfter = Infinity;
 
-    expect(await runRelease(deps, request)).toEqual({ outcome: 'released' });
+    await settle(deps, deliver);
+    expect(await runRelease(deps, promote)).toEqual({ outcome: 'released' });
     expect(effects).toEqual(HAPPY);
   });
 });

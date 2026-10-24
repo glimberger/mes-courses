@@ -6,7 +6,9 @@ export type Bump = 'major' | 'minor' | 'patch';
 export type ReleaseTarget =
   | { kind: 'bump'; bump: Bump }
   | { kind: 'version'; version: string }
-  | { kind: 'ask' };
+  | { kind: 'ask' }
+  /** The version already delivered to staging, sent on to production. */
+  | { kind: 'promote' };
 
 const RELEASE_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
