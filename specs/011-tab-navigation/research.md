@@ -42,3 +42,11 @@
 
 - **Decision**: `Lists` calls `set-current-list`, then navigates to the Courses tab with its stack reset to `CurrentList`.
 - **Rationale**: the add screen must never target another list than the one it opened with.
+
+## Icons: new names and the filled form
+
+**Decision**: the tab bar and the add toggle need `shopping_cart`, `grocery`, `add_circle` and `check_circle`, none of which is in the generated Material Symbols subset (ADR-0012). Phase 2 (task T006) adds the names to `symbols.txt` and reruns `design/icons/build-symbols.sh`. The filled `check_circle` (FILL=1) needs a form the script does not build (it only makes FILL=0 instances), so task T007 adds a third static instance (`FILL=1`, weight 500, `check_circle` only) and a `filled` prop on `AppIcon`; ADR-0012 is amended.
+
+**Rationale**: the mockups draw the filled mark; another distinct form would drift from them, and the extra instance is a few hundred bytes.
+
+**Alternatives considered**: using `check_circle` outline with a tinted card only (loses the filled mark of the mockups).
