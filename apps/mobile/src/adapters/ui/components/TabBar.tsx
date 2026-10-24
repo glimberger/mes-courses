@@ -89,14 +89,9 @@ export const TabBar = ({
               </View>
               <Text
                 variant="labelMedium"
-                style={[
-                  selected ? styles.selectedLabel : styles.label,
-                  {
-                    color: selected
-                      ? colors.onSurface
-                      : colors.onSurfaceVariant,
-                  },
-                ]}
+                style={{
+                  color: selected ? colors.onSurface : colors.onSurfaceVariant,
+                }}
               >
                 {label}
               </Text>
@@ -116,9 +111,8 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingHorizontal: spacing.sm,
   },
-  tab: { flex: 1 },
-  label: { fontWeight: '700' },
-  selectedLabel: { fontWeight: '800' },
+  // The pill, its gap and the label make 52 dp: the minimum touch target is set all the same.
+  tab: { flex: 1, minHeight: 48 },
   content: { alignItems: 'center', gap: spacing.xs },
   pill: {
     width: PILL_WIDTH,

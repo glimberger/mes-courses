@@ -19,7 +19,7 @@ import { useAnnouncement } from '../accessibility/announce';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { Button } from '../components/Button';
 import { PasswordField } from '../components/PasswordField';
-import type { RootStackParamList } from '../routes';
+import type { AppNavigation, RootStackParamList } from '../routes';
 import type { AppState } from '../state/app-store';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
@@ -100,8 +100,11 @@ export const ChoosePasswordScreen = () => {
     );
     setSaving(false);
     if (outcome.ok) {
-      // Past SignIn and this screen, to the current list.
+      // Past SignIn and this screen, then to the current list, in the Courses tab.
       navigation.popToTop();
+      navigation
+        .getParent<AppNavigation>()
+        ?.navigate('CoursesTab', { screen: 'CurrentList' });
       return;
     }
     setError(chooseErrorText(outcome.error));

@@ -67,7 +67,8 @@ export const ListsScreen = () => {
           return;
         }
       }
-      if (navigation.canGoBack()) navigation.goBack();
+      // Courses is another tab: its stack shows the list again (the reset is T021).
+      navigation.navigate('CoursesTab', { screen: 'CurrentList' });
     },
     [navigation, setCurrentList],
   );

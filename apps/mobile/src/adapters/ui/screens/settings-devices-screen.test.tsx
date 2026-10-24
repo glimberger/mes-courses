@@ -35,7 +35,7 @@ const openSettings = async (scenario: StoryScenario = {}) => {
   );
   await screen.findByText('Ma liste');
   fireEvent.press(screen.getByRole('button', { name: 'Réglages' }));
-  await screen.findByText('Réglages');
+  await screen.findByRole('header', { name: 'Réglages' });
   return rendered;
 };
 

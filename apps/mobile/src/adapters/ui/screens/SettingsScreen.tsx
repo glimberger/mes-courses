@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { DeviceInfo } from '../../../application/use-cases/list-devices';
@@ -92,8 +92,10 @@ export const SettingsScreen = () => {
       setAccount({ type: 'loading' });
     }
   }
+  // The tab keeps this screen alive: it loads again each time it is shown, never while hidden.
+  const focused = useIsFocused();
   useEffect(() => {
-    if (!isConnected) return;
+    if (!isConnected || !focused) return;
     // Dropped when the screen goes or a newer load starts: only the latest is shown.
     let current = true;
     void listDevices().then((outcome) => {
@@ -115,10 +117,10 @@ export const SettingsScreen = () => {
     return () => {
       current = false;
     };
-  }, [isConnected, listDevices, reload]);
+  }, [isConnected, focused, listDevices, reload]);
   // The address and the role are the server's to tell on every opening, never read from storage.
   useEffect(() => {
-    if (!isConnected) return;
+    if (!isConnected || !focused) return;
     let current = true;
     void getAccountSettings().then(({ account: outcome }) => {
       if (!current || outcome === null) return;
@@ -143,7 +145,7 @@ export const SettingsScreen = () => {
     return () => {
       current = false;
     };
-  }, [isConnected, getAccountSettings, reload]);
+  }, [isConnected, focused, getAccountSettings, reload]);
   const loadDevices = () => {
     setConnectionNeeded(false);
     setDevices({ type: 'loading' });

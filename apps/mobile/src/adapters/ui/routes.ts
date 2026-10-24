@@ -1,4 +1,7 @@
-import type { NavigatorScreenParams } from '@react-navigation/native';
+import type {
+  NavigationProp,
+  NavigatorScreenParams,
+} from '@react-navigation/native';
 
 import type { ArticleId } from '../../domain/article';
 import type { CategoryId } from '../../domain/category';
@@ -21,9 +24,14 @@ export type ListsStackParamList = {
   Lists: undefined;
 };
 
-/** Articles tab: a placeholder showing today's catalog until phase 5. */
+/**
+ * Articles tab: a placeholder showing today's catalog until phase 5, so it still reaches the
+ * creation and edit screens it had.
+ */
 export type CatalogStackParamList = {
   Catalog: undefined;
+  CreateArticle: CreateArticleParams;
+  EditArticle: { articleId: ArticleId };
 };
 
 /** Réglages tab. */
@@ -53,6 +61,14 @@ export type RootStackParamList = CoursesStackParamList &
   ListsStackParamList &
   CatalogStackParamList &
   SettingsStackParamList;
+
+/**
+ * What a screen navigates with: to a route of its own stack by name, or to a screen of another
+ * tab through its tab (`navigate('ListsTab', { screen: 'Lists' })`).
+ */
+export type AppNavigation = NavigationProp<
+  RootTabParamList & RootStackParamList
+>;
 
 /** The tabs in display order: the route, the bar's label and icon, and the root of its stack. */
 export const TABS = [
