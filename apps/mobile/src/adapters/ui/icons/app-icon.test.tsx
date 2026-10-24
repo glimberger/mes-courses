@@ -45,6 +45,20 @@ describe('the Material Symbols icon set', () => {
     expect(hasGlyph(symbol)).toBe(true);
   });
 
+  it.each([
+    'shopping_cart',
+    'grocery',
+    'add_circle',
+    'check_circle',
+    'remove_shopping_cart',
+    'info',
+    'format_list_bulleted',
+    'settings',
+    'more_vert',
+  ])('resolves the symbol %s the tab navigation draws', (symbol) => {
+    expect(hasGlyph(symbol)).toBe(true);
+  });
+
   it('draws every icon name the components and screens write as a literal', () => {
     const names = literalIconNames();
     expect(names.length).toBeGreaterThan(20);
