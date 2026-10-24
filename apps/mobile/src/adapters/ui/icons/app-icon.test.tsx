@@ -1,4 +1,4 @@
-import { globSync, readFileSync } from 'node:fs';
+import { existsSync, globSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { render } from '@testing-library/react-native';
@@ -75,5 +75,31 @@ describe('the Material Symbols icon set', () => {
     expect(() =>
       render(<AppIcon name="magnify" weight={weight} />),
     ).not.toThrow();
+  });
+
+  it('renders the filled form of check_circle', () => {
+    expect(() =>
+      render(<AppIcon name="check_circle" filled testID="filled" />),
+    ).not.toThrow();
+  });
+
+  it('uses the filled font instance for a filled icon, and only then', () => {
+    const filled = render(<AppIcon name="check_circle" filled testID="a" />);
+    const outline = render(<AppIcon name="check_circle" testID="b" />);
+    const fontOf = (screen: typeof filled, id: string) =>
+      JSON.stringify(screen.getByTestId(id).props.style);
+    expect(fontOf(filled, 'a')).toContain('MaterialSymbolsRounded_500_filled');
+    expect(fontOf(outline, 'b')).not.toContain('_filled');
+  });
+
+  it('bundles the filled instance', () => {
+    expect(
+      existsSync(
+        path.join(
+          __dirname,
+          '../../../../assets/fonts/MaterialSymbolsRounded_500_filled.ttf',
+        ),
+      ),
+    ).toBe(true);
   });
 });

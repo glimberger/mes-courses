@@ -17,10 +17,11 @@ the app must load its fonts from the bundle (offline first, no network at runtim
 ## Decision
 
 We use Material Symbols Rounded. `design/icons/build-symbols.sh` downloads the variable font from
-`google/material-design-icons` at a pinned commit, checks its SHA-256, makes two static instances
-(weight 500 with every symbol the app draws, weight 700 with `check` only) and subsets them to the
-names in `apps/mobile/src/adapters/ui/icons/symbols.txt`. The script writes the two TTFs to
-`apps/mobile/assets/fonts/` and the glyph map `symbols-glyphs.json`. The app renders them through
+`google/material-design-icons` at a pinned commit, checks its SHA-256, makes three static instances
+(weight 500 with every symbol the app draws, weight 700 with `check` only, and weight 500 with
+FILL=1 for `check_circle` only, the selected state of the add toggle) and subsets them to the
+names in `apps/mobile/src/adapters/ui/icons/symbols.txt`. The script writes the three TTFs to
+`apps/mobile/assets/fonts/` (`MaterialSymbolsRounded_500.ttf`, `_700.ttf`, `_500_filled.ttf`) and the glyph map `symbols-glyphs.json`. The app renders them through
 `createIconSet` from `@expo/vector-icons` and hands the set to Paper through `PaperProvider`
 `settings.icon`.
 
