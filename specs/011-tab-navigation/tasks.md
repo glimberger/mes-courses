@@ -35,7 +35,7 @@ Paths are under `apps/mobile/src/adapters/ui/` unless stated.
 
 **Independent Test**: the app opens on Courses; each tab opens; Courses -> add screen, switch tab, back, the add screen is still there.
 
-- [ ] T005 [US1] Add `@react-navigation/bottom-tabs` (version matching React Navigation) to `apps/mobile/package.json` and the lockfile
+- [x] T005 [US1] Add `@react-navigation/bottom-tabs` (version matching React Navigation) to `apps/mobile/package.json` and the lockfile
 - [ ] T006 [US1] Add the icons the new UI draws to `apps/mobile/src/adapters/ui/icons/symbols.txt` (`shopping_cart`, `grocery`, `add_circle`, `check_circle`, `remove_shopping_cart` for the "Retirer de la liste" menu item, `info` for the hint row and the edit dialog note; `format_list_bulleted`, `settings` and `more_vert` are already there; the status-bar `wifi`, `signal_cellular_alt` and `battery_full` of the mockups are decoration only and are not drawn by the app), rerun `design/icons/build-symbols.sh` and commit the regenerated `symbols-glyphs.json` and `apps/mobile/assets/fonts/MaterialSymbolsRounded_500.ttf` (ADR-0012); extend `app-icon.test.tsx` to resolve each name
 - [ ] T007 [US1] Test first, then add the filled form (needed by `check_circle` in T035): `design/icons/build-symbols.sh` builds a third static instance with `FILL=1 wght=500` (subset to `check_circle` only, `MaterialSymbolsRounded_500_filled.ttf`), `AppIcon` gets a `filled?: boolean` prop that picks it (`icons/AppIcon.tsx`), and ADR-0012 is amended to list the new instance
 - [ ] T008 [US1] Test first, then implement the route types: `RootTabParamList` and one param list per stack in `routes.ts`; `Catalog` route added, `EditArticle` kept until phase 5
