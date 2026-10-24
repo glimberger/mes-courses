@@ -49,19 +49,25 @@ case "$rev" in
     ;;
 esac
 
-pnpm prune --prod
+# `pnpm deploy` writes the delivery workspace and its production dependencies only (what `yarn
+# workspaces focus --production` did): `pnpm prune --prod` would keep those of every workspace. The
+# result goes in the bundle under apps/delivery, where `node apps/delivery/dist/...` looks for it.
+staging=$(mktemp -d)
+trap 'rm -rf "$staging"' EXIT
+pnpm --filter @mes-courses/delivery deploy --prod "$staging/delivery"
 # @sentry/node pulls in oxc-parser through @sentry/bundler-plugins. Only the bundler entry points
 # (@sentry/node/bundler-plugin/*) load it, never the agent, and its platform binaries are native:
 # left out of the artifact, as in pack-server.sh.
-rm -rf node_modules/oxc-parser node_modules/@oxc-parser
+rm -rf "$staging"/delivery/node_modules/.pnpm/oxc-parser@* "$staging"/delivery/node_modules/.pnpm/@oxc-parser+*
+find "$staging/delivery/node_modules" -type l ! -exec test -e {} \; -exec rm -f {} +
 
-staging=$(mktemp -d)
-trap 'rm -rf "$staging"' EXIT
 printf '%s\n' "$rev" >"$staging/nixpkgs-rev"
+mkdir -p "$staging/bundle/apps/delivery" "$output"
+cp -R "$root/apps/delivery/dist" "$root/apps/delivery/package.json" "$staging/bundle/apps/delivery/"
+mv "$staging/delivery/node_modules" "$staging/bundle/apps/delivery/node_modules"
+cp "$root/package.json" "$staging/bundle/"
+mv "$staging/nixpkgs-rev" "$staging/bundle/"
 
-mkdir -p "$output"
 archive="$output/delivery-$version.tar.gz"
-tar -czf "$archive" \
-  -C "$root" apps/delivery/dist apps/delivery/package.json package.json node_modules \
-  -C "$staging" nixpkgs-rev
+tar -czf "$archive" -C "$staging/bundle" .
 echo "$archive"

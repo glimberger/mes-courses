@@ -1,10 +1,12 @@
 const ADDRESS_CHARACTERS = String.raw`[^\s@<>"'()\[\],;:=&?/\\]`;
 const AT = '(?:@|%40)';
 /** Anything that looks like an email address, in plain text or percent-encoded in a URL. */
+// The label after the dot starts with a letter: a top-level domain never starts with a digit, which
+// keeps a stack frame like `node_modules/.pnpm/pkg@1.2.3_dep@4/` from reading as an address.
 // Each run is capped at the 254 characters of the longest address: unbounded runs made a long text
 // without an address cost quadratic time.
 const ADDRESS = new RegExp(
-  `${ADDRESS_CHARACTERS}{1,254}${AT}${ADDRESS_CHARACTERS}{1,254}\\.[a-zA-Z]{2,}(?<!\\.)`,
+  `${ADDRESS_CHARACTERS}{1,254}${AT}${ADDRESS_CHARACTERS}{1,254}\\.(?=[a-z\u00C0-\uFFFF])${ADDRESS_CHARACTERS}{1,254}(?<!\\.)`,
   'gi',
 );
 
