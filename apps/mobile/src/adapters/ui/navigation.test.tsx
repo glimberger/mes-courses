@@ -186,6 +186,40 @@ describe('Navigation', () => {
     expect(await screen.findByText('Apparence')).toBeOnTheScreen();
   });
 
+  it('opens the Settings root from the sync status, past a SignIn left open in the Réglages tab', async () => {
+    const { store } = await renderNavigation();
+    await screen.findByText('Ma liste');
+    act(() =>
+      store.setState({
+        sync: {
+          ...store.getState().sync,
+          connection: 'signedOut',
+          signedOutReason: 'revoked',
+        },
+      }),
+    );
+    fireEvent.press(screen.getByRole('button', { name: 'Se reconnecter' }));
+    await screen.findByLabelText('Adresse e-mail');
+    fireEvent.press(screen.getByRole('tab', { name: 'Courses' }));
+    await screen.findByText('Ma liste');
+
+    fireEvent.press(
+      screen.getByRole('button', {
+        name: "Cet appareil n'est plus autorisé. Reconnectez-vous.",
+      }),
+    );
+
+    expect(await screen.findByText('Apparence')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Retour' })).toBeNull();
+    await waitFor(() =>
+      expect(
+        screen.queryAllByLabelText('Adresse e-mail', {
+          includeHiddenElements: true,
+        }),
+      ).toHaveLength(0),
+    );
+  });
+
   it('keeps the search of the Articles tab apart from the one of AddArticles', async () => {
     await renderNavigation();
     await screen.findByText('Ma liste');

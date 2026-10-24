@@ -115,8 +115,10 @@ export const SyncStatusBar = ({
       <TouchableRipple
         accessibilityRole="button"
         accessibilityLabel={label ?? text}
+        // `pop: true` pops back to the Settings root instead of pushing a second one over
+        // SignIn or Accounts, which the Réglages stack keeps while another tab is shown.
         onPress={() =>
-          navigation.navigate('SettingsTab', { screen: 'Settings' })
+          navigation.navigate('SettingsTab', { screen: 'Settings', pop: true })
         }
         style={styles.status}
       >
