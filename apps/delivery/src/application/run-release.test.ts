@@ -125,7 +125,7 @@ describe('runRelease', () => {
         'bump pull request: https://github.test/pull/1',
         `waiting for ${REQUIRED_WORKFLOWS.join(', ')} on sha-1`,
         '1.3.0 is on staging (sha-1)',
-        'Validate it there, then run `yarn release promote` to release it to production.',
+        'Validate it there, then run `pnpm release promote` to release it to production.',
       ]),
     );
   });
@@ -436,7 +436,7 @@ describe('runRelease', () => {
         'would enable auto-merge (squash) on it',
         'would wait for the pull request to merge',
         `would wait for ${REQUIRED_WORKFLOWS.join(', ')} on the bump commit`,
-        'would stop with 1.3.0 on staging, for `yarn release promote`',
+        'would stop with 1.3.0 on staging, for `pnpm release promote`',
       ]);
     });
 
@@ -965,7 +965,7 @@ describe('runRelease', () => {
       expect(result).toMatchObject({
         outcome: 'stopped',
         message: expect.stringContaining(
-          '1.3.0 is not delivered to staging yet (sha-1): run `yarn release 1.3.0`',
+          '1.3.0 is not delivered to staging yet (sha-1): run `pnpm release 1.3.0`',
         ),
       });
       expect(fakeSleep.durations).toEqual([]);

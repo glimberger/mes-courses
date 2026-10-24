@@ -44,5 +44,5 @@ simulator:
   maintainer, and its black-box waits are less deterministic than Detox's synchronization.
 - **Appium**: a WebDriver setup heavier than a two-platform app needs.
 - **Detox on debug builds**: needs Metro during tests and differs from what users run.
-- **The journeys inside `apps/mobile/`**: `yarn test` would pick them up.
+- **The journeys inside `apps/mobile/`**: `pnpm test` would pick them up.
 - **iOS in CI on `macos-latest`**: cost; it can be added if the repository becomes public.

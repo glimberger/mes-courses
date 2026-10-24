@@ -6,11 +6,11 @@ Apple Developer Program.
 
 1. Do the manual checks first. Record in the test plan of the last pull request every manual check
    of [quickstart §6](../../specs/001-shopping-lists/quickstart.md) and the [device checks](device-checks.md). These checks are a precondition of a release: the
-   pipeline does not run them, and `yarn release` does not either.
+   pipeline does not run them, and `pnpm release` does not either.
 2. Deliver the version to staging. From a clean `main` that matches `origin/main`, run:
 
    ```sh
-   yarn release [major|minor|patch|X.Y.Z] [--yes|-y] [--dry-run]
+   pnpm release [major|minor|patch|X.Y.Z] [--yes|-y] [--dry-run]
    ```
 
    - With `major`, `minor` or `patch` it computes the next version from the app version on
@@ -36,7 +36,7 @@ Apple Developer Program.
 4. Promote it to production, from any checkout:
 
    ```sh
-   yarn release promote [--yes|-y] [--dry-run]
+   pnpm release promote [--yes|-y] [--dry-run]
    ```
 
    It takes the version on `origin/main`, checks that its runs (`Deliver staging` included) are

@@ -42,7 +42,7 @@ export type ReleaseRequest = {
 
 export type ReleaseResult =
   | { outcome: 'released' }
-  /** The version runs on staging and waits for `yarn release promote`. */
+  /** The version runs on staging and waits for `pnpm release promote`. */
   | { outcome: 'staged' }
   | { outcome: 'declined' }
   | { outcome: 'stopped'; message: string };
@@ -51,7 +51,7 @@ const POLL_MS = 30_000;
 const WAIT_LIMIT_MS = 90 * 60_000;
 const RESUME_AFTER_ERROR = 'Run the same command again to resume.';
 const RESUME = 'run the same command again to resume';
-const PROMOTE = '`yarn release promote`';
+const PROMOTE = '`pnpm release promote`';
 
 /** Everything that changes the repository or GitHub goes through here, so a dry run cannot leak. */
 type Steps = {
@@ -367,7 +367,7 @@ const execute = async (
     // Only a version that staging received can be promoted.
     if (promote && !tagging)
       return stopped(
-        `${version} is not delivered to staging yet${state.releaseCommit === null ? '' : ` (${state.releaseCommit})`}: run \`yarn release ${version}\` to wait for it, validate it on staging, then run ${PROMOTE}`,
+        `${version} is not delivered to staging yet${state.releaseCommit === null ? '' : ` (${state.releaseCommit})`}: run \`pnpm release ${version}\` to wait for it, validate it on staging, then run ${PROMOTE}`,
       );
 
     // The staging half stops where the tag would go: production waits for the promotion.

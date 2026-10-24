@@ -40,12 +40,12 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - run: nix develop --command yarn install --immutable
+      - run: nix develop --command pnpm install --frozen-lockfile
       - name: Check the release rules
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GH_TOKEN: ${{ github.token }}
-        run: nix develop --command yarn workspace @mes-courses/delivery ci release-gate --tag "$TAG" --commit "$SHA"
+        run: nix develop --command pnpm --filter @mes-courses/delivery run ci release-gate --tag "$TAG" --commit "$SHA"
       - id: facts
         run: |
           {
@@ -69,8 +69,8 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - run: nix develop --command yarn install --immutable
-      - run: nix develop --command yarn build
+      - run: nix develop --command pnpm install --frozen-lockfile
+      - run: nix develop --command pnpm build
       - name: Pack the server
         env:
           VERSION: ${{ needs.gate.outputs.version }}
@@ -98,8 +98,8 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - run: nix develop --command yarn install --immutable
-      - run: nix develop --command yarn workspace @mes-courses/delivery build
+      - run: nix develop --command pnpm install --frozen-lockfile
+      - run: nix develop --command pnpm --filter @mes-courses/delivery build
       - name: Pack the agent
         run: |
           version=$(node -p "require('./apps/delivery/package.json').version")
@@ -167,7 +167,7 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - run: nix develop --command yarn install --immutable
+      - run: nix develop --command pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v8
         with:
           path: ${{ runner.temp }}/artifacts
@@ -194,7 +194,7 @@ jobs:
         run: |
           set -eu
           dir="$RUNNER_TEMP/artifacts"
-          nix develop --command yarn workspace @mes-courses/delivery ci write-manifest \
+          nix develop --command pnpm --filter @mes-courses/delivery run ci write-manifest \
             --env production --commit "$SHA" --version "$VERSION" \
             --server "$dir/server-production/server-$SHA.tar.gz" \
             --fdroid "$dir/fdroid-production/fdroid-production-$SHA.tar.gz"
@@ -217,11 +217,11 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - run: nix develop --command yarn install --immutable
+      - run: nix develop --command pnpm install --frozen-lockfile
       - name: Wait for the production server to run the release
         env:
           PRODUCTION_SERVER_URL: ${{ vars.PRODUCTION_SERVER_URL }}
-        run: nix develop --command yarn workspace @mes-courses/delivery ci wait-health --url "$PRODUCTION_SERVER_URL" --commit "$SHA" --timeout 1200
+        run: nix develop --command pnpm --filter @mes-courses/delivery run ci wait-health --url "$PRODUCTION_SERVER_URL" --commit "$SHA" --timeout 1200
       - name: Summarize this job
         if: always()
         run: sh .github/scripts/delivery-summary.sh wait-production-health "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

@@ -4,7 +4,7 @@ The app and the server follow a hexagonal architecture ([constitution](../.speci
 Principle VI): the rules sit in the middle and know nothing about the outside world; everything that
 touches a database, the network, the screen or the clock sits at the edge and plugs into the middle
 through small interfaces called ports. The [dependency-cruiser](../.dependency-cruiser.cjs) rules
-enforce it: `yarn test:architecture` fails when a layer imports something it must not.
+enforce it: `pnpm test:architecture` fails when a layer imports something it must not.
 
 ## The layers and the direction of dependencies
 

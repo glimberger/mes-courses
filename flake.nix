@@ -1,5 +1,5 @@
 {
-  description = "Mes courses: development shell (Node 24, Yarn through Corepack, watchman)";
+  description = "Mes courses: development shell (Node 24, pnpm, watchman)";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
@@ -25,7 +25,7 @@
         default = pkgs.mkShellNoCC {
           packages = [
             pkgs.nodejs_24
-            pkgs.corepack_24
+            pkgs.pnpm
             pkgs.watchman
             pkgs.jq
             pkgs.actionlint

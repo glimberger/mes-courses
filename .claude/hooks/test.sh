@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tests of pre-tool-use.sh against a throwaway repository. Run with `yarn test:hooks`.
+# Tests of pre-tool-use.sh against a throwaway repository. Run with `pnpm test:hooks`.
 set -uo pipefail
 hook="$(cd "$(dirname "$0")" && pwd)/pre-tool-use.sh"
 repo=$(mktemp -d)
@@ -161,8 +161,8 @@ bash_cmd 2 'mv in the PR loop state' 'mv .git/gl-pr-loop/a.json .git/gl-pr-loop/
 bash_cmd 2 'touch in the PR loop state' 'touch .git/gl-pr-loop/a.json'
 bash_cmd 2 'push --all' 'git push --all origin'
 bash_cmd 2 'push --mirror' 'git push --mirror origin'
-bash_cmd 0 'yarn install' 'yarn install && git status'
-bash_cmd 2 'lefthook uninstall' 'yarn lefthook uninstall'
+bash_cmd 0 'pnpm install' 'pnpm install && git status'
+bash_cmd 2 'lefthook uninstall' 'pnpm lefthook uninstall'
 bash_cmd 0 'cp a guardrail file elsewhere' 'cp .github/workflows/ci.yml /tmp/ci.yml'
 bash_cmd 2 'cp over a guardrail file' 'cp /tmp/ci.yml .github/workflows/ci.yml'
 

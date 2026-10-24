@@ -75,7 +75,7 @@ export const createGithubReleasePullRequests = (
         '--title',
         title,
         '--body',
-        'Release bump opened by `yarn release`.',
+        'Release bump opened by `pnpm release`.',
       ]);
       const pr = await findBump(branch);
       if (pr === null) {

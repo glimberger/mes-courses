@@ -40,7 +40,7 @@ export const readBuildInfo = (
 
 /**
  * The release Sentry reports: `mes-courses-server@<version>`. The version comes from the build
- * info, not from `npm_package_version`, which only yarn sets and systemd does not (FR-022a).
+ * info, not from `npm_package_version`, which only pnpm sets and systemd does not (FR-022a).
  */
 export const serverRelease = (buildInfoPath?: string): string =>
   `mes-courses-server@${readBuildInfo(buildInfoPath).version}`;

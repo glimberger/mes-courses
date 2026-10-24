@@ -1,5 +1,5 @@
 /**
- * Architecture rules (research R15). Run from the root with `yarn test:architecture`.
+ * Architecture rules (research R15). Run from the root with `pnpm run test:architecture`.
  * Paths are relative to the repository root.
  */
 

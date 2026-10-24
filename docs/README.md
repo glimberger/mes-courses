@@ -33,7 +33,7 @@ and procedures, which are runbooks to follow step by step.
 | [Sentry alerts](procedures/sentry-alerts.md)                                       | Setting the alert rules in Sentry                         |
 | [End-to-end tests](procedures/e2e-tests.md)                                        | Running the Detox journeys on a device                    |
 | [Device checks](procedures/device-checks.md)                                       | The manual checks and measurements before a release       |
-| [Releases](procedures/releases.md)                                                 | Delivering to staging, then promoting with `yarn release` |
+| [Releases](procedures/releases.md)                                                 | Delivering to staging, then promoting with `pnpm release` |
 | [Losing or exposing a signing key](procedures/losing-or-exposing-a-signing-key.md) | A signing key is lost or compromised                      |
 | [Android: from Google Play to F-Droid](procedures/google-play-to-fdroid.md)        | Moving Android users to the F-Droid repository            |
 | [Merging a pull request](procedures/merging-a-pull-request.md)                     | The checks to pass before merging                         |

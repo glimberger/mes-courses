@@ -1,7 +1,7 @@
 # Agent guardrails
 
 `.claude/settings.json` bounds what Claude Code agents can do in this repository. Its rules
-and hooks apply to every session started here; the hooks need `git`, `jq` (in the Nix dev shell; without it they block every edit and command) and `yarn`.
+and hooks apply to every session started here; the hooks need `git`, `jq` (in the Nix dev shell; without it they block every edit and command) and `pnpm`.
 
 - **Denied commands**: force push, `--no-verify`, `gh pr merge` and reading `.env` files are
   refused outright.
@@ -24,7 +24,7 @@ and hooks apply to every session started here; the hooks need `git`, `jq` (in th
 - **After an edit** (`post-tool-use.sh`): ESLint on the edited JavaScript or TypeScript file and
   `tsc` on its workspace. Errors go straight back to the agent.
 - **Before the agent ends its turn** (`stop.sh`): when code changed and is not committed,
-  `yarn typecheck`, `yarn test` and `yarn test:architecture` run (about 30 seconds). Only
+  `pnpm typecheck`, `pnpm test` and `pnpm test:architecture` run (about 30 seconds). Only
   changes made during the turn count: `prompt-submit.sh` records the tree when you send a prompt,
   so your own work in progress never sends the agent back. A failure sends the agent back to
   work once; a green state is cached until the tree changes again.

@@ -27,6 +27,17 @@ describe('scrubAddresses', () => {
     expect(scrubAddresses('MARIE@EXAMPLE.ORG')).toBe(REDACTED);
   });
 
+  it('004 R10 removes an address whose domain ends in a non-ASCII or punycode label', () => {
+    expect(scrubAddresses('marie@exemple.рф')).toBe(REDACTED);
+    expect(scrubAddresses('marie@exemple.xn--p1ai')).toBe(REDACTED);
+  });
+
+  it('004 R10 leaves a package folder of a stack trace untouched', () => {
+    const frame =
+      'at x (/app/node_modules/.pnpm/jest-circus@30.5.2_supports-color@8.1.1/node_modules/y.js:1:2)';
+    expect(scrubAddresses(frame)).toBe(frame);
+  });
+
   it('004 R10 stays fast on a long text without an address', () => {
     const text = 'a'.repeat(100_000);
     const started = Date.now();
