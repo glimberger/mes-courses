@@ -166,8 +166,9 @@ export const AddArticlesScreen = () => {
     focusRow();
   };
 
-  const createArticle = (params: RootStackParamList['CreateArticle']) =>
-    navigation.navigate('CreateArticle', params);
+  const createArticle = (
+    params?: Omit<RootStackParamList['CreateArticle'], 'addToList'>,
+  ) => navigation.navigate('CreateArticle', { ...params, addToList: true });
 
   /** "Nouvel article", named after the search if there is one (FR-008, FR-022). */
   const newArticle = () => {

@@ -5,6 +5,8 @@ import type { ListId } from '../../../domain/shopping-list';
 import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
 import type { Fixture, StoryScenario } from '../testing/story-store';
+import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
+import { Navigation } from '../navigation';
 import { CatalogScreen } from './CatalogScreen';
 
 const shownCategories = [
@@ -139,5 +141,38 @@ describe('Catalog', () => {
     });
 
     expect(await screen.findByText('Aucun article')).toBeOnTheScreen();
+  });
+
+  it('has the extended button "Nouvel article"', async () => {
+    await renderScreen();
+    await screen.findByText('Beurre');
+
+    expect(
+      screen.getByRole('button', { name: 'Nouvel article' }),
+    ).toBeOnTheScreen();
+  });
+
+  it('"Nouvel article" creates in the catalog only: the new article shows with no badge, the current list is unchanged', async () => {
+    const { unitOfWork } = await renderWithStore(
+      <Navigation errorReporter={new RecordingErrorReporter()} />,
+      { seed, asScreen: false },
+    );
+    fireEvent.press(await screen.findByRole('tab', { name: 'Articles' }));
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Nouvel article' }),
+    );
+
+    expect(screen.queryByLabelText('Quantité')).not.toBeOnTheScreen();
+    fireEvent.changeText(await screen.findByLabelText('Nom'), 'Cumin');
+    fireEvent.press(screen.getByRole('radio', { name: 'Boissons' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Créer' }));
+
+    expect(await screen.findByText('Cumin')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Cumin')).toBeOnTheScreen();
+    expect(
+      await unitOfWork.run((repos) =>
+        repos.items.forList('list-ma-liste' as ListId),
+      ),
+    ).toHaveLength(fixture.items.length);
   });
 });

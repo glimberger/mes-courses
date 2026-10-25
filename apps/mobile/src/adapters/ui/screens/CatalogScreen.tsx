@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { SectionList, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { ArticleId } from '../../../domain/article';
 import type { CatalogView } from '../../../domain/catalog-view';
 import { CatalogArticleRow } from '../components/CatalogArticleRow';
 import { CategoryHeader } from '../components/CategoryHeader';
 import { EmptyState } from '../components/EmptyState';
-import { SCREEN_FAB_CLEARANCE } from '../components/ScreenFab';
+import { ScreenFab, SCREEN_FAB_CLEARANCE } from '../components/ScreenFab';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenStateView } from '../components/ScreenStateView';
 import { SearchField } from '../components/SearchField';
 import { SyncStatusBar } from '../components/SyncStatusBar';
 import { hasScreenBelow } from '../navigation-history';
+import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
 
@@ -29,7 +31,8 @@ const rowId = (article: CatalogArticle) => article.id;
  * with the number of lists holding the article (spec 011, Catalog).
  */
 export const CatalogScreen = () => {
-  const navigation = useNavigation();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const catalog = useAppStore((state) => state.catalog.view);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
   const searchCatalog = useAppStore((state) => state.searchCatalog);
@@ -113,6 +116,13 @@ export const CatalogScreen = () => {
             />
           );
         }}
+      />
+      <ScreenFab
+        icon="add"
+        label="Nouvel article"
+        onPress={() =>
+          navigation.navigate('CreateArticle', { addToList: false })
+        }
       />
     </View>
   );

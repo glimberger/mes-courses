@@ -369,3 +369,73 @@ describe('CreateArticle', () => {
     expect(store.getState().notice).toEqual({ type: 'storageFull' });
   });
 });
+
+describe('CreateArticle, catalog only (Articles tab)', () => {
+  const renderCatalogOnly = async () => {
+    const rendered = await renderWithStore(<CreateArticleScreen />, {
+      seed: fixture,
+      routeParams: { addToList: false },
+    });
+    await screen.findByRole('radio', { name: 'Boissons' });
+    return rendered;
+  };
+
+  const createOnly = () =>
+    fireEvent.press(screen.getByRole('button', { name: 'Créer' }));
+
+  it('has no quantity fields and a "Créer" button', async () => {
+    await renderCatalogOnly();
+
+    expect(screen.queryByLabelText('Quantité')).not.toBeOnTheScreen();
+    expect(screen.queryByLabelText('Unité')).not.toBeOnTheScreen();
+    expect(
+      screen.queryByRole('button', { name: 'Créer et ajouter' }),
+    ).not.toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Créer' })).toBeOnTheScreen();
+  });
+
+  it('creates the article in its category and on no list', async () => {
+    const { unitOfWork } = await renderCatalogOnly();
+
+    type('Nom', 'Cumin');
+    choose('Boissons');
+    createOnly();
+
+    await waitFor(async () => {
+      const articles = await unitOfWork.run((repos) => repos.articles.all());
+      expect(articles.map((article) => article.name)).toContain('Cumin');
+    });
+    expect(
+      await unitOfWork.run((repos) => repos.items.forList(maListe)),
+    ).toHaveLength(fixture.items.length);
+  });
+
+  it('says "« Beurre » existe déjà." without offering to add it to a list', async () => {
+    await renderCatalogOnly();
+
+    type('Nom', ' beurre ');
+    choose('Crèmerie');
+    createOnly();
+
+    expect(
+      await screen.findByText('« Beurre » existe déjà.'),
+    ).toBeOnTheScreen();
+    expect(
+      screen.queryByRole('button', { name: 'Ajouter « Beurre »' }),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('asks for a category before creating', async () => {
+    const { unitOfWork } = await renderCatalogOnly();
+
+    type('Nom', 'Cumin');
+    createOnly();
+
+    expect(
+      await screen.findByText('Choisissez une catégorie.'),
+    ).toBeOnTheScreen();
+    expect(await unitOfWork.run((repos) => repos.articles.all())).toHaveLength(
+      fixture.articles.length,
+    );
+  });
+});

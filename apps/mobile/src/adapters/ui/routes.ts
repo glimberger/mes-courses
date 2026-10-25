@@ -6,9 +6,13 @@ import type {
 import type { ArticleId } from '../../domain/article';
 import type { CategoryId } from '../../domain/category';
 
-type CreateArticleParams =
+type CreateArticleParams = {
   /** The name to start from, and the category to choose, if any (FR-008, FR-018). */
-  { name?: string; categoryId?: CategoryId } | undefined;
+  name?: string;
+  categoryId?: CategoryId;
+  /** True from Courses (also adds to the current list), false from Articles (catalog only). */
+  addToList: boolean;
+};
 
 /** Courses tab: the current list, the add screen and article creation. */
 export type CoursesStackParamList = {
@@ -24,10 +28,7 @@ export type ListsStackParamList = {
   Lists: undefined;
 };
 
-/**
- * Articles tab: a placeholder showing today's catalog until phase 5, so it still reaches the
- * creation and edit screens it had.
- */
+/** Articles tab: the catalog, and article creation (catalog only). */
 export type CatalogStackParamList = {
   Catalog: undefined;
   CreateArticle: CreateArticleParams;
