@@ -7,9 +7,11 @@ import {
   createList,
   expectRow,
   openAddArticles,
+  openArticles,
+  openCatalogRowMenu,
+  openTab,
   openLists,
   openQuantityDialog,
-  openRowMenu,
   tapUndo,
 } from '../support/app';
 
@@ -35,31 +37,29 @@ describe('delete an article', () => {
       .toBeVisible()
       .withTimeout(2000);
 
-    await openRowMenu('Lait', 'Supprimer');
+    await backToList();
+
+    await openArticles();
+    await openCatalogRowMenu('Lait', 'Supprimer');
     await element(by.text('Supprimer')).tap();
     await expect(element(by.text('Supprimer « Lait » ?'))).toBeVisible();
     await expect(
-      element(
-        by.text(
-          'Il est dans les listes « Barbecue » et « Ma liste » et en sera retiré.',
-        ),
-      ),
+      element(by.text('L’article sera retiré de 2 listes.')),
     ).toBeVisible();
     await element(by.label('Supprimer')).tap();
 
     await waitFor(element(by.text('« Lait » supprimé')))
       .toBeVisible()
       .withTimeout(2000);
-    await expect(
-      element(by.label("Plus d'actions pour « Lait »")),
-    ).not.toExist();
-    await backToList();
-    // The offer lasts 5 s (FR-010): no other screen is visited before "Annuler". The other
-    // list losing the article is covered by the use case tests.
-    await expect(element(by.label('Lait, pas dans le caddie'))).not.toExist();
+    await expect(element(by.label('Actions pour Lait'))).not.toExist();
 
     await tapUndo();
 
+    // The row and its content match: either one shows it is back.
+    await waitFor(element(by.label('Lait, dans 2 listes')).atIndex(0))
+      .toBeVisible()
+      .withTimeout(2000);
+    await openTab('Courses');
     await expectRow('Lait, pas dans le caddie');
     await openLists();
     await chooseList('Ma liste, 1 article', 'Ma liste');
