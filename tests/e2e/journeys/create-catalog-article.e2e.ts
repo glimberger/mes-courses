@@ -13,6 +13,9 @@ describe('create an article from the Articles tab', () => {
     await element(by.label('Nouvel article')).atIndex(0).tap();
     await expect(element(by.label('Créer'))).toExist();
 
+    // Type the name while its field is still on screen: the swipe below scrolls it out of view.
+    await typeInto('Nom', 'Couches');
+
     // The button ends the list of categories, below the fold.
     await element(by.text('Catégorie')).swipe('up', 'fast', 0.8);
     await waitFor(element(by.text('Nouvelle catégorie')))
@@ -28,12 +31,11 @@ describe('create an article from the Articles tab', () => {
     await waitFor(element(by.label('Bébé')).atIndex(0))
       .toExist()
       .withTimeout(5000);
-    // Let the category dialog finish unmounting before typing into the form's field.
+    // Let the category dialog finish unmounting before submitting the form.
     await waitFor(element(by.text('Nouvelle catégorie')).atIndex(1))
       .not.toExist()
       .withTimeout(5000);
 
-    await typeInto('Nom', 'Couches');
     await element(by.label('Créer')).tap();
 
     await expect(element(by.text('Nouvel article'))).toBeVisible();
