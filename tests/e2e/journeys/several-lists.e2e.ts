@@ -7,6 +7,7 @@ import {
   createList,
   expectRow,
   openAddArticles,
+  tapToAdd,
   openLists,
 } from '../support/app';
 
@@ -36,9 +37,7 @@ describe('several lists', () => {
     await expect(element(by.text('Votre liste est vide'))).toBeVisible();
 
     await openAddArticles(true);
-    // The row and the name inside it match: tapping either opens the dialog.
-    await element(by.label('Lait')).atIndex(0).tap();
-    await element(by.label('Ajouter')).tap();
+    await tapToAdd('Lait');
     await backToList();
 
     await expectRow('Lait, pas dans le caddie');

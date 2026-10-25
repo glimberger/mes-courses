@@ -11,7 +11,7 @@ import {
   openCatalogRowMenu,
   openTab,
   openLists,
-  openQuantityDialog,
+  tapToAdd,
   tapUndo,
 } from '../support/app';
 
@@ -31,11 +31,7 @@ describe('delete an article', () => {
     await createList('Barbecue');
     await chooseList('Barbecue, 0 articles', 'Barbecue');
     await openAddArticles(true);
-    await openQuantityDialog('Lait');
-    await element(by.label('Ajouter')).tap();
-    await waitFor(element(by.text('« Lait » ajouté')))
-      .toBeVisible()
-      .withTimeout(2000);
+    await tapToAdd('Lait');
 
     await backToList();
 
