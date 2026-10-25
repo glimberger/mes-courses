@@ -48,6 +48,8 @@ export const requiredStories: readonly string[] = [
   'Dialogs/DeleteAccountDialog/LastAdministrator',
   'Dialogs/ResendCredentialsDialog/Default',
   // User Story 2
+  'Components/AddToggle/NotAdded',
+  'Components/AddToggle/Added',
   'Components/ArticleRow/Default',
   'Components/ArticleRow/AlreadyOnList',
   'Components/EmptyCategoryCard/Default',
