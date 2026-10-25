@@ -10,6 +10,7 @@ import type { CategoryId } from '../../../domain/category';
 import { cleanName } from '../../../domain/name';
 import { AppbarIconAction } from '../components/AppbarIconAction';
 import { ArticleRow } from '../components/ArticleRow';
+import { Button } from '../components/Button';
 import { CategoryHeader } from '../components/CategoryHeader';
 import { EmptyCategoryCard } from '../components/EmptyCategoryCard';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -171,6 +172,7 @@ export const AddArticlesScreen = ({
             searching={cleanName(query) !== ''}
             toggle={toggle}
             createInCategory={(categoryId) => createArticle({ categoryId })}
+            create={() => createArticle()}
           />
         )}
       />
@@ -189,12 +191,14 @@ const CatalogSections = ({
   searching,
   toggle,
   createInCategory,
+  create,
 }: {
   view: CatalogView;
   hidden: Snapshot;
   searching: boolean;
   toggle: (article: CatalogArticle) => void;
   createInCategory: (categoryId: CategoryId) => void;
+  create: () => void;
 }) => {
   const { sections, alreadyOnList } = useMemo(() => {
     const shown = view.sections.flatMap((section) => {
@@ -230,6 +234,20 @@ const CatalogSections = ({
             {`« ${name} » est déjà dans la liste`}
           </Text>
         ))}
+      </View>
+    );
+  }
+
+  // Without a search, every article is on the list already: say so, and offer to create one.
+  if (sections.length === 0 && alreadyOnList.length > 0) {
+    return (
+      <View style={styles.already}>
+        <Text variant="bodyLarge">
+          Tous les articles sont déjà dans la liste
+        </Text>
+        <Button mode="text" onPress={create}>
+          Créer un article
+        </Button>
       </View>
     );
   }

@@ -322,6 +322,31 @@ describe('AddArticles', () => {
     expect(screen.queryByRole('button', { name: /Lait/ })).toBeNull();
   });
 
+  it('AC3 with every article already on the list, says so and offers to create one', async () => {
+    const names = ['Lait', 'Pommes'];
+    const kept = fixture.articles.filter((article) =>
+      names.includes(article.name),
+    );
+    const onListOnly = {
+      ...fixture,
+      items: fixture.items.filter((item) =>
+        kept.some((article) => article.id === item.articleId),
+      ),
+      categories: fixture.categories.filter((category) =>
+        ['Crèmerie', 'Fruits et légumes'].includes(category.name),
+      ),
+      articles: kept,
+    };
+    await renderScreen({ seed: onListOnly });
+
+    expect(
+      await screen.findByText('Tous les articles sont déjà dans la liste'),
+    ).toBeOnTheScreen();
+    expect(
+      screen.getByRole('button', { name: 'Créer un article' }),
+    ).toBeOnTheScreen();
+  });
+
   it('AC3 a search matching a shown and a hidden article lists the shown one only', async () => {
     const withLaitier = {
       ...seed,
