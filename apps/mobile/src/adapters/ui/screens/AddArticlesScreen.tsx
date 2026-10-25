@@ -67,7 +67,12 @@ const CatalogRow = memo(function CatalogRow({
  * are not in that snapshot, so they stay shown, marked as added. The screen stays open, so
  * several articles can be added in a row.
  */
-export const AddArticlesScreen = () => {
+export const AddArticlesScreen = ({
+  initialQuery = '',
+}: {
+  /** The search the screen opens with: for the stories, which cannot type. */
+  initialQuery?: string;
+}) => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const store = useAppStoreApi();
@@ -93,7 +98,7 @@ export const AddArticlesScreen = () => {
   // query only, shared with the Articles tab's screen, so each puts its own back in the store
   // whenever it is shown, which also repairs the store after the other one left. Closing this
   // screen drops its search, so it opens on the whole catalog the next time.
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   useEffect(() => {
     void load().then(adopt);
     return () => searchCatalog('');

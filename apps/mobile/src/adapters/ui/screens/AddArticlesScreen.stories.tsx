@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-native';
 
 import { fixture } from '../testing/fixtures';
-import type { StoryScenario } from '../testing/story-store';
 import { useAppStoreApi } from '../state/app-store-provider';
 import { AddArticlesScreen } from './AddArticlesScreen';
 
@@ -69,49 +68,25 @@ export const Empty: Story = {
   },
 };
 
-/** The catalog loaded, then searched as the user types. */
-const searching =
-  (query: string): StoryScenario['prepare'] =>
-  async (store) => {
-    await store.loadCatalog();
-    store.searchCatalog(query);
-  };
-
 /** "beu" finds "Beurre", which can be added. */
 export const SearchMatches: Story = {
-  parameters: {
-    scenario: {
-      seed: fixture,
-      prepare: searching('beu'),
-    },
-  },
+  render: () => <AddArticlesScreen initialQuery="beu" />,
+  parameters: { scenario: { seed: fixture } },
 };
 
 /** "pom" finds "Pommes", on the list when the screen opened: said so, with no action. */
 export const SearchHiddenMatch: Story = {
-  parameters: {
-    scenario: {
-      seed: fixture,
-      prepare: searching('pom'),
-    },
-  },
+  render: () => <AddArticlesScreen initialQuery="pom" />,
+  parameters: { scenario: { seed: fixture } },
 };
 
 export const SearchNoMatch: Story = {
-  parameters: {
-    scenario: {
-      seed: fixture,
-      prepare: searching('xyz'),
-    },
-  },
+  render: () => <AddArticlesScreen initialQuery="xyz" />,
+  parameters: { scenario: { seed: fixture } },
 };
 
 /** A long article name wraps in the matches list without clipping. */
 export const SearchWrapped: Story = {
-  parameters: {
-    scenario: {
-      seed: fixture,
-      prepare: searching('yaourt'),
-    },
-  },
+  render: () => <AddArticlesScreen initialQuery="yaourt" />,
+  parameters: { scenario: { seed: fixture } },
 };
