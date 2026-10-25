@@ -1,20 +1,17 @@
-import { memo, type Ref } from 'react';
-import { StyleSheet, View, type HostInstance } from 'react-native';
+import { memo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Text, TouchableRipple, useTheme } from 'react-native-paper';
 
 import { shape } from '../theme/shape';
 import type { AppTheme } from '../theme/theme';
 import { AddToggle, addToggleLabel } from './AddToggle';
 import { Card } from './Card';
-import { paperRef } from './paper-ref';
 
 export type ArticleRowProps = {
   name: string;
   /** On the current list: added by a tap of this visit of the add screen. */
   added: boolean;
   onPress: () => void;
-  /** The row screen readers focus, for a focus move (FR-037). */
-  ref?: Ref<HostInstance>;
 };
 
 const ROW_MIN_HEIGHT = 64;
@@ -29,7 +26,6 @@ export const ArticleRow = memo(function ArticleRow({
   name,
   added,
   onPress,
-  ref,
 }: ArticleRowProps) {
   const { colors } = useTheme() as AppTheme;
 
@@ -47,7 +43,6 @@ export const ArticleRow = memo(function ArticleRow({
       ]}
     >
       <TouchableRipple
-        ref={paperRef(ref)}
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={addToggleLabel(name, added)}
