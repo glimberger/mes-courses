@@ -24,7 +24,7 @@ export type ListItemRowProps = {
   quantity: Quantity | null;
   inCart: boolean;
   onToggle: () => void;
-  /** Shows the action "Modifier la quantité" (US2-3). */
+  /** Shows the menu entry "Quantité…" (US2-3). */
   onEditQuantity?: () => void;
   /** Shows the action "Retirer de la liste" (US2-6). */
   onRemove?: () => void;

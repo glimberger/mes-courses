@@ -29,19 +29,23 @@ export const RowMenu = ({
   defaultVisible = false,
 }: RowMenuProps) => {
   const [visible, setVisible] = useState(defaultVisible);
+  const button = (
+    <AppbarIconAction
+      icon="more_vert"
+      accessibilityLabel={`Actions pour ${name}`}
+      onPress={() => setVisible(true)}
+    />
+  );
+  // Paper's `Menu` starts a 250 ms hide when it mounts closed, and that hide unmounts the menu
+  // even if it was opened meanwhile. Mounting it only while open skips that stale hide.
+  if (!visible) return button;
   return (
     <Menu
-      visible={visible}
+      visible
       onDismiss={() => setVisible(false)}
       overlayAccessibilityLabel="Fermer le menu"
       anchorPosition="bottom"
-      anchor={
-        <AppbarIconAction
-          icon="more_vert"
-          accessibilityLabel={`Actions pour ${name}`}
-          onPress={() => setVisible(true)}
-        />
-      }
+      anchor={button}
     >
       {items.map(({ title, accessibilityLabel, onPress }) => (
         <Menu.Item

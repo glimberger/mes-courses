@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { ThemeProvider } from '../theme/theme-provider';
 import { waitForMenusToSettle } from '../testing/wait-for-menus';
@@ -48,6 +48,17 @@ describe('RowMenu', () => {
     expect(screen.getByLabelText('Retirer Lait de la liste')).toBeOnTheScreen();
     expect(screen.getByText('Quantité…')).toBeOnTheScreen();
     expect(screen.getByText('Retirer de la liste')).toBeOnTheScreen();
+  });
+
+  it('FR-008 stays open when opened right after it is mounted', async () => {
+    renderMenu();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Actions pour Lait' }));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
+
+    expect(screen.getByLabelText('Quantité de Lait')).toBeOnTheScreen();
   });
 
   it('FR-008 runs the action of the chosen entry', async () => {
