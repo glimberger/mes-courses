@@ -80,10 +80,12 @@ describe('AddArticles', () => {
     });
 
     expect(await screen.findByTestId('sync-status-bar')).toBeOnTheScreen();
+    await screen.findByText('Beurre');
   });
 
   it('shows "Ajouter des articles" in the Appbar and the search field "Rechercher un article"', async () => {
     await renderScreen();
+    await screen.findByText('Beurre');
 
     expect(screen.getByText('Ajouter des articles')).toBeOnTheScreen();
     expect(
@@ -116,18 +118,18 @@ describe('AddArticles', () => {
     await renderScreen();
     await screen.findByText('Beurre');
 
+    // "Lait", "Pommes" and "Farine" were on the list when the screen opened: hidden, and "Fruits
+    // et légumes", left with none, is not shown.
     expect(
-      shownInOrder([...shownCategories, 'Pommes', 'Beurre', 'Lait', 'Farine']),
-    ).toEqual([
-      'Fruits et légumes',
-      'Pommes',
-      'Crèmerie',
-      'Beurre',
-      'Lait',
-      'Épicerie salée',
-      'Farine',
-      'Boissons',
-    ]);
+      shownInOrder([
+        ...shownCategories,
+        'Pommes',
+        'Beurre',
+        'Lait',
+        'Farine',
+        'Pâte',
+      ]),
+    ).toEqual(['Crèmerie', 'Beurre', 'Épicerie salée', 'Pâte', 'Boissons']);
     expect(
       screen.getByText('Aucun article dans cette catégorie'),
     ).toBeOnTheScreen();
@@ -189,66 +191,175 @@ describe('AddArticles', () => {
     await screen.findByText('Beurre');
     const run = jest.spyOn(unitOfWork, 'run');
 
-    for (const query of ['p', 'po', 'pom']) {
+    for (const query of ['p', 'pâ', 'pât']) {
       search(query);
       expect(screen.queryByLabelText('Chargement')).not.toBeOnTheScreen();
-      expect(screen.getByText('Pommes')).toBeOnTheScreen();
+      expect(screen.getByText('Pâte')).toBeOnTheScreen();
     }
 
     expect(run).not.toHaveBeenCalled();
   });
 
-  it('US2-8 marks the articles already on the list', async () => {
+  it('AC3 hides the articles on the list when the screen opened', async () => {
     await renderScreen();
+    await screen.findByText('Beurre');
 
-    expect(
-      await screen.findByRole('button', {
-        name: 'Lait ajoutée, toucher pour retirer',
-      }),
-    ).toBeOnTheScreen();
+    for (const name of ['Lait', 'Pommes', 'Farine']) {
+      expect(screen.queryByText(name)).not.toBeOnTheScreen();
+    }
     expect(
       screen.getByRole('button', { name: 'Ajouter Beurre' }),
     ).toBeOnTheScreen();
   });
 
-  it('US2-8 FR-011 tapping an article on the list opens the already-on-list mode, adding nothing', async () => {
-    const { unitOfWork } = await renderScreen();
-
-    fireEvent.press(
-      await screen.findByRole('button', {
-        name: 'Lait ajoutée, toucher pour retirer',
-      }),
-    );
-
-    expect(
-      await screen.findByText('« Lait » est déjà dans la liste.'),
-    ).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Fermer' }));
-    expect(
-      await unitOfWork.run((repos) => repos.items.forList(maListe)),
-    ).toHaveLength(fixture.items.length);
-  });
-
-  it('US2-1 SC-003 adds an article with a tap and "Ajouter", staying open and confirming it', async () => {
+  it('AC1 a tap adds the article with no quantity and no dialog, and marks the row', async () => {
     const { unitOfWork } = await renderScreen();
 
     fireEvent.press(
       await screen.findByRole('button', { name: 'Ajouter Beurre' }),
     );
-    fireEvent.press(await screen.findByRole('button', { name: 'Ajouter' }));
 
-    expect(await screen.findByText('« Beurre » ajouté')).toBeOnTheScreen();
     expect(
       await screen.findByRole('button', {
         name: 'Beurre ajoutée, toucher pour retirer',
       }),
     ).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Ajouter' })).toBeNull();
     expect(screen.getByText('Ajouter des articles')).toBeOnTheScreen();
     expect(
       await unitOfWork.run((repos) =>
         repos.items.find(maListe, 'article-beurre' as ArticleId),
       ),
     ).toMatchObject({ inCart: false, quantity: null });
+  });
+
+  it('AC1 adds several articles in a row, the screen staying open', async () => {
+    const { unitOfWork } = await renderScreen();
+
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Ajouter Beurre' }),
+    );
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Ajouter Pâte' }),
+    );
+
+    await screen.findByRole('button', {
+      name: 'Pâte ajoutée, toucher pour retirer',
+    });
+    expect(
+      await unitOfWork.run((repos) => repos.items.forList(maListe)),
+    ).toHaveLength(fixture.items.length + 2);
+  });
+
+  it('AC2 a second tap takes the article off the list, quietly, and the row stays shown', async () => {
+    const { unitOfWork, store } = await renderScreen();
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Ajouter Beurre' }),
+    );
+    fireEvent.press(
+      await screen.findByRole('button', {
+        name: 'Beurre ajoutée, toucher pour retirer',
+      }),
+    );
+
+    expect(
+      await screen.findByRole('button', { name: 'Ajouter Beurre' }),
+    ).toBeOnTheScreen();
+    expect(
+      await unitOfWork.run((repos) =>
+        repos.items.find(maListe, 'article-beurre' as ArticleId),
+      ),
+    ).toBeNull();
+    expect(store.getState().pendingUndo).toBeNull();
+    expect(screen.queryByText(/retiré de la liste/)).toBeNull();
+
+    // And it can be added once more.
+    fireEvent.press(screen.getByRole('button', { name: 'Ajouter Beurre' }));
+    expect(
+      await screen.findByRole('button', {
+        name: 'Beurre ajoutée, toucher pour retirer',
+      }),
+    ).toBeOnTheScreen();
+  });
+
+  it('AC5 announces "Ajouter Beurre", then "Beurre ajoutée, toucher pour retirer" for the same row', async () => {
+    await renderScreen();
+
+    const row = await screen.findByRole('button', { name: 'Ajouter Beurre' });
+    expect(row).toHaveAccessibleName('Ajouter Beurre');
+    fireEvent.press(row);
+
+    expect(
+      await screen.findByRole('button', {
+        name: 'Beurre ajoutée, toucher pour retirer',
+      }),
+    ).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Ajouter Beurre' })).toBeNull();
+  });
+
+  it('AC5 every row of the catalog has one announced label, "Ajouter <name>" until added', async () => {
+    await renderScreen();
+    await screen.findByText('Beurre');
+
+    expect(
+      screen
+        .getAllByRole('button', { name: /^Ajouter / })
+        .map((node) => node.props.accessibilityLabel as string),
+    ).toEqual(['Ajouter Beurre', 'Ajouter Pâte']);
+  });
+
+  it('AC3 a search matching only a hidden article says it is already on the list, with no action', async () => {
+    await renderScreen();
+    await screen.findByText('Beurre');
+
+    search('lait');
+
+    expect(
+      screen.getByText('« Lait » est déjà dans la liste'),
+    ).toBeOnTheScreen();
+    expect(screen.queryByText(/Aucun article ne correspond/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /Créer «/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Lait/ })).toBeNull();
+  });
+
+  it('AC3 a search matching a shown and a hidden article lists the shown one only', async () => {
+    const withLaitier = {
+      ...seed,
+      articles: [
+        ...seed.articles,
+        {
+          id: 'article-lait-ribot' as ArticleId,
+          name: 'Lait ribot',
+          categoryId: farine.categoryId,
+        },
+      ],
+    };
+    await renderScreen({ seed: withLaitier });
+    await screen.findByText('Beurre');
+
+    search('lait');
+
+    expect(screen.getByText('Lait ribot')).toBeOnTheScreen();
+    expect(screen.queryByText(/déjà dans la liste/)).toBeNull();
+  });
+
+  it('AC3 an article added during the visit stays shown when searched', async () => {
+    await renderScreen();
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Ajouter Beurre' }),
+    );
+    await screen.findByRole('button', {
+      name: 'Beurre ajoutée, toucher pour retirer',
+    });
+
+    search('beur');
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Beurre ajoutée, toucher pour retirer',
+      }),
+    ).toBeOnTheScreen();
+    expect(screen.queryByText(/déjà dans la liste/)).toBeNull();
   });
 
   describe('"Nouvel article"', () => {
