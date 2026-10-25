@@ -74,12 +74,12 @@ describe.each([
     expect(
       screen.UNSAFE_getByProps({ source: 'chevron_right' }).props.color,
     ).toBe(theme.colors.onSurfaceVariant);
-    expect(screen.queryByText('Liste actuelle')).toBeNull();
+    expect(screen.queryByText('en cours')).toBeNull();
   });
 
-  it('ends with the brand chip "Liste actuelle" when the list is current', () => {
+  it('ends with the brand chip "en cours" when the list is current', () => {
     renderRow(theme, { isCurrent: true });
-    expect(screen.getByText('Liste actuelle')).toBeTruthy();
+    expect(screen.getByText('en cours')).toBeTruthy();
     expect(screen.UNSAFE_queryByProps({ source: 'chevron_right' })).toBeNull();
   });
 
@@ -100,7 +100,7 @@ describe.each([
       onPress,
     });
     expect(row.props.accessibilityLabel).toBe(
-      'Barbecue, 0 articles, liste actuelle',
+      'Barbecue, 0 articles, liste en cours',
     );
     fireEvent.press(row);
     expect(onPress).toHaveBeenCalledTimes(1);

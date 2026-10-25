@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import type { ArticleId } from '../../../domain/article';
@@ -65,14 +65,14 @@ describe('Lists', () => {
     expect(errorReporter.reports).toHaveLength(2);
   });
 
-  it('US3-8 shows each list with its name and item count, the current one marked "Liste actuelle"', async () => {
+  it('US3-8 shows each list with its name and item count, the current one marked "en cours"', async () => {
     await renderScreen();
 
     expect(await screen.findByText('Barbecue')).toBeOnTheScreen();
     expect(screen.getByText('0 articles')).toBeOnTheScreen();
     expect(screen.getByText('Ma liste')).toBeOnTheScreen();
     expect(screen.getByText('4 articles')).toBeOnTheScreen();
-    expect(screen.getAllByText('Liste actuelle')).toHaveLength(1);
+    expect(screen.getAllByText('en cours')).toHaveLength(1);
   });
 
   it('US3-8 says "1 article" for a list holding one item', async () => {
@@ -91,13 +91,13 @@ describe('Lists', () => {
       screen
         .getAllByRole('button', { name: /articles?/ })
         .map((button) => button.props.accessibilityLabel as string),
-    ).toEqual(['Barbecue, 0 articles', 'Ma liste, 4 articles, liste actuelle']);
+    ).toEqual(['Barbecue, 0 articles', 'Ma liste, 4 articles, liste en cours']);
   });
 
-  it('FR-032 reads each row as one label: "Barbecue, 0 articles, liste actuelle"', async () => {
+  it('FR-032 reads each row as one label: "Barbecue, 0 articles, liste en cours"', async () => {
     await renderScreen({ seed: { ...fixture, currentListId: barbecue } });
 
-    expect(await row('Barbecue, 0 articles, liste actuelle')).toBeOnTheScreen();
+    expect(await row('Barbecue, 0 articles, liste en cours')).toBeOnTheScreen();
     expect(await row('Ma liste, 4 articles')).toBeOnTheScreen();
   });
 
@@ -115,6 +115,32 @@ describe('Lists', () => {
     ).toBe(barbecue);
   });
 
+  it('US4-3 FR-015 tapping a list while the add screen is open in Courses returns that stack to CurrentList', async () => {
+    await renderApp();
+    fireEvent.press(await screen.findByRole('button', { name: 'Ajouter' }));
+    await screen.findByText('Ajouter des articles');
+    fireEvent.press(screen.getByRole('tab', { name: 'Listes' }));
+
+    fireEvent.press(await row('Barbecue, 0 articles'));
+
+    expect(await screen.findByText('Votre liste est vide')).toBeOnTheScreen();
+    await waitFor(() =>
+      expect(
+        screen.queryAllByPlaceholderText('Rechercher un article', {
+          includeHiddenElements: true,
+        }),
+      ).toHaveLength(0),
+    );
+  });
+
+  it('US4-1 FR-015 marks only the current list "en cours", and offers no ⋮ menu on rows', async () => {
+    await renderScreen();
+    await screen.findByText('Barbecue');
+
+    expect(screen.getAllByText('en cours')).toHaveLength(1);
+    expect(screen.queryByLabelText(/^Actions pour/)).not.toBeOnTheScreen();
+  });
+
   it('FR-025 tapping the current list goes back to CurrentList, saving nothing, and the "Annuler" offer stays', async () => {
     const { store, useCases } = await renderApp();
     const setCurrentList = jest.spyOn(useCases, 'setCurrentList');
@@ -122,7 +148,7 @@ describe('Lists', () => {
     await screen.findByText('« Lait » retiré de la liste');
     fireEvent.press(screen.getByRole('tab', { name: 'Listes' }));
 
-    fireEvent.press(await row('Ma liste, 3 articles, liste actuelle'));
+    fireEvent.press(await row('Ma liste, 3 articles, liste en cours'));
 
     expect(
       await screen.findByRole('button', { name: 'Ajouter' }),

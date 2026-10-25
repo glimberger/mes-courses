@@ -22,9 +22,9 @@ export type ListSummaryRowProps = {
 };
 
 /**
- * One list of the lists screen, as a mockup card: its name, its item count, and "Liste actuelle"
+ * One list of the lists screen, as a mockup card: its name, its item count, and "en cours"
  * with a check icon on the current one, which is outlined in brand (US3-8). It reads as one
- * label, for example "Barbecue, 0 articles, liste actuelle". The name wraps (FR-033) and the
+ * label, for example "Barbecue, 0 articles, liste en cours". The name wraps (FR-033) and the
  * card is at least 48 dp high (FR-034).
  */
 export const ListSummaryRow = memo(function ListSummaryRow({
@@ -41,7 +41,7 @@ export const ListSummaryRow = memo(function ListSummaryRow({
       <TouchableRipple
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel={`${name}, ${count}${isCurrent ? ', liste actuelle' : ''}`}
+        accessibilityLabel={`${name}, ${count}${isCurrent ? ', liste en cours' : ''}`}
         style={styles.touchable}
       >
         <View style={styles.rowline}>
@@ -59,7 +59,7 @@ export const ListSummaryRow = memo(function ListSummaryRow({
           </View>
           {isCurrent ? (
             <Chip tone="brand" icon="check">
-              Liste actuelle
+              en cours
             </Chip>
           ) : (
             <Icon

@@ -38,7 +38,7 @@ const rowId = (list: ListSummary) => list.id;
 
 /**
  * The lists (User Story 3), by name with their item counts and the current one marked. A tap
- * makes a list current and goes back to it (US3-3); the FAB creates a list (US3-2).
+ * makes a list current and opens the Courses tab on it (US4); the FAB creates a list (US3-2).
  */
 export const ListsScreen = () => {
   const navigation = useNavigation();
@@ -68,8 +68,9 @@ export const ListsScreen = () => {
           return;
         }
       }
-      // Courses is another tab: its stack shows the list again (the reset is T021).
-      navigation.navigate('CoursesTab', { screen: 'CurrentList' });
+      // Courses is another tab: its stack returns to the list (`pop`), so an open add screen
+      // never targets another list.
+      navigation.navigate('CoursesTab', { screen: 'CurrentList', pop: true });
       // The screen stays mounted behind the Courses tab: the next visit can choose again.
       choosing.current = false;
     },

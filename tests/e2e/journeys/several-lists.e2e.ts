@@ -27,7 +27,7 @@ describe('several lists', () => {
 
     await expectRow('Barbecue, 0 articles');
     await expect(
-      element(by.label('Ma liste, 1 article, liste actuelle')),
+      element(by.label('Ma liste, 1 article, liste en cours')),
     ).toBeVisible();
   });
 
@@ -47,7 +47,7 @@ describe('several lists', () => {
   it('US3-4 switching back shows "Ma liste" untouched, "Lait" still ticked there', async () => {
     await openLists();
     await expect(
-      element(by.label('Barbecue, 1 article, liste actuelle')),
+      element(by.label('Barbecue, 1 article, liste en cours')),
     ).toBeVisible();
 
     await chooseList('Ma liste, 1 article', 'Ma liste');

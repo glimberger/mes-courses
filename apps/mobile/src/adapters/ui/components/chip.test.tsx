@@ -48,7 +48,7 @@ describe.each([
   it('sets its label in the labelMedium type role', () => {
     const { label } = renderChip(theme, {
       tone: 'brand',
-      children: 'Liste actuelle',
+      children: 'en cours',
     });
     expect(label).toHaveStyle({
       fontFamily: theme.fonts.labelMedium.fontFamily,

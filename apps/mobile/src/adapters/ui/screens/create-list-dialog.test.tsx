@@ -76,7 +76,7 @@ describe('CreateListDialog', () => {
     expect(rows()).toEqual([
       'Barbecue, 0 articles',
       'Fête, 0 articles',
-      'Ma liste, 4 articles, liste actuelle',
+      'Ma liste, 4 articles, liste en cours',
     ]);
     expect(
       (await unitOfWork.run((repos) => repos.lists.all())).map((l) => l.name),
