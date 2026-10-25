@@ -202,16 +202,22 @@ describe('AddArticles', () => {
     await renderScreen();
 
     expect(
-      await screen.findByRole('button', { name: 'Lait, déjà dans la liste' }),
+      await screen.findByRole('button', {
+        name: 'Lait ajoutée, toucher pour retirer',
+      }),
     ).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Beurre' })).toBeOnTheScreen();
+    expect(
+      screen.getByRole('button', { name: 'Ajouter Beurre' }),
+    ).toBeOnTheScreen();
   });
 
   it('US2-8 FR-011 tapping an article on the list opens the already-on-list mode, adding nothing', async () => {
     const { unitOfWork } = await renderScreen();
 
     fireEvent.press(
-      await screen.findByRole('button', { name: 'Lait, déjà dans la liste' }),
+      await screen.findByRole('button', {
+        name: 'Lait ajoutée, toucher pour retirer',
+      }),
     );
 
     expect(
@@ -226,12 +232,16 @@ describe('AddArticles', () => {
   it('US2-1 SC-003 adds an article with a tap and "Ajouter", staying open and confirming it', async () => {
     const { unitOfWork } = await renderScreen();
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Beurre' }));
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Ajouter Beurre' }),
+    );
     fireEvent.press(await screen.findByRole('button', { name: 'Ajouter' }));
 
     expect(await screen.findByText('« Beurre » ajouté')).toBeOnTheScreen();
     expect(
-      await screen.findByRole('button', { name: 'Beurre, déjà dans la liste' }),
+      await screen.findByRole('button', {
+        name: 'Beurre ajoutée, toucher pour retirer',
+      }),
     ).toBeOnTheScreen();
     expect(screen.getByText('Ajouter des articles')).toBeOnTheScreen();
     expect(

@@ -51,7 +51,7 @@ export const requiredStories: readonly string[] = [
   'Components/AddToggle/NotAdded',
   'Components/AddToggle/Added',
   'Components/ArticleRow/Default',
-  'Components/ArticleRow/AlreadyOnList',
+  'Components/ArticleRow/Added',
   'Components/EmptyCategoryCard/Default',
   'Components/QuantityFields/Empty',
   'Components/QuantityFields/Filled',

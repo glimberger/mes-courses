@@ -58,7 +58,7 @@ const CatalogRow = memo(function CatalogRow({
     <ArticleRow
       ref={ref}
       name={article.name}
-      onList={article.onList}
+      added={article.onList}
       onPress={onPress}
     />
   );

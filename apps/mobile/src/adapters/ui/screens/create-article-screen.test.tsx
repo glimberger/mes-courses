@@ -195,7 +195,7 @@ describe('CreateArticle', () => {
     expect(screen.queryByText('Nouvel article')).not.toBeOnTheScreen();
     expect(
       await screen.findByRole('button', {
-        name: 'Houmous, déjà dans la liste',
+        name: 'Houmous ajoutée, toucher pour retirer',
       }),
     ).toBeOnTheScreen();
     expect(await stored('id-1' as ArticleId)).toMatchObject({

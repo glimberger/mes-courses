@@ -316,14 +316,18 @@ describe('QuantityDialog', () => {
     it('goes to the dialog title when it opens, and back to the row that opened it when it closes', async () => {
       await renderWithStore(<AddArticlesScreen />, { seed: fixture });
 
-      fireEvent.press(await screen.findByRole('button', { name: 'Beurre' }));
+      fireEvent.press(
+        await screen.findByRole('button', { name: 'Ajouter Beurre' }),
+      );
       await waitFor(() => expect(isOpen('Beurre')).toBe(true));
       await waitFor(() => expect(focusTargets).toEqual(['Beurre']));
 
       press('Annuler');
 
       await closed('Beurre');
-      await waitFor(() => expect(focusTargets).toEqual(['Beurre', 'Beurre']));
+      await waitFor(() =>
+        expect(focusTargets).toEqual(['Beurre', 'Ajouter Beurre']),
+      );
       // The row, a button, not the title of the closed dialog.
       const target = jest.mocked(focusOn).mock.calls.at(-1)?.[0].current as {
         props: { accessibilityRole?: string };
@@ -451,7 +455,9 @@ describe('QuantityDialog', () => {
         },
         syncServer: server.syncServer,
       });
-      fireEvent.press(await screen.findByRole('button', { name: 'Beurre' }));
+      fireEvent.press(
+        await screen.findByRole('button', { name: 'Ajouter Beurre' }),
+      );
       await waitFor(() => expect(focusTargets).toEqual(['Beurre']));
 
       await act(async () => {
