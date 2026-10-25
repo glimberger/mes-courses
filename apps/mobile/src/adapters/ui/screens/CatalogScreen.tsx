@@ -30,11 +30,21 @@ const withArticles = (view: CatalogView) =>
 
 const rowId = (row: CatalogRow) => row.id;
 
+export type CatalogScreenProps = {
+  /** The search text to start from, for stories. */
+  initialQuery?: string;
+  /** The name of the article whose ⋮ menu starts open, for stories. */
+  menuInitiallyOpenFor?: string;
+};
+
 /**
  * The Articles tab's root: the whole catalog by category, searched as the user types, each row
  * with the number of lists holding the article (spec 011, Catalog).
  */
-export const CatalogScreen = () => {
+export const CatalogScreen = ({
+  initialQuery = '',
+  menuInitiallyOpenFor,
+}: CatalogScreenProps = {}) => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const catalog = useAppStore((state) => state.catalog.view);
@@ -47,7 +57,7 @@ export const CatalogScreen = () => {
 
   // The store holds one query, shared with the add screen: this screen puts its own back
   // whenever it is shown, and drops it when it leaves, as the add screen does.
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [editing, setEditing] = useState<EditedArticle | null>(null);
   const [deleting, setDeleting] = useState<EditedArticle | null>(null);
   const titleRef = useRef<HostInstance>(null);
@@ -123,6 +133,7 @@ export const CatalogScreen = () => {
                     count={counts.get(item.id) ?? 0}
                     onEdit={() => setEditing(item)}
                     onDelete={() => setDeleting(item)}
+                    menuInitiallyOpen={item.name === menuInitiallyOpenFor}
                   />
                 </View>
               )}

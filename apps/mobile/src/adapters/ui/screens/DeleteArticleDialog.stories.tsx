@@ -5,7 +5,7 @@ import { fixture } from '../testing/fixtures';
 import { DeleteArticleDialog } from './DeleteArticleDialog';
 
 const meta = {
-  title: 'Dialogs/DeleteArticleDialog',
+  title: 'Dialogs/DeleteArticle',
   component: DeleteArticleDialog,
   args: { onClose: () => undefined },
   parameters: { scenario: { seed: fixture } },

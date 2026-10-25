@@ -15,6 +15,8 @@ export type CatalogArticleRowProps = {
   onEdit: () => void;
   /** "Supprimer" in the ⋮ menu. */
   onDelete: () => void;
+  /** Shows the ⋮ menu open, for stories. */
+  menuInitiallyOpen?: boolean;
 };
 
 // The mockups' row: a 64 dp card.
@@ -30,6 +32,7 @@ export const CatalogArticleRow = memo(function CatalogArticleRow({
   count,
   onEdit,
   onDelete,
+  menuInitiallyOpen,
 }: CatalogArticleRowProps) {
   const { colors } = useTheme() as AppTheme;
   return (
@@ -54,6 +57,7 @@ export const CatalogArticleRow = memo(function CatalogArticleRow({
       </View>
       <RowMenu
         name={name}
+        defaultVisible={menuInitiallyOpen ?? false}
         items={[
           {
             title: 'Modifier',

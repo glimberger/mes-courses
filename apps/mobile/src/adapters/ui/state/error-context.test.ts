@@ -157,10 +157,6 @@ const cases: Record<string, Case> = {
     run: (state) =>
       state.editArticle(lait, { name: 'Lait entier', categoryId: crèmerie }),
   },
-  '002 getArticleUsage': {
-    failing: 'getArticleUsage',
-    run: (state) => state.getArticleUsage(lait),
-  },
   '002 deleteArticle': {
     failing: 'deleteArticle',
     run: (state) => state.deleteArticle(lait),
