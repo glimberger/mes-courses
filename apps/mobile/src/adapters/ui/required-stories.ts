@@ -63,6 +63,8 @@ export const requiredStories: readonly string[] = [
   'Screens/AddArticles/Error',
   'Screens/AddArticles/NoQuery',
   'Screens/AddArticles/SearchMatches',
+  'Screens/AddArticles/SearchHiddenMatch',
+  'Screens/AddArticles/Empty',
   'Screens/AddArticles/SearchNoMatch',
   'Screens/CreateArticle/Empty',
   'Screens/CreateArticle/NameAlreadyUsed',
