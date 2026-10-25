@@ -74,7 +74,7 @@ Paths are under `apps/mobile/src/adapters/ui/` unless stated.
 - [x] T020 [P] [US4] Test first, then implement the "en cours" chip and the accessible label "<name>, liste en cours" on the current list row only (`components/ListSummaryRow.tsx`, `components/Chip.tsx`, `screens/ListsScreen.tsx`)
 - [x] T021 [US4] Test first, then implement tap -> `set-current-list`, then switch to the Courses tab with its stack reset to `CurrentList` (`screens/ListsScreen.tsx`, `navigation.tsx`)
 - [x] T022 [US4] Keep the extended FAB "Nouvelle liste"; no ⋮ menu; add the bottom inset (`screens/ListsScreen.tsx`) with tests
-- [ ] T023 [US4] Update stories, `required-stories.ts`, Detox suite and story screenshots; run the Android suite
+- [x] T023 [US4] Update stories, `required-stories.ts`, Detox suite and story screenshots; run the Android suite
 
 ---
 
