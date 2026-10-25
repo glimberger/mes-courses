@@ -104,14 +104,14 @@ Paths are under `apps/mobile/src/adapters/ui/` unless stated.
 
 **Independent Test**: on a list that already holds Lait, tap Carotte and Pain, tap Pain again, go back: the list holds Lait and Carotte, with no quantity and no "Annuler" snackbar shown.
 
-- [ ] T035 [P] [US3] Test first, then implement `AddToggle` (round, `add_circle` outline -> `check_circle` filled via the `filled` prop of T007 and the icons of T006, tinted card and border, accessible labels "Ajouter <name>" / "<name>, dans la liste, toucher pour retirer") in `components/AddToggle.tsx` with stories
-- [ ] T036 [US3] Test first, then implement the visit snapshot and visit set, and the visible rows rule, in `screens/AddArticlesScreen.tsx` (hidden: on the list at open; shown: added during the visit); rows grouped under `CategoryHeader`, name only
-- [ ] T037 [US3] Test first, then implement the store action `removeItemQuietly(articleId)` in `adapters/ui/state/edit-list-actions.ts`: runs `remove-item-from-list` (`ItemNotOnList` expected), releases its held changes at once, never sets `pendingUndo`; `removeItem` (row menu, with the undo snackbar) is unchanged
-- [ ] T038 [US3] Test first, then implement tap -> `add-article-to-list` with no quantity, tap again -> `removeItemQuietly`; no quantity dialog, no confirm button, back arrow ← (`screens/AddArticlesScreen.tsx`)
-- [ ] T039 [US3] Test first, then implement the "Créer « xyz »" row (name filled in, `addToList: true`), the return to `AddArticles` with `createdArticleId` that adds the new article to the visit set (shown marked, can be un-tapped), and the "« name » est déjà dans la liste" text with no action (`screens/AddArticlesScreen.tsx`, `screens/CreateArticleScreen.tsx`, `routes.ts`)
-- [ ] T040 [US3] Remove the cart icon at the start of rows; rows use `AddToggle` on the right (`components/ArticleRow.tsx`)
-- [ ] T041 [US3] Offline tests of the add screen (no network, server unreachable) and the edge case "list made current while the add screen is open"
-- [ ] T042 [US3] Update stories, `required-stories.ts`, Detox suite and story screenshots; run the Android suite
+- [x] T035 [P] [US3] Test first, then implement `AddToggle` (round, `add_circle` outline -> `check_circle` filled via the `filled` prop of T007 and the icons of T006, tinted card and border, accessible labels "Ajouter <name>" / "<name> ajoutée, toucher pour retirer") in `components/AddToggle.tsx` with stories
+- [x] T036 [US3] Test first, then implement the visit snapshot and visit set, and the visible rows rule, in `screens/AddArticlesScreen.tsx` (hidden: on the list at open; shown: added during the visit); rows grouped under `CategoryHeader`, name only
+- [x] T037 [US3] Test first, then implement the store action `removeItemQuietly(articleId)` in `adapters/ui/state/edit-list-actions.ts`: runs `remove-item-from-list` (`ItemNotOnList` expected), releases its held changes at once, never sets `pendingUndo`; `removeItem` (row menu, with the undo snackbar) is unchanged
+- [x] T038 [US3] Test first, then implement tap -> `add-article-to-list` with no quantity, tap again -> `removeItemQuietly`; no quantity dialog, no confirm button, back arrow ← (`screens/AddArticlesScreen.tsx`)
+- [x] T039 [US3] Test first, then implement the "Créer « xyz »" row (name filled in, `addToList: true`), the return to `AddArticles` with `createdArticleId` that adds the new article to the visit set (shown marked, can be un-tapped), and the "« name » est déjà dans la liste" text with no action (`screens/AddArticlesScreen.tsx`, `screens/CreateArticleScreen.tsx`, `routes.ts`)
+- [x] T040 [US3] Remove the cart icon at the start of rows; rows use `AddToggle` on the right (`components/ArticleRow.tsx`)
+- [x] T041 [US3] Offline tests of the add screen (no network, server unreachable) and the edge case "list made current while the add screen is open"
+- [x] T042 [US3] Update stories, `required-stories.ts`, Detox suite and story screenshots; run the Android suite
 
 ---
 

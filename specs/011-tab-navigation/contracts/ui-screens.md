@@ -35,7 +35,7 @@ Tab bar: labels "Courses", "Listes", "Articles", "Réglages"; accessible role ta
 ## AddArticles (Courses)
 
 - Back arrow ← to the list; no confirm button; search field on top.
-- Rows are grouped under category headers (`CategoryHeader`, empty categories hidden); a row is a card with the name only (the category is not repeated), round toggle on the right. Not added: `add_circle` outline, label "Ajouter <name>". Added: `check_circle` filled, tinted card and border, label "<name>, dans la liste, toucher pour retirer" (no gender agreement).
+- Rows are grouped under category headers (`CategoryHeader`, empty categories hidden); a row is a card with the name only (the category is not repeated), round toggle on the right. Not added: `add_circle` outline, label "Ajouter <name>". Added: `check_circle` filled, tinted card and border, label "<name> ajoutée, toucher pour retirer" (no gender agreement).
 - Tap: `add-article-to-list` with no quantity. Tap on an added row: the store action `removeItemQuietly` (see research.md, "Un-tap"): `remove-item-from-list`, then its held changes are released at once, with no `removedItem` undo offer and no snackbar.
 - Hidden: articles on the list when the screen opened. Shown: those added during the visit, including an article created through "Créer « xyz »".
 - No match: row "Créer « xyz »" -> `CreateArticle { name: 'xyz', addToList: true }` (`create-article-and-add-to-list`); on return the screen opens with `createdArticleId`, which is added to the visit set, so the row is shown marked as added and can be un-tapped.
