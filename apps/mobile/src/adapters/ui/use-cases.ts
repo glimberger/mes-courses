@@ -75,7 +75,6 @@ import {
 import { createSignOut } from '../../application/use-cases/sign-out';
 import { createEditArticle } from '../../application/use-cases/edit-article';
 import { createFinishShopping } from '../../application/use-cases/finish-shopping';
-import { createGetArticleUsage } from '../../application/use-cases/get-article-usage';
 import { createGetCatalog } from '../../application/use-cases/get-catalog';
 import { createGetCategories } from '../../application/use-cases/get-categories';
 import { createGetCurrentList } from '../../application/use-cases/get-current-list';
@@ -108,7 +107,6 @@ import type {
   Article,
   ArticleId,
   ArticleNotFound,
-  ArticleUsage,
   DeletedArticle,
 } from '../../domain/article';
 import type { AccountSummary } from '@mes-courses/sync-core';
@@ -181,9 +179,6 @@ export type UseCases = {
       NameError | NameAlreadyUsed<Article> | ArticleNotFound | CategoryNotFound
     >
   >;
-  getArticleUsage: (
-    articleId: ArticleId,
-  ) => Promise<Result<ArticleUsage, ArticleNotFound>>;
   getArticleUsageCounts: () => Promise<Map<ArticleId, number>>;
   deleteArticle: (
     articleId: ArticleId,
@@ -303,7 +298,6 @@ export const createUseCases = (ports: {
   createArticleAndAddToList: createCreateArticleAndAddToList(ports),
   createArticle: createCreateArticle(ports),
   editArticle: createEditArticle(ports),
-  getArticleUsage: createGetArticleUsage(ports),
   getArticleUsageCounts: createGetArticleUsageCounts(ports),
   deleteArticle: createDeleteArticle(ports),
   restoreDeletedArticle: createRestoreDeletedArticle(ports),

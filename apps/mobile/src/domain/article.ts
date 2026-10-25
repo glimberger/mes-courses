@@ -24,9 +24,3 @@ export type DeletedArticle = {
   article: Article;
   items: { listId: ListId; inCart: boolean; quantity: Quantity | null }[];
 };
-
-/** Where an article is used: the lists holding it, sorted by name (FR-006). */
-export type ArticleUsage = {
-  article: { id: ArticleId; name: string };
-  lists: { id: ListId; name: string }[];
-};

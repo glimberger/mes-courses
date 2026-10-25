@@ -156,6 +156,19 @@ export const listItemRepositoryContract = (
       ]);
     });
 
+    it('counts the lists holding each article, leaving out the articles on no list', async () => {
+      await repos.items.save(item('l-1', 'a-1'));
+      await repos.items.save(item('l-2', 'a-1'));
+      await repos.items.save(item('l-1', 'a-2'));
+
+      expect(await repos.items.countsByArticle()).toEqual(
+        new Map([
+          [articleId('a-1'), 2],
+          [articleId('a-2'), 1],
+        ]),
+      );
+    });
+
     it('removes every item of an article, leaving the other articles items', async () => {
       await repos.items.save(item('l-1', 'a-1'));
       await repos.items.save(item('l-2', 'a-1', { inCart: true }));

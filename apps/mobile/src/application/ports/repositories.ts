@@ -43,6 +43,8 @@ export interface ListItemRepository {
   /** Inserts the item, or updates it when the list already holds the article. */
   save(item: ListItem): Promise<void>;
   remove(listId: ListId, articleId: ArticleId): Promise<void>;
+  /** The number of lists holding each article; an article on no list has no entry. */
+  countsByArticle(): Promise<Map<ArticleId, number>>;
   /** The items of the article on every list. */
   forArticle(articleId: ArticleId): Promise<ListItem[]>;
   removeAllForArticle(articleId: ArticleId): Promise<void>;

@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { memo, type Ref } from 'react';
+import { StyleSheet, View, type HostInstance } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 
 import type { AppTheme } from '../theme/theme';
@@ -17,6 +17,8 @@ export type CatalogArticleRowProps = {
   onDelete: () => void;
   /** Shows the ⋮ menu open, for stories. */
   menuInitiallyOpen?: boolean;
+  /** The row's label, for the screen to put screen reader focus back on it. */
+  ref?: Ref<HostInstance>;
 };
 
 // The mockups' row: a 64 dp card.
@@ -33,11 +35,13 @@ export const CatalogArticleRow = memo(function CatalogArticleRow({
   onEdit,
   onDelete,
   menuInitiallyOpen,
+  ref,
 }: CatalogArticleRowProps) {
   const { colors } = useTheme() as AppTheme;
   return (
     <Card style={styles.row}>
       <View
+        ref={ref}
         accessible
         accessibilityLabel={count > 0 ? usageLabel(name, count) : name}
         style={styles.content}

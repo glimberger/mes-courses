@@ -70,6 +70,13 @@ const OpenEditArticleDialog = ({
   const savingRef = useRef(false);
   const titleRef = useRef<HostInstance>(null);
 
+  // The confirmation of an earlier addition no longer applies once an edit starts (002). A
+  // failure notice stays, so the user still reads it.
+  useEffect(() => {
+    const { notice, dismissNotice } = store.getState();
+    if (notice?.type === 'articleAdded') dismissNotice();
+  }, [store]);
+
   // Screen reader focus goes to the title when the dialog opens (FR-037).
   useEffect(() => {
     focusOn(titleRef);

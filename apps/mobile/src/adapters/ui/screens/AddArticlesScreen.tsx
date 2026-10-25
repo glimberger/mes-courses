@@ -81,10 +81,9 @@ export const AddArticlesScreen = () => {
   const titleRef = useRef<HostInstance>(null);
 
   // The catalog is loaded once per screen, the search is kept per screen: the store holds one
-  // query only, shared by the copies of this screen (AddArticles in Courses, and the Articles
-  // tab), so each copy puts its own back in the store whenever it is shown, which also repairs the
-  // store after another copy left. Leaving the screen drops its search, so it opens on the whole
-  // catalog the next time.
+  // query only, shared with the Articles tab's screen, so each puts its own back in the store
+  // whenever it is shown, which also repairs the store after the other one left. Closing this
+  // screen drops its search, so it opens on the whole catalog the next time.
   const [query, setQuery] = useState('');
   useEffect(() => {
     void loadCatalog();

@@ -8,12 +8,4 @@ import type { UnitOfWork } from '../ports/unit-of-work';
 export const createGetArticleUsageCounts =
   ({ unitOfWork }: { unitOfWork: UnitOfWork }) =>
   (): Promise<Map<ArticleId, number>> =>
-    unitOfWork.run(async (repos) => {
-      const counts = new Map<ArticleId, number>();
-      for (const list of await repos.lists.all()) {
-        for (const item of await repos.items.forList(list.id)) {
-          counts.set(item.articleId, (counts.get(item.articleId) ?? 0) + 1);
-        }
-      }
-      return counts;
-    });
+    unitOfWork.run((repos) => repos.items.countsByArticle());

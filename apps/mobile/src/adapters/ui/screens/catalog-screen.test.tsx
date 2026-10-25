@@ -194,6 +194,31 @@ describe('Catalog', () => {
 });
 
 describe('Catalog row menu', () => {
+  it('opens no dialog while the number of lists is unknown, and says the read failed', async () => {
+    const { store } = await renderScreen({
+      failing: ['getArticleUsageCounts'],
+    });
+    await screen.findByText('Beurre');
+
+    await chooseFor('Lait', 'Supprimer');
+
+    await waitFor(() =>
+      expect(store.getState().notice).toEqual({ type: 'writeFailed' }),
+    );
+    expect(screen.queryByText('Supprimer « Lait » ?')).not.toBeOnTheScreen();
+  });
+
+  it('dismisses the confirmation of an earlier addition when "Modifier" opens', async () => {
+    const { store } = await renderScreen();
+    await screen.findByLabelText('Lait, dans 2 listes');
+    store.setState({ notice: { type: 'articleAdded', name: 'Lait' } });
+
+    await chooseFor('Lait', 'Modifier');
+
+    expect(await screen.findByText("Modifier l'article")).toBeOnTheScreen();
+    expect(store.getState().notice).toBeNull();
+  });
+
   it('AC3 AC4 opens a menu with "Modifier" and "Supprimer" from the ⋮ button of a row', async () => {
     await renderScreen();
     await screen.findByText('Beurre');
