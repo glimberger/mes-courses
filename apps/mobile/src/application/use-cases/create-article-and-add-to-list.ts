@@ -3,11 +3,11 @@ import type { CategoryId, CategoryNotFound } from '../../domain/category';
 import { newItem } from '../../domain/list-item';
 import type { NameAlreadyUsed, NameError } from '../../domain/name';
 import type { Quantity } from '../../domain/quantity';
-import { err, ok, type Result } from '../../domain/result';
+import { ok, type Result } from '../../domain/result';
 import type { ListId } from '../../domain/shopping-list';
 import type { IdGenerator } from '../ports/id-generator';
 import type { UnitOfWork } from '../ports/unit-of-work';
-import { uniqueName } from './unique-name';
+import { addNewArticle } from './add-new-article';
 
 /**
  * Creates the article, its name cleaned (FR-022), and puts it on the list in one transaction
@@ -27,22 +27,9 @@ export const createCreateArticleAndAddToList =
     >
   > =>
     unitOfWork.run(async (repos) => {
-      const unique = await uniqueName(repos.articles, name);
-      if (!unique.ok) return unique;
-      if (!(await repos.categories.findById(categoryId))) {
-        return err({ type: 'CategoryNotFound' });
-      }
-
-      const articleId = ids.next() as ArticleId;
-      await repos.articles.add({
-        id: articleId,
-        name: unique.value,
-        categoryId,
-      });
-      await repos.changes.record('article', articleId, {
-        name: unique.value,
-        categoryId,
-      });
+      const created = await addNewArticle(repos, ids, { name, categoryId });
+      if (!created.ok) return created;
+      const { articleId } = created.value;
       // A new article is on no list yet.
       const item = newItem({ listId, articleId }, quantity);
       await repos.items.save(item);

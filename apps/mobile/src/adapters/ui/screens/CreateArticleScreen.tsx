@@ -18,6 +18,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Article } from '../../../domain/article';
 import type { CategoryId } from '../../../domain/category';
 import { validateName } from '../../../domain/name';
+import { ok } from '../../../domain/result';
 import { parseQuantity, type QuantityError } from '../../../domain/quantity';
 import { focusOn } from '../accessibility/focus';
 import { useAnnouncement } from '../accessibility/announce';
@@ -49,7 +50,10 @@ export const CreateArticleScreen = () => {
   const createArticleAndAddToList = useAppStore(
     (state) => state.createArticleAndAddToList,
   );
+  const createArticleInCatalog = useAppStore((state) => state.createArticle);
   const addArticleToList = useAppStore((state) => state.addArticleToList);
+  // The Articles tab creates in the catalog only; the Courses tab also adds to the list.
+  const addToList = params?.addToList ?? true;
   const store = useAppStoreApi();
 
   // The confirmation of an earlier addition no longer applies to this form. A failure notice
@@ -89,17 +93,16 @@ export const CreateArticleScreen = () => {
 
   const create = async () => {
     const validated = validateName(name);
-    const quantity = typedQuantity();
+    const quantity = addToList ? typedQuantity() : ok(null);
     setExisting(null);
     setNameError(validated.ok ? null : nameErrorText(validated.error));
     setCategoryMissing(categoryId === null);
     if (!validated.ok || categoryId === null || !quantity.ok) return;
 
     setSaving(true);
-    const outcome = await createArticleAndAddToList(
-      { name, categoryId },
-      quantity.value,
-    );
+    const outcome = addToList
+      ? await createArticleAndAddToList({ name, categoryId }, quantity.value)
+      : await createArticleInCatalog({ name, categoryId });
     setSaving(false);
     if (outcome.ok) {
       navigation.goBack();
@@ -107,7 +110,8 @@ export const CreateArticleScreen = () => {
     }
     switch (outcome.error.type) {
       case 'NameAlreadyUsed':
-        setExisting(outcome.error.existing);
+        // Nothing to add the existing article to, in the catalog.
+        if (addToList) setExisting(outcome.error.existing);
         setNameError(`« ${outcome.error.existing.name} » existe déjà.`);
         return;
       case 'NameRequired':
@@ -155,6 +159,7 @@ export const CreateArticleScreen = () => {
           setExisting(null);
         }}
         nameError={nameError}
+        addToList={addToList}
         existingName={existing?.name ?? null}
         onAddExisting={() => existing && void addExisting(existing)}
         addExistingRef={addExistingRef}
@@ -175,6 +180,8 @@ export const CreateArticleScreen = () => {
 };
 
 export type CreateArticleFormProps = {
+  /** False in the Articles tab: no quantity, and the article is created in the catalog only. */
+  addToList?: boolean;
   /** Goes back, or null when there is nothing to go back to. */
   onBack: (() => void) | null;
   name: string;
@@ -201,6 +208,7 @@ export type CreateArticleFormProps = {
  * each error (T058). Only the category picker reads the store.
  */
 export const CreateArticleForm = ({
+  addToList = true,
   onBack,
   name,
   onChangeName,
@@ -247,13 +255,15 @@ export const CreateArticleForm = ({
             {`Ajouter « ${existingName} »`}
           </Button>
         )}
-        <QuantityFields
-          amount={amount}
-          unit={unit}
-          onChangeAmount={onChangeAmount}
-          onChangeUnit={onChangeUnit}
-          error={quantityError}
-        />
+        {addToList && (
+          <QuantityFields
+            amount={amount}
+            unit={unit}
+            onChangeAmount={onChangeAmount}
+            onChangeUnit={onChangeUnit}
+            error={quantityError}
+          />
+        )}
         <CategoryHeader title="Catégorie" />
         {categoryMissing && <HelperText type="error">{NO_CATEGORY}</HelperText>}
         <CategoryPicker
@@ -269,7 +279,7 @@ export const CreateArticleForm = ({
           onPress={onSubmit}
           style={styles.submit}
         >
-          Créer et ajouter
+          {addToList ? 'Créer et ajouter' : 'Créer'}
         </Button>
       </View>
     </KeyboardAvoidingView>

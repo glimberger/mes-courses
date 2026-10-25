@@ -297,12 +297,12 @@ describe.each(networks)(
       const chooseFromMenu = async (name: string, action: string) => {
         fireEvent.press(
           await screen.findByRole('button', {
-            name: `Plus d'actions pour « ${name} »`,
+            name: `Actions pour ${name}`,
           }),
         );
         fireEvent.press(screen.getByText(action));
       };
-      await press('Ajouter');
+      fireEvent.press(await screen.findByRole('tab', { name: 'Articles' }));
 
       // Rename.
       await chooseFromMenu('Beurre', 'Modifier');
@@ -311,8 +311,8 @@ describe.each(networks)(
       // Change the category.
       fireEvent.press(await screen.findByRole('radio', { name: 'Boissons' }));
       await press('Enregistrer');
-      await screen.findByText('Ajouter des articles');
       expect(await screen.findByText('Beurre doux')).toBeOnTheScreen();
+      expect(screen.queryByText("Modifier l'article")).toBeNull();
       const renamed = await storedBeurre();
       expect(renamed?.name).toBe('Beurre doux');
       const boissons = seed.categories.find((c) => c.name === 'Boissons');

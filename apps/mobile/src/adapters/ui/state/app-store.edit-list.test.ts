@@ -375,6 +375,41 @@ describe('editing the current list in the store', () => {
     });
   });
 
+  describe('createArticle', () => {
+    it('US5 creates the article in the catalog only: the current list is unchanged and no notice', async () => {
+      const { store } = await buildStore();
+      await store.getState().loadCurrentList();
+
+      const outcome = await store
+        .getState()
+        .createArticle({ name: '  Houmous ', categoryId: boissons });
+
+      expect(outcome.ok).toBe(true);
+      expect(listed(store).map((item) => item.name)).toEqual([
+        'Lait',
+        'Beurre',
+      ]);
+      expect(store.getState().notice).toBeNull();
+    });
+
+    it('US5 returns NameAlreadyUsed with the existing article, with no notice and no report', async () => {
+      const { store, errorReporter } = await buildStore();
+
+      const outcome = await store
+        .getState()
+        .createArticle({ name: ' beurre ', categoryId: boissons });
+
+      expect(outcome).toEqual(
+        err({
+          type: 'NameAlreadyUsed',
+          existing: { ...beurre, categoryId: cremerie },
+        }),
+      );
+      expect(store.getState().notice).toBeNull();
+      expect(errorReporter.reports).toEqual([]);
+    });
+  });
+
   describe('changeItemQuantity', () => {
     it('US2-3 changes the quantity and refreshes the current list', async () => {
       const { store } = await buildStore();

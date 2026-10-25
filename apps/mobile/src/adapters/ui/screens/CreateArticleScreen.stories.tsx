@@ -40,3 +40,28 @@ export const NameAlreadyUsed: Story = {
     />
   ),
 };
+
+/** Opened from the Articles tab: no quantity, and "Créer" only makes the article. */
+export const CatalogOnly: Story = {
+  render: () => (
+    <CreateArticleForm
+      addToList={false}
+      onBack={noop}
+      name="Camembert"
+      onChangeName={noop}
+      nameError={null}
+      existingName={null}
+      onAddExisting={noop}
+      amount=""
+      unit=""
+      onChangeAmount={noop}
+      onChangeUnit={noop}
+      quantityError={null}
+      categoryId={fixture.articles[0]?.categoryId ?? null}
+      onChooseCategory={noop}
+      categoryMissing={false}
+      saving={false}
+      onSubmit={noop}
+    />
+  ),
+};

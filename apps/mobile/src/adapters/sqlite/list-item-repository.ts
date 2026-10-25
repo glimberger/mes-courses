@@ -61,6 +61,16 @@ export const sqliteListItemRepository = (
       listId,
       articleId,
     ]),
+  countsByArticle: async () =>
+    new Map(
+      await findAll(
+        db,
+        'SELECT article_id, count(*) AS count FROM list_item GROUP BY article_id',
+        [],
+        (row: { article_id: string; count: number }) =>
+          [row.article_id as ArticleId, row.count] as const,
+      ),
+    ),
   forArticle: (articleId) =>
     findAll(
       db,

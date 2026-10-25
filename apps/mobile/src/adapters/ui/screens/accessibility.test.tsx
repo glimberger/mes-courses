@@ -50,6 +50,15 @@ const openApp = async (scenario: StoryScenario = {}) => {
   });
 };
 
+/** The Articles tab with the row menu of an article open. */
+const openCatalogMenu = async (name: string) => {
+  await openApp();
+  await pressTab('Articles');
+  // The catalog is fully drawn: a row redrawn later would close its menu.
+  await screen.findByText('Beurre', {}, slow);
+  fireEvent.press(screen.getByRole('button', { name: `Actions pour ${name}` }));
+};
+
 /** A device paired with a server that lists two devices (003). */
 const connected: StoryScenario = {
   connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
@@ -151,54 +160,22 @@ const views: Record<string, () => Promise<void>> = {
     await press('Nouvelle liste');
     await screen.findByRole('button', { name: 'Créer' });
   },
-  'AddArticles row menu': async () => {
-    await openApp();
-    await press('Ajouter');
-    // The catalog is fully drawn: a row redrawn later would close its menu.
-    await screen.findByText('Beurre', {}, slow);
-    fireEvent.press(
-      screen.getByRole('button', {
-        name: "Plus d'actions pour « Lait »",
-      }),
-    );
+  'Catalog row menu': async () => {
+    await openCatalogMenu('Lait');
     await screen.findByText('Modifier', {}, slow);
   },
-  EditArticle: async () => {
-    await openApp();
-    await press('Ajouter');
-    // The catalog is fully drawn: a row redrawn later would close its menu.
-    await screen.findByText('Beurre', {}, slow);
-    fireEvent.press(
-      screen.getByRole('button', {
-        name: "Plus d'actions pour « Lait »",
-      }),
-    );
+  EditArticleDialog: async () => {
+    await openCatalogMenu('Lait');
     fireEvent.press(screen.getByText('Modifier'));
     await screen.findByRole('radio', { name: 'Boissons' }, slow);
   },
   DeleteArticleDialog: async () => {
-    await openApp();
-    await press('Ajouter');
-    // The catalog is fully drawn: a row redrawn later would close its menu.
-    await screen.findByText('Beurre', {}, slow);
-    fireEvent.press(
-      screen.getByRole('button', {
-        name: "Plus d'actions pour « Lait »",
-      }),
-    );
+    await openCatalogMenu('Lait');
     fireEvent.press(screen.getByText('Supprimer'));
     await header('Supprimer « Lait » ?');
   },
   'undo snackbar after a deletion': async () => {
-    await openApp();
-    await press('Ajouter');
-    // The catalog is fully drawn: a row redrawn later would close its menu.
-    await screen.findByText('Beurre', {}, slow);
-    fireEvent.press(
-      screen.getByRole('button', {
-        name: "Plus d'actions pour « Lait »",
-      }),
-    );
+    await openCatalogMenu('Lait');
     fireEvent.press(screen.getByText('Supprimer'));
     await screen.findByText('Supprimer « Lait » ?', {}, slow);
     await press('Supprimer');

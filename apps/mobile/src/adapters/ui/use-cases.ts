@@ -49,6 +49,8 @@ import {
   type ChangeServerUrlError,
 } from '../../application/use-cases/change-server-url';
 import { createChangeItemQuantity } from '../../application/use-cases/change-item-quantity';
+import { createCreateArticle } from '../../application/use-cases/create-article';
+import { createGetArticleUsageCounts } from '../../application/use-cases/get-article-usage-counts';
 import { createCreateArticleAndAddToList } from '../../application/use-cases/create-article-and-add-to-list';
 import {
   createSignIn,
@@ -73,7 +75,6 @@ import {
 import { createSignOut } from '../../application/use-cases/sign-out';
 import { createEditArticle } from '../../application/use-cases/edit-article';
 import { createFinishShopping } from '../../application/use-cases/finish-shopping';
-import { createGetArticleUsage } from '../../application/use-cases/get-article-usage';
 import { createGetCatalog } from '../../application/use-cases/get-catalog';
 import { createGetCategories } from '../../application/use-cases/get-categories';
 import { createGetCurrentList } from '../../application/use-cases/get-current-list';
@@ -106,7 +107,6 @@ import type {
   Article,
   ArticleId,
   ArticleNotFound,
-  ArticleUsage,
   DeletedArticle,
 } from '../../domain/article';
 import type { AccountSummary } from '@mes-courses/sync-core';
@@ -161,6 +161,15 @@ export type UseCases = {
       NameError | NameAlreadyUsed<Article> | CategoryNotFound
     >
   >;
+  createArticle: (article: {
+    name: string;
+    categoryId: CategoryId;
+  }) => Promise<
+    Result<
+      { articleId: ArticleId },
+      NameError | NameAlreadyUsed<Article> | CategoryNotFound
+    >
+  >;
   editArticle: (
     articleId: ArticleId,
     article: { name: string; categoryId: CategoryId },
@@ -170,9 +179,7 @@ export type UseCases = {
       NameError | NameAlreadyUsed<Article> | ArticleNotFound | CategoryNotFound
     >
   >;
-  getArticleUsage: (
-    articleId: ArticleId,
-  ) => Promise<Result<ArticleUsage, ArticleNotFound>>;
+  getArticleUsageCounts: () => Promise<Map<ArticleId, number>>;
   deleteArticle: (
     articleId: ArticleId,
   ) => Promise<Result<DeletedArticle, ArticleNotFound>>;
@@ -289,8 +296,9 @@ export const createUseCases = (ports: {
   getCategories: createGetCategories(ports),
   addArticleToList: createAddArticleToList(ports),
   createArticleAndAddToList: createCreateArticleAndAddToList(ports),
+  createArticle: createCreateArticle(ports),
   editArticle: createEditArticle(ports),
-  getArticleUsage: createGetArticleUsage(ports),
+  getArticleUsageCounts: createGetArticleUsageCounts(ports),
   deleteArticle: createDeleteArticle(ports),
   restoreDeletedArticle: createRestoreDeletedArticle(ports),
   changeItemQuantity: createChangeItemQuantity(ports),

@@ -56,6 +56,13 @@ export const typeInto = (label: string, text: string) =>
   field(label).replaceText(text);
 
 /**
+ * Like `typeInto`, for a field shown twice: the form's and the one of a dialog over it, which
+ * Detox lists first.
+ */
+export const typeIntoDialog = (label: string, text: string) =>
+  field(label).atIndex(0).replaceText(text);
+
+/**
  * From AddArticles, creates the article in the category, with the quantity if given, and adds it
  * to the current list; ends back on AddArticles.
  */
@@ -182,13 +189,19 @@ export const openQuantityDialog = async (name: string) => {
     .withTimeout(2000);
 };
 
+/** Opens the Articles tab and waits for its extended FAB. */
+export const openArticles = async () => {
+  await openTab('Articles');
+  await expect(element(by.text('Nouvel article'))).toBeVisible();
+};
+
 /**
- * From AddArticles, opens the menu of the catalog row of this article and waits for its entry
- * (e.g. "Modifier" or "Supprimer"): the menu mounts in a portal after the tap.
+ * From the Articles tab, searches the catalog for this article, opens the ⋮ menu of its row and
+ * waits for its entry (e.g. "Modifier" or "Supprimer"): the menu mounts in a portal after the tap.
  */
-export const openRowMenu = async (name: string, entry: string) => {
-  await searchCatalog(name);
-  await element(by.label(`Plus d'actions pour « ${name} »`)).tap();
+export const openCatalogRowMenu = async (name: string, entry: string) => {
+  await typeInto('Rechercher un article', name);
+  await element(by.label(`Actions pour ${name}`)).tap();
   await waitFor(element(by.text(entry)))
     .toBeVisible()
     .withTimeout(2000);

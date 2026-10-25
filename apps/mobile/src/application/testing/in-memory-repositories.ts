@@ -4,7 +4,7 @@ import {
   type Change,
   type EntityKind,
 } from '@mes-courses/sync-core';
-import type { Article } from '../../domain/article';
+import type { Article, ArticleId } from '../../domain/article';
 import type { Category } from '../../domain/category';
 import type { ListItem } from '../../domain/list-item';
 import { normalizedName } from '../../domain/name';
@@ -236,6 +236,13 @@ export class InMemoryRepositories implements Repositories {
     },
     remove: async (listId, articleId) => {
       this.state.items.delete(itemRef(listId, articleId));
+    },
+    countsByArticle: async () => {
+      const counts = new Map<ArticleId, number>();
+      for (const item of this.state.items.values()) {
+        counts.set(item.articleId, (counts.get(item.articleId) ?? 0) + 1);
+      }
+      return counts;
     },
     forArticle: async (articleId) =>
       [...this.state.items.values()]

@@ -16,10 +16,10 @@ import { TabBar } from './components/TabBar';
 import { UndoSnackbar } from './components/UndoSnackbar';
 import { AccountsScreen } from './screens/AccountsScreen';
 import { AddArticlesScreen } from './screens/AddArticlesScreen';
+import { CatalogScreen } from './screens/CatalogScreen';
 import { ChoosePasswordScreen } from './screens/ChoosePasswordScreen';
 import { CreateArticleScreen } from './screens/CreateArticleScreen';
 import { CurrentListScreen } from './screens/CurrentListScreen';
-import { EditArticleScreen } from './screens/EditArticleScreen';
 import { ListsScreen } from './screens/ListsScreen';
 import { SignedOutNotice } from './screens/SignedOutNoticeDialog';
 import { SettingsScreen } from './screens/SettingsScreen';
@@ -63,7 +63,6 @@ const CoursesNavigator = () => (
     <CoursesStack.Screen name="CurrentList" component={CurrentListScreen} />
     <CoursesStack.Screen name="AddArticles" component={AddArticlesScreen} />
     <CoursesStack.Screen name="CreateArticle" component={CreateArticleScreen} />
-    <CoursesStack.Screen name="EditArticle" component={EditArticleScreen} />
   </CoursesStack.Navigator>
 );
 
@@ -76,15 +75,13 @@ const ListsNavigator = () => (
   </ListsStack.Navigator>
 );
 
-// Placeholder until phase 5: today's catalog screen, with its create and edit screens.
 const CatalogNavigator = () => (
   <CatalogStack.Navigator
     screenOptions={stackOptions}
     screenLayout={screenLayout}
   >
-    <CatalogStack.Screen name="Catalog" component={AddArticlesScreen} />
+    <CatalogStack.Screen name="Catalog" component={CatalogScreen} />
     <CatalogStack.Screen name="CreateArticle" component={CreateArticleScreen} />
-    <CatalogStack.Screen name="EditArticle" component={EditArticleScreen} />
   </CatalogStack.Navigator>
 );
 

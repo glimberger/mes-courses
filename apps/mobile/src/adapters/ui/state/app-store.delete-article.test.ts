@@ -2,7 +2,7 @@ import type { UnitOfWork } from '../../../application/ports/unit-of-work';
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import type { ArticleId } from '../../../domain/article';
 import type { CategoryId } from '../../../domain/category';
-import { err, ok } from '../../../domain/result';
+import { err } from '../../../domain/result';
 import type { ListId } from '../../../domain/shopping-list';
 import { buildStoryStore, type Fixture } from '../testing/story-store';
 import type { UseCases } from '../use-cases';
@@ -70,28 +70,6 @@ const storedLait = (unitOfWork: UnitOfWork) =>
   unitOfWork.run((repos) => repos.articles.findById(lait.id));
 
 describe('deleting an article in the store', () => {
-  it('getArticleUsage returns the use case Result and stores nothing', async () => {
-    const { store } = await buildLoadedStore();
-    const before = store.getState();
-
-    const outcome = await store.getState().getArticleUsage(lait.id);
-
-    expect(outcome).toEqual(
-      ok({
-        article: lait,
-        lists: [
-          { id: barbecue, name: 'Barbecue' },
-          { id: maListe, name: 'Ma liste' },
-        ],
-      }),
-    );
-    const after = store.getState();
-    expect(after.pendingUndo).toBe(before.pendingUndo);
-    expect(after.notice).toBe(before.notice);
-    expect(after.currentList).toBe(before.currentList);
-    expect(after.catalog).toBe(before.catalog);
-  });
-
   it('US2-1 US2-4 on success offers the undo and refreshes every loaded region', async () => {
     const { store } = await buildLoadedStore();
 

@@ -369,3 +369,102 @@ describe('CreateArticle', () => {
     expect(store.getState().notice).toEqual({ type: 'storageFull' });
   });
 });
+
+describe('CreateArticle, catalog only (Articles tab)', () => {
+  const renderCatalogOnly = async () => {
+    const rendered = await renderWithStore(<CreateArticleScreen />, {
+      seed: fixture,
+      routeParams: { addToList: false },
+    });
+    await screen.findByRole('radio', { name: 'Boissons' });
+    return rendered;
+  };
+
+  const createOnly = () =>
+    fireEvent.press(screen.getByRole('button', { name: 'Créer' }));
+
+  it('has no quantity fields and a "Créer" button', async () => {
+    await renderCatalogOnly();
+
+    expect(screen.queryByLabelText('Quantité')).not.toBeOnTheScreen();
+    expect(screen.queryByLabelText('Unité')).not.toBeOnTheScreen();
+    expect(
+      screen.queryByRole('button', { name: 'Créer et ajouter' }),
+    ).not.toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Créer' })).toBeOnTheScreen();
+  });
+
+  it('creates the article in its category and on no list', async () => {
+    const { unitOfWork } = await renderCatalogOnly();
+
+    type('Nom', 'Cumin');
+    choose('Boissons');
+    createOnly();
+
+    await waitFor(async () => {
+      const articles = await unitOfWork.run((repos) => repos.articles.all());
+      expect(articles.map((article) => article.name)).toContain('Cumin');
+    });
+    expect(
+      await unitOfWork.run((repos) => repos.items.forList(maListe)),
+    ).toHaveLength(fixture.items.length);
+  });
+
+  it('says "« Beurre » existe déjà." without offering to add it to a list', async () => {
+    await renderCatalogOnly();
+
+    type('Nom', ' beurre ');
+    choose('Crèmerie');
+    createOnly();
+
+    expect(
+      await screen.findByText('« Beurre » existe déjà.'),
+    ).toBeOnTheScreen();
+    expect(
+      screen.queryByRole('button', { name: 'Ajouter « Beurre »' }),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('asks for a category before creating', async () => {
+    const { unitOfWork } = await renderCatalogOnly();
+
+    type('Nom', 'Cumin');
+    createOnly();
+
+    expect(
+      await screen.findByText('Choisissez une catégorie.'),
+    ).toBeOnTheScreen();
+    expect(await unitOfWork.run((repos) => repos.articles.all())).toHaveLength(
+      fixture.articles.length,
+    );
+  });
+
+  it('AC5 a category created from "Nouvelle catégorie" is chosen at once and receives the article', async () => {
+    const { unitOfWork } = await renderCatalogOnly();
+
+    type('Nom', 'Couche');
+    fireEvent.press(screen.getByRole('button', { name: 'Nouvelle catégorie' }));
+    await waitFor(() =>
+      expect(screen.getAllByLabelText('Nom')).toHaveLength(2),
+    );
+    fireEvent.changeText(dialogNameField(), 'Bébé');
+    // The dialog's button comes after the form's.
+    const [, dialogCreate] = screen.getAllByRole('button', { name: 'Créer' });
+    if (!dialogCreate) throw new Error('No dialog button');
+    fireEvent.press(dialogCreate);
+
+    expect(await screen.findByRole('radio', { name: 'Bébé' })).toBeChecked();
+    createOnly();
+
+    await waitFor(async () => {
+      const articles = await unitOfWork.run((repos) => repos.articles.all());
+      const categories = await unitOfWork.run((repos) =>
+        repos.categories.all(),
+      );
+      const baby = categories.find((category) => category.name === 'Bébé');
+      expect(
+        articles.find((article) => article.name === 'Couche')?.categoryId,
+      ).toBe(baby?.id);
+    });
+  });
+});

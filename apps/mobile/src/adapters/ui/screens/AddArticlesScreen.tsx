@@ -3,7 +3,7 @@ import { SectionList, StyleSheet, View, type HostInstance } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import type { ArticleId, ArticleUsage } from '../../../domain/article';
+import type { ArticleId } from '../../../domain/article';
 import type { CatalogView } from '../../../domain/catalog-view';
 import type { CategoryId } from '../../../domain/category';
 import { cleanName } from '../../../domain/name';
@@ -20,7 +20,6 @@ import { hasScreenBelow } from '../navigation-history';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
-import { DeleteArticleDialog } from './DeleteArticleDialog';
 import { QuantityDialog, type QuantityRequest } from './QuantityDialog';
 
 type CatalogArticle = CatalogView['sections'][number]['articles'][number];
@@ -38,8 +37,6 @@ type RowRefs = Map<ArticleId, HostInstance>;
 type CatalogRowProps = {
   article: CatalogArticle;
   open: (article: CatalogArticle) => void;
-  edit: (article: CatalogArticle) => void;
-  remove: (article: CatalogArticle) => void;
   rowRefs: RowRefs;
 };
 
@@ -47,13 +44,9 @@ type CatalogRowProps = {
 const CatalogRow = memo(function CatalogRow({
   article,
   open,
-  edit,
-  remove,
   rowRefs,
 }: CatalogRowProps) {
   const onPress = useCallback(() => open(article), [article, open]);
-  const onEdit = useCallback(() => edit(article), [article, edit]);
-  const onDelete = useCallback(() => remove(article), [article, remove]);
   const ref = useCallback(
     (node: HostInstance | null) => {
       if (node) rowRefs.set(article.id, node);
@@ -67,8 +60,6 @@ const CatalogRow = memo(function CatalogRow({
       name={article.name}
       onList={article.onList}
       onPress={onPress}
-      onEdit={onEdit}
-      onDelete={onDelete}
     />
   );
 });
@@ -84,20 +75,15 @@ export const AddArticlesScreen = () => {
   const catalog = useAppStore((state) => state.catalog.view);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
   const searchCatalog = useAppStore((state) => state.searchCatalog);
-  const getArticleUsage = useAppStore((state) => state.getArticleUsage);
-  const [usage, setUsage] = useState<ArticleUsage | null>(null);
   const [request, setRequest] = useState<QuantityRequest | null>(null);
   const [rowRefs] = useState<RowRefs>(() => new Map());
   const opener = useRef<ArticleId | null>(null);
   const titleRef = useRef<HostInstance>(null);
-  // A second tap while the usage is being read would open the dialog for the wrong row.
-  const reading = useRef(false);
 
   // The catalog is loaded once per screen, the search is kept per screen: the store holds one
-  // query only, shared by the copies of this screen (AddArticles in Courses, and the Articles
-  // tab), so each copy puts its own back in the store whenever it is shown, which also repairs the
-  // store after another copy left. Leaving the screen drops its search, so it opens on the whole
-  // catalog the next time.
+  // query only, shared with the Articles tab's screen, so each puts its own back in the store
+  // whenever it is shown, which also repairs the store after the other one left. Closing this
+  // screen drops its search, so it opens on the whole catalog the next time.
   const [query, setQuery] = useState('');
   useEffect(() => {
     void loadCatalog();
@@ -123,36 +109,8 @@ export const AddArticlesScreen = () => {
     );
   }, []);
 
-  const edit = useCallback(
-    (article: CatalogArticle) =>
-      navigation.navigate('EditArticle', { articleId: article.id }),
-    [navigation],
-  );
-
-  /** Reads where the article is used, then asks before deleting it (FR-006). */
-  const remove = useCallback(
-    async (article: CatalogArticle) => {
-      if (reading.current) return;
-      reading.current = true;
-      opener.current = article.id;
-      try {
-        const outcome = await getArticleUsage(article.id);
-        if (outcome.ok) setUsage(outcome.value);
-      } finally {
-        reading.current = false;
-      }
-    },
-    [getArticleUsage],
-  );
-
-  const closeDeleteDialog = () => {
-    setUsage(null);
-    focusRow();
-  };
-
   const focusRow = () => {
-    // Back to the row that opened the dialog, looked up once the dialog is gone (FR-037). A
-    // deleted article has no row any more: focus goes to the screen title instead.
+    // Back to the row that opened the dialog, looked up once the dialog is gone (FR-037).
     const id = opener.current;
     focusOn({
       get current() {
@@ -166,8 +124,9 @@ export const AddArticlesScreen = () => {
     focusRow();
   };
 
-  const createArticle = (params: RootStackParamList['CreateArticle']) =>
-    navigation.navigate('CreateArticle', params);
+  const createArticle = (
+    params?: Omit<RootStackParamList['CreateArticle'], 'addToList'>,
+  ) => navigation.navigate('CreateArticle', { ...params, addToList: true });
 
   /** "Nouvel article", named after the search if there is one (FR-008, FR-022). */
   const newArticle = () => {
@@ -213,15 +172,12 @@ export const AddArticlesScreen = () => {
           <CatalogSections
             view={view}
             open={open}
-            edit={edit}
-            remove={remove}
             rowRefs={rowRefs}
             createInCategory={(categoryId) => createArticle({ categoryId })}
           />
         )}
       />
       <QuantityDialog request={request} onClose={closeDialog} />
-      <DeleteArticleDialog usage={usage} onClose={closeDeleteDialog} />
     </View>
   );
 };
@@ -232,15 +188,11 @@ const rowId = (row: Row) =>
 const CatalogSections = ({
   view,
   open,
-  edit,
-  remove,
   rowRefs,
   createInCategory,
 }: {
   view: CatalogView;
   open: (article: CatalogArticle) => void;
-  edit: (article: CatalogArticle) => void;
-  remove: (article: CatalogArticle) => void;
   rowRefs: RowRefs;
   createInCategory: (categoryId: CategoryId) => void;
 }) => (
@@ -267,13 +219,7 @@ const CatalogSections = ({
             onAction={() => createInCategory(item.categoryId)}
           />
         ) : (
-          <CatalogRow
-            article={item}
-            open={open}
-            edit={edit}
-            remove={remove}
-            rowRefs={rowRefs}
-          />
+          <CatalogRow article={item} open={open} rowRefs={rowRefs} />
         )}
       </View>
     )}
