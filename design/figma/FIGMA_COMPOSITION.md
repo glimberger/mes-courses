@@ -62,7 +62,7 @@ Dark : même structure, couleurs du scheme dark.
 - **Top app bar** (centered) — titre « Mes listes ».
 - **Card** ×N, chacune un **List item** (two-line) :
   - icône `format_list_bulleted` (lead) + titre (titleMedium) + sous-titre « X articles »
-    (bodySmall) + chevron_right (ou **Chip** brand « Liste actuelle » pour la liste active).
+    (bodySmall) + chevron_right (ou **Chip** brand « en cours » pour la liste active).
   - Liste active : outline 2 dp primaryContainer (brand).
 - **FAB** extended : `add` + « Nouvelle liste ».
 

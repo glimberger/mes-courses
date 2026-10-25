@@ -19,7 +19,7 @@ et le thème déjà importé via Material Theme Builder.
 | Route | Écran | Mockup |
 | --- | --- | --- |
 | `CurrentList` | Ma liste (articles à acheter, catégories, FAB) | `1-liste.html` / `6-liste-dark.html` |
-| `Lists` | Mes listes (cartes + puce « Liste actuelle ») | `2-listes.html` |
+| `Lists` | Mes listes (cartes + puce « en cours ») | `2-listes.html` |
 | `AddArticles` | Ajouter des articles (puces vertes, recherche) | `3-ajouter.html` |
 | `CreateArticle` | Créer un article | (pas de mockup dédié) |
 | `EditArticle` | Éditer un article | (pas de mockup dédié) |
