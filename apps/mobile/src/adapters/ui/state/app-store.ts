@@ -249,6 +249,7 @@ export const createAppStoreWith = <Actions extends object>(
         view: { status: 'idle' },
       },
       lists: { status: 'idle' },
+      usageCounts: { status: 'idle' },
       categories: { status: 'idle' },
       pendingUndo: null,
       sync: {

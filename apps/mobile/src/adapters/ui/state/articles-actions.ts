@@ -11,6 +11,8 @@ import type { StoreKit, WriteFailed } from './store-kit';
 
 /** The actions that manage the catalog's articles (002). */
 export type ArticlesActions = {
+  /** Loads the number of lists holding each article, in one read; also used by "Réessayer". */
+  loadArticleUsageCounts: () => Promise<void>;
   /** Renames the article and saves its category; every loaded region then shows it (US1-1, US1-2). */
   editArticle: (
     articleId: ArticleId,
@@ -34,7 +36,16 @@ export const createArticlesActions = ({
   report,
   set,
   follow,
+  region,
 }: StoreKit): ArticlesActions => ({
+  loadArticleUsageCounts: region(
+    'usageCounts',
+    'getArticleUsageCounts',
+    async () => ({
+      status: 'success',
+      data: await useCases.getArticleUsageCounts(),
+    }),
+  ),
   editArticle: (articleId, article) =>
     runWrite('editArticle', () =>
       useCases.editArticle(follow(articleId), article),

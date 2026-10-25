@@ -1,5 +1,5 @@
 import type { RemoteEffects } from '../../../application/ports/pulled-rows';
-import type { DeletedArticle } from '../../../domain/article';
+import type { ArticleId, DeletedArticle } from '../../../domain/article';
 import type { CatalogView } from '../../../domain/catalog-view';
 import type { CategoryId } from '../../../domain/category';
 import type { CurrentListView } from '../../../domain/current-list-view';
@@ -82,6 +82,8 @@ export interface StoreCore {
     view: ScreenState<CatalogView, { query: string }>;
   };
   lists: ScreenState<ListSummary[]>;
+  /** The number of lists holding each article, for the badges of the Articles tab. */
+  usageCounts: ScreenState<Map<ArticleId, number>>;
   /** The categories of the category picker, ordered by position. */
   categories: ScreenState<{ id: CategoryId; name: string }[]>;
   pendingUndo: PendingUndo | null;
@@ -108,7 +110,7 @@ export type WriteOptions<T, X extends string> = {
 };
 
 /** Regions that hold one `ScreenState` and load with one query. */
-type RegionName = 'currentList' | 'lists' | 'categories';
+type RegionName = 'currentList' | 'lists' | 'categories' | 'usageCounts';
 type Loaded<K extends RegionName> = Extract<
   StoreCore[K],
   { status: 'success' | 'empty' }
