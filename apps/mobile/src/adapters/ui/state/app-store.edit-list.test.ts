@@ -426,6 +426,44 @@ describe('editing the current list in the store', () => {
     });
   });
 
+  describe('removeItemQuietly', () => {
+    it('AC2 removes the item and refreshes, without any undo offer, and releases its held changes at once', async () => {
+      const releaseHeldChanges = jest.fn(async (_undoId: string) => undefined);
+      const { store, stored } = await buildStore(() => ({
+        releaseHeldChanges,
+      }));
+      await store.getState().loadCurrentList();
+
+      const outcome = await store.getState().removeItemQuietly(beurre.id);
+
+      expect(outcome).toEqual(ok(undefined));
+      expect(await stored(beurre.id)).toBeNull();
+      expect(listed(store).map((item) => item.name)).toEqual(['Lait']);
+      expect(store.getState().pendingUndo).toBeNull();
+      expect(releaseHeldChanges).toHaveBeenCalledTimes(1);
+    });
+
+    it('AC2 tolerates an item already gone: no notice, nothing reported', async () => {
+      const { store, errorReporter } = await buildStore();
+      await store.getState().loadCurrentList();
+      await store.getState().removeItemQuietly(beurre.id);
+
+      const again = await store.getState().removeItemQuietly(beurre.id);
+
+      expect(again.ok).toBe(false);
+      expect(store.getState().notice).toBeNull();
+      expect(errorReporter.reports).toEqual([]);
+    });
+
+    it('AC2 ends a pending undo offer as any later write does, and makes none', async () => {
+      const { store } = await buildStoreWithOffer();
+
+      await store.getState().removeItemQuietly(lait.id);
+
+      expect(store.getState().pendingUndo).toBeNull();
+    });
+  });
+
   describe('removeItem and the undo offer', () => {
     it('US2-6 removes the item, refreshes, and offers to undo with the removed item and its name', async () => {
       const { store, stored } = await buildStoreWithOffer();
