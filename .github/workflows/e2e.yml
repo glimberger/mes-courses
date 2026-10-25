@@ -64,6 +64,10 @@ jobs:
       - run: nix develop --command pnpm --filter @mes-courses/e2e-tests e2e:build:android
         env:
           ORG_GRADLE_PROJECT_reactNativeArchitectures: x86_64
+      - name: Install emulator dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpulse0
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
