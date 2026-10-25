@@ -49,6 +49,8 @@ import {
   type ChangeServerUrlError,
 } from '../../application/use-cases/change-server-url';
 import { createChangeItemQuantity } from '../../application/use-cases/change-item-quantity';
+import { createCreateArticle } from '../../application/use-cases/create-article';
+import { createGetArticleUsageCounts } from '../../application/use-cases/get-article-usage-counts';
 import { createCreateArticleAndAddToList } from '../../application/use-cases/create-article-and-add-to-list';
 import {
   createSignIn,
@@ -161,6 +163,15 @@ export type UseCases = {
       NameError | NameAlreadyUsed<Article> | CategoryNotFound
     >
   >;
+  createArticle: (article: {
+    name: string;
+    categoryId: CategoryId;
+  }) => Promise<
+    Result<
+      { articleId: ArticleId },
+      NameError | NameAlreadyUsed<Article> | CategoryNotFound
+    >
+  >;
   editArticle: (
     articleId: ArticleId,
     article: { name: string; categoryId: CategoryId },
@@ -173,6 +184,7 @@ export type UseCases = {
   getArticleUsage: (
     articleId: ArticleId,
   ) => Promise<Result<ArticleUsage, ArticleNotFound>>;
+  getArticleUsageCounts: () => Promise<Map<ArticleId, number>>;
   deleteArticle: (
     articleId: ArticleId,
   ) => Promise<Result<DeletedArticle, ArticleNotFound>>;
@@ -289,8 +301,10 @@ export const createUseCases = (ports: {
   getCategories: createGetCategories(ports),
   addArticleToList: createAddArticleToList(ports),
   createArticleAndAddToList: createCreateArticleAndAddToList(ports),
+  createArticle: createCreateArticle(ports),
   editArticle: createEditArticle(ports),
   getArticleUsage: createGetArticleUsage(ports),
+  getArticleUsageCounts: createGetArticleUsageCounts(ports),
   deleteArticle: createDeleteArticle(ports),
   restoreDeletedArticle: createRestoreDeletedArticle(ports),
   changeItemQuantity: createChangeItemQuantity(ports),

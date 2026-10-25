@@ -42,6 +42,19 @@ export type EditListActions = {
       NameError | NameAlreadyUsed<Article> | WriteFailed
     >
   >;
+  /**
+   * Creates the article in the catalog only, never on a list (Articles tab); every loaded region
+   * then shows it.
+   */
+  createArticle: (article: {
+    name: string;
+    categoryId: CategoryId;
+  }) => Promise<
+    Result<
+      { articleId: ArticleId },
+      NameError | NameAlreadyUsed<Article> | WriteFailed
+    >
+  >;
   changeItemQuantity: (
     articleId: ArticleId,
     quantity: Quantity | null,
@@ -194,6 +207,9 @@ export const createEditListActions = (
       return outcome;
     };
 
+  const createArticle: EditListActions['createArticle'] = (article) =>
+    runWrite('createArticle', () => useCases.createArticle(article));
+
   const changeItemQuantity: EditListActions['changeItemQuantity'] = (
     articleId,
     quantity,
@@ -271,6 +287,7 @@ export const createEditListActions = (
     loadCategories,
     addArticleToList,
     createArticleAndAddToList,
+    createArticle,
     changeItemQuantity,
     removeItem,
     undo,
