@@ -236,12 +236,11 @@ describe('Navigation', () => {
     await screen.findByText('Beurre');
     fireEvent.changeText(
       screen.getByPlaceholderText('Rechercher un article'),
-      'Lait',
+      'Beur',
     );
-    await waitFor(() => expect(screen.queryByText('Beurre')).toBeNull());
 
     fireEvent.press(screen.getByRole('tab', { name: 'Articles' }));
-    expect(await screen.findByText('Beurre')).toBeOnTheScreen();
+    expect(await screen.findByText('Lait')).toBeOnTheScreen();
     expect(screen.getByPlaceholderText('Rechercher un article')).toHaveProp(
       'value',
       '',
@@ -250,12 +249,15 @@ describe('Navigation', () => {
       screen.getByPlaceholderText('Rechercher un article'),
       'Farine',
     );
-    await waitFor(() => expect(screen.queryByText('Beurre')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Lait')).toBeNull());
 
     fireEvent.press(screen.getByRole('tab', { name: 'Courses' }));
-    expect(await screen.findByText('Lait')).toBeOnTheScreen();
+    expect(await screen.findByText('Beurre')).toBeOnTheScreen();
+    expect(screen.getByPlaceholderText('Rechercher un article')).toHaveProp(
+      'value',
+      'Beur',
+    );
     expect(screen.queryByText('Farine')).toBeNull();
-    expect(screen.queryByText('Beurre')).toBeNull();
 
     fireEvent.press(screen.getByRole('tab', { name: 'Articles' }));
     expect(await screen.findByText('Farine')).toBeOnTheScreen();

@@ -4,27 +4,15 @@ import type { ServerRow } from '@mes-courses/sync-core';
 
 import type { ArticleId } from '../../../domain/article';
 import type { ListId } from '../../../domain/shopping-list';
-import { focusOn } from '../accessibility/focus';
 import { fixture } from '../testing/fixtures';
-import { recordFocusTargets } from '../testing/focus-targets';
 import {
   OTHER_DEVICE_HLC,
   pullingSyncServer,
 } from '../testing/pulling-sync-server';
 import { renderWithStore } from '../testing/render-with-store';
 import type { StoryScenario } from '../testing/story-store';
-import { AddArticlesScreen } from './AddArticlesScreen';
 import { CurrentListScreen } from './CurrentListScreen';
 import { QuantityDialog, type QuantityRequest } from './QuantityDialog';
-
-jest.mock('../accessibility/focus', () => ({ focusOn: jest.fn() }));
-
-let focusTargets: string[] = [];
-
-beforeEach(() => {
-  jest.mocked(focusOn).mockReset();
-  focusTargets = recordFocusTargets(jest.mocked(focusOn));
-});
 
 const maListe = 'list-ma-liste' as ListId;
 const beurre = { id: 'article-beurre' as ArticleId, name: 'Beurre' };
@@ -312,30 +300,6 @@ describe('QuantityDialog', () => {
     });
   });
 
-  describe('FR-037 screen reader focus', () => {
-    it('goes to the dialog title when it opens, and back to the row that opened it when it closes', async () => {
-      await renderWithStore(<AddArticlesScreen />, { seed: fixture });
-
-      fireEvent.press(
-        await screen.findByRole('button', { name: 'Ajouter Beurre' }),
-      );
-      await waitFor(() => expect(isOpen('Beurre')).toBe(true));
-      await waitFor(() => expect(focusTargets).toEqual(['Beurre']));
-
-      press('Annuler');
-
-      await closed('Beurre');
-      await waitFor(() =>
-        expect(focusTargets).toEqual(['Beurre', 'Ajouter Beurre']),
-      );
-      // The row, a button, not the title of the closed dialog.
-      const target = jest.mocked(focusOn).mock.calls.at(-1)?.[0].current as {
-        props: { accessibilityRole?: string };
-      } | null;
-      expect(target?.props.accessibilityRole).toBe('button');
-    });
-  });
-
   describe('a pull while the dialog is open (FR-020a)', () => {
     const stamp = OTHER_DEVICE_HLC;
 
@@ -443,32 +407,6 @@ describe('QuantityDialog', () => {
       await pull([itemRow(farine.id, false)]);
 
       expect(isOpen('Lait')).toBe(true);
-    });
-
-    it('FR-037 gives focus back to the row that opened the dialog when the pull closes it', async () => {
-      const server = pullingSyncServer();
-      const rendered = await renderWithStore(<AddArticlesScreen />, {
-        seed: fixture,
-        connected: {
-          serverUrl: 'https://courses.example.fr',
-          lastSyncAt: null,
-        },
-        syncServer: server.syncServer,
-      });
-      fireEvent.press(
-        await screen.findByRole('button', { name: 'Ajouter Beurre' }),
-      );
-      await waitFor(() => expect(focusTargets).toEqual(['Beurre']));
-
-      await act(async () => {
-        server.send([deletedArticle(beurre.id)]);
-        await rendered.store.getState().syncNow();
-      });
-
-      await closed('Beurre');
-      // The row went with the article: focus leaves the closed dialog for the screen.
-      await waitFor(() => expect(focusTargets).toHaveLength(2));
-      expect(focusTargets[1]).not.toBe('Beurre');
     });
   });
 });

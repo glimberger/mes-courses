@@ -404,6 +404,141 @@ describe('AddArticles', () => {
     });
   });
 
+  describe('creating an article from the add screen', () => {
+    const createKefir = async () => {
+      const rendered = await openFromCurrentList();
+      search('kéfir');
+      fireEvent.press(screen.getByRole('button', { name: 'Créer « kéfir »' }));
+      await screen.findByLabelText('Nom');
+      return rendered;
+    };
+
+    it('AC4 opens CreateArticle with the name filled in, to create and add', async () => {
+      await createKefir();
+
+      expect(screen.getByLabelText('Nom')).toHaveDisplayValue('kéfir');
+      expect(
+        screen.getByRole('button', { name: 'Créer et ajouter' }),
+      ).toBeOnTheScreen();
+    });
+
+    it('AC4 on return, the new article is shown marked as added, and a tap takes it off the list', async () => {
+      const { unitOfWork } = await createKefir();
+      fireEvent.press(screen.getByRole('radio', { name: 'Crèmerie' }));
+      fireEvent.press(screen.getByRole('button', { name: 'Créer et ajouter' }));
+
+      const added = await screen.findByRole('button', {
+        name: 'kéfir ajoutée, toucher pour retirer',
+      });
+      expect(screen.getByText('Ajouter des articles')).toBeOnTheScreen();
+      expect(
+        await unitOfWork.run((repos) => repos.items.forList(maListe)),
+      ).toHaveLength(fixture.items.length + 1);
+
+      fireEvent.press(added);
+
+      expect(
+        await screen.findByRole('button', { name: 'Ajouter kéfir' }),
+      ).toBeOnTheScreen();
+      expect(
+        await unitOfWork.run((repos) => repos.items.forList(maListe)),
+      ).toHaveLength(fixture.items.length);
+    });
+
+    it('AC3 going back from the creation without saving changes nothing', async () => {
+      const { unitOfWork } = await createKefir();
+
+      fireEvent.press(screen.getByRole('button', { name: 'Retour' }));
+
+      expect(await screen.findByText('Ajouter des articles')).toBeOnTheScreen();
+      expect(
+        screen.getByRole('button', { name: 'Créer « kéfir »' }),
+      ).toBeOnTheScreen();
+      expect(
+        await unitOfWork.run((repos) => repos.items.forList(maListe)),
+      ).toHaveLength(fixture.items.length);
+    });
+  });
+
+  describe('with no network (Principle VII)', () => {
+    const realFetch = global.fetch;
+    const offlineFetch = jest.fn(() => {
+      throw new TypeError('Network request failed');
+    });
+    beforeEach(() => {
+      offlineFetch.mockClear();
+      global.fetch = offlineFetch as unknown as typeof fetch;
+    });
+    afterEach(() => {
+      global.fetch = realFetch;
+    });
+
+    it('AC1 AC2 adds and removes an article with no error shown, reported or fetched', async () => {
+      const { unitOfWork, errorReporter } = await renderScreen({
+        connected: {
+          serverUrl: 'https://courses.example.fr',
+          lastSyncAt: null,
+        },
+      });
+
+      fireEvent.press(
+        await screen.findByRole('button', { name: 'Ajouter Beurre' }),
+      );
+      const added = await screen.findByRole('button', {
+        name: 'Beurre ajoutée, toucher pour retirer',
+      });
+      expect(
+        await unitOfWork.run((repos) =>
+          repos.items.find(maListe, 'article-beurre' as ArticleId),
+        ),
+      ).not.toBeNull();
+      fireEvent.press(added);
+      expect(
+        await screen.findByRole('button', { name: 'Ajouter Beurre' }),
+      ).toBeOnTheScreen();
+
+      expect(
+        screen.queryByText("La modification n'a pas pu être enregistrée."),
+      ).toBeNull();
+      expect(errorReporter.reports).toEqual([]);
+      expect(offlineFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  it('AC1 AC2 a list made current while the add screen is open resets the Courses stack, and the screen opens again on that list', async () => {
+    await openFromCurrentList();
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Ajouter Beurre' }),
+    );
+    await screen.findByRole('button', {
+      name: 'Beurre ajoutée, toucher pour retirer',
+    });
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Listes' }));
+    fireEvent.press(
+      await screen.findByRole('button', { name: /^Barbecue, 0/ }),
+    );
+
+    expect(await screen.findByText('Votre liste est vide')).toBeOnTheScreen();
+    await waitFor(() =>
+      expect(
+        screen.queryAllByPlaceholderText('Rechercher un article', {
+          includeHiddenElements: true,
+        }),
+      ).toHaveLength(0),
+    );
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Ajouter des articles' }),
+    );
+    // The list is empty: nothing is hidden, and the earlier addition is not carried over.
+    expect(
+      await screen.findByRole('button', { name: 'Ajouter Lait' }),
+    ).toBeOnTheScreen();
+    expect(
+      screen.getByRole('button', { name: 'Ajouter Beurre' }),
+    ).toBeOnTheScreen();
+  });
+
   it('FR-009 "Effacer la recherche" empties the search and shows the whole catalog again', async () => {
     await renderScreen();
     await screen.findByText('Beurre');

@@ -616,8 +616,9 @@ describe('CurrentList, editing the list (User Story 2)', () => {
     );
 
     fireEvent.press(await screen.findByRole('button', { name: 'Ajouter' }));
-    fireEvent.press(await screen.findByRole('button', { name: 'Beurre' }));
-    fireEvent.press(await screen.findByRole('button', { name: 'Ajouter' }));
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Ajouter Beurre' }),
+    );
     await screen.findByText('« Beurre » ajouté');
     fireEvent.press(screen.getByLabelText('Retour'));
 
