@@ -2,9 +2,12 @@ import { by, device, element, expect, waitFor } from 'detox';
 
 import {
   backToList,
+  chooseRowMenuEntry,
   createArticle,
   expectRow,
   openAddArticles,
+  openListRowMenu,
+  typeInto,
   removeRow,
   tapUndo,
 } from '../support/app';
@@ -34,5 +37,28 @@ describe('remove an item and undo', () => {
     await tapUndo();
 
     await expectRow('Beurre, 2 kg, dans le caddie');
+  });
+
+  it('011 FR-008 the ⋮ menu sets the quantity of a row, then removes another row, and "Annuler" brings it back', async () => {
+    await openAddArticles();
+    await createArticle('Farine', 'Épicerie salée');
+    await backToList();
+    await expectRow('Farine, pas dans le caddie');
+
+    await openListRowMenu('Farine');
+    await chooseRowMenuEntry('Quantité de Farine');
+    await typeInto('Quantité', '2');
+    await typeInto('Unité', 'kg');
+    await element(by.label('Enregistrer')).tap();
+    await expectRow('Farine, 2 kg, pas dans le caddie');
+
+    await openListRowMenu('Farine');
+    await chooseRowMenuEntry('Retirer Farine de la liste');
+    await waitFor(element(by.text('« Farine » retiré de la liste')))
+      .toBeVisible()
+      .withTimeout(2000);
+    await tapUndo();
+
+    await expectRow('Farine, 2 kg, pas dans le caddie');
   });
 });

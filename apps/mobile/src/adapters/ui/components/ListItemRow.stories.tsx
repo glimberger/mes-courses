@@ -6,7 +6,11 @@ import { ListItemRow } from './ListItemRow';
 const meta = {
   title: 'Components/ListItemRow',
   component: ListItemRow,
-  args: { onToggle: () => undefined },
+  args: {
+    onToggle: () => undefined,
+    onEditQuantity: () => undefined,
+    onRemove: () => undefined,
+  },
 } satisfies Meta<typeof ListItemRow>;
 
 export default meta;
@@ -31,4 +35,14 @@ export const WithQuantity: Story = {
 
 export const LongName: Story = {
   args: { name: LONG_ARTICLE_NAME, quantity: null, inCart: false },
+};
+
+/** The ⋮ menu open, with "Quantité…" and "Retirer de la liste". */
+export const MenuOpen: Story = {
+  args: {
+    name: 'Farine',
+    quantity: { amount: 1.5, unit: 'kg' },
+    inCart: false,
+    menuInitiallyOpen: true,
+  },
 };
