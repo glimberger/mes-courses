@@ -20,5 +20,5 @@ export const Tertiary: Story = {
 };
 
 export const Brand: Story = {
-  args: { tone: 'brand', icon: 'check', children: 'Liste actuelle' },
+  args: { tone: 'brand', icon: 'check', children: 'en cours' },
 };

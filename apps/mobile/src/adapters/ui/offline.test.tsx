@@ -239,7 +239,7 @@ describe.each(networks)(
       await pressTab('Listes');
       expect(
         await screen.findByRole('button', {
-          name: 'Ma liste, 6 articles, liste actuelle',
+          name: 'Ma liste, 6 articles, liste en cours',
         }),
       ).toBeOnTheScreen();
       expect(
