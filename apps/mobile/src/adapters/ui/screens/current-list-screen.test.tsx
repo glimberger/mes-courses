@@ -1,4 +1,4 @@
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, SectionList, StyleSheet } from 'react-native';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import type { ReactTestInstance } from 'react-test-renderer';
 
@@ -6,10 +6,12 @@ import type { ArticleId } from '../../../domain/article';
 import type { ListId } from '../../../domain/shopping-list';
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
 import { focusOn } from '../accessibility/focus';
+import { SCREEN_FAB_CLEARANCE } from '../components/ScreenFab';
 import { UndoSnackbar } from '../components/UndoSnackbar';
 import { Navigation } from '../navigation';
 import { fixture, LONG_ARTICLE_NAME } from '../testing/fixtures';
 import { recordFocusTargets } from '../testing/focus-targets';
+import { waitForMenusToSettle } from '../testing/wait-for-menus';
 import { renderWithStore } from '../testing/render-with-store';
 import type { Fixture } from '../testing/story-store';
 import { CurrentListScreen } from './CurrentListScreen';
@@ -80,6 +82,17 @@ const liveRegionsAbove = (node: ReactTestInstance) => {
 };
 
 describe('CurrentList', () => {
+  it('011 FR-019 leaves a bottom inset under the last row, so it scrolls above the FAB', async () => {
+    await renderScreen();
+    await screen.findByRole('button', { name: 'Ajouter' });
+
+    const { contentContainerStyle } =
+      screen.UNSAFE_getByType(SectionList).props;
+    expect(
+      StyleSheet.flatten(contentContainerStyle).paddingBottom,
+    ).toBeGreaterThanOrEqual(SCREEN_FAB_CLEARANCE);
+  });
+
   it('003 FR-020 renders the sync status bar under the Appbar', async () => {
     await renderScreen({
       seed: fixture,
@@ -345,18 +358,26 @@ describe('CurrentList, editing the list (User Story 2)', () => {
       nativeEvent: { actionName },
     });
 
-  it('FR-032 offers "Modifier la quantité" and "Retirer de la liste" as accessibility actions of each row', async () => {
+  /** Opens the ⋮ menu of the row of this article. */
+  const openRowMenu = async (name: string) => {
+    await waitForMenusToSettle();
+    fireEvent.press(
+      await screen.findByRole('button', { name: `Actions pour ${name}` }),
+    );
+  };
+
+  it('FR-032 offers "Quantité…" and "Retirer de la liste" as accessibility actions of each row', async () => {
     await renderEditable();
 
     expect(
       (await row('Beurre, 2 kg, dans le caddie')).props.accessibilityActions,
     ).toEqual([
-      { name: 'editQuantity', label: 'Modifier la quantité' },
+      { name: 'editQuantity', label: 'Quantité…' },
       { name: 'remove', label: 'Retirer de la liste' },
     ]);
   });
 
-  it('US2-3 the action "Modifier la quantité" opens QuantityDialog prefilled, and saving shows the new quantity', async () => {
+  it('US2-3 the action "Quantité…" opens QuantityDialog prefilled, and saving shows the new quantity', async () => {
     await renderEditable();
 
     await runAction('Lait, 2 L, pas dans le caddie', 'editQuantity');
@@ -372,15 +393,11 @@ describe('CurrentList, editing the list (User Story 2)', () => {
     expect(await row('Lait, 3 L, pas dans le caddie')).toBeOnTheScreen();
   });
 
-  it('US2-4 the row button "Modifier la quantité" opens the dialog, where the quantity can be cleared', async () => {
+  it('011 FR-008 the ⋮ menu entry "Quantité…" opens the dialog, where the quantity can be cleared', async () => {
     await renderEditable({ ...withBeurre, items: withBeurre.items.slice(-1) });
 
-    fireEvent.press(
-      // Hidden from screen readers, which reach it as the row's action.
-      screen.getByLabelText('Modifier la quantité', {
-        includeHiddenElements: true,
-      }),
-    );
+    await openRowMenu('Beurre');
+    fireEvent.press(await screen.findByLabelText('Quantité de Beurre'));
     fireEvent.press(
       await screen.findByRole('button', { name: 'Effacer la quantité' }),
     );
@@ -388,18 +405,14 @@ describe('CurrentList, editing the list (User Story 2)', () => {
     expect(await row('Beurre, dans le caddie')).toBeOnTheScreen();
   });
 
-  it('US2-6 the row button "Retirer de la liste" removes the item at once and offers "Annuler"', async () => {
+  it('011 FR-008 the ⋮ menu entry "Retirer de la liste" removes the item at once, with no confirmation, and offers "Annuler"', async () => {
     const { stored } = await renderEditable({
       ...withBeurre,
       items: withBeurre.items.slice(-1),
     });
 
-    fireEvent.press(
-      // Hidden from screen readers, which reach it as the row's action.
-      screen.getByLabelText('Retirer de la liste', {
-        includeHiddenElements: true,
-      }),
-    );
+    await openRowMenu('Beurre');
+    fireEvent.press(await screen.findByLabelText('Retirer Beurre de la liste'));
 
     expect(
       await screen.findByText('« Beurre » retiré de la liste'),

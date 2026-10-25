@@ -5,12 +5,7 @@ import {
   type AccessibilityActionEvent,
   type HostInstance,
 } from 'react-native';
-import {
-  IconButton,
-  Text,
-  TouchableRipple,
-  useTheme,
-} from 'react-native-paper';
+import { Text, TouchableRipple, useTheme } from 'react-native-paper';
 
 import type { Quantity } from '../../../domain/quantity';
 import type { AppTheme } from '../theme/theme';
@@ -19,6 +14,7 @@ import { CheckboxBox } from './BrandCheckbox';
 import { Card } from './Card';
 import { formatQuantity } from './format-quantity';
 import { paperRef } from './paper-ref';
+import { RowMenu, type RowMenuItem } from './RowMenu';
 
 // The mockups' row measures (`.row`), off the 4 dp grid.
 const ROW_MIN_HEIGHT = 64;
@@ -32,6 +28,8 @@ export type ListItemRowProps = {
   onEditQuantity?: () => void;
   /** Shows the action "Retirer de la liste" (US2-6). */
   onRemove?: () => void;
+  /** Opens the ⋮ menu when first shown (stories and screenshots). */
+  menuInitiallyOpen?: boolean;
   /** The checkbox screen readers focus, for a focus move (FR-037). */
   ref?: Ref<HostInstance>;
 };
@@ -52,12 +50,12 @@ const EDIT_QUANTITY = 'editQuantity';
 const REMOVE = 'remove';
 
 /**
- * One item of a list, ticked or unticked by a tap. The checkbox, the whole row but its trailing
- * actions, is the one element screen readers see: they reach "Modifier la quantité" and
- * "Retirer de la liste" as its accessibility actions (FR-032), so the trailing buttons are hidden
- * from them. A ticked item shows a check mark and text in `onSurfaceVariant`, never a
- * lower opacity, so its contrast is the one the theme test checks (FR-035, FR-036). The
- * name wraps (FR-033) and the row is at least 48 dp high (FR-034).
+ * One item of a list, ticked or unticked by a tap on the square checkbox at its start. The
+ * trailing ⋮ menu offers "Quantité…" and "Retirer de la liste" (011 FR-008); screen readers reach
+ * the same two as accessibility actions of the checkbox (FR-032). A ticked item shows a check
+ * mark and a struck-through name (011 FR-009) in `onSurfaceVariant`, never a lower opacity, so
+ * its contrast is the one the theme test checks (FR-036). The name wraps (FR-033) and the row is
+ * at least 48 dp high (FR-034).
  */
 export const ListItemRow = memo(function ListItemRow({
   name,
@@ -66,18 +64,40 @@ export const ListItemRow = memo(function ListItemRow({
   onToggle,
   onEditQuantity,
   onRemove,
+  menuInitiallyOpen,
   ref,
 }: ListItemRowProps) {
   const { colors, fonts } = useTheme() as AppTheme;
   const textStyle = [
     { color: inCart ? colors.onSurfaceVariant : colors.onSurface },
-    inCart && { fontFamily: fonts.bodyLarge.fontFamily },
+    inCart && {
+      fontFamily: fonts.bodyLarge.fontFamily,
+      textDecorationLine: 'line-through' as const,
+    },
   ];
   const actions = [
-    ...(onEditQuantity
-      ? [{ name: EDIT_QUANTITY, label: 'Modifier la quantité' }]
-      : []),
+    ...(onEditQuantity ? [{ name: EDIT_QUANTITY, label: 'Quantité…' }] : []),
     ...(onRemove ? [{ name: REMOVE, label: 'Retirer de la liste' }] : []),
+  ];
+  const menuItems: RowMenuItem[] = [
+    ...(onEditQuantity
+      ? [
+          {
+            title: 'Quantité…',
+            accessibilityLabel: `Quantité de ${name}`,
+            onPress: onEditQuantity,
+          },
+        ]
+      : []),
+    ...(onRemove
+      ? [
+          {
+            title: 'Retirer de la liste',
+            accessibilityLabel: `Retirer ${name} de la liste`,
+            onPress: onRemove,
+          },
+        ]
+      : []),
   ];
   const onAction = ({ nativeEvent }: AccessibilityActionEvent) => {
     if (nativeEvent.actionName === EDIT_QUANTITY) onEditQuantity?.();
@@ -117,30 +137,12 @@ export const ListItemRow = memo(function ListItemRow({
           </View>
         </View>
       </TouchableRipple>
-      {actions.length > 0 && (
-        // Reached by screen readers as the checkbox's actions.
-        <View
-          importantForAccessibility="no-hide-descendants"
-          accessibilityElementsHidden
-          style={styles.actions}
-        >
-          {onEditQuantity && (
-            <IconButton
-              icon="edit"
-              accessibilityLabel="Modifier la quantité"
-              onPress={onEditQuantity}
-              style={styles.action}
-            />
-          )}
-          {onRemove && (
-            <IconButton
-              icon="close"
-              accessibilityLabel="Retirer de la liste"
-              onPress={onRemove}
-              style={styles.action}
-            />
-          )}
-        </View>
+      {menuItems.length > 0 && (
+        <RowMenu
+          name={name}
+          items={menuItems}
+          defaultVisible={menuInitiallyOpen ?? false}
+        />
       )}
     </Card>
   );
@@ -173,7 +175,4 @@ const styles = StyleSheet.create({
   },
   name: { flexShrink: 1 },
   quantity: typeOverrides.quantity,
-  actions: { flexDirection: 'row' },
-  // The mockups' 48 dp icon buttons (FR-034).
-  action: { width: 48, height: 48, margin: 0 },
 });

@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { Quantity } from '../../../domain/quantity';
 import { LONG_ARTICLE_NAME } from '../testing/fixtures';
+import { waitForMenusToSettle } from '../testing/wait-for-menus';
 import { darkTheme, lightTheme } from '../theme/theme';
 import { ThemeProvider } from '../theme/theme-provider';
 import { ListItemRow } from './ListItemRow';
@@ -95,14 +96,14 @@ describe('ListItemRow', () => {
     expect(screen.getByText('2 L')).toBeOnTheScreen();
   });
 
-  it('FR-035 shows a ticked item with a check mark and no strikethrough, not only a color', () => {
+  it('011 FR-009 shows a ticked item with a check mark and a struck-through name, not only a color', () => {
     renderRow({ inCart: true, quantity: { amount: 2, unit: 'L' } });
 
     // The marked box: the weight-700 check mark of the mockups.
     expect(
       screen.UNSAFE_queryAllByProps({ name: 'check', weight: 700 }),
     ).not.toHaveLength(0);
-    expect(decorationOf('Lait')).toBeUndefined();
+    expect(decorationOf('Lait')).toBe('line-through');
     expect(decorationOf('2 L')).toBeUndefined();
   });
 
@@ -110,7 +111,7 @@ describe('ListItemRow', () => {
     ['light', lightTheme],
     ['dark', darkTheme],
   ] as const)(
-    'FR-035 shows a ticked item with a check mark and no strikethrough under the %s theme',
+    '011 FR-009 shows a ticked item with a check mark and a struck-through name under the %s theme',
     (scheme, theme) => {
       mockColorScheme = scheme;
       renderRow({ inCart: true, quantity: { amount: 2, unit: 'L' } });
@@ -122,7 +123,7 @@ describe('ListItemRow', () => {
       expect(
         screen.UNSAFE_queryAllByProps({ name: 'check', weight: 700 }),
       ).not.toHaveLength(0);
-      expect(decorationOf('Lait')).toBeUndefined();
+      expect(decorationOf('Lait')).toBe('line-through');
       expect(decorationOf('2 L')).toBeUndefined();
     },
   );
@@ -205,6 +206,39 @@ describe('ListItemRow', () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
+  it('011 FR-008 has no ⋮ menu without handlers', () => {
+    renderRow();
+
+    expect(
+      screen.queryByRole('button', { name: 'Actions pour Lait' }),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('011 FR-008 offers "Quantité…" and "Retirer de la liste", named after the article, in the ⋮ menu', async () => {
+    const onEditQuantity = jest.fn();
+    const onRemove = jest.fn();
+    render(
+      <ThemeProvider>
+        <ListItemRow
+          name="Lait"
+          quantity={null}
+          inCart={false}
+          onToggle={jest.fn()}
+          onEditQuantity={onEditQuantity}
+          onRemove={onRemove}
+        />
+      </ThemeProvider>,
+    );
+    await waitForMenusToSettle();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Actions pour Lait' }));
+    fireEvent.press(await screen.findByLabelText('Quantité de Lait'));
+    expect(onEditQuantity).toHaveBeenCalledTimes(1);
+    fireEvent.press(screen.getByRole('button', { name: 'Actions pour Lait' }));
+    fireEvent.press(await screen.findByLabelText('Retirer Lait de la liste'));
+    expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
   describe('when a sync changes the tick', () => {
     const synced = (inCart: boolean) => (
       <ThemeProvider>
@@ -231,7 +265,7 @@ describe('ListItemRow', () => {
         expect(screen.getByText('2 L')).toHaveStyle({
           color: lightTheme.colors.onSurfaceVariant,
         });
-        expect(decorationOf('Lait')).toBeUndefined();
+        expect(decorationOf('Lait')).toBe('line-through');
       } finally {
         jest.useRealTimers();
       }

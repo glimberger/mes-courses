@@ -116,6 +116,18 @@ export const removeRow = (rowLabel: string) =>
     device.getPlatform() === 'ios' ? 'Retirer de la liste' : 'remove',
   );
 
+/** Opens the ⋮ menu of the row of this article on the current list. */
+export const openListRowMenu = (name: string) =>
+  element(by.label(`Actions pour ${name}`)).tap();
+
+/** Taps the entry of an open row menu by the accessible label naming the article. */
+export const chooseRowMenuEntry = async (label: string) => {
+  await waitFor(element(by.label(label)))
+    .toBeVisible()
+    .withTimeout(2000);
+  await element(by.label(label)).tap();
+};
+
 /** Taps a tab of the bottom bar. The tab and the label inside it match: either one opens it. */
 export const openTab = (name: 'Courses' | 'Listes' | 'Articles' | 'Réglages') =>
   element(by.label(name)).atIndex(0).tap();

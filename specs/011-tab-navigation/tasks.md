@@ -57,11 +57,11 @@ Paths are under `apps/mobile/src/adapters/ui/` unless stated.
 
 **Independent Test**: set a quantity from a row menu; remove another row and undo.
 
-- [ ] T015 [P] [US2] Test first, then implement the shared `RowMenu` (⋮ button, 48 dp target, accessible label "Actions pour <name>") in `components/RowMenu.tsx` with a story
-- [ ] T016 [US2] Test first, then implement the ⋮ menu on `ListItemRow` with "Quantité…" (opens `QuantityDialog`, `change-item-quantity`) and "Retirer de la liste" (`remove-item-from-list`, `UndoSnackbar` "Annuler" -> `restore-removed-item`, no confirmation) in `components/ListItemRow.tsx` and `screens/CurrentListScreen.tsx`
-- [ ] T017 [US2] Test first, then implement the extended FAB "Ajouter" to `AddArticles` and the bottom inset of the list in `screens/CurrentListScreen.tsx` (reuse `ScreenFab`)
-- [ ] T018 [US2] In-cart rows: square checkbox on the left, struck-through name (`components/ListItemRow.tsx`, `BrandCheckbox.tsx`) with tests
-- [ ] T019 [US2] Update stories (row menu open, in cart), `required-stories.ts`, Detox suite and story screenshots; run the Android suite
+- [x] T015 [P] [US2] Test first, then implement the shared `RowMenu` (⋮ button, 48 dp target, accessible label "Actions pour <name>") in `components/RowMenu.tsx` with a story
+- [x] T016 [US2] Test first, then implement the ⋮ menu on `ListItemRow` with "Quantité…" (opens `QuantityDialog`, `change-item-quantity`) and "Retirer de la liste" (`remove-item-from-list`, `UndoSnackbar` "Annuler" -> `restore-removed-item`, no confirmation) in `components/ListItemRow.tsx` and `screens/CurrentListScreen.tsx`
+- [x] T017 [US2] Test first, then implement the extended FAB "Ajouter" to `AddArticles` and the bottom inset of the list in `screens/CurrentListScreen.tsx` (reuse `ScreenFab`)
+- [x] T018 [US2] In-cart rows: square checkbox on the left, struck-through name (`components/ListItemRow.tsx`, `BrandCheckbox.tsx`) with tests
+- [x] T019 [US2] Update stories (row menu open, in cart), `required-stories.ts`, Detox suite and story screenshots; run the Android suite
 
 ---
 

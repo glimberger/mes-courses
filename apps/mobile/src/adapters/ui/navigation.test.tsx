@@ -96,18 +96,27 @@ describe('Navigation', () => {
   });
 
   describe('while the keyboard is open', () => {
-    const listeners = new Map<string, () => void>();
-    const emit = (event: string) => act(() => listeners.get(event)?.());
+    const listeners = new Map<string, Set<(event: unknown) => void>>();
+    // The row menus of the current list read the keyboard's coordinates too.
+    const emit = (event: string) =>
+      act(() =>
+        listeners
+          .get(event)
+          ?.forEach((listener) =>
+            listener({ endCoordinates: { height: 300 } }),
+          ),
+      );
 
     beforeEach(() => {
       listeners.clear();
       jest
         .spyOn(Keyboard, 'addListener')
         .mockImplementation((event, listener) => {
-          listeners.set(event, listener as () => void);
-          return { remove: () => listeners.delete(event) } as ReturnType<
-            typeof Keyboard.addListener
-          >;
+          const typed = listener as (event: unknown) => void;
+          listeners.set(event, (listeners.get(event) ?? new Set()).add(typed));
+          return {
+            remove: () => listeners.get(event)?.delete(typed),
+          } as ReturnType<typeof Keyboard.addListener>;
         });
     });
 
