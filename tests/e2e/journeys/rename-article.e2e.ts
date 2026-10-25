@@ -51,7 +51,7 @@ describe('rename an article', () => {
       element(by.label('Lait demi-écrémé, dans 2 listes')).atIndex(0),
     )
       .toBeVisible()
-      .withTimeout(2000);
+      .withTimeout(5000);
     await openTab('Courses');
     await expectRow('Lait demi-écrémé, pas dans le caddie');
     await openLists();

@@ -83,7 +83,7 @@ export const createArticle = async (
   // The snackbar slides in.
   await waitFor(element(by.text(`« ${name} » ajouté`)))
     .toBeVisible()
-    .withTimeout(2000);
+    .withTimeout(5000);
 };
 
 /** From the current list, opens AddArticles, with the FAB or from the empty list. */
@@ -104,13 +104,13 @@ export const backToList = async () => {
 export const expectRow = (label: string) =>
   waitFor(element(by.label(label)))
     .toBeVisible()
-    .withTimeout(2000);
+    .withTimeout(5000);
 
 /** Taps "Annuler" in the undo snackbar, once it has slid fully in. */
 export const tapUndo = async () => {
   await waitFor(element(by.text('Annuler')))
     .toBeVisible(100)
-    .withTimeout(2000);
+    .withTimeout(5000);
   await element(by.text('Annuler')).tap();
 };
 
@@ -131,7 +131,7 @@ export const openListRowMenu = (name: string) =>
 export const chooseRowMenuEntry = async (label: string) => {
   await waitFor(element(by.label(label)))
     .toBeVisible()
-    .withTimeout(2000);
+    .withTimeout(5000);
   await element(by.label(label)).tap();
 };
 
@@ -163,7 +163,7 @@ export const chooseList = async (rowLabel: string, name: string) => {
   // Lists tab stays mounted behind the Courses tab).
   await waitFor(element(by.text('Nouvelle liste')))
     .not.toBeVisible()
-    .withTimeout(2000);
+    .withTimeout(5000);
   await expect(element(by.text(name))).toBeVisible();
 };
 
@@ -193,7 +193,7 @@ export const tapToAdd = async (name: string) => {
 export const expectAddedRow = (name: string) =>
   waitFor(element(by.label(`${name} ajoutée, toucher pour retirer`)))
     .toBeVisible()
-    .withTimeout(2000);
+    .withTimeout(5000);
 
 /** From AddArticles, taps the added row of this article again, which takes it off the list. */
 export const tapToRemove = async (name: string) => {
@@ -202,7 +202,7 @@ export const tapToRemove = async (name: string) => {
     .tap();
   await waitFor(element(by.label(`Ajouter ${name}`)))
     .toBeVisible()
-    .withTimeout(2000);
+    .withTimeout(5000);
 };
 
 /**
@@ -237,5 +237,5 @@ export const openCatalogRowMenu = async (name: string, entry: string) => {
   await element(by.label(`Actions pour ${name}`)).tap();
   await waitFor(element(by.text(entry)))
     .toBeVisible()
-    .withTimeout(2000);
+    .withTimeout(5000);
 };

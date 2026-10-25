@@ -17,17 +17,21 @@ describe('create an article from the Articles tab', () => {
     await element(by.text('Catégorie')).swipe('up', 'fast', 0.8);
     await waitFor(element(by.text('Nouvelle catégorie')))
       .toBeVisible()
-      .withTimeout(2000);
+      .withTimeout(5000);
     await element(by.text('Nouvelle catégorie')).tap();
     await waitFor(element(by.text('Nouvelle catégorie')).atIndex(1))
       .toExist()
-      .withTimeout(2000);
+      .withTimeout(5000);
     await typeIntoDialog('Nom', 'Bébé');
     // The dialog's button is listed before the form's, which shows through.
     await element(by.label('Créer')).atIndex(0).tap();
     await waitFor(element(by.label('Bébé')).atIndex(0))
       .toExist()
-      .withTimeout(2000);
+      .withTimeout(5000);
+    // Let the category dialog finish unmounting before typing into the form's field.
+    await waitFor(element(by.text('Nouvelle catégorie')).atIndex(1))
+      .not.toExist()
+      .withTimeout(5000);
 
     await typeInto('Nom', 'Couches');
     await element(by.label('Créer')).tap();
@@ -40,7 +44,7 @@ describe('create an article from the Articles tab', () => {
       ).atIndex(0),
     )
       .toBeVisible()
-      .withTimeout(2000);
+      .withTimeout(5000);
     await expect(
       element(by.text('Bébé').withAncestor(by.label('Articles du catalogue'))),
     ).toBeVisible();

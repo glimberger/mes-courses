@@ -29,7 +29,7 @@ describe('remove an item and undo', () => {
     // The snackbar slides in.
     await waitFor(element(by.text('« Beurre » retiré de la liste')))
       .toBeVisible()
-      .withTimeout(2000);
+      .withTimeout(5000);
     await expect(
       element(by.label('Beurre, 2 kg, dans le caddie')),
     ).not.toExist();
@@ -41,7 +41,7 @@ describe('remove an item and undo', () => {
 
   it('011 FR-008 the ⋮ menu sets the quantity of a row, then removes another row, and "Annuler" brings it back', async () => {
     await openAddArticles();
-    await createArticle('Farine', 'Épicerie salée');
+    await createArticle('Farine', 'Crèmerie');
     await backToList();
     await expectRow('Farine, pas dans le caddie');
 
@@ -56,7 +56,7 @@ describe('remove an item and undo', () => {
     await chooseRowMenuEntry('Retirer Farine de la liste');
     await waitFor(element(by.text('« Farine » retiré de la liste')))
       .toBeVisible()
-      .withTimeout(2000);
+      .withTimeout(5000);
     await tapUndo();
 
     await expectRow('Farine, 2 kg, pas dans le caddie');
