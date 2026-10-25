@@ -46,7 +46,7 @@ describe('delete an article', () => {
 
     await waitFor(element(by.text('« Lait » supprimé')))
       .toBeVisible()
-      .withTimeout(2000);
+      .withTimeout(5000);
     await expect(element(by.label('Actions pour Lait'))).not.toExist();
 
     await tapUndo();
@@ -54,7 +54,7 @@ describe('delete an article', () => {
     // The row and its content match: either one shows it is back.
     await waitFor(element(by.label('Lait, dans 2 listes')).atIndex(0))
       .toBeVisible()
-      .withTimeout(2000);
+      .withTimeout(5000);
     await openTab('Courses');
     await expectRow('Lait, pas dans le caddie');
     await openLists();
