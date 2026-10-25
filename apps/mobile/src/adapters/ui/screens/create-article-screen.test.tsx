@@ -438,4 +438,33 @@ describe('CreateArticle, catalog only (Articles tab)', () => {
       fixture.articles.length,
     );
   });
+
+  it('AC5 a category created from "Nouvelle catégorie" is chosen at once and receives the article', async () => {
+    const { unitOfWork } = await renderCatalogOnly();
+
+    type('Nom', 'Couche');
+    fireEvent.press(screen.getByRole('button', { name: 'Nouvelle catégorie' }));
+    await waitFor(() =>
+      expect(screen.getAllByLabelText('Nom')).toHaveLength(2),
+    );
+    fireEvent.changeText(dialogNameField(), 'Bébé');
+    // The dialog's button comes after the form's.
+    const [, dialogCreate] = screen.getAllByRole('button', { name: 'Créer' });
+    if (!dialogCreate) throw new Error('No dialog button');
+    fireEvent.press(dialogCreate);
+
+    expect(await screen.findByRole('radio', { name: 'Bébé' })).toBeChecked();
+    createOnly();
+
+    await waitFor(async () => {
+      const articles = await unitOfWork.run((repos) => repos.articles.all());
+      const categories = await unitOfWork.run((repos) =>
+        repos.categories.all(),
+      );
+      const baby = categories.find((category) => category.name === 'Bébé');
+      expect(
+        articles.find((article) => article.name === 'Couche')?.categoryId,
+      ).toBe(baby?.id);
+    });
+  });
 });
