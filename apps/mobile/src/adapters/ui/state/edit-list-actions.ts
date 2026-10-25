@@ -67,6 +67,13 @@ export type EditListActions = {
     articleId: ArticleId,
   ) => Promise<Result<void, ItemNotOnList | WriteFailed>>;
   /**
+   * Removes the item from the current list with no undo offer (the add screen's second tap): its
+   * held changes are released at once. An item already gone is `ItemNotOnList`, not reported.
+   */
+  removeItemQuietly: (
+    articleId: ArticleId,
+  ) => Promise<Result<void, ItemNotOnList | WriteFailed>>;
+  /**
    * Ends the offer at once, then puts the item back in the write queue (R8). With the `undoId` of
    * an offer a pull already ended, a tap racing its snackbar restores nothing and shows the notice
    * "Cet article a été supprimé sur un autre appareil." (research R10a).
@@ -242,6 +249,24 @@ export const createEditListActions = (
     return outcome.ok ? ok(undefined) : outcome;
   };
 
+  const removeItemQuietly: EditListActions['removeItemQuietly'] = async (
+    articleId,
+  ) => {
+    const outcome = await writeOnList(
+      'removeItemFromList',
+      (listId) => useCases.removeItemFromList(listId, follow(articleId)),
+      { expected: ['ItemNotOnList'] },
+    );
+    if (!outcome.ok) return outcome;
+    // No offer to undo: the removal is final, so its held changes go to the next sync.
+    await releaseOffer({
+      kind: 'removedItem',
+      removed: outcome.value,
+      name: '',
+    });
+    return ok(undefined);
+  };
+
   const articleDeletedElsewhere = () =>
     set({ notice: { type: 'articleDeletedElsewhere' } });
 
@@ -290,6 +315,7 @@ export const createEditListActions = (
     createArticle,
     changeItemQuantity,
     removeItem,
+    removeItemQuietly,
     undo,
     dismissUndo: endUndo,
   };

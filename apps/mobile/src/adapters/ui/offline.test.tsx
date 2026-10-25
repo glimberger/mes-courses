@@ -92,10 +92,9 @@ const runAction = async (
     nativeEvent: { actionName },
   });
 
-/** From AddArticles, adds the article of this row with no quantity. */
+/** From AddArticles, adds the article of this row with one tap, and no quantity. */
 const addFromCatalog = async (name: string) => {
-  await press(name);
-  await pressLast('Ajouter');
+  await press(`Ajouter ${name}`);
   await screen.findByText(`« ${name} » ajouté`);
 };
 

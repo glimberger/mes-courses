@@ -174,20 +174,53 @@ export const chooseList = async (rowLabel: string, name: string) => {
 const searchCatalog = (name: string) => typeInto('Rechercher un article', name);
 
 /**
- * From AddArticles, taps the catalog row of this article and waits for the quantity dialog
- * ("Ajouter"): the dialog mounts in a portal after the tap.
+ * From AddArticles, taps the catalog row of this article to add it to the current list, with no
+ * quantity, and waits for the row to read as added.
  */
-export const openQuantityDialog = async (name: string) => {
+export const tapToAdd = async (name: string) => {
   await searchCatalog(name);
-  // The row and the name inside it match: tapping either opens the dialog. The search field
-  // holds the name too, so the match is kept inside the list.
-  await element(by.label(name).withAncestor(by.label('Articles du catalogue')))
+  // The row and the toggle inside it match: tapping either adds. The search field holds the name
+  // too, so the match is kept inside the list.
+  await element(
+    by.label(`Ajouter ${name}`).withAncestor(by.label('Articles du catalogue')),
+  )
     .atIndex(0)
     .tap();
-  await waitFor(element(by.label('Ajouter')))
+  await expectAddedRow(name);
+};
+
+/** Waits for the row of the add screen to read as added ("<name> ajoutée, toucher pour retirer"). */
+export const expectAddedRow = (name: string) =>
+  waitFor(element(by.label(`${name} ajoutée, toucher pour retirer`)))
+    .toBeVisible()
+    .withTimeout(2000);
+
+/** From AddArticles, taps the added row of this article again, which takes it off the list. */
+export const tapToRemove = async (name: string) => {
+  await element(by.label(`${name} ajoutée, toucher pour retirer`))
+    .atIndex(0)
+    .tap();
+  await waitFor(element(by.label(`Ajouter ${name}`)))
     .toBeVisible()
     .withTimeout(2000);
 };
+
+/**
+ * From AddArticles, searches a name no article has, taps "Créer « <name> »", chooses the category
+ * and creates the article, which is added to the current list; ends back on AddArticles, with the
+ * name already filled in by the search.
+ */
+export const createFromSearch = async (name: string, category: string) => {
+  await searchCatalog(name);
+  await element(by.text(`Créer « ${name} »`)).tap();
+  // The radio item and the text inside it match: tapping either chooses the category.
+  await element(by.label(category)).atIndex(0).tap();
+  await element(by.label('Créer et ajouter')).tap();
+  await expectAddedRow(name);
+};
+
+/** From AddArticles, searches the catalog for this name (the field is emptied with ''). */
+export const search = (name: string) => searchCatalog(name);
 
 /** Opens the Articles tab and waits for its extended FAB. */
 export const openArticles = async () => {

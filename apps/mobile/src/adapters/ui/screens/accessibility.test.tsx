@@ -126,7 +126,7 @@ const views: Record<string, () => Promise<void>> = {
   AddArticles: async () => {
     await openApp();
     await press('Ajouter');
-    await screen.findByRole('button', { name: 'Beurre' });
+    await screen.findByRole('button', { name: 'Ajouter Beurre' });
   },
   'AddArticles with a search': async () => {
     await openApp();
@@ -150,9 +150,13 @@ const views: Record<string, () => Promise<void>> = {
   },
   QuantityDialog: async () => {
     await openApp();
-    await press('Ajouter');
-    await press('Beurre');
-    await header('Beurre');
+    // The dialog of the row's "Quantité…", as a screen reader opens it.
+    fireEvent(
+      screen.getByRole('checkbox', { name: 'Lait, 2 L, pas dans le caddie' }),
+      'accessibilityAction',
+      { nativeEvent: { actionName: 'editQuantity' } },
+    );
+    await header('Lait');
   },
   CreateListDialog: async () => {
     await openApp();
