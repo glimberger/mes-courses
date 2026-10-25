@@ -32,9 +32,13 @@ describe('tab routes', () => {
     ).toEqual(ROOTS);
   });
 
-  it('keeps Catalog and the EditArticle route until phase 5', () => {
-    const catalog: keyof CatalogStackParamList = 'Catalog';
-    const edit: keyof CoursesStackParamList = 'EditArticle';
-    expect([catalog, edit]).toEqual(['Catalog', 'EditArticle']);
+  it('has no EditArticle route: the edit dialog replaced it', () => {
+    const routes: string[] = [
+      'CurrentList',
+      'AddArticles',
+      'CreateArticle',
+      'Catalog',
+    ] satisfies (keyof CoursesStackParamList | keyof CatalogStackParamList)[];
+    expect(routes).not.toContain('EditArticle');
   });
 });

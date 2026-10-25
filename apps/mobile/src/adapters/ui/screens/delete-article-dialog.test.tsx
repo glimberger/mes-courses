@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
-import type { ArticleId, ArticleUsage } from '../../../domain/article';
+import type { ArticleId } from '../../../domain/article';
 import type { ListId } from '../../../domain/shopping-list';
 import { NoticeSnackbar } from '../components/NoticeSnackbar';
 import { fixture } from '../testing/fixtures';
@@ -13,23 +13,20 @@ import { DeleteArticleDialog } from './DeleteArticleDialog';
 const maListe = 'list-ma-liste' as ListId;
 const lait = 'article-lait' as ArticleId;
 
-const usageOn = (lists: string[]): ArticleUsage => ({
+/** What the dialog is opened with: the article and the number of lists holding it. */
+const usageOn = (count: number) => ({
   article: { id: lait, name: 'Lait' },
-  lists: lists.map((name) => ({ id: `list-${name}` as ListId, name })),
+  count,
 });
+type Usage = ReturnType<typeof usageOn>;
 
 /** The dialog as a screen holds it: open on `usage` until it closes. */
-const Host = ({
-  usage,
-  onClose,
-}: {
-  usage: ArticleUsage;
-  onClose: () => void;
-}) => {
+const Host = ({ usage, onClose }: { usage: Usage; onClose: () => void }) => {
   const [open, setOpen] = useState(true);
   return (
     <DeleteArticleDialog
-      usage={open ? usage : null}
+      article={open ? usage.article : null}
+      count={usage.count}
       onClose={() => {
         setOpen(false);
         onClose();
@@ -39,10 +36,7 @@ const Host = ({
 };
 
 /** The dialog over the fixture's "Ma liste", with the snackbar every screen shares. */
-const renderDialog = async (
-  usage: ArticleUsage,
-  scenario: StoryScenario = {},
-) => {
+const renderDialog = async (usage: Usage, scenario: StoryScenario = {}) => {
   const onClose = jest.fn();
   const rendered = await renderWithStore(
     <>
@@ -63,39 +57,37 @@ const press = (name: string) =>
 
 describe('DeleteArticleDialog', () => {
   it('shows the title "Supprimer « Lait » ?"', async () => {
-    await renderDialog(usageOn([]));
+    await renderDialog(usageOn(0));
 
     expect(screen.getByText('Supprimer « Lait » ?')).toBeOnTheScreen();
   });
 
-  it('FR-006 for no list, says the article leaves the catalog', async () => {
-    await renderDialog(usageOn([]));
+  it('AC4 for no list, says the article is in none', async () => {
+    await renderDialog(usageOn(0));
 
     expect(
-      screen.getByText("L'article sera retiré du catalogue."),
+      screen.getByText('L’article n’est dans aucune liste.'),
     ).toBeOnTheScreen();
   });
 
-  it('FR-006 for one list, names it', async () => {
-    await renderDialog(usageOn(['Ma liste']));
+  it('AC4 for one list, says it leaves 1 liste', async () => {
+    await renderDialog(usageOn(1));
 
     expect(
-      screen.getByText('Il est dans la liste « Ma liste » et en sera retiré.'),
+      screen.getByText('L’article sera retiré de 1 liste.'),
     ).toBeOnTheScreen();
   });
 
-  it('US2-3 for several lists, names them with "et"', async () => {
-    await renderDialog(usageOn(['Barbecue', 'Ma liste']));
+  it('AC4 for several lists, says how many it leaves', async () => {
+    await renderDialog(usageOn(3));
 
     expect(
-      screen.getByText(
-        'Il est dans les listes « Barbecue » et « Ma liste » et en sera retiré.',
-      ),
+      screen.getByText('L’article sera retiré de 3 listes.'),
     ).toBeOnTheScreen();
   });
 
   it('US2-2 "Annuler" closes the dialog and changes nothing', async () => {
-    const { onClose, stored, store } = await renderDialog(usageOn([]));
+    const { onClose, stored, store } = await renderDialog(usageOn(0));
 
     press('Annuler');
 
@@ -108,9 +100,7 @@ describe('DeleteArticleDialog', () => {
   });
 
   it('US2-1 US2-4 "Supprimer" deletes the article and closes the dialog', async () => {
-    const { onClose, stored, store } = await renderDialog(
-      usageOn(['Ma liste']),
-    );
+    const { onClose, stored, store } = await renderDialog(usageOn(1));
 
     press('Supprimer');
 
@@ -128,10 +118,9 @@ describe('DeleteArticleDialog', () => {
   });
 
   it('an unexpected delete failure closes the dialog, changes nothing and shows "La modification n\'a pas pu être enregistrée."', async () => {
-    const { onClose, stored, errorReporter } = await renderDialog(
-      usageOn(['Ma liste']),
-      { failing: ['deleteArticle'] },
-    );
+    const { onClose, stored, errorReporter } = await renderDialog(usageOn(1), {
+      failing: ['deleteArticle'],
+    });
 
     press('Supprimer');
 
@@ -149,7 +138,7 @@ describe('DeleteArticleDialog', () => {
   });
 
   it('keeps the list in storage untouched on Annuler', async () => {
-    const { unitOfWork } = await renderDialog(usageOn(['Ma liste']));
+    const { unitOfWork } = await renderDialog(usageOn(1));
 
     press('Annuler');
 

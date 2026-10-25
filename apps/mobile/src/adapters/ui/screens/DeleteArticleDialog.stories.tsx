@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
 
-import type { ArticleId, ArticleUsage } from '../../../domain/article';
-import type { ListId } from '../../../domain/shopping-list';
+import type { ArticleId } from '../../../domain/article';
 import { fixture } from '../testing/fixtures';
 import { DeleteArticleDialog } from './DeleteArticleDialog';
 
@@ -16,20 +15,15 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-const usageOn = (names: string[]): ArticleUsage => ({
-  article: { id: 'article-lait' as ArticleId, name: 'Lait' },
-  lists: names.map((name) => ({ id: `list-${name}` as ListId, name })),
-});
+const lait = { id: 'article-lait' as ArticleId, name: 'Lait' };
 
-export const NoList: Story = { args: { usage: usageOn([]) } };
+export const NoList: Story = { args: { article: lait, count: 0 } };
 
-export const OneList: Story = { args: { usage: usageOn(['Ma liste']) } };
+export const OneList: Story = { args: { article: lait, count: 1 } };
 
-export const SeveralLists: Story = {
-  args: { usage: usageOn(['Barbecue', 'Ma liste', 'Pique-nique']) },
-};
+export const SeveralLists: Story = { args: { article: lait, count: 3 } };
 
-/** Mockup 9 in dark appearance. */
+/** Mockup 24 in dark appearance. */
 export const SeveralListsDark: Story = {
   ...SeveralLists,
   parameters: { ...SeveralLists.parameters, appearance: 'dark' },

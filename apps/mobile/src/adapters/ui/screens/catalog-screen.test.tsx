@@ -6,6 +6,7 @@ import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
 import type { Fixture, StoryScenario } from '../testing/story-store';
 import { RecordingErrorReporter } from '../../../application/testing/recording-error-reporter';
+import { UndoSnackbar } from '../components/UndoSnackbar';
 import { Navigation } from '../navigation';
 import { CatalogScreen } from './CatalogScreen';
 
@@ -38,7 +39,22 @@ const seed: Fixture = {
 };
 
 const renderScreen = (scenario: StoryScenario = {}) =>
-  renderWithStore(<CatalogScreen />, { seed, ...scenario });
+  renderWithStore(
+    <>
+      <CatalogScreen />
+      <UndoSnackbar />
+    </>,
+    { seed, ...scenario },
+  );
+
+const lait = 'article-lait' as ArticleId;
+
+const chooseFor = async (name: string, entry: 'Modifier' | 'Supprimer') => {
+  fireEvent.press(
+    await screen.findByRole('button', { name: `Actions pour ${name}` }),
+  );
+  fireEvent.press(screen.getByText(entry));
+};
 
 const search = (text: string) =>
   fireEvent.changeText(
@@ -174,5 +190,126 @@ describe('Catalog', () => {
         repos.items.forList('list-ma-liste' as ListId),
       ),
     ).toHaveLength(fixture.items.length);
+  });
+});
+
+describe('Catalog row menu', () => {
+  it('AC3 AC4 opens a menu with "Modifier" and "Supprimer" from the ⋮ button of a row', async () => {
+    await renderScreen();
+    await screen.findByText('Beurre');
+
+    fireEvent.press(screen.getByRole('button', { name: 'Actions pour Lait' }));
+
+    expect(screen.getByText('Modifier')).toBeOnTheScreen();
+    expect(screen.getByText('Supprimer')).toBeOnTheScreen();
+  });
+
+  it('AC3 "Modifier" opens the edit dialog for that article, saying it is on 2 listes', async () => {
+    await renderScreen();
+    await screen.findByLabelText('Lait, dans 2 listes');
+
+    await chooseFor('Lait', 'Modifier');
+
+    expect(await screen.findByText("Modifier l'article")).toBeOnTheScreen();
+    expect(screen.getByLabelText('Nom')).toHaveDisplayValue('Lait');
+    expect(
+      screen.getByText('Ce changement s’applique à 2 listes.'),
+    ).toBeOnTheScreen();
+  });
+
+  it('AC3 the edit dialog says the article is in no list for an unused article', async () => {
+    await renderScreen();
+    await screen.findByText('Beurre');
+
+    await chooseFor('Beurre', 'Modifier');
+
+    expect(
+      await screen.findByText('Cet article n’est dans aucune liste.'),
+    ).toBeOnTheScreen();
+  });
+
+  it('AC3 saving a new name shows it on the row, which keeps its badge', async () => {
+    const { unitOfWork } = await renderScreen();
+    await screen.findByLabelText('Lait, dans 2 listes');
+    await chooseFor('Lait', 'Modifier');
+
+    fireEvent.changeText(await screen.findByLabelText('Nom'), 'Lait entier');
+    fireEvent.press(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(
+      await screen.findByLabelText('Lait entier, dans 2 listes'),
+    ).toBeOnTheScreen();
+    expect(screen.queryByText("Modifier l'article")).not.toBeOnTheScreen();
+    expect(
+      (await unitOfWork.run((repos) => repos.articles.findById(lait)))?.name,
+    ).toBe('Lait entier');
+  });
+
+  it('AC4 "Supprimer" asks first, saying the article leaves 2 listes', async () => {
+    await renderScreen();
+    await screen.findByLabelText('Lait, dans 2 listes');
+
+    await chooseFor('Lait', 'Supprimer');
+
+    expect(await screen.findByText('Supprimer « Lait » ?')).toBeOnTheScreen();
+    expect(
+      screen.getByText('L’article sera retiré de 2 listes.'),
+    ).toBeOnTheScreen();
+  });
+
+  it('AC4 "Annuler" in the dialog deletes nothing', async () => {
+    const { unitOfWork } = await renderScreen();
+    await screen.findByLabelText('Lait, dans 2 listes');
+    await chooseFor('Lait', 'Supprimer');
+    await screen.findByText('Supprimer « Lait » ?');
+
+    fireEvent.press(screen.getByRole('button', { name: 'Annuler' }));
+
+    await waitFor(() =>
+      expect(screen.queryByText('Supprimer « Lait » ?')).toBeNull(),
+    );
+    expect(
+      await unitOfWork.run((repos) => repos.articles.findById(lait)),
+    ).not.toBeNull();
+  });
+
+  it('AC4 confirming deletes the article, then "Annuler" in the snackbar restores it with its badge', async () => {
+    const { unitOfWork } = await renderScreen();
+    await screen.findByLabelText('Lait, dans 2 listes');
+    await chooseFor('Lait', 'Supprimer');
+    await screen.findByText('Supprimer « Lait » ?');
+
+    fireEvent.press(screen.getByRole('button', { name: 'Supprimer' }));
+
+    expect(await screen.findByText('« Lait » supprimé')).toBeOnTheScreen();
+    // A boolean, so a failed poll does not format the whole tree and outlast the timeout.
+    await waitFor(() =>
+      expect(screen.queryByLabelText(/^Lait, dans/) === null).toBe(true),
+    );
+    expect(
+      await unitOfWork.run((repos) => repos.articles.findById(lait)),
+    ).toBeNull();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Annuler' }));
+
+    expect(
+      await screen.findByLabelText('Lait, dans 2 listes'),
+    ).toBeOnTheScreen();
+    expect(
+      await unitOfWork.run((repos) => repos.articles.findById(lait)),
+    ).not.toBeNull();
+  });
+
+  it('AC4 the category of a deleted article is hidden once empty', async () => {
+    await renderScreen();
+    await screen.findByText('Beurre');
+    await chooseFor('Pommes', 'Supprimer');
+    await screen.findByText('Supprimer « Pommes » ?');
+
+    fireEvent.press(screen.getByRole('button', { name: 'Supprimer' }));
+
+    await screen.findByText('« Pommes » supprimé');
+    expect(screen.queryByText('Pommes')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Fruits et légumes')).not.toBeOnTheScreen();
   });
 });

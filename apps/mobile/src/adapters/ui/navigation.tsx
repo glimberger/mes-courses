@@ -20,7 +20,6 @@ import { CatalogScreen } from './screens/CatalogScreen';
 import { ChoosePasswordScreen } from './screens/ChoosePasswordScreen';
 import { CreateArticleScreen } from './screens/CreateArticleScreen';
 import { CurrentListScreen } from './screens/CurrentListScreen';
-import { EditArticleScreen } from './screens/EditArticleScreen';
 import { ListsScreen } from './screens/ListsScreen';
 import { SignedOutNotice } from './screens/SignedOutNoticeDialog';
 import { SettingsScreen } from './screens/SettingsScreen';
@@ -64,7 +63,6 @@ const CoursesNavigator = () => (
     <CoursesStack.Screen name="CurrentList" component={CurrentListScreen} />
     <CoursesStack.Screen name="AddArticles" component={AddArticlesScreen} />
     <CoursesStack.Screen name="CreateArticle" component={CreateArticleScreen} />
-    <CoursesStack.Screen name="EditArticle" component={EditArticleScreen} />
   </CoursesStack.Navigator>
 );
 

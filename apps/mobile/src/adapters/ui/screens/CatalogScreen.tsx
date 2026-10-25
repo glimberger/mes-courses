@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
-import { SectionList, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { SectionList, StyleSheet, View, type HostInstance } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { ArticleId } from '../../../domain/article';
 import type { CatalogView } from '../../../domain/catalog-view';
+import { focusOn } from '../accessibility/focus';
 import { CatalogArticleRow } from '../components/CatalogArticleRow';
 import { CategoryHeader } from '../components/CategoryHeader';
 import { EmptyState } from '../components/EmptyState';
@@ -17,14 +18,17 @@ import { hasScreenBelow } from '../navigation-history';
 import type { RootStackParamList } from '../routes';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
+import { DeleteArticleDialog } from './DeleteArticleDialog';
+import { EditArticleDialog, type EditedArticle } from './EditArticleDialog';
 
-type CatalogArticle = CatalogView['sections'][number]['articles'][number];
+/** A row: the article and the category of its section, which the edit dialog starts from. */
+type CatalogRow = EditedArticle;
 
 /** The articles with their category, empty categories left out (AC1). */
 const withArticles = (view: CatalogView) =>
   view.sections.filter((section) => section.articles.length > 0);
 
-const rowId = (article: CatalogArticle) => article.id;
+const rowId = (row: CatalogRow) => row.id;
 
 /**
  * The Articles tab's root: the whole catalog by category, searched as the user types, each row
@@ -44,6 +48,9 @@ export const CatalogScreen = () => {
   // The store holds one query, shared with the add screen: this screen puts its own back
   // whenever it is shown, and drops it when it leaves, as the add screen does.
   const [query, setQuery] = useState('');
+  const [editing, setEditing] = useState<EditedArticle | null>(null);
+  const [deleting, setDeleting] = useState<EditedArticle | null>(null);
+  const titleRef = useRef<HostInstance>(null);
   useEffect(() => {
     void loadCatalog();
     void loadArticleUsageCounts();
@@ -59,11 +66,15 @@ export const CatalogScreen = () => {
   const counts: ReadonlyMap<ArticleId, number> =
     usageCounts.status === 'success' ? usageCounts.data : new Map();
 
+  const countOf = (article: EditedArticle | null) =>
+    article === null ? 0 : (counts.get(article.id) ?? 0);
+
   return (
     <View style={styles.screen}>
       <ScreenHeader
         title="Articles"
         titleVariant="titleLarge"
+        titleRef={titleRef}
         onBack={
           hasScreenBelow(navigation) ? () => navigation.goBack() : undefined
         }
@@ -90,12 +101,16 @@ export const CatalogScreen = () => {
             return <EmptyState message="Aucun article" />;
           }
           return (
-            <SectionList<CatalogArticle, { title: string }>
+            <SectionList<CatalogRow, { title: string }>
               // Named, so the end-to-end journeys can scroll it.
               accessibilityLabel="Articles du catalogue"
               sections={sections.map((section) => ({
                 title: section.category.name,
-                data: section.articles,
+                data: section.articles.map(({ id, name }) => ({
+                  id,
+                  name,
+                  categoryId: section.category.id,
+                })),
               }))}
               keyExtractor={rowId}
               renderSectionHeader={({ section }) => (
@@ -106,6 +121,8 @@ export const CatalogScreen = () => {
                   <CatalogArticleRow
                     name={item.name}
                     count={counts.get(item.id) ?? 0}
+                    onEdit={() => setEditing(item)}
+                    onDelete={() => setDeleting(item)}
                   />
                 </View>
               )}
@@ -115,6 +132,22 @@ export const CatalogScreen = () => {
               contentContainerStyle={styles.list}
             />
           );
+        }}
+      />
+      <EditArticleDialog
+        article={editing}
+        count={countOf(editing)}
+        onClose={() => {
+          setEditing(null);
+          focusOn(titleRef);
+        }}
+      />
+      <DeleteArticleDialog
+        article={deleting}
+        count={countOf(deleting)}
+        onClose={() => {
+          setDeleting(null);
+          focusOn(titleRef);
         }}
       />
       <ScreenFab

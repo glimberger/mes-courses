@@ -3,7 +3,6 @@ import type {
   NavigatorScreenParams,
 } from '@react-navigation/native';
 
-import type { ArticleId } from '../../domain/article';
 import type { CategoryId } from '../../domain/category';
 
 type CreateArticleParams = {
@@ -19,8 +18,6 @@ export type CoursesStackParamList = {
   CurrentList: undefined;
   AddArticles: undefined;
   CreateArticle: CreateArticleParams;
-  /** Kept until the edit dialog replaces it (phase 5). */
-  EditArticle: { articleId: ArticleId };
 };
 
 /** Listes tab. */
@@ -32,7 +29,6 @@ export type ListsStackParamList = {
 export type CatalogStackParamList = {
   Catalog: undefined;
   CreateArticle: CreateArticleParams;
-  EditArticle: { articleId: ArticleId };
 };
 
 /** Réglages tab. */
