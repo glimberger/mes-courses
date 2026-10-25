@@ -23,7 +23,7 @@ const config = {
   slug: 'mes-courses',
   // Semantic versioning, set by hand in the pull request that leads to a release (research R24);
   // the build number is EAS's, remote and incremented on every build.
-  version: '1.2.0',
+  version: '2.0.0',
   orientation: 'portrait',
   icon: variant.icon,
   userInterfaceStyle: 'automatic',
