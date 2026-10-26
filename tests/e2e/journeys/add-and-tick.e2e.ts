@@ -25,9 +25,10 @@ describe('add articles and tick one', () => {
     await createArticle('Lait', 'Crèmerie', { amount: '2', unit: 'L' });
     await createArticle('Beurre', 'Crèmerie');
 
-    // Created during this visit, so shown, marked as added.
-    await expectAddedRow('Lait');
+    // Created during this visit, so shown, marked as added. "Beurre" comes first in the list, and
+    // "Lait" may be below the fold: check them from the top down.
     await expectAddedRow('Beurre');
+    await expectAddedRow('Lait');
   });
 
   it('AC1 AC2 a tap adds an existing article with no quantity dialog, a second tap takes it off', async () => {

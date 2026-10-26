@@ -189,11 +189,17 @@ export const tapToAdd = async (name: string) => {
   await expectAddedRow(name);
 };
 
-/** Waits for the row of the add screen to read as added ("<name> ajoutée, toucher pour retirer"). */
+/**
+ * Waits for the row of the add screen to read as added ("<name> ajoutée, toucher pour retirer").
+ * The row can sit below the fold (the empty categories above it fill a small screen), where it
+ * is not visible enough, so the list scrolls down to it. It only scrolls down: with several rows
+ * to check, check them from the top of the list to the bottom.
+ */
 export const expectAddedRow = (name: string) =>
   waitFor(element(by.label(`${name} ajoutée, toucher pour retirer`)))
     .toBeVisible()
-    .withTimeout(5000);
+    .whileElement(by.label('Articles du catalogue'))
+    .scroll(200, 'down');
 
 /** From AddArticles, taps the added row of this article again, which takes it off the list. */
 export const tapToRemove = async (name: string) => {
