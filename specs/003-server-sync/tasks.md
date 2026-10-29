@@ -534,7 +534,7 @@ revoke it from the first: it stops syncing on its next attempt and keeps its loc
   - not yet: the scenarios of §4 and §5 (see below).
 
   Progress (2026-10-11, commit d036e39, PR #89):
-  - done: quickstart §3 on the Pi (Debian 13, aarch64) at `courses.glim-agent-pi.duckdns.org`
+  - done: quickstart §3 on the Pi (Debian 13, aarch64) at `courses.glim.duckdns.org`
     (DuckDNS): service and Caddy active, Let's Encrypt certificate, `/v1/health` from mobile
     data and from the home Wi-Fi, HTTP redirected to HTTPS (308);
   - done: Storybook review on iOS;
