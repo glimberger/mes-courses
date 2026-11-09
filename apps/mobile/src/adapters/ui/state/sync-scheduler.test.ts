@@ -330,7 +330,12 @@ describe('sync scheduler', () => {
 });
 
 describe('the store after a cycle', () => {
-  const NO_EFFECTS = { deletedArticles: [], removedItems: [], merges: [] };
+  const NO_EFFECTS = {
+    deletedArticles: [],
+    deletedLists: [],
+    removedItems: [],
+    merges: [],
+  };
   let result: SyncResult;
 
   const buildStore = async () => {

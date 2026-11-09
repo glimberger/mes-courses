@@ -4,6 +4,8 @@ import type { ServerRow } from '@mes-courses/sync-core';
 export type RemoteEffects = {
   /** Articles tombstoned by this pull. */
   deletedArticles: string[];
+  /** Lists tombstoned by this pull (a deletion, not a name merge). */
+  deletedLists: string[];
   /** List items set to `present = false` by this pull. */
   removedItems: { listId: string; articleId: string }[];
   /** Entities merged into another by name. */

@@ -121,6 +121,81 @@ describe('createList', () => {
   });
 });
 
+describe('renameList', () => {
+  it('US1-1 resolves ok and shows the new name in alphabetical place, offline too', async () => {
+    const { store } = await buildStore();
+    await store.getState().loadLists();
+
+    const outcome = await store.getState().renameList(barbecue, 'Zoo');
+
+    expect(outcome).toEqual(ok(undefined));
+    expect(shownLists(store).map(({ name }) => name)).toEqual([
+      'Ma liste',
+      'Zoo',
+    ]);
+  });
+
+  it('US1-4 returns NameAlreadyUsed to the form, unreported, changing nothing', async () => {
+    const { store, errorReporter } = await buildStore();
+    await store.getState().loadLists();
+
+    const outcome = await store.getState().renameList(barbecue, 'ma liste');
+
+    expect(outcome).toEqual(
+      err({
+        type: 'NameAlreadyUsed',
+        existing: { id: maListe, name: 'Ma liste' },
+      }),
+    );
+    expect(shownLists(store).map(({ name }) => name)).toEqual([
+      'Barbecue',
+      'Ma liste',
+    ]);
+    expect(store.getState().notice).toBeNull();
+    expect(errorReporter.reports).toEqual([]);
+  });
+
+  it('US1-6 returns NameRequired to the form, unreported', async () => {
+    const { store, errorReporter } = await buildStore();
+
+    expect(await store.getState().renameList(barbecue, '  ')).toEqual(
+      err({ type: 'NameRequired' }),
+    );
+    expect(errorReporter.reports).toEqual([]);
+  });
+
+  it('returns ListNotFound as expected: no notice, nothing reported', async () => {
+    const { store, errorReporter } = await buildStore();
+
+    const outcome = await store
+      .getState()
+      .renameList('list-unknown' as ListId, 'Zoo');
+
+    expect(outcome).toEqual(err({ type: 'ListNotFound' }));
+    expect(store.getState().notice).toBeNull();
+    expect(errorReporter.reports).toEqual([]);
+  });
+
+  it('resolves to WriteFailed with the failed save notice, reporting the operation without the name', async () => {
+    const { store, errorReporter } = await buildStore({
+      failing: ['renameList'],
+    });
+    await store.getState().loadLists();
+
+    expect(await store.getState().renameList(barbecue, 'Zoo')).toEqual(
+      err({ type: 'WriteFailed' }),
+    );
+    expect(store.getState().notice).toEqual({ type: 'writeFailed' });
+    expect(errorReporter.reports).toEqual([
+      { error: expect.any(Error), context: { operation: 'renameList' } },
+    ]);
+    expect(shownLists(store).map(({ name }) => name)).toEqual([
+      'Barbecue',
+      'Ma liste',
+    ]);
+  });
+});
+
 describe('setCurrentList', () => {
   it('US3-3 refreshes, so the current list region shows the chosen list', async () => {
     const { store } = await buildStore();

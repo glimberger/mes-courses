@@ -5,14 +5,19 @@ import type { ListId } from '../../../domain/shopping-list';
 import { useAppStoreApi } from './app-store-provider';
 import { followRedirects } from './store-kit';
 
-/** What a form edits: an article (EditArticle) or an item of a list (QuantityDialog). */
-export type RemovalTarget = { articleId: ArticleId; listId?: ListId };
+/**
+ * What a form edits: an article (EditArticle), an item of a list (QuantityDialog), or a list
+ * alone (EditListDialog, DeleteListDialog: `listId` with no `articleId`).
+ */
+export type RemovalTarget =
+  | { articleId: ArticleId; listId?: ListId }
+  | { articleId?: undefined; listId: ListId };
 
-export type RemovalReason = 'articleDeleted' | 'itemRemoved';
+export type RemovalReason = 'articleDeleted' | 'itemRemoved' | 'listDeleted';
 
 /**
- * Calls `onRemoved` when a cycle that ends after the form mounted deleted its article or removed
- * its item from its list (FR-020a, research R10a). Cycles before the mount are ignored.
+ * Calls `onRemoved` when a cycle that ends after the form mounted deleted its article or list, or
+ * removed its item from its list (FR-020a, research R10a). Cycles before the mount are ignored.
  */
 export const useRemoteRemoval = (
   target: RemovalTarget,
@@ -31,6 +36,20 @@ export const useRemoteRemoval = (
         if (state.sync.remote === previous.sync.remote) return;
         const { effects } = state.sync.remote;
         const { target: now, onRemoved: callback } = latest.current;
+        if (now.articleId === undefined) {
+          // A list alone; it may be merged away since: the deletion names its survivor.
+          const followedList = followRedirects(
+            state.sync.redirects,
+            now.listId,
+          );
+          if (
+            effects.deletedLists.includes(now.listId) ||
+            effects.deletedLists.includes(followedList)
+          ) {
+            callback('listDeleted');
+          }
+          return;
+        }
         // The form may hold an id merged away since: the deletion names its survivor.
         const followed = followRedirects(state.sync.redirects, now.articleId);
         if (

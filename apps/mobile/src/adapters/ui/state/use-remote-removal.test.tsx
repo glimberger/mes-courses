@@ -17,7 +17,13 @@ const maListe = 'list-ma-liste' as ListId;
 
 const cycleWith = (effects: Partial<SyncResult['effects']>): SyncResult => ({
   outcome: { type: 'saved' },
-  effects: { deletedArticles: [], removedItems: [], merges: [], ...effects },
+  effects: {
+    deletedArticles: [],
+    deletedLists: [],
+    removedItems: [],
+    merges: [],
+    ...effects,
+  },
   pulledRows: 1,
 });
 
@@ -51,6 +57,31 @@ describe('useRemoteRemoval', () => {
 
     expect(onRemoved).toHaveBeenCalledTimes(1);
     expect(onRemoved).toHaveBeenCalledWith('articleDeleted');
+  });
+
+  it('calls back with listDeleted when a later cycle deletes the list', async () => {
+    const { wrapper, cycle } = await setup();
+    const onRemoved = jest.fn();
+    renderHook(() => useRemoteRemoval({ listId: maListe }, onRemoved), {
+      wrapper,
+    });
+
+    await cycle({ deletedLists: [maListe] });
+
+    expect(onRemoved).toHaveBeenCalledTimes(1);
+    expect(onRemoved).toHaveBeenCalledWith('listDeleted');
+  });
+
+  it('ignores the deletion of another list', async () => {
+    const { wrapper, cycle } = await setup();
+    const onRemoved = jest.fn();
+    renderHook(() => useRemoteRemoval({ listId: maListe }, onRemoved), {
+      wrapper,
+    });
+
+    await cycle({ deletedLists: ['list-barbecue'] });
+
+    expect(onRemoved).not.toHaveBeenCalled();
   });
 
   it('calls back when a later cycle removes the item from the list', async () => {

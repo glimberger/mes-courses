@@ -32,6 +32,8 @@ export interface ShoppingListRepository {
   findByNormalizedName(normalizedName: string): Promise<ShoppingList | null>;
   count(): Promise<number>;
   add(list: ShoppingList): Promise<void>;
+  /** Saves the name and the normalized name of the list; rejects a name another list has. */
+  rename(id: ListId, name: string): Promise<void>;
   /** The number of items of every list, 0 included. */
   itemCounts(): Promise<Map<ListId, number>>;
 }

@@ -202,6 +202,17 @@ export class InMemoryRepositories implements Repositories {
       checkNewNamed('shopping_list', this.state.lists, list);
       this.state.lists.set(list.id, { ...list });
     },
+    rename: async (id, name) => {
+      const sameName = findByName(
+        this.state.lists.values(),
+        normalizedName(name),
+      );
+      if (sameName && sameName.id !== id) {
+        throw uniqueFailed('shopping_list.normalized_name');
+      }
+      const stored = this.state.lists.get(id);
+      if (stored) this.state.lists.set(id, { ...stored, name });
+    },
     itemCounts: async () => {
       const counts = new Map<ListId, number>();
       for (const list of this.state.lists.values()) counts.set(list.id, 0);
@@ -332,6 +343,7 @@ export class InMemoryRepositories implements Repositories {
     apply: async (rows) => {
       const effects: RemoteEffects = {
         deletedArticles: [],
+        deletedLists: [],
         removedItems: [],
         merges: [],
       };

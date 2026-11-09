@@ -63,6 +63,7 @@ import {
 } from '../../application/use-cases/choose-initial-password';
 import { createCreateCategory } from '../../application/use-cases/create-category';
 import { createCreateList } from '../../application/use-cases/create-list';
+import { createRenameList } from '../../application/use-cases/rename-list';
 import { createDeleteArticle } from '../../application/use-cases/delete-article';
 import {
   createChangePassword,
@@ -204,6 +205,12 @@ export type UseCases = {
   ) => Promise<
     Result<{ listId: ListId }, NameError | NameAlreadyUsed<ShoppingList>>
   >;
+  renameList: (
+    listId: ListId,
+    name: string,
+  ) => Promise<
+    Result<void, NameError | NameAlreadyUsed<ShoppingList> | ListNotFound>
+  >;
   setCurrentList: (listId: ListId) => Promise<Result<void, ListNotFound>>;
   createCategory: (
     name: string,
@@ -306,6 +313,7 @@ export const createUseCases = (ports: {
   restoreRemovedItem: createRestoreRemovedItem(ports),
   getLists: createGetLists(ports),
   createList: createCreateList(ports),
+  renameList: createRenameList(ports),
   setCurrentList: createSetCurrentList(ports),
   createCategory: createCreateCategory(ports),
   signIn: createSignIn(ports),

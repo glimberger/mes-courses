@@ -37,6 +37,7 @@ export const sqlitePulledRowsApplier = (
   apply: async (rows, pendingFields) => {
     const effects: RemoteEffects = {
       deletedArticles: [],
+      deletedLists: [],
       removedItems: [],
       merges: [],
     };

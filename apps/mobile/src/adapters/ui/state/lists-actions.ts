@@ -1,6 +1,10 @@
 import type { NameAlreadyUsed, NameError } from '../../../domain/name';
 import type { Result } from '../../../domain/result';
-import type { ListId, ShoppingList } from '../../../domain/shopping-list';
+import type {
+  ListId,
+  ListNotFound,
+  ShoppingList,
+} from '../../../domain/shopping-list';
 import type { StoreKit, WriteFailed } from './store-kit';
 
 /** The actions of the lists screen (User Story 3). */
@@ -14,6 +18,19 @@ export type ListsActions = {
     Result<
       { listId: ListId },
       NameError | NameAlreadyUsed<ShoppingList> | WriteFailed
+    >
+  >;
+  /**
+   * Renames the list; the lists region then shows it in its alphabetical place (US1-1). A list
+   * already gone, deleted just before, is `ListNotFound`: not reported.
+   */
+  renameList: (
+    listId: ListId,
+    name: string,
+  ) => Promise<
+    Result<
+      void,
+      NameError | NameAlreadyUsed<ShoppingList> | ListNotFound | WriteFailed
     >
   >;
   /** Makes the list current; the refresh then shows it in the current list region (US3-3). */
@@ -31,6 +48,10 @@ export const createListsActions = ({
     data: await useCases.getLists(),
   })),
   createList: (name) => runWrite('createList', () => useCases.createList(name)),
+  renameList: (listId, name) =>
+    runWrite('renameList', () => useCases.renameList(follow(listId), name), {
+      expected: ['ListNotFound'],
+    }),
   setCurrentList: (listId) =>
     runWrite('setCurrentList', () => useCases.setCurrentList(follow(listId))),
 });

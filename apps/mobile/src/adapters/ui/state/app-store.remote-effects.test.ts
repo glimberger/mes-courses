@@ -15,7 +15,13 @@ const maListe = 'list-ma-liste' as ListId;
 
 const cycleWith = (effects: Partial<SyncResult['effects']>): SyncResult => ({
   outcome: { type: 'saved' },
-  effects: { deletedArticles: [], removedItems: [], merges: [], ...effects },
+  effects: {
+    deletedArticles: [],
+    deletedLists: [],
+    removedItems: [],
+    merges: [],
+    ...effects,
+  },
   pulledRows: 1,
 });
 

@@ -40,6 +40,7 @@ export type SyncResult = {
 
 const noEffects = (): RemoteEffects => ({
   deletedArticles: [],
+  deletedLists: [],
   removedItems: [],
   merges: [],
 });
@@ -212,6 +213,7 @@ export const createSynchronize =
             pendingKeys(waiting),
           );
           effects.deletedArticles.push(...applied.effects.deletedArticles);
+          effects.deletedLists.push(...applied.effects.deletedLists);
           effects.removedItems.push(...applied.effects.removedItems);
           effects.merges.push(...applied.effects.merges);
         }

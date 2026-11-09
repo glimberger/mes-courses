@@ -262,7 +262,12 @@ export const createAppStoreWith = <Actions extends object>(
         redirects: {},
         remote: {
           cycle: 0,
-          effects: { deletedArticles: [], removedItems: [], merges: [] },
+          effects: {
+            deletedArticles: [],
+            deletedLists: [],
+            removedItems: [],
+            merges: [],
+          },
         },
       },
       notice: null,

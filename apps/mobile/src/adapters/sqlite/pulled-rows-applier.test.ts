@@ -577,6 +577,7 @@ describe('pulled rows applier', () => {
 
       expect(effects).toEqual({
         deletedArticles: [],
+        deletedLists: [],
         removedItems: [],
         merges: [],
       });
@@ -587,7 +588,12 @@ describe('pulled rows applier', () => {
 
       expect(await applier.apply([], NO_PENDING)).toEqual({
         deferred: 0,
-        effects: { deletedArticles: [], removedItems: [], merges: [] },
+        effects: {
+          deletedArticles: [],
+          deletedLists: [],
+          removedItems: [],
+          merges: [],
+        },
       });
     });
   });

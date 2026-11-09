@@ -72,6 +72,42 @@ export const shoppingListRepositoryContract = (
       );
     });
 
+    it('renames a list: the name and normalized name change, the id and items stay', async () => {
+      await repos.categories.add(category('c-1', 'Crèmerie', 0));
+      await repos.articles.add(article('a-1', 'Lait', 'c-1'));
+      await repos.lists.add(list('l-1', 'Ma liste'));
+      await repos.items.save(item('l-1', 'a-1'));
+
+      await repos.lists.rename(listId('l-1'), 'Barbecue');
+
+      expect(await repos.lists.findById(listId('l-1'))).toEqual(
+        list('l-1', 'Barbecue'),
+      );
+      expect(
+        await repos.lists.findByNormalizedName(normalizedName('barbecue')),
+      ).toEqual(list('l-1', 'Barbecue'));
+      expect(
+        await repos.lists.findByNormalizedName(normalizedName('Ma liste')),
+      ).toBeNull();
+      expect(await repos.items.forList(listId('l-1'))).toEqual([
+        item('l-1', 'a-1'),
+      ]);
+    });
+
+    it('rejects renaming a list to the normalized name of another, keeping both', async () => {
+      await repos.lists.add(list('l-1', 'Ma liste'));
+      await repos.lists.add(list('l-2', 'Barbecue'));
+
+      await expect(
+        repos.lists.rename(listId('l-1'), '  barbecue '),
+      ).rejects.toThrow();
+
+      expect(await repos.lists.all()).toEqual([
+        list('l-1', 'Ma liste'),
+        list('l-2', 'Barbecue'),
+      ]);
+    });
+
     it('counts the items of every list, 0 included', async () => {
       await repos.categories.add(category('c-1', 'Crèmerie', 0));
       await repos.articles.add(article('a-1', 'Lait', 'c-1'));

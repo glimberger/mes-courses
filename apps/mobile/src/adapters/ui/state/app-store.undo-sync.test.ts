@@ -10,7 +10,12 @@ import { createAppStore } from './app-store';
 const lait = 'article-lait' as ArticleId;
 const pommes = 'article-pommes' as ArticleId;
 
-const NO_EFFECTS = { deletedArticles: [], removedItems: [], merges: [] };
+const NO_EFFECTS = {
+  deletedArticles: [],
+  deletedLists: [],
+  removedItems: [],
+  merges: [],
+};
 
 /** What 062 and 067 add to the value the use cases return: the id of the undo offer. */
 const withUndoId = <T extends object>(value: T, undoId: string) =>

@@ -24,6 +24,7 @@ import { createSynchronize } from './synchronize';
 
 const NO_EFFECTS: RemoteEffects = {
   deletedArticles: [],
+  deletedLists: [],
   removedItems: [],
   merges: [],
 };
@@ -369,6 +370,7 @@ describe('synchronize', () => {
       await connect();
       const effects: RemoteEffects = {
         deletedArticles: ['a-1'],
+        deletedLists: ['l-4'],
         removedItems: [{ listId: 'l-1', articleId: 'a-2' }],
         merges: [{ kind: 'list', loserId: 'l-2', survivorId: 'l-3' }],
       };

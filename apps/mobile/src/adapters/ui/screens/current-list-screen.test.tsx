@@ -532,6 +532,7 @@ describe('CurrentList, editing the list (User Story 2)', () => {
               cycle: sync.remote.cycle + 1,
               effects: {
                 deletedArticles: [],
+                deletedLists: [],
                 removedItems: articleIds.map((articleId) => ({
                   listId: 'list-ma-liste' as ListId,
                   articleId,
