@@ -16,6 +16,7 @@ Rules:
 4. The name of a tombstoned list is free for a new live list (partial unique index).
 5. The server does not touch the list's items; a client deletes them with the list.
 6. A deletion of a merged-away list id is applied to its survivor (existing redirect rule).
+7. The HTTP request schema (`apps/server/src/adapters/http/schemas.ts`) accepts `{ "deleted": true }` on a list (`deleted: { const: true }`); it answered 400 before this fix. Covered by `apps/server/src/adapters/http/sync-route.test.ts`.
 
 ## Pull (client)
 

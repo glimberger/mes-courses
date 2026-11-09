@@ -28,7 +28,7 @@ Lists already carry a tombstone on the **server** (`deleted_hlc`, `merged_into`,
 
 **Constraints**: offline-first (VII); French text only in the UI adapter (X); Material 3 tokens and shared components only (V); explicit screen states (IX); hexagonal layers enforced by dependency-cruiser (VI)
 
-**Scale/Scope**: 1 protocol field, 1 server rule, 2 new use cases (`renameList`, `deleteList`) and 1 shared helper, 3 repository methods, 1 applier branch, 1 sync step, 1 changed row component, 1 generalised dialog, 1 new dialog, 1 Detox journey
+**Scale/Scope**: 1 protocol field, 1 server rule, 2 new use cases (`renameList`, `deleteList`) and 1 shared helper, 4 repository methods (`rename`, `remove`, `removeAllForList`, `clearCurrentList`), 1 applier branch, 1 sync step, 1 changed row component, 1 generalised dialog, 1 new dialog, 1 Detox journey
 
 ## Constitution Check
 
@@ -75,20 +75,22 @@ specs/012-rename-delete-list/
 packages/sync-core/src/protocol.ts                      # SyncedFields.list gains deleted: true
 apps/server/src/
 ├── domain/apply-change.ts                              # list tombstone; edits to a tombstone ignored
+├── adapters/http/{schemas.ts, sync-route.test.ts}      # list fields accept deleted: {const:true} (400 before the fix)
 └── application/{use-cases/sync.test.ts, testing/contracts/list-repository.contract.ts}
 apps/mobile/src/
 ├── domain/shopping-list.ts                             # pickCurrentList (displayed order)
 ├── application/
-│   ├── ports/{repositories.ts, pulled-rows.ts}         # rename/remove, removeAllForList, effects.deletedLists
+│   ├── ports/{repositories.ts, pulled-rows.ts}         # rename/remove, removeAllForList, AppStateRepository.clearCurrentList, RemoteEffects.deletedLists
 │   ├── use-cases/{rename-list.ts, delete-list.ts, resolve-current-list.ts, synchronize.ts}
 │   └── testing/{in-memory-repositories.ts, contracts/*}
-├── adapters/sqlite/{shopping-list-repository.ts, list-item-repository.ts, pulled-rows-applier.ts}
+├── adapters/sqlite/{shopping-list-repository.ts, list-item-repository.ts, app-state-repository.ts, pulled-rows-applier.ts}
 ├── composition/composition-root.ts                     # passes the default list name to sync
 └── adapters/ui/
     ├── components/{ListSummaryRow.tsx, CreateNamedDialog.tsx}
     ├── screens/{ListsScreen.tsx, EditListDialog.tsx, DeleteListDialog.tsx}
     ├── state/{lists-actions.ts, app-store.ts, store-kit.ts, use-remote-removal.ts}
     └── required-stories.ts, stories
+tests/sync/src/two-devices.test.ts                      # US3-1 to US3-5: two real SQLite replicas against a real test server
 tests/e2e/{journeys/rename-delete-list.e2e.ts, support/app.ts}
 design/mockups/                                         # Listes with ⋮, menu, edit, delete
 ```

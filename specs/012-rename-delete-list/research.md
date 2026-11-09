@@ -57,4 +57,5 @@ Decisions that matter only inside this feature. Code references are to the repos
 - No existing test asserts the chevron except `list-summary-row.test.tsx` ("ends with a chevron_right when not current"), which changes because the behavior changes.
 - Server: `apply-change.test.ts` (unit), `sync.test.ts` (use case on the in-memory store), `list-repository.contract.ts` (both stores), real `node:sqlite` through the existing sqlite store test.
 - App: contract tests for the repositories (in-memory and SQLite), use-case tests on `InMemoryUnitOfWork`, `pulled-rows-applier.test.ts` on real SQLite, `synchronize.test.ts` with `OfflineSyncServer`/paired-device doubles, component tests with `renderWithStore`, stories checked by `stories.test.tsx`.
+- Multi-device (US3-1 to US3-5): `tests/sync/src/two-devices.test.ts`, two real SQLite replicas against a real test server, because the in-memory applier does not merge by name.
 - Device: one Detox journey on Android (rename, delete another, delete the current one, delete the last one), isolated with `delete: true, newInstance: true`.
