@@ -40,6 +40,8 @@ export const sqliteShoppingListRepository = (
       'UPDATE shopping_list SET name = ?, normalized_name = ? WHERE id = ?',
       [name, normalizedName(name), id],
     ),
+  // The foreign keys of list_item and app_state reject it while they refer to the list.
+  remove: (id) => write(db, 'DELETE FROM shopping_list WHERE id = ?', [id]),
   itemCounts: async () =>
     new Map(
       await findAll(

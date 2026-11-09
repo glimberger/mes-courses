@@ -108,6 +108,43 @@ export const shoppingListRepositoryContract = (
       ]);
     });
 
+    it('removes a list, keeping the others', async () => {
+      await repos.lists.add(list('l-1', 'Ma liste'));
+      await repos.lists.add(list('l-2', 'Barbecue'));
+
+      await repos.lists.remove(listId('l-2'));
+
+      expect(await repos.lists.all()).toEqual([list('l-1', 'Ma liste')]);
+      expect(await repos.lists.findById(listId('l-2'))).toBeNull();
+      expect(
+        await repos.lists.findByNormalizedName(normalizedName('Barbecue')),
+      ).toBeNull();
+    });
+
+    it('rejects removing a list while an item refers to it, keeping both', async () => {
+      await repos.categories.add(category('c-1', 'Crèmerie', 0));
+      await repos.articles.add(article('a-1', 'Lait', 'c-1'));
+      await repos.lists.add(list('l-1', 'Ma liste'));
+      await repos.items.save(item('l-1', 'a-1'));
+
+      await expect(repos.lists.remove(listId('l-1'))).rejects.toThrow();
+
+      expect(await repos.lists.all()).toEqual([list('l-1', 'Ma liste')]);
+      expect(await repos.items.forList(listId('l-1'))).toEqual([
+        item('l-1', 'a-1'),
+      ]);
+    });
+
+    it('rejects removing the current list, keeping it current', async () => {
+      await repos.lists.add(list('l-1', 'Ma liste'));
+      await repos.appState.setCurrentListId(listId('l-1'));
+
+      await expect(repos.lists.remove(listId('l-1'))).rejects.toThrow();
+
+      expect(await repos.lists.all()).toEqual([list('l-1', 'Ma liste')]);
+      expect(await repos.appState.currentListId()).toBe(listId('l-1'));
+    });
+
     it('counts the items of every list, 0 included', async () => {
       await repos.categories.add(category('c-1', 'Crèmerie', 0));
       await repos.articles.add(article('a-1', 'Lait', 'c-1'));

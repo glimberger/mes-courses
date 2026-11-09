@@ -39,5 +39,16 @@ export const appStateRepositoryContract = (
 
       expect(await repos.appState.currentListId()).toBe('l-1');
     });
+
+    it('clears the current list, so the list can be removed and another set later', async () => {
+      await repos.appState.setCurrentListId(listId('l-1'));
+
+      await repos.appState.clearCurrentList();
+
+      expect(await repos.appState.currentListId()).toBeNull();
+      await repos.lists.remove(listId('l-1'));
+      await repos.appState.setCurrentListId(listId('l-2'));
+      expect(await repos.appState.currentListId()).toBe('l-2');
+    });
   });
 };

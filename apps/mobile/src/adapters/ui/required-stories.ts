@@ -88,6 +88,8 @@ export const requiredStories: readonly string[] = [
   // 012 Rename and delete a list
   'Dialogs/EditListDialog/Default',
   'Dialogs/EditListDialog/NameError',
+  'Dialogs/DeleteListDialog/Default',
+  'Dialogs/DeleteListDialog/DefaultDark',
   'Dialogs/CreateCategoryDialog/Default',
   'Dialogs/CreateCategoryDialog/NameAlreadyUsed',
   // 002 Manage articles

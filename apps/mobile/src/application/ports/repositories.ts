@@ -34,6 +34,8 @@ export interface ShoppingListRepository {
   add(list: ShoppingList): Promise<void>;
   /** Saves the name and the normalized name of the list; rejects a name another list has. */
   rename(id: ListId, name: string): Promise<void>;
+  /** Rejects while a list item still refers to the list, or while it is the current list. */
+  remove(id: ListId): Promise<void>;
   /** The number of items of every list, 0 included. */
   itemCounts(): Promise<Map<ListId, number>>;
 }
@@ -50,6 +52,7 @@ export interface ListItemRepository {
   /** The items of the article on every list. */
   forArticle(articleId: ArticleId): Promise<ListItem[]>;
   removeAllForArticle(articleId: ArticleId): Promise<void>;
+  removeAllForList(listId: ListId): Promise<void>;
   /** Unticks every item of the list, keeping the items and their quantities. */
   takeAllOutOfCart(listId: ListId): Promise<void>;
 }
@@ -58,4 +61,9 @@ export interface AppStateRepository {
   /** `null` only before `initializeStore`. */
   currentListId(): Promise<ListId | null>;
   setCurrentListId(id: ListId): Promise<void>;
+  /**
+   * Leaves no current list, inside a transaction that removes the current list and sets another
+   * that cannot exist before (012 research R4); the transaction sets one before it ends.
+   */
+  clearCurrentList(): Promise<void>;
 }

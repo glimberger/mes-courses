@@ -213,6 +213,15 @@ export class InMemoryRepositories implements Repositories {
       const stored = this.state.lists.get(id);
       if (stored) this.state.lists.set(id, { ...stored, name });
     },
+    remove: async (id) => {
+      if ([...this.state.items.values()].some((i) => i.listId === id)) {
+        throw new Error('Constraint failed: a list item still refers to it');
+      }
+      if (this.state.currentListId === id) {
+        throw new Error('Constraint failed: app_state still refers to it');
+      }
+      this.state.lists.delete(id);
+    },
     itemCounts: async () => {
       const counts = new Map<ListId, number>();
       for (const list of this.state.lists.values()) counts.set(list.id, 0);
@@ -264,6 +273,11 @@ export class InMemoryRepositories implements Repositories {
         if (item.articleId === articleId) this.state.items.delete(ref);
       }
     },
+    removeAllForList: async (listId) => {
+      for (const [ref, item] of this.state.items) {
+        if (item.listId === listId) this.state.items.delete(ref);
+      }
+    },
     takeAllOutOfCart: async (listId) => {
       for (const item of this.state.items.values()) {
         if (item.listId === listId) item.inCart = false;
@@ -276,6 +290,9 @@ export class InMemoryRepositories implements Repositories {
     setCurrentListId: async (id) => {
       if (!this.state.lists.has(id)) throw missingReference();
       this.state.currentListId = id;
+    },
+    clearCurrentList: async () => {
+      this.state.currentListId = null;
     },
   };
 

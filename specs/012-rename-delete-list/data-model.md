@@ -39,8 +39,9 @@ No schema change, no migration. `shopping_list`, `list_item`, `app_state`, `pend
 
 **Ports**
 
-- `ShoppingListRepository`: `rename(id, name)`, `remove(id)` (rejects while items refer to it, like `ArticleRepository.remove`).
+- `ShoppingListRepository`: `rename(id, name)`, `remove(id)` (rejects while items refer to it, like `ArticleRepository.remove`, or while it is the current list: the `app_state` foreign key).
 - `ListItemRepository`: `removeAllForList(listId)`.
+- `AppStateRepository`: `clearCurrentList()`, used only inside the transaction that replaces the last list (research R4).
 - `RemoteEffects.deletedLists: string[]`: lists deleted by this pull.
 
 **Validation**: rename uses `uniqueName(repos.lists, name, (l) => l.id === listId)`: cleaned, 1 to 60 characters, unique ignoring case, accents and spacing, own name allowed (spec FR-003).
