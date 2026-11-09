@@ -85,6 +85,13 @@ export const requiredStories: readonly string[] = [
   'Dialogs/CreateListDialog/Default',
   'Dialogs/CreateListDialog/DefaultDark',
   'Dialogs/CreateListDialog/NameAlreadyUsed',
+  // 012 Rename and delete a list
+  'Dialogs/EditListDialog/Default',
+  'Dialogs/EditListDialog/NameError',
+  'Dialogs/DeleteListDialog/Default',
+  'Dialogs/DeleteListDialog/DefaultDark',
+  'Screens/Lists/MenuOpen',
+  'Components/ListSummaryRow/MenuOpen',
   'Dialogs/CreateCategoryDialog/Default',
   'Dialogs/CreateCategoryDialog/NameAlreadyUsed',
   // 002 Manage articles

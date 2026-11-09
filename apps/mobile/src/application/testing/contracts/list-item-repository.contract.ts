@@ -182,6 +182,20 @@ export const listItemRepositoryContract = (
       ]);
     });
 
+    it('removes every item of a list, leaving the other lists items and the articles', async () => {
+      await repos.items.save(item('l-1', 'a-1', { inCart: true }));
+      await repos.items.save(item('l-1', 'a-2'));
+      await repos.items.save(item('l-2', 'a-1'));
+
+      await repos.items.removeAllForList(listId('l-1'));
+
+      expect(await repos.items.forList(listId('l-1'))).toEqual([]);
+      expect(await repos.items.forList(listId('l-2'))).toEqual([
+        item('l-2', 'a-1'),
+      ]);
+      expect(await repos.articles.all()).toHaveLength(2);
+    });
+
     it('rejects an item of a list or an article that does not exist', async () => {
       await expect(repos.items.save(item('unknown', 'a-1'))).rejects.toThrow();
       await expect(repos.items.save(item('l-1', 'unknown'))).rejects.toThrow();

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../application/testing/recording-error-reporter';
 import type { SyncServer } from '../../application/ports/sync-server';
@@ -8,6 +8,7 @@ import type { ListId } from '../../domain/shopping-list';
 import { Navigation } from './navigation';
 import { fixture } from './testing/fixtures';
 import { renderWithStore } from './testing/render-with-store';
+import { waitForMenusToSettle } from './testing/wait-for-menus';
 import type { Fixture, StoryScenario } from './testing/story-store';
 import type { AppStore } from './state/app-store';
 
@@ -337,6 +338,43 @@ describe.each(networks)(
     });
   },
 );
+
+describe('renaming and deleting a list with the server unreachable (012 SC-005)', () => {
+  it('completes both from the Listes tab, with nothing reported', async () => {
+    const navigationReporter = new RecordingErrorReporter();
+    const { errorReporter } = await renderWithStore(
+      <Navigation errorReporter={navigationReporter} />,
+      { seed, asScreen: false },
+    );
+    fireEvent.press(await screen.findByRole('tab', { name: 'Listes' }));
+    await screen.findByText('Barbecue');
+    await waitForMenusToSettle();
+    const chooseFromMenu = async (name: string, action: string) => {
+      fireEvent.press(await screen.findByLabelText(`Actions pour ${name}`));
+      fireEvent.press(await screen.findByLabelText(`${action} ${name}`));
+    };
+
+    await chooseFromMenu('Barbecue', 'Modifier');
+    fireEvent.changeText(
+      await screen.findByLabelText('Nom'),
+      'Barbecue dimanche',
+    );
+    fireEvent.press(screen.getByRole('button', { name: 'Enregistrer' }));
+    expect(await screen.findByText('Barbecue dimanche')).toBeOnTheScreen();
+
+    await chooseFromMenu('Barbecue dimanche', 'Supprimer');
+    await pressLast('Supprimer');
+    // The deletion is written, then the dialog's close animation ends.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    });
+    expect(screen.queryByText('Barbecue dimanche')).toBeNull();
+
+    expect(errorReporter.reports).toEqual([]);
+    expect(navigationReporter.reports).toEqual([]);
+    expect(offlineFetch).not.toHaveBeenCalled();
+  });
+});
 
 describe('a signed-in device reopened with no network (004 US2-6, FR-007)', () => {
   it('goes straight to its lists, asks for no sign-in, and keeps working', async () => {

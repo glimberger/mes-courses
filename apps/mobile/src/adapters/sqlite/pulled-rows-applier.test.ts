@@ -442,6 +442,159 @@ describe('pulled rows applier', () => {
     });
   });
 
+  describe('deleted lists (012)', () => {
+    const withBarbecue = async () => {
+      const ready = await setup();
+      await ready.applier.apply(
+        [
+          categoryRow('c-1', 'Fruits', 1),
+          articleRow('a-1', 'Pommes', 'c-1'),
+          articleRow('a-2', 'Poires', 'c-1'),
+          listRow('l-1', 'Barbecue'),
+          itemRow('l-1', 'a-1'),
+          itemRow('l-1', 'a-2'),
+          itemRow('l-0', 'a-1'),
+        ],
+        NO_PENDING,
+      );
+      return ready;
+    };
+
+    it('US3-2 deletes a tombstoned list and its items, keeps the articles, and reports it', async () => {
+      const { db, applier } = await withBarbecue();
+
+      const { effects } = await applier.apply(
+        [listRow('l-1', 'Barbecue', { deletedHlc: hlc(20) })],
+        NO_PENDING,
+      );
+
+      expect(await all(db, `SELECT id FROM shopping_list`)).toEqual([
+        { id: 'l-0' },
+      ]);
+      expect(
+        await all(db, `SELECT list_id, article_id FROM list_item`),
+      ).toEqual([{ list_id: 'l-0', article_id: 'a-1' }]);
+      expect(await all(db, `SELECT id FROM article ORDER BY id`)).toEqual([
+        { id: 'a-1' },
+        { id: 'a-2' },
+      ]);
+      expect(effects.deletedLists).toEqual(['l-1']);
+      expect(effects.merges).toEqual([]);
+    });
+
+    it('deletes a tombstoned current list without a foreign key failure, and its waiting changes', async () => {
+      const { db, applier } = await withBarbecue();
+      await db.runAsync(
+        `UPDATE app_state SET current_list_id = 'l-1' WHERE id = 1`,
+        [],
+      );
+      await db.runAsync(
+        `INSERT INTO pending_change (change_id, hlc, kind, entity_id, fields)
+         VALUES ('c1', 'h', 'listItem', 'l-1:a-1', '{}'),
+                ('c2', 'h', 'listItem', 'l-10:a-1', '{}')`,
+        [],
+      );
+
+      await applier.apply(
+        [listRow('l-1', 'Barbecue', { deletedHlc: hlc(20) })],
+        NO_PENDING,
+      );
+
+      expect(await all(db, `SELECT * FROM app_state`)).toEqual([]);
+      expect(await all(db, `SELECT change_id FROM pending_change`)).toEqual([
+        { change_id: 'c2' },
+      ]);
+    });
+
+    it('ignores the tombstone of a list it does not hold', async () => {
+      const { db, applier } = await setup();
+
+      const { effects } = await applier.apply(
+        [listRow('l-9', 'Inconnue', { deletedHlc: hlc(20) })],
+        NO_PENDING,
+      );
+
+      expect(await all(db, `SELECT id FROM shopping_list`)).toEqual([
+        { id: 'l-0' },
+      ]);
+      expect(effects.deletedLists).toEqual([]);
+    });
+
+    it('FR-009 deletes the list even with a local rename still pending', async () => {
+      const { db, applier } = await withBarbecue();
+
+      const { effects } = await applier.apply(
+        [listRow('l-1', 'Barbecue', { deletedHlc: hlc(20) })],
+        new Set(['list:l-1:name', 'listItem:l-1:a-1:inCart']),
+      );
+
+      expect(await all(db, `SELECT id FROM shopping_list`)).toEqual([
+        { id: 'l-0' },
+      ]);
+      expect(effects.deletedLists).toEqual(['l-1']);
+    });
+
+    it('does not bring back a list deleted here and waiting to be sent', async () => {
+      const { db, applier } = await setup();
+
+      await applier.apply(
+        [listRow('l-1', 'Barbecue')],
+        new Set(['list:l-1:deleted']),
+      );
+
+      expect(await all(db, `SELECT id FROM shopping_list`)).toEqual([
+        { id: 'l-0' },
+      ]);
+    });
+
+    it('skips the items of a list it does not hold, in the same batch as its tombstone', async () => {
+      const { db, applier } = await withBarbecue();
+
+      await applier.apply(
+        [
+          listRow('l-1', 'Barbecue', { deletedHlc: hlc(20) }),
+          itemRow('l-1', 'a-2', { inCart: true }),
+          itemRow('l-9', 'a-2'),
+        ],
+        NO_PENDING,
+      );
+
+      expect(
+        await all(db, `SELECT list_id, article_id FROM list_item`),
+      ).toEqual([{ list_id: 'l-0', article_id: 'a-1' }]);
+    });
+
+    it('still follows the merge path for a merge tombstone', async () => {
+      const { db, applier } = await withBarbecue();
+
+      const { effects } = await applier.apply(
+        [
+          listRow('l-2', 'Barbecue'),
+          listRow('l-1', 'Barbecue', {
+            deletedHlc: hlc(20),
+            mergedInto: 'l-2',
+          }),
+        ],
+        NO_PENDING,
+      );
+
+      expect(
+        await all(
+          db,
+          `SELECT list_id, article_id FROM list_item ORDER BY list_id, article_id`,
+        ),
+      ).toEqual([
+        { list_id: 'l-0', article_id: 'a-1' },
+        { list_id: 'l-2', article_id: 'a-1' },
+        { list_id: 'l-2', article_id: 'a-2' },
+      ]);
+      expect(effects.deletedLists).toEqual([]);
+      expect(effects.merges).toEqual([
+        { kind: 'list', loserId: 'l-1', survivorId: 'l-2' },
+      ]);
+    });
+  });
+
   describe('the current list', () => {
     it('FR-015 is left alone by every row but a merge of the current list', async () => {
       const { db, applier } = await setup();
@@ -577,6 +730,7 @@ describe('pulled rows applier', () => {
 
       expect(effects).toEqual({
         deletedArticles: [],
+        deletedLists: [],
         removedItems: [],
         merges: [],
       });
@@ -587,7 +741,12 @@ describe('pulled rows applier', () => {
 
       expect(await applier.apply([], NO_PENDING)).toEqual({
         deferred: 0,
-        effects: { deletedArticles: [], removedItems: [], merges: [] },
+        effects: {
+          deletedArticles: [],
+          deletedLists: [],
+          removedItems: [],
+          merges: [],
+        },
       });
     });
   });

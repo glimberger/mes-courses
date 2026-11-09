@@ -75,7 +75,10 @@ export const syncBodySchema = {
               deleted: { const: true },
             }),
           ),
-          changeSchema('list', fieldsSchema({ name: nameSchema })),
+          changeSchema(
+            'list',
+            fieldsSchema({ name: nameSchema, deleted: { const: true } }),
+          ),
           changeSchema(
             'listItem',
             fieldsSchema({

@@ -19,6 +19,8 @@ also opens directly (`1-liste.html`, `7-dialog-quantite.html`, …).
 - `14`–`24` show the tab navigation (issue #170, epic #169): the four tabs with the bottom
   tab bar, the add screen and its states, and the row menus, article edit and delete dialogs.
   Screens `1`–`3` are the previous header-based navigation.
+- `25`–`28` show renaming and deleting a list (issue #192): the Listes tab with the ⋮ button in place of
+  the chevron, the row menu, the "Modifier la liste" dialog and the delete dialog (light and dark).
 - Everything is relative: the folder is self-contained (`assets/` holds the splash image,
   the dialog backdrops are iframes of the screen mockups).
 - Nunito and the Material Symbols icons load from Google Fonts: view them with a network

@@ -61,3 +61,9 @@ export const Empty: Story = {
     },
   },
 };
+
+/** Mockup 26: the ⋮ menu of "Barbecue" open, with "Modifier" and "Supprimer". */
+export const MenuOpen: Story = {
+  args: { menuInitiallyOpenFor: 'Barbecue' },
+  parameters: { scenario: { seed: fixture } },
+};

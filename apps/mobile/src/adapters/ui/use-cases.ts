@@ -63,6 +63,8 @@ import {
 } from '../../application/use-cases/choose-initial-password';
 import { createCreateCategory } from '../../application/use-cases/create-category';
 import { createCreateList } from '../../application/use-cases/create-list';
+import { createRenameList } from '../../application/use-cases/rename-list';
+import { createDeleteList } from '../../application/use-cases/delete-list';
 import { createDeleteArticle } from '../../application/use-cases/delete-article';
 import {
   createChangePassword,
@@ -204,6 +206,16 @@ export type UseCases = {
   ) => Promise<
     Result<{ listId: ListId }, NameError | NameAlreadyUsed<ShoppingList>>
   >;
+  renameList: (
+    listId: ListId,
+    name: string,
+  ) => Promise<
+    Result<void, NameError | NameAlreadyUsed<ShoppingList> | ListNotFound>
+  >;
+  deleteList: (
+    listId: ListId,
+    firstListName: string,
+  ) => Promise<Result<void, ListNotFound>>;
   setCurrentList: (listId: ListId) => Promise<Result<void, ListNotFound>>;
   createCategory: (
     name: string,
@@ -285,6 +297,8 @@ export const createUseCases = (ports: {
   adminServer: AdminServer;
   credentials: CredentialStore;
   localDataEraser: LocalDataEraser;
+  /** The list a pull creates when it deletes the last one (`seed.firstListName`, 012 R4). */
+  firstListName: string;
   /** Accepts `http://` server addresses; development builds only. */
   allowInsecure?: boolean;
 }): UseCases => ({
@@ -306,6 +320,8 @@ export const createUseCases = (ports: {
   restoreRemovedItem: createRestoreRemovedItem(ports),
   getLists: createGetLists(ports),
   createList: createCreateList(ports),
+  renameList: createRenameList(ports),
+  deleteList: createDeleteList(ports),
   setCurrentList: createSetCurrentList(ports),
   createCategory: createCreateCategory(ports),
   signIn: createSignIn(ports),

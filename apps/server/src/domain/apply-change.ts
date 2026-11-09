@@ -178,6 +178,10 @@ const updateRecord = (
     }
     case 'list': {
       const row = current as ListRecord;
+      if (row.deletedHlc !== null) return current;
+      if (change.fields.deleted) {
+        return { ...row, deletedHlc: incomingHlc, seq };
+      }
       if (change.fields.name === undefined) return current;
       const name = merge(
         { value: row.name, hlc: row.nameHlc },
@@ -240,7 +244,7 @@ const updateRecord = (
 
 /**
  * The row after the change: a new row for a create, the same object when the change has no effect
- * (a lost field, a deleted article), `null` for an update of an unknown row.
+ * (a lost field, a tombstoned article or list), `null` for an update of an unknown row.
  */
 export const applyChange = (
   current: Record_ | null,

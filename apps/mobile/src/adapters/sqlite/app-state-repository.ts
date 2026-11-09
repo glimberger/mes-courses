@@ -21,4 +21,5 @@ export const sqliteAppStateRepository = (
        ON CONFLICT (id) DO UPDATE SET current_list_id = excluded.current_list_id`,
       [id],
     ),
+  clearCurrentList: () => write(db, 'DELETE FROM app_state WHERE id = 1', []),
 });

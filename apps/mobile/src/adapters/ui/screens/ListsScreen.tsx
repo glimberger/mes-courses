@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, StyleSheet, View, type HostInstance } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
+import type { ListId } from '../../../domain/shopping-list';
 import type { ListSummary } from '../../../domain/list-summary';
 import { focusOn } from '../accessibility/focus';
 import { hasScreenBelow } from '../navigation-history';
@@ -13,22 +14,48 @@ import { SyncStatusBar } from '../components/SyncStatusBar';
 import { spacing } from '../theme/spacing';
 import { useAppStore } from '../state/use-app-store';
 import { CreateListDialog } from './CreateListDialog';
+import { DeleteListDialog, type DeletedListTarget } from './DeleteListDialog';
+import { EditListDialog, type EditedList } from './EditListDialog';
 
-/** A row whose callback stays the same between renders. */
+type RowRefs = Map<ListId, HostInstance>;
+
+type ListRowProps = {
+  list: ListSummary;
+  onChoose: (list: ListSummary) => void;
+  open: (list: ListSummary, dialog: 'edit' | 'delete') => void;
+  menuRefs: RowRefs;
+  /** Shows the ⋮ menu open, for stories. */
+  menuInitiallyOpen: boolean;
+};
+
+/** A row whose callbacks stay the same between renders. */
 const ListRow = memo(function ListRow({
   list,
   onChoose,
-}: {
-  list: ListSummary;
-  onChoose: (list: ListSummary) => void;
-}) {
+  open,
+  menuRefs,
+  menuInitiallyOpen,
+}: ListRowProps) {
   const onPress = useCallback(() => onChoose(list), [list, onChoose]);
+  const onEdit = useCallback(() => open(list, 'edit'), [list, open]);
+  const onDelete = useCallback(() => open(list, 'delete'), [list, open]);
+  const menuButtonRef = useCallback(
+    (node: HostInstance | null) => {
+      if (node) menuRefs.set(list.id, node);
+      else menuRefs.delete(list.id);
+    },
+    [list.id, menuRefs],
+  );
   return (
     <ListSummaryRow
       name={list.name}
       itemCount={list.itemCount}
       isCurrent={list.isCurrent}
       onPress={onPress}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      menuButtonRef={menuButtonRef}
+      menuInitiallyOpen={menuInitiallyOpen}
     />
   );
 });
@@ -38,15 +65,27 @@ const rowId = (list: ListSummary) => list.id;
 
 /**
  * The lists (User Story 3), by name with their item counts and the current one marked. A tap
- * makes a list current and opens the Courses tab on it (US4); the FAB creates a list (US3-2).
+ * makes a list current and opens the Courses tab on it (US4); the FAB creates a list (US3-2); the
+ * ⋮ menu of a row renames or deletes it (spec 012).
  */
-export const ListsScreen = () => {
+export type ListsScreenProps = {
+  /** The name of the list whose ⋮ menu starts open, for stories. */
+  menuInitiallyOpenFor?: string;
+};
+
+export const ListsScreen = ({
+  menuInitiallyOpenFor,
+}: ListsScreenProps = {}) => {
   const navigation = useNavigation();
   const lists = useAppStore((state) => state.lists);
   const loadLists = useAppStore((state) => state.loadLists);
   const setCurrentList = useAppStore((state) => state.setCurrentList);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<EditedList | null>(null);
+  const [deleting, setDeleting] = useState<DeletedListTarget | null>(null);
   const fabRef = useRef<HostInstance>(null);
+  const [menuRefs] = useState<RowRefs>(() => new Map());
+  const opener = useRef<ListId | null>(null);
 
   useEffect(() => {
     void loadLists();
@@ -81,9 +120,26 @@ export const ListsScreen = () => {
     [choose],
   );
 
+  const open = useCallback((list: ListSummary, dialog: 'edit' | 'delete') => {
+    opener.current = list.id;
+    const target = { id: list.id, name: list.name };
+    (dialog === 'edit' ? setEditing : setDeleting)(target);
+  }, []);
+
   const closeDialog = () => {
     setCreating(false);
     focusOn(fabRef);
+  };
+
+  // Screen reader focus goes back to the ⋮ button of the row that opened the dialog, looked up
+  // once the dialog is gone; a deleted list has no row left, so the FAB takes it (FR-037).
+  const focusMenuButton = () => {
+    const id = opener.current;
+    focusOn({
+      get current() {
+        return (id === null ? null : menuRefs.get(id)) ?? fabRef.current;
+      },
+    });
   };
 
   return (
@@ -105,7 +161,13 @@ export const ListsScreen = () => {
             data={data}
             keyExtractor={rowId}
             renderItem={({ item }) => (
-              <ListRow list={item} onChoose={onChoose} />
+              <ListRow
+                list={item}
+                onChoose={onChoose}
+                open={open}
+                menuRefs={menuRefs}
+                menuInitiallyOpen={item.name === menuInitiallyOpenFor}
+              />
             )}
             contentContainerStyle={styles.list}
           />
@@ -118,6 +180,20 @@ export const ListsScreen = () => {
         onPress={() => setCreating(true)}
       />
       <CreateListDialog visible={creating} onClose={closeDialog} />
+      <EditListDialog
+        list={editing}
+        onClose={() => {
+          setEditing(null);
+          focusMenuButton();
+        }}
+      />
+      <DeleteListDialog
+        list={deleting}
+        onClose={() => {
+          setDeleting(null);
+          focusMenuButton();
+        }}
+      />
     </View>
   );
 };

@@ -202,6 +202,26 @@ export class InMemoryRepositories implements Repositories {
       checkNewNamed('shopping_list', this.state.lists, list);
       this.state.lists.set(list.id, { ...list });
     },
+    rename: async (id, name) => {
+      const sameName = findByName(
+        this.state.lists.values(),
+        normalizedName(name),
+      );
+      if (sameName && sameName.id !== id) {
+        throw uniqueFailed('shopping_list.normalized_name');
+      }
+      const stored = this.state.lists.get(id);
+      if (stored) this.state.lists.set(id, { ...stored, name });
+    },
+    remove: async (id) => {
+      if ([...this.state.items.values()].some((i) => i.listId === id)) {
+        throw new Error('Constraint failed: a list item still refers to it');
+      }
+      if (this.state.currentListId === id) {
+        throw new Error('Constraint failed: app_state still refers to it');
+      }
+      this.state.lists.delete(id);
+    },
     itemCounts: async () => {
       const counts = new Map<ListId, number>();
       for (const list of this.state.lists.values()) counts.set(list.id, 0);
@@ -253,6 +273,11 @@ export class InMemoryRepositories implements Repositories {
         if (item.articleId === articleId) this.state.items.delete(ref);
       }
     },
+    removeAllForList: async (listId) => {
+      for (const [ref, item] of this.state.items) {
+        if (item.listId === listId) this.state.items.delete(ref);
+      }
+    },
     takeAllOutOfCart: async (listId) => {
       for (const item of this.state.items.values()) {
         if (item.listId === listId) item.inCart = false;
@@ -265,6 +290,9 @@ export class InMemoryRepositories implements Repositories {
     setCurrentListId: async (id) => {
       if (!this.state.lists.has(id)) throw missingReference();
       this.state.currentListId = id;
+    },
+    clearCurrentList: async () => {
+      this.state.currentListId = null;
     },
   };
 
@@ -312,6 +340,16 @@ export class InMemoryRepositories implements Repositories {
         (entry) => entry.heldBy !== heldBy,
       );
     },
+    forgetList: async (listId) => {
+      this.state.outbox = this.state.outbox.filter(
+        (entry) =>
+          !(
+            (entry.change.kind === 'list' && entry.change.id === listId) ||
+            (entry.change.kind === 'listItem' &&
+              entry.change.id.startsWith(`${listId}:`))
+          ),
+      );
+    },
     count: async () =>
       this.state.outbox.filter((entry) => entry.heldBy === null).length,
   };
@@ -326,12 +364,17 @@ export class InMemoryRepositories implements Repositories {
   /**
    * Applies only what the screens react to, and reports it: a deleted article goes with its
    * items, a list item with `present = false` goes, and merges are reported (the loser article
-   * goes). The SQLite applier, with its own tests, applies everything.
+   * goes). Lists are created, renamed and deleted (with their items), minding the pending local
+   * changes, as the current list rule depends on them (012). The SQLite applier, with its own
+   * tests, applies everything.
    */
   pulledRows: PulledRowsApplier = {
-    apply: async (rows) => {
+    apply: async (rows, pendingFields) => {
+      const pendingOnList = (id: string, field: string) =>
+        pendingFields.has(`list:${id}:${field}`);
       const effects: RemoteEffects = {
         deletedArticles: [],
+        deletedLists: [],
         removedItems: [],
         merges: [],
       };
@@ -353,6 +396,32 @@ export class InMemoryRepositories implements Repositories {
           if (this.state.articles.has(row.id)) {
             effects.deletedArticles.push(row.id);
             dropArticle(row.id);
+          }
+        } else if (row.kind === 'list' && row.deletedHlc !== null) {
+          if (this.state.lists.has(row.id)) {
+            if (this.state.currentListId === row.id) {
+              this.state.currentListId = null;
+            }
+            await this.items.removeAllForList(row.id as ListId);
+            await this.lists.remove(row.id as ListId);
+            this.state.outbox = this.state.outbox.filter(
+              ({ change }) =>
+                !(
+                  (change.kind === 'list' && change.id === row.id) ||
+                  (change.kind === 'listItem' &&
+                    change.id.startsWith(`${row.id}:`))
+                ),
+            );
+            effects.deletedLists.push(row.id);
+          }
+        } else if (row.kind === 'list') {
+          const name = row.fields.name?.value;
+          if (name === undefined) continue;
+          if (!this.state.lists.has(row.id)) {
+            if (pendingOnList(row.id, 'deleted')) continue;
+            await this.lists.add({ id: row.id as ListId, name });
+          } else if (!pendingOnList(row.id, 'name')) {
+            await this.lists.rename(row.id as ListId, name);
           }
         } else if (
           row.kind === 'listItem' &&

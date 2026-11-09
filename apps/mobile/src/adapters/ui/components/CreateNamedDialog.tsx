@@ -20,6 +20,10 @@ export type CreateNamedDialogProps<T> = {
   title: string;
   /** Shown when another entity already has the name (FR-021). */
   alreadyUsedText: string;
+  /** The name the field starts with; empty by default (creation). */
+  initialName?: string;
+  /** The confirm button's label; "Créer" by default. */
+  confirmLabel?: string;
   /** The store action that creates the entity. */
   create: (name: string) => Promise<CreateNamedResult<T>>;
   /**
@@ -37,10 +41,12 @@ export type CreateNamedDialogProps<T> = {
 export const CreateNamedDialog = <T,>({
   title,
   alreadyUsedText,
+  initialName = '',
+  confirmLabel,
   create,
   onClose,
 }: CreateNamedDialogProps<T>) => {
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   // Set at once, so a second tap before the next render does not create a second entity.
@@ -86,6 +92,7 @@ export const CreateNamedDialog = <T,>({
     <CreateNamedDialogForm
       title={title}
       titleRef={titleRef}
+      confirmLabel={confirmLabel}
       name={name}
       onChangeName={setName}
       error={error}
@@ -100,6 +107,8 @@ export type CreateNamedDialogFormProps = {
   title: string;
   /** The title, which takes screen reader focus when the dialog opens (FR-037). */
   titleRef?: Ref<HostInstance> | undefined;
+  /** The confirm button's label; "Créer" by default. */
+  confirmLabel?: string | undefined;
   name: string;
   onChangeName: (text: string) => void;
   /** The French name error, if any. */
@@ -116,6 +125,7 @@ export type CreateNamedDialogFormProps = {
 export const CreateNamedDialogForm = ({
   title,
   titleRef,
+  confirmLabel = 'Créer',
   name,
   onChangeName,
   error,
@@ -131,7 +141,7 @@ export const CreateNamedDialogForm = ({
     title={title}
     titleRef={titleRef}
     cancel={{ label: 'Annuler', onPress: onClose, disabled: saving }}
-    confirm={{ label: 'Créer', onPress: onSubmit, disabled: saving }}
+    confirm={{ label: confirmLabel, onPress: onSubmit, disabled: saving }}
   >
     <NameField
       context="dialog"

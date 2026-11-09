@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
+import type { HostInstance } from 'react-native';
 import { Menu } from 'react-native-paper';
 
 import { AppbarIconAction } from './AppbarIconAction';
@@ -17,6 +18,8 @@ export type RowMenuProps = {
   items: RowMenuItem[];
   /** Opens the menu when first shown (stories and screenshots). */
   defaultVisible?: boolean;
+  /** The ⋮ button, for a screen to put screen reader focus back on it (FR-037). */
+  buttonRef?: Ref<HostInstance> | undefined;
 };
 
 /**
@@ -27,10 +30,12 @@ export const RowMenu = ({
   name,
   items,
   defaultVisible = false,
+  buttonRef,
 }: RowMenuProps) => {
   const [visible, setVisible] = useState(defaultVisible);
   const button = (
     <AppbarIconAction
+      ref={buttonRef}
       icon="more_vert"
       accessibilityLabel={`Actions pour ${name}`}
       onPress={() => setVisible(true)}

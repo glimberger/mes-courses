@@ -14,7 +14,8 @@ with its quantities). The third, [003 server synchronization](specs/003-server-s
 keeps the data on a home server (a Raspberry Pi behind the Internet box) and on every phone and
 tablet signed in to the same account, which converge on their own. The fourth,
 [004 multi-user accounts](specs/004-multi-user/spec.md), gives each person an account on that
-server, with their own data and devices. Everything still works with no network: each
+server, with their own data and devices. From the Listes tab, [012 rename and delete a list](specs/012-rename-delete-list/spec.md) lets you
+rename a shopping list or delete it with its items (the articles stay in the catalog). Everything still works with no network: each
 change is saved on the device first and reaches the server when it can.
 Its governing principles are in [`.specify/memory/constitution.md`](.specify/memory/constitution.md),
 its lasting technical decisions are in [`docs/adr/`](docs/adr/README.md),

@@ -113,7 +113,7 @@
   insuffisant. Libérez de la place sur votre téléphone."; the change is handled like any failed
   save, and the error is not reported because it is expected (FR-030).
 - Q: Why is exactly one list always current? → A: The first launch makes "Ma liste" current,
-  choosing another list replaces it, and lists cannot be deleted in this feature; FR-002 now
+  choosing another list replaces it, and lists cannot be deleted in this feature (since [012](../012-rename-delete-list/spec.md) they can); FR-002 now
   states these three rules together.
 - Q: What counts as a first launch, and what if it is interrupted? → A: First launch means no
   list is stored yet, so reinstalling or clearing the application's data sets up again and
@@ -650,7 +650,8 @@ the new heading.
 - **FR-001**: The application MUST open on the current shopping list and display its name.
 - **FR-002**: Exactly one list MUST be current at any time: the first launch makes "Ma liste"
   current (FR-023), choosing another list replaces it (FR-025), and lists cannot be deleted in
-  this feature (Assumptions).
+  this feature (Assumptions; superseded by [012](../012-rename-delete-list/spec.md), which adds
+  rename and delete).
 - **FR-003**: A list MUST show its items grouped under their category headings, hiding
   categories that hold no item of the list.
 - **FR-004**: Users MUST be able to tick an item (in the cart) and untick it (not in the
@@ -1039,7 +1040,8 @@ The actions of this spec, checked one by one by SC-006 and SC-009:
   merging of quantities is done. Items carry no price or note in this feature.
 - Renaming or deleting articles, categories and lists, and reordering categories, are out of
   scope for this feature. Editing and deleting articles is specified in
-  [002-manage-articles](../002-manage-articles/spec.md). Since lists cannot be deleted, at least
+  [002-manage-articles](../002-manage-articles/spec.md); renaming and deleting lists by
+  [012-rename-delete-list](../012-rename-delete-list/spec.md). Since lists cannot be deleted, at least
   one list always exists.
 - Categories are displayed in the order described for the Category entity above; items within a
   category are sorted alphabetically (French collation) inside the unticked and ticked groups.

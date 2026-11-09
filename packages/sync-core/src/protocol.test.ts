@@ -4,6 +4,7 @@ import type {
   ErrorCode,
   InvalidPasswordBody,
   SignInResponse,
+  SyncedFields,
 } from './protocol';
 import { ERROR_CODES } from './protocol';
 
@@ -45,6 +46,8 @@ assertType<
     'TooShort' | 'TooLong' | 'SameAsTemporary' | 'SameAsCurrent'
   >
 >();
+// 012: a list change can carry the intent to tombstone the list, as an article change does.
+assertType<Equal<SyncedFields['list'], { name: string; deleted: true }>>();
 
 describe('protocol', () => {
   it('004 the signed-in response carries the account and its id', () => {

@@ -26,7 +26,9 @@ export type SyncActions = DeviceActions & {
    */
   acknowledgeSignedOut: () => Promise<Result<void, WriteFailed>>;
   /** Tells the user a pull removed what a form was editing; the form then closes itself. */
-  noticeRemoteRemoval: (reason: 'articleDeleted' | 'itemRemoved') => void;
+  noticeRemoteRemoval: (
+    reason: 'articleDeleted' | 'itemRemoved' | 'listDeleted',
+  ) => void;
   /** Signs this device in (US2-1). */
   signIn: (
     url: string,
@@ -107,6 +109,7 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
    */
   const endOfferOfDeleted = ({
     deletedArticles,
+    deletedLists,
     merges,
   }: SyncResult['effects']) => {
     const offer = get().pendingUndo;
@@ -123,6 +126,7 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
       offer.kind === 'deletedArticle' ? offer.deleted.article.categoryId : null;
     const gone =
       deletedArticles.includes(articleId) ||
+      listIds.some((id) => deletedLists.includes(id)) ||
       merges.some(
         ({ kind, loserId }) =>
           (kind === 'article' && loserId === articleId) ||
@@ -142,6 +146,7 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
     // An idle cycle changes nothing: leave the slice alone so no subscriber wakes.
     if (
       effects.deletedArticles.length === 0 &&
+      effects.deletedLists.length === 0 &&
       effects.removedItems.length === 0 &&
       effects.merges.length === 0
     ) {
@@ -382,6 +387,8 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
     };
 
   const noticeRemoteRemoval: SyncActions['noticeRemoteRemoval'] = (reason) => {
+    // A list deleted elsewhere closes its dialogs silently (spec 012, edge cases).
+    if (reason === 'listDeleted') return;
     // The form is closing: the user must be told why. Only the storage-full notice, shown once
     // per streak, is kept.
     if (get().notice?.type === 'storageFull') return;

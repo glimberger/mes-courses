@@ -121,6 +121,170 @@ describe('createList', () => {
   });
 });
 
+describe('renameList', () => {
+  it('US1-1 resolves ok and shows the new name in alphabetical place, offline too', async () => {
+    const { store } = await buildStore();
+    await store.getState().loadLists();
+
+    const outcome = await store.getState().renameList(barbecue, 'Zoo');
+
+    expect(outcome).toEqual(ok(undefined));
+    expect(shownLists(store).map(({ name }) => name)).toEqual([
+      'Ma liste',
+      'Zoo',
+    ]);
+  });
+
+  it('US1-4 returns NameAlreadyUsed to the form, unreported, changing nothing', async () => {
+    const { store, errorReporter } = await buildStore();
+    await store.getState().loadLists();
+
+    const outcome = await store.getState().renameList(barbecue, 'ma liste');
+
+    expect(outcome).toEqual(
+      err({
+        type: 'NameAlreadyUsed',
+        existing: { id: maListe, name: 'Ma liste' },
+      }),
+    );
+    expect(shownLists(store).map(({ name }) => name)).toEqual([
+      'Barbecue',
+      'Ma liste',
+    ]);
+    expect(store.getState().notice).toBeNull();
+    expect(errorReporter.reports).toEqual([]);
+  });
+
+  it('US1-6 returns NameRequired to the form, unreported', async () => {
+    const { store, errorReporter } = await buildStore();
+
+    expect(await store.getState().renameList(barbecue, '  ')).toEqual(
+      err({ type: 'NameRequired' }),
+    );
+    expect(errorReporter.reports).toEqual([]);
+  });
+
+  it('returns ListNotFound as expected: no notice, nothing reported', async () => {
+    const { store, errorReporter } = await buildStore();
+
+    const outcome = await store
+      .getState()
+      .renameList('list-unknown' as ListId, 'Zoo');
+
+    expect(outcome).toEqual(err({ type: 'ListNotFound' }));
+    expect(store.getState().notice).toBeNull();
+    expect(errorReporter.reports).toEqual([]);
+  });
+
+  it('resolves to WriteFailed with the failed save notice, reporting the operation without the name', async () => {
+    const { store, errorReporter } = await buildStore({
+      failing: ['renameList'],
+    });
+    await store.getState().loadLists();
+
+    expect(await store.getState().renameList(barbecue, 'Zoo')).toEqual(
+      err({ type: 'WriteFailed' }),
+    );
+    expect(store.getState().notice).toEqual({ type: 'writeFailed' });
+    expect(errorReporter.reports).toEqual([
+      { error: expect.any(Error), context: { operation: 'renameList' } },
+    ]);
+    expect(shownLists(store).map(({ name }) => name)).toEqual([
+      'Barbecue',
+      'Ma liste',
+    ]);
+  });
+});
+
+describe('deleteList', () => {
+  it('US2-3 removes a list that is not current from the lists, offline at once, keeping the current list', async () => {
+    const { store } = await buildStore();
+    await store.getState().loadCurrentList();
+    await store.getState().loadLists();
+
+    expect(await store.getState().deleteList(barbecue)).toEqual(ok(undefined));
+
+    expect(shownLists(store).map(({ name }) => name)).toEqual(['Ma liste']);
+    expect(shownList(store.getState().currentList)?.id).toBe(maListe);
+  });
+
+  it('US2-5 reloads the current list region to the first remaining list when the current list is deleted', async () => {
+    const { store } = await buildStore();
+    await store.getState().loadCurrentList();
+    await store.getState().loadLists();
+
+    await store.getState().deleteList(maListe);
+
+    expect(shownList(store.getState().currentList)).toEqual({
+      id: barbecue,
+      name: 'Barbecue',
+    });
+    expect(shownLists(store)).toEqual([
+      { id: barbecue, name: 'Barbecue', itemCount: 0, isCurrent: true },
+    ]);
+  });
+
+  it('US2-6 shows a new current "Ma liste" when the last list is deleted', async () => {
+    const { store } = await buildStore();
+    await store.getState().loadCurrentList();
+    await store.getState().loadLists();
+    await store.getState().deleteList(barbecue);
+
+    await store.getState().deleteList(maListe);
+
+    const [created] = shownLists(store);
+    expect(shownLists(store)).toEqual([
+      {
+        id: expect.any(String),
+        name: 'Ma liste',
+        itemCount: 0,
+        isCurrent: true,
+      },
+    ]);
+    expect(created?.id).not.toBe(maListe);
+    expect(store.getState().currentList.status).toBe('empty');
+  });
+
+  it('makes no undo offer and ends an existing one', async () => {
+    const { store } = await buildStore();
+    await store.getState().loadCurrentList();
+    await store.getState().removeItem(lait);
+    expect(store.getState().pendingUndo).not.toBeNull();
+
+    await store.getState().deleteList(barbecue);
+
+    expect(store.getState().pendingUndo).toBeNull();
+  });
+
+  it('returns ListNotFound as expected: no notice, nothing reported, nothing changed', async () => {
+    const { store, errorReporter } = await buildStore();
+    await store.getState().loadLists();
+
+    const outcome = await store.getState().deleteList('list-unknown' as ListId);
+
+    expect(outcome).toEqual(err({ type: 'ListNotFound' }));
+    expect(store.getState().notice).toBeNull();
+    expect(errorReporter.reports).toEqual([]);
+    expect(shownLists(store)).toHaveLength(2);
+  });
+
+  it('resolves to WriteFailed with the failed save notice, changing nothing', async () => {
+    const { store, errorReporter } = await buildStore({
+      failing: ['deleteList'],
+    });
+    await store.getState().loadLists();
+
+    expect(await store.getState().deleteList(barbecue)).toEqual(
+      err({ type: 'WriteFailed' }),
+    );
+    expect(store.getState().notice).toEqual({ type: 'writeFailed' });
+    expect(errorReporter.reports).toEqual([
+      { error: expect.any(Error), context: { operation: 'deleteList' } },
+    ]);
+    expect(shownLists(store)).toHaveLength(2);
+  });
+});
+
 describe('setCurrentList', () => {
   it('US3-3 refreshes, so the current list region shows the chosen list', async () => {
     const { store } = await buildStore();

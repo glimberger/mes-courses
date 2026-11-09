@@ -26,6 +26,7 @@ const buildStore = () => {
     ids,
     clock: new FakeClock(),
     localDataEraser: eraserOf(unitOfWork, ids, seed),
+    firstListName: seed.firstListName,
   });
   return createAppStore({
     useCases,

@@ -4,6 +4,7 @@ import { RecordingErrorReporter } from '../../../application/testing/recording-e
 import type { ArticleId } from '../../../domain/article';
 import type { ListId } from '../../../domain/shopping-list';
 import { Navigation } from '../navigation';
+import { waitForMenusToSettle } from '../testing/wait-for-menus';
 import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
 import type { StoryScenario } from '../testing/story-store';
@@ -133,12 +134,13 @@ describe('Lists', () => {
     );
   });
 
-  it('US4-1 FR-015 marks only the current list "en cours", and offers no ⋮ menu on rows', async () => {
+  it('US4-1 FR-015 marks only the current list "en cours", and gives each row a ⋮ menu', async () => {
     await renderScreen();
     await screen.findByText('Barbecue');
 
     expect(screen.getAllByText('en cours')).toHaveLength(1);
-    expect(screen.queryByLabelText(/^Actions pour/)).not.toBeOnTheScreen();
+    expect(screen.getByLabelText('Actions pour Barbecue')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Actions pour Ma liste')).toBeOnTheScreen();
   });
 
   it('FR-025 tapping the current list goes back to CurrentList, saving nothing, and the "Annuler" offer stays', async () => {
@@ -195,5 +197,105 @@ describe('Lists', () => {
 
     expect(await screen.findByText('Votre liste est vide')).toBeOnTheScreen();
     expect(screen.getByText('Barbecue')).toBeOnTheScreen();
+  });
+
+  describe('the ⋮ menu of a row (spec 012)', () => {
+    const chooseFromMenu = async (
+      name: string,
+      action: 'Modifier' | 'Supprimer',
+    ) => {
+      fireEvent.press(await screen.findByLabelText(`Actions pour ${name}`));
+      fireEvent.press(await screen.findByLabelText(`${action} ${name}`));
+    };
+
+    it('US1-1 "Modifier" opens the dialog pre-filled with the name', async () => {
+      await renderScreen();
+      await screen.findByText('Barbecue');
+      await waitForMenusToSettle();
+
+      await chooseFromMenu('Barbecue', 'Modifier');
+
+      expect(await screen.findByText('Modifier la liste')).toBeOnTheScreen();
+      expect(screen.getByLabelText('Nom').props.value).toBe('Barbecue');
+    });
+
+    it('US1-2 US1-3 renaming shows the new name in alphabetical place, keeping the "en cours" chip', async () => {
+      await renderScreen();
+      await screen.findByText('Barbecue');
+      await waitForMenusToSettle();
+
+      await chooseFromMenu('Ma liste', 'Modifier');
+      fireEvent.changeText(await screen.findByLabelText('Nom'), 'Anniversaire');
+      fireEvent.press(screen.getByRole('button', { name: 'Enregistrer' }));
+
+      expect(await screen.findByText('Anniversaire')).toBeOnTheScreen();
+      await waitFor(() =>
+        expect(screen.queryByText('Modifier la liste')).toBeNull(),
+      );
+      expect(screen.queryByText('Ma liste')).toBeNull();
+      expect(
+        screen
+          .getAllByRole('button', { name: /articles?/ })
+          .map((button) => button.props.accessibilityLabel as string),
+      ).toEqual([
+        'Anniversaire, 4 articles, liste en cours',
+        'Barbecue, 0 articles',
+      ]);
+    });
+
+    it('US2-1 "Supprimer" asks first, and confirming removes the list', async () => {
+      await renderScreen();
+      await screen.findByText('Barbecue');
+      await waitForMenusToSettle();
+
+      await chooseFromMenu('Barbecue', 'Supprimer');
+      expect(
+        await screen.findByText('Supprimer « Barbecue » ?'),
+      ).toBeOnTheScreen();
+      fireEvent.press(screen.getByRole('button', { name: 'Supprimer' }));
+
+      await waitFor(() => expect(screen.queryByText('Barbecue')).toBeNull(), {
+        timeout: 3000,
+      });
+      expect(screen.getByText('Ma liste')).toBeOnTheScreen();
+    });
+
+    it('US2-1 deleting the current list makes the first remaining one "en cours"', async () => {
+      await renderScreen();
+      await screen.findByText('Barbecue');
+      await waitForMenusToSettle();
+
+      await chooseFromMenu('Ma liste', 'Supprimer');
+      fireEvent.press(await screen.findByRole('button', { name: 'Supprimer' }));
+
+      expect(
+        await screen.findByLabelText('Barbecue, 0 articles, liste en cours'),
+      ).toBeOnTheScreen();
+    });
+
+    it('cancelling the delete dialog keeps the list', async () => {
+      await renderScreen();
+      await screen.findByText('Barbecue');
+      await waitForMenusToSettle();
+
+      await chooseFromMenu('Barbecue', 'Supprimer');
+      fireEvent.press(await screen.findByRole('button', { name: 'Annuler' }));
+
+      await waitFor(() =>
+        expect(screen.queryByText('Supprimer « Barbecue » ?')).toBeNull(),
+      );
+      expect(screen.getByText('Barbecue')).toBeOnTheScreen();
+    });
+
+    it('opening the menu does not choose the list', async () => {
+      const { useCases } = await renderScreen();
+      const setCurrentList = jest.spyOn(useCases, 'setCurrentList');
+      await screen.findByText('Barbecue');
+      await waitForMenusToSettle();
+
+      fireEvent.press(screen.getByLabelText('Actions pour Barbecue'));
+
+      expect(setCurrentList).not.toHaveBeenCalled();
+    });
   });
 });
