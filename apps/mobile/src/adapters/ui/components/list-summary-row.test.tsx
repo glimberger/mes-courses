@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import { waitForMenusToSettle } from '../testing/wait-for-menus';
 import { darkTheme, lightTheme, type AppTheme } from '../theme/theme';
 import { ListSummaryRow, type ListSummaryRowProps } from './ListSummaryRow';
 
@@ -13,12 +14,16 @@ const renderRow = (theme: AppTheme, props: Partial<ListSummaryRowProps>) => {
         itemCount={4}
         isCurrent={false}
         onPress={jest.fn()}
+        onEdit={jest.fn()}
+        onDelete={jest.fn()}
         testID="card"
         {...props}
       />
     </PaperProvider>,
   );
-  return screen.getByRole('button');
+  const [button] = screen.getAllByRole('button');
+  if (!button) throw new Error('No button');
+  return button;
 };
 
 describe.each([
@@ -69,11 +74,10 @@ describe.each([
     });
   });
 
-  it('ends with a chevron_right when the list is not current', () => {
+  it('has no chevron, and ends with the ⋮ button', () => {
     renderRow(theme, { isCurrent: false });
-    expect(
-      screen.UNSAFE_getByProps({ source: 'chevron_right' }).props.color,
-    ).toBe(theme.colors.onSurfaceVariant);
+    expect(screen.UNSAFE_queryByProps({ source: 'chevron_right' })).toBeNull();
+    expect(screen.getByLabelText('Actions pour Ma liste')).toBeOnTheScreen();
     expect(screen.queryByText('en cours')).toBeNull();
   });
 
@@ -81,6 +85,7 @@ describe.each([
     renderRow(theme, { isCurrent: true });
     expect(screen.getByText('en cours')).toBeTruthy();
     expect(screen.UNSAFE_queryByProps({ source: 'chevron_right' })).toBeNull();
+    expect(screen.getByLabelText('Actions pour Ma liste')).toBeOnTheScreen();
   });
 
   it('wraps a long name instead of truncating it', () => {
@@ -104,5 +109,42 @@ describe.each([
     );
     fireEvent.press(row);
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the ⋮ button outside the tappable row: tapping it does not call onPress', async () => {
+    const onPress = jest.fn();
+    renderRow(theme, { onPress });
+    await waitForMenusToSettle();
+
+    fireEvent.press(screen.getByLabelText('Actions pour Ma liste'));
+
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('offers "Modifier <name>" then "Supprimer <name>" and calls onEdit and onDelete', async () => {
+    const onEdit = jest.fn();
+    const onDelete = jest.fn();
+    renderRow(theme, { name: 'Barbecue', onEdit, onDelete });
+    await waitForMenusToSettle();
+
+    fireEvent.press(screen.getByLabelText('Actions pour Barbecue'));
+    expect(await screen.findByText('Modifier')).toBeOnTheScreen();
+    expect(
+      screen
+        .getAllByLabelText(/^(Modifier|Supprimer) Barbecue$/)
+        .map((item) => item.props.accessibilityLabel as string),
+    ).toEqual(['Modifier Barbecue', 'Supprimer Barbecue']);
+    fireEvent.press(screen.getByLabelText('Modifier Barbecue'));
+    expect(onEdit).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(screen.getByLabelText('Actions pour Barbecue'));
+    fireEvent.press(screen.getByLabelText('Supprimer Barbecue'));
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the menu open when asked, for stories', () => {
+    renderRow(theme, { menuInitiallyOpen: true });
+    expect(screen.getByText('Modifier')).toBeOnTheScreen();
+    expect(screen.getByText('Supprimer')).toBeOnTheScreen();
   });
 });

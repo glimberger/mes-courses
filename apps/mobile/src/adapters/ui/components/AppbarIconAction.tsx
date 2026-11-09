@@ -8,7 +8,7 @@ export type AppbarIconActionProps = {
   accessibilityLabel: string;
   onPress: () => void;
   /** The button screen readers focus, for a focus move (FR-037). */
-  ref?: Ref<HostInstance>;
+  ref?: Ref<HostInstance> | undefined;
 };
 
 /**

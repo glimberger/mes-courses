@@ -90,6 +90,8 @@ export const requiredStories: readonly string[] = [
   'Dialogs/EditListDialog/NameError',
   'Dialogs/DeleteListDialog/Default',
   'Dialogs/DeleteListDialog/DefaultDark',
+  'Screens/Lists/MenuOpen',
+  'Components/ListSummaryRow/MenuOpen',
   'Dialogs/CreateCategoryDialog/Default',
   'Dialogs/CreateCategoryDialog/NameAlreadyUsed',
   // 002 Manage articles

@@ -25,7 +25,7 @@ Paths are under `apps/mobile/src/` for the app and `apps/server/src/` for the se
 - [X] T001 Write `specs/012-rename-delete-list/spec.md` and its quality checklist (issue #192)
 - [X] T002 Write `plan.md`, `research.md`, `data-model.md`, `quickstart.md` and `contracts/`
 - [X] T003 Write this `tasks.md`
-- [ ] T004 [P] Update `design/mockups/`: the Listes tab with the ⋮ button in place of the chevron (current row with chip and ⋮), the open row menu, the "Modifier la liste" dialog and the "Supprimer « … » ?" dialog (light, and dark for the delete dialog), as `25-` to `28-` files linked from `index.html` and `README.md`; the app screens follow them (Principle V)
+- [X] T004 [P] Update `design/mockups/`: the Listes tab with the ⋮ button in place of the chevron (current row with chip and ⋮), the open row menu, the "Modifier la liste" dialog and the "Supprimer « … » ?" dialog (light, and dark for the delete dialog), as `25-` to `28-` files linked from `index.html` and `README.md`; the app screens follow them (Principle V)
 
 ---
 
@@ -82,8 +82,8 @@ Paths are under `apps/mobile/src/` for the app and `apps/server/src/` for the se
 
 **Independent Test**: from the Listes tab, rename and delete a list with the menu; a tap on the row still makes it current.
 
-- [ ] T019 [US1] [US2] Test first, then implement `adapters/ui/components/ListSummaryRow.tsx` and `list-summary-row.test.tsx`: no chevron (the "ends with a chevron_right" test becomes "has no chevron"), the ⋮ `RowMenu` labelled "Actions pour <name>" outside the tappable area, entries "Modifier <name>" and "Supprimer <name>" in that order, the chip kept on the current row beside the ⋮, `onEdit`/`onDelete` called, the row label unchanged, a tap on the row alone calls `onPress`, `menuInitiallyOpen` for stories; add `Components/ListSummaryRow/MenuOpen`
-- [ ] T020 [US1] [US2] Test first in `adapters/ui/screens/lists-screen.test.tsx` (US1-1 to US1-3, US2-1; the row tap still makes the list current and shows Courses; Modifier opens the pre-filled dialog; Supprimer opens the confirmation; the outcomes show in the rows and the "en cours" chip; focus returns to the row's ⋮ or the FAB; loading, empty, error and success states unchanged) and `adapters/ui/offline.test.tsx` (rename and delete with the server unreachable, SC-005), then wire `adapters/ui/screens/ListsScreen.tsx`; add `Screens/Lists/MenuOpen` to the stories and `required-stories.ts`; update the story screenshot list in `tests/e2e/screenshots/` if the Listes shots change
+- [X] T019 [US1] [US2] Test first, then implement `adapters/ui/components/ListSummaryRow.tsx` and `list-summary-row.test.tsx`: no chevron (the "ends with a chevron_right" test becomes "has no chevron"), the ⋮ `RowMenu` labelled "Actions pour <name>" outside the tappable area, entries "Modifier <name>" and "Supprimer <name>" in that order, the chip kept on the current row beside the ⋮, `onEdit`/`onDelete` called, the row label unchanged, a tap on the row alone calls `onPress`, `menuInitiallyOpen` for stories; add `Components/ListSummaryRow/MenuOpen`
+- [X] T020 [US1] [US2] Test first in `adapters/ui/screens/lists-screen.test.tsx` (US1-1 to US1-3, US2-1; the row tap still makes the list current and shows Courses; Modifier opens the pre-filled dialog; Supprimer opens the confirmation; the outcomes show in the rows and the "en cours" chip; focus returns to the row's ⋮ or the FAB; loading, empty, error and success states unchanged) and `adapters/ui/offline.test.tsx` (rename and delete with the server unreachable, SC-005), then wire `adapters/ui/screens/ListsScreen.tsx`; add `Screens/Lists/MenuOpen` to the stories and `required-stories.ts`; update the story screenshot list in `tests/e2e/screenshots/` if the Listes shots change
 
 **Checkpoint**: US1 and US2 complete on one device.
 
