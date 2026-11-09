@@ -340,6 +340,16 @@ export class InMemoryRepositories implements Repositories {
         (entry) => entry.heldBy !== heldBy,
       );
     },
+    forgetList: async (listId) => {
+      this.state.outbox = this.state.outbox.filter(
+        (entry) =>
+          !(
+            (entry.change.kind === 'list' && entry.change.id === listId) ||
+            (entry.change.kind === 'listItem' &&
+              entry.change.id.startsWith(`${listId}:`))
+          ),
+      );
+    },
     count: async () =>
       this.state.outbox.filter((entry) => entry.heldBy === null).length,
   };

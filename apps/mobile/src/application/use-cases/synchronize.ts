@@ -160,6 +160,8 @@ const moveCurrentListOffDeleted = async (
       incoming,
       firstListName,
     });
+    // A deletion wins over any pending local edit (012 R3), as in the applier for other lists.
+    await repos.changes.forgetList(current);
     removed.push(current);
   }
   return { removed, makeCurrent };

@@ -34,6 +34,11 @@ export interface ChangeRecorder {
   releaseAll(): Promise<void>;
   /** Undo: deletes the held entries, so the server never sees them. */
   discard(heldBy: string): Promise<void>;
+  /**
+   * Drops every entry, held or not, about the list or its items (`listItem` ids are
+   * `<listId>:<articleId>`): they would be sent for a list that no longer exists.
+   */
+  forgetList(listId: string): Promise<void>;
   /** The number of pending entries, held ones excluded. */
   count(): Promise<number>;
 }

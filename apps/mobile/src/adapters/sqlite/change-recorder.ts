@@ -90,6 +90,13 @@ export const sqliteChangeRecorder = (
     releaseAll: () => write(db, 'UPDATE pending_change SET held_by = NULL', []),
     discard: (heldBy) =>
       write(db, 'DELETE FROM pending_change WHERE held_by = ?', [heldBy]),
+    forgetList: (listId) =>
+      write(
+        db,
+        `DELETE FROM pending_change WHERE (kind = 'list' AND entity_id = ?)
+         OR (kind = 'listItem' AND substr(entity_id, 1, ?) = ?)`,
+        [listId, listId.length + 1, `${listId}:`],
+      ),
     count: async () =>
       (await findFirst(
         db,

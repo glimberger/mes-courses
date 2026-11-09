@@ -519,6 +519,30 @@ describe('synchronize', () => {
       expect(await current()).toBe(lists[0]?.[0]);
     });
 
+    it('a pull deleting the current list drops its queued rename and item edits', async () => {
+      await connect();
+      await seedLists(['l-1', 'Ma liste'], ['l-2', 'Barbecue']);
+      await record('list', 'l-1', { name: 'Renommée' });
+      await record('listItem', 'l-1:a-1', { inCart: true });
+      await record('list', 'l-2', { name: 'Autre' });
+      handler = (request) =>
+        ok(
+          respond(request, {
+            acknowledged: [],
+            rows: [deletedRow('l-1', 'Ma liste', 9)],
+            seq: 9,
+          }),
+        );
+
+      await synchronize();
+
+      expect(await current()).toBe('l-2');
+      const queued = await unitOfWork.run((repos) => repos.changes.pending(10));
+      expect(queued.map((change) => `${change.kind}:${change.id}`)).toEqual([
+        'list:l-2',
+      ]);
+    });
+
     it('FR-010 a pull deleting the current list and the first one after it lands on the next', async () => {
       await connect();
       await seedLists(
