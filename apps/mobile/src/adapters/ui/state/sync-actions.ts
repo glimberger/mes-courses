@@ -109,6 +109,7 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
    */
   const endOfferOfDeleted = ({
     deletedArticles,
+    deletedLists,
     merges,
   }: SyncResult['effects']) => {
     const offer = get().pendingUndo;
@@ -125,6 +126,7 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
       offer.kind === 'deletedArticle' ? offer.deleted.article.categoryId : null;
     const gone =
       deletedArticles.includes(articleId) ||
+      listIds.some((id) => deletedLists.includes(id)) ||
       merges.some(
         ({ kind, loserId }) =>
           (kind === 'article' && loserId === articleId) ||

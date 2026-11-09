@@ -228,9 +228,20 @@ export const sqlitePulledRowsApplier = (
           ) {
             // A deletion wins over any pending local edit (012 R3). The caller has already moved
             // the current list away from it (R4).
+            // The caller settles a current list left unset (it was moved already in most cases).
+            await write(db, 'DELETE FROM app_state WHERE current_list_id = ?', [
+              row.id,
+            ]);
             await write(db, 'DELETE FROM list_item WHERE list_id = ?', [
               row.id,
             ]);
+            // Changes still waiting for the list or its items would be sent for a tombstone.
+            await write(
+              db,
+              `DELETE FROM pending_change WHERE (kind = 'list' AND entity_id = ?)
+               OR (kind = 'listItem' AND substr(entity_id, 1, ?) = ?)`,
+              [row.id, row.id.length + 1, `${row.id}:`],
+            );
             await write(db, 'DELETE FROM shopping_list WHERE id = ?', [row.id]);
             effects.deletedLists.push(row.id);
           }

@@ -63,9 +63,18 @@ export const resolveCurrentList = async (
   const pulled = pickCurrentList(incoming.filter((l) => l.id !== removing));
   if (pulled) return pulled.id;
 
+  await createFirstList(repos, ids, firstListName);
+  return null;
+};
+
+/** Creates the replacement list, recorded as a normal change, and makes it current. */
+export const createFirstList = async (
+  repos: Repositories,
+  ids: IdGenerator,
+  firstListName: string,
+): Promise<void> => {
   const listId = ids.next() as ListId;
   await repos.lists.add({ id: listId, name: firstListName });
   await repos.changes.record('list', listId, { name: firstListName });
   await repos.appState.setCurrentListId(listId);
-  return null;
 };

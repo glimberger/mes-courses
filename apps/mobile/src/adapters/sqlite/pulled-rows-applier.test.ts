@@ -482,6 +482,30 @@ describe('pulled rows applier', () => {
       expect(effects.merges).toEqual([]);
     });
 
+    it('deletes a tombstoned current list without a foreign key failure, and its waiting changes', async () => {
+      const { db, applier } = await withBarbecue();
+      await db.runAsync(
+        `UPDATE app_state SET current_list_id = 'l-1' WHERE id = 1`,
+        [],
+      );
+      await db.runAsync(
+        `INSERT INTO pending_change (change_id, hlc, kind, entity_id, fields)
+         VALUES ('c1', 'h', 'listItem', 'l-1:a-1', '{}'),
+                ('c2', 'h', 'listItem', 'l-10:a-1', '{}')`,
+        [],
+      );
+
+      await applier.apply(
+        [listRow('l-1', 'Barbecue', { deletedHlc: hlc(20) })],
+        NO_PENDING,
+      );
+
+      expect(await all(db, `SELECT * FROM app_state`)).toEqual([]);
+      expect(await all(db, `SELECT change_id FROM pending_change`)).toEqual([
+        { change_id: 'c2' },
+      ]);
+    });
+
     it('ignores the tombstone of a list it does not hold', async () => {
       const { db, applier } = await setup();
 

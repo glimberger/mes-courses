@@ -9,7 +9,11 @@ import {
   type SyncResponse,
 } from '@mes-courses/sync-core';
 
-import type { ListId, ShoppingList } from '../../domain/shopping-list';
+import {
+  pickCurrentList,
+  type ListId,
+  type ShoppingList,
+} from '../../domain/shopping-list';
 import type { Clock } from '../ports/clock';
 import type { CredentialStore } from '../ports/credential-store';
 import type { IdGenerator } from '../ports/id-generator';
@@ -17,7 +21,7 @@ import type { PendingChange } from '../ports/change-recorder';
 import type { RemoteEffects } from '../ports/pulled-rows';
 import type { Connection, SyncServer } from '../ports/sync-server';
 import type { Repositories, UnitOfWork } from '../ports/unit-of-work';
-import { resolveCurrentList } from './resolve-current-list';
+import { createFirstList, resolveCurrentList } from './resolve-current-list';
 
 /** Why a device is signed out by the server (data-model.md, connection state). */
 export type SignedOutReason = 'revoked' | 'accountDeleted';
@@ -161,6 +165,30 @@ const moveCurrentListOffDeleted = async (
   return { removed, makeCurrent };
 };
 
+/**
+ * Once the batch is stored, gives the app a current list again if the deletions left none (the
+ * pulled list planned for it may have been deferred or skipped by the applier): the planned list
+ * when it is stored, else the first local list, else a new default list.
+ */
+const settleCurrentList = async (
+  repos: Repositories,
+  ids: IdGenerator,
+  makeCurrent: ListId | null,
+  firstListName: string,
+): Promise<void> => {
+  if ((await repos.appState.currentListId()) !== null) return;
+  if (makeCurrent !== null && (await repos.lists.findById(makeCurrent))) {
+    await repos.appState.setCurrentListId(makeCurrent);
+    return;
+  }
+  const local = pickCurrentList(await repos.lists.all());
+  if (local) {
+    await repos.appState.setCurrentListId(local.id);
+    return;
+  }
+  await createFirstList(repos, ids, firstListName);
+};
+
 export const createSynchronize =
   ({
     unitOfWork,
@@ -274,8 +302,8 @@ export const createSynchronize =
             firstListName,
           );
           const applied = await repos.pulledRows.apply(response.rows, pending);
-          if (makeCurrent !== null) {
-            await repos.appState.setCurrentListId(makeCurrent);
+          if (removed.length > 0 || applied.effects.deletedLists.length > 0) {
+            await settleCurrentList(repos, ids, makeCurrent, firstListName);
           }
           effects.deletedArticles.push(...applied.effects.deletedArticles);
           effects.deletedLists.push(

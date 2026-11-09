@@ -377,7 +377,7 @@ describe('synchronize', () => {
       await connect();
       const effects: RemoteEffects = {
         deletedArticles: ['a-1'],
-        deletedLists: ['l-4'],
+        deletedLists: [],
         removedItems: [{ listId: 'l-1', articleId: 'a-2' }],
         merges: [{ kind: 'list', loserId: 'l-2', survivorId: 'l-3' }],
       };
@@ -591,6 +591,54 @@ describe('synchronize', () => {
 
       expect(await listNames()).toEqual([['l-1', 'Ma liste']]);
       expect(result.effects.deletedLists).toEqual(['l-2']);
+    });
+
+    it('a deletion drops the changes of the list items the server did not acknowledge', async () => {
+      await connect();
+      await seedLists(['l-1', 'Ma liste'], ['l-2', 'Barbecue']);
+      await record('listItem', 'l-2:a-1', { inCart: true });
+      handler = (request) =>
+        ok(
+          respond(request, {
+            acknowledged: [],
+            rows: [deletedRow('l-2', 'Barbecue', 9)],
+            seq: 9,
+          }),
+        );
+
+      await synchronize();
+
+      expect(await repositories.changes.pending(10)).toEqual([]);
+    });
+
+    it('keeps a current list when the pulled replacement is deferred by the applier', async () => {
+      await connect();
+      await seedLists(['l-1', 'Barbecue']);
+      await repositories.appState.setCurrentListId('l-1' as ListId);
+      pull(deletedRow('l-1', 'Barbecue', 9), listRow('l-9', 'Autre', 9));
+      jest
+        .spyOn(repositories.pulledRows, 'apply')
+        .mockImplementationOnce(async () => {
+          await repositories.items.removeAllForList('l-1' as ListId);
+          await repositories.lists.remove('l-1' as ListId);
+          return {
+            deferred: 1,
+            effects: {
+              deletedArticles: [],
+              deletedLists: ['l-1'],
+              removedItems: [],
+              merges: [],
+            },
+          };
+        });
+
+      await synchronize();
+
+      const current = await repositories.appState.currentListId();
+      expect(current).not.toBeNull();
+      expect(
+        await repositories.lists.findById(current as ListId),
+      ).not.toBeNull();
     });
 
     it('SC-003 after a snapshot, the tombstone the server sends back beats the minimum-HLC create', async () => {

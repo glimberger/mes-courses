@@ -36,26 +36,19 @@ export const useRemoteRemoval = (
         if (state.sync.remote === previous.sync.remote) return;
         const { effects } = state.sync.remote;
         const { target: now, onRemoved: callback } = latest.current;
+        // The form may hold an id merged away since: the deletion names its survivor.
+        const deletedIn = (deleted: string[], id: string) =>
+          deleted.includes(id) ||
+          deleted.includes(followRedirects(state.sync.redirects, id));
         if (now.articleId === undefined) {
-          // A list alone; it may be merged away since: the deletion names its survivor.
-          const followedList = followRedirects(
-            state.sync.redirects,
-            now.listId,
-          );
-          if (
-            effects.deletedLists.includes(now.listId) ||
-            effects.deletedLists.includes(followedList)
-          ) {
+          // A list alone.
+          if (deletedIn(effects.deletedLists, now.listId)) {
             callback('listDeleted');
           }
           return;
         }
-        // The form may hold an id merged away since: the deletion names its survivor.
         const followed = followRedirects(state.sync.redirects, now.articleId);
-        if (
-          effects.deletedArticles.includes(now.articleId) ||
-          effects.deletedArticles.includes(followed)
-        ) {
+        if (deletedIn(effects.deletedArticles, now.articleId)) {
           callback('articleDeleted');
         } else if (
           now.listId !== undefined &&

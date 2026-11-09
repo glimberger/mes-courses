@@ -389,8 +389,19 @@ export class InMemoryRepositories implements Repositories {
           }
         } else if (row.kind === 'list' && row.deletedHlc !== null) {
           if (this.state.lists.has(row.id)) {
+            if (this.state.currentListId === row.id) {
+              this.state.currentListId = null;
+            }
             await this.items.removeAllForList(row.id as ListId);
             await this.lists.remove(row.id as ListId);
+            this.state.outbox = this.state.outbox.filter(
+              ({ change }) =>
+                !(
+                  (change.kind === 'list' && change.id === row.id) ||
+                  (change.kind === 'listItem' &&
+                    change.id.startsWith(`${row.id}:`))
+                ),
+            );
             effects.deletedLists.push(row.id);
           }
         } else if (row.kind === 'list') {
