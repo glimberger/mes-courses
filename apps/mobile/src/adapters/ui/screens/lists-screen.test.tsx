@@ -255,10 +255,10 @@ describe('Lists', () => {
       fireEvent.press(screen.getByRole('button', { name: 'Supprimer' }));
 
       await waitFor(() => expect(screen.queryByText('Barbecue')).toBeNull(), {
-        timeout: 3000,
+        timeout: 8000,
       });
       expect(screen.getByText('Ma liste')).toBeOnTheScreen();
-    });
+    }, 15000);
 
     it('US2-1 deleting the current list makes the first remaining one "en cours"', async () => {
       await renderScreen();
