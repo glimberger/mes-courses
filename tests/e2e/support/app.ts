@@ -245,3 +245,21 @@ export const openCatalogRowMenu = async (name: string, entry: string) => {
     .toBeVisible()
     .withTimeout(5000);
 };
+
+/**
+ * From Lists, opens the ⋮ menu of the row of this list and taps its entry ("Modifier" or
+ * "Supprimer"), which opens the matching dialog.
+ */
+export const chooseListMenuEntry = async (
+  name: string,
+  entry: 'Modifier' | 'Supprimer',
+) => {
+  await openListRowMenu(name);
+  await chooseRowMenuEntry(`${entry} ${name}`);
+};
+
+/** Waits until no row of Lists has this label. */
+export const expectListGone = (rowLabel: string) =>
+  waitFor(element(by.label(rowLabel)))
+    .not.toExist()
+    .withTimeout(5000);
