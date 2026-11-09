@@ -343,6 +343,55 @@ describe('applyChange', () => {
     });
   });
 
+  describe('deleted lists', () => {
+    const deleteList = (wallMs: number, changeId = 'ch-1'): Change => ({
+      changeId,
+      hlc: hlc(wallMs),
+      kind: 'list',
+      id: 'l-1',
+      fields: { deleted: true },
+    });
+    const renameList = (wallMs: number, changeId = 'ch-2'): Change => ({
+      changeId,
+      hlc: hlc(wallMs),
+      kind: 'list',
+      id: 'l-1',
+      fields: { name: 'Barbecue' },
+    });
+
+    it('US3 sets deletedHlc and the change seq on list.deleted', () => {
+      expect(applyChange(list(), deleteList(20), 6)).toEqual(
+        list({ deletedHlc: hlc(20), seq: 6 }),
+      );
+    });
+
+    it('US3 tombstones a live list even with an older stamp than its name', () => {
+      const renamed = list({ nameHlc: hlc(50) });
+
+      expect(applyChange(renamed, deleteList(20), 6)).toEqual(
+        list({ nameHlc: hlc(50), deletedHlc: hlc(20), seq: 6 }),
+      );
+    });
+
+    it('US3 ignores a rename or a second deletion of a deleted list', () => {
+      const deleted = list({ deletedHlc: hlc(20), seq: 6 });
+
+      expect(applyChange(deleted, renameList(30), 7)).toBe(deleted);
+      expect(applyChange(deleted, deleteList(40, 'ch-3'), 8)).toBe(deleted);
+    });
+
+    it('US3 ignores a rename or a deletion of a list merged into another', () => {
+      const merged = list({ deletedHlc: hlc(20), mergedInto: 'l-0', seq: 6 });
+
+      expect(applyChange(merged, renameList(30), 7)).toBe(merged);
+      expect(applyChange(merged, deleteList(40, 'ch-3'), 8)).toBe(merged);
+    });
+
+    it('US3 writes nothing for the deletion of an unknown list', () => {
+      expect(applyChange(null, deleteList(20), 3)).toBeNull();
+    });
+  });
+
   describe('unknown entities', () => {
     it('ignores an update for an entity that does not exist', () => {
       const changes: Change[] = [

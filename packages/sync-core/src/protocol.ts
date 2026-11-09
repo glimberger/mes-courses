@@ -10,7 +10,8 @@ export type SyncedFields = {
   category: { name: string; position: number };
   /** `deleted: true` is the intent to tombstone; the server turns it into `deletedHlc`. */
   article: { name: string; categoryId: string; deleted: true };
-  list: { name: string };
+  /** `deleted: true` tombstones the list, as for `article`. */
+  list: { name: string; deleted: true };
   listItem: {
     listId: string;
     articleId: string;
@@ -47,7 +48,7 @@ export type ServerRow = {
       };
     };
     createdHlc: Hlc;
-    /** Set for a tombstone: a deleted article, or an entity merged into another. */
+    /** Set for a tombstone: a deleted article or list, or an entity merged into another. */
     deletedHlc: Hlc | null;
     /** The survivor's id when the entity was merged by name (research R8). */
     mergedInto: string | null;

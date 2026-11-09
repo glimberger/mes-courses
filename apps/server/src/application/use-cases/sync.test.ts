@@ -839,4 +839,171 @@ describe('sync', () => {
       ]);
     });
   });
+
+  describe('list deletion (012 US3)', () => {
+    const deleteList = (changeId: string, id: string, at: number): Change => ({
+      changeId,
+      hlc: hlc(at),
+      kind: 'list',
+      id,
+      fields: { deleted: true },
+    });
+    const renameList = (
+      changeId: string,
+      id: string,
+      name: string,
+      at: number,
+    ): Change => ({
+      changeId,
+      hlc: hlc(at),
+      kind: 'list',
+      id,
+      fields: { name },
+    });
+
+    it('US3 a pull from lastSeq 0 returns the deleted list as a tombstone', async () => {
+      const { run } = await setup();
+      await run([createList('ch-1', 'l-1', 'Barbecue', NOW - 2000)]);
+      await run([deleteList('ch-2', 'l-1', NOW - 1000)]);
+
+      const { rows } = await run([], 0);
+
+      expect(rowOf(rows, 'list', 'l-1')).toMatchObject({
+        deletedHlc: hlc(NOW - 1000),
+        mergedInto: null,
+      });
+    });
+
+    it('US3 acknowledges and ignores a rename of a deleted list, even a later one', async () => {
+      const { run } = await setup();
+      await run([
+        createList('ch-1', 'l-1', 'Barbecue', NOW - 3000),
+        deleteList('ch-2', 'l-1', NOW - 2000),
+      ]);
+      const before = await run([], 0);
+
+      const after = await run(
+        [renameList('ch-3', 'l-1', 'Pique-nique', NOW - 1000)],
+        before.seq,
+      );
+
+      expect(after.acknowledged).toEqual(['ch-3']);
+      expect(after.rows).toEqual([]);
+      expect(rowOf((await run([], 0)).rows, 'list', 'l-1')).toMatchObject({
+        fields: { name: { value: 'Barbecue' } },
+        deletedHlc: hlc(NOW - 2000),
+      });
+    });
+
+    it('US3 stores an item change aimed at a deleted list without reviving the list', async () => {
+      const { run } = await setup();
+      await run([
+        {
+          changeId: 'ch-0',
+          hlc: hlc(NOW - 4000),
+          kind: 'category',
+          id: 'c-1',
+          fields: { name: 'Fruits', position: 0 },
+        },
+        {
+          changeId: 'ch-00',
+          hlc: hlc(NOW - 4000),
+          kind: 'article',
+          id: 'a-1',
+          fields: { name: 'Pommes', categoryId: 'c-1' },
+        },
+        createList('ch-1', 'l-1', 'Barbecue', NOW - 3000),
+        deleteList('ch-2', 'l-1', NOW - 2000),
+      ]);
+
+      const { acknowledged, rows } = await run([
+        {
+          changeId: 'ch-3',
+          hlc: hlc(NOW - 1000),
+          kind: 'listItem',
+          id: 'l-1:a-1',
+          fields: {
+            listId: 'l-1',
+            articleId: 'a-1',
+            present: true,
+            inCart: false,
+            quantity: null,
+          },
+        },
+      ]);
+
+      expect(acknowledged).toEqual(['ch-3']);
+      expect(rowOf(rows, 'listItem', 'l-1:a-1')).toBeDefined();
+      expect(rowOf(rows, 'list', 'l-1')).toMatchObject({
+        deletedHlc: hlc(NOW - 2000),
+      });
+    });
+
+    it('US3 frees the name of a deleted list for a new live list', async () => {
+      const { run } = await setup();
+      await run([
+        createList('ch-1', 'l-1', 'Barbecue', NOW - 3000),
+        deleteList('ch-2', 'l-1', NOW - 2000),
+      ]);
+
+      const { rows } = await run([
+        createList('ch-3', 'l-2', 'barbecue', NOW - 1000),
+      ]);
+
+      expect(rowOf(rows, 'list', 'l-2')).toMatchObject({
+        deletedHlc: null,
+        mergedInto: null,
+      });
+      expect(rowOf(rows, 'list', 'l-1')).toMatchObject({
+        deletedHlc: hlc(NOW - 2000),
+        mergedInto: null,
+      });
+    });
+
+    it('FR-006 a replayed deletion is acknowledged and changes nothing', async () => {
+      const { run, store } = await setup();
+      await run([createList('ch-1', 'l-1', 'Barbecue', NOW - 2000)]);
+      const first = await run([deleteList('ch-2', 'l-1', NOW - 1000)]);
+      const seqAfterFirst = await store.run(({ meta }) => meta.currentSeq());
+
+      const replay = await run(
+        [deleteList('ch-2', 'l-1', NOW - 1000)],
+        first.seq,
+      );
+
+      expect(replay.acknowledged).toEqual(['ch-2']);
+      expect(replay.rows).toEqual([]);
+      expect(await store.run(({ meta }) => meta.currentSeq())).toBe(
+        seqAfterFirst,
+      );
+    });
+
+    it('US3 acknowledges the deletion of an unknown list and writes nothing', async () => {
+      const { run, store } = await setup();
+
+      const { acknowledged, rows } = await run([
+        deleteList('ch-1', 'l-9', NOW - 1000),
+      ]);
+
+      expect(acknowledged).toEqual(['ch-1']);
+      expect(rows).toEqual([]);
+      expect(await store.run(({ meta }) => meta.currentSeq())).toBe(0);
+    });
+
+    it('R3 deleting a list merged into another deletes its survivor', async () => {
+      const { run } = await setup();
+      await run([
+        createList('ch-1', 'l-1', 'Ma liste', NOW - 3000),
+        createList('ch-2', 'l-2', 'ma liste', NOW - 2000),
+      ]);
+
+      const { rows } = await run([deleteList('ch-3', 'l-2', NOW - 1000)]);
+
+      expect(rowOf(rows, 'list', 'l-1')).toMatchObject({
+        deletedHlc: hlc(NOW - 1000),
+        mergedInto: null,
+      });
+      expect(rowOf(rows, 'list', 'l-2')).toMatchObject({ mergedInto: 'l-1' });
+    });
+  });
 });
