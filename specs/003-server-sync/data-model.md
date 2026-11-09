@@ -7,6 +7,9 @@ This builds on [001's data model](../001-shopping-lists/data-model.md) and
 and the server (`packages/sync-core`), the device's local additions (migration 2 of the app's
 SQLite), and the server's database.
 
+> Note: the list `deleted` intent added by [012-rename-delete-list](../012-rename-delete-list/contracts/sync-api.md)
+> extends these types.
+
 ## Shared types (`packages/sync-core`)
 
 ```text

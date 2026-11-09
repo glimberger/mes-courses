@@ -6,6 +6,9 @@ by a schema on the server. The TypeScript types live in `packages/sync-core/src/
 the app's HTTP adapter and the server use the same definitions. The server returns error codes,
 never display text: the app writes the French (Principle X).
 
+> Note: the list `deleted` intent added by [012-rename-delete-list](../../012-rename-delete-list/contracts/sync-api.md)
+> extends this contract.
+
 ## Common rules
 
 - **Base path**: `/v1`. Every response carries:

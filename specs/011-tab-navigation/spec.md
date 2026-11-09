@@ -190,6 +190,6 @@ Editing or deleting an article changes it on every list, so it belongs on a dedi
 ## Assumptions
 
 - Features 001, 002 and 008 are in place; their use cases (`set-current-list`, `add-article-to-list`, `change-item-quantity`, `remove-item-from-list`, `restore-removed-item`, `edit-article`, `delete-article`, `restore-deleted-article`, `get-article-usage`, `get-categories`, `create-category`, `create-article-and-add-to-list`) are reused; new behavior in the application layer is limited to three gaps found in the code: `create-article` (create without adding to a list), `get-article-usage-counts` (one batch read for the badges) and a store action that removes an item without the undo offer.
-- Renaming an article on one list only, and a menu on "Mes listes" (rename or delete a list), are out of scope.
+- Renaming an article on one list only, and a menu on "Mes listes" (rename or delete a list), are out of scope (the list menu is specified in [012-rename-delete-list](../012-rename-delete-list/spec.md)).
 - The iOS build is not delivered (see project memory); navigation is verified on Android and in stories.
 - Screen text is French as given in this document; this specification is in English.
