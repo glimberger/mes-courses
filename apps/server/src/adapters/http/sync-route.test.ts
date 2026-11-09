@@ -195,6 +195,48 @@ describe('POST /v1/sync', () => {
     expect(pulledBody.seq).toBe(pushedBody.seq);
   });
 
+  it('012 accepts a list deletion, and another device pulls the tombstone', async () => {
+    const { pair, post, clock } = await harness();
+    const first = await pair();
+    const second = await pair();
+    await post(first.credential, {
+      lastSeq: 0,
+      hlc: hlc(START),
+      changes: [createList('c-1', 'l-1', 'Barbecue')],
+    });
+
+    const deleted = await post(first.credential, {
+      lastSeq: 0,
+      hlc: hlc(START + 1000),
+      changes: [
+        {
+          changeId: 'c-2',
+          hlc: hlc(START),
+          kind: 'list',
+          id: 'l-1',
+          fields: { deleted: true },
+        },
+      ],
+    });
+    clock.ms += 5000;
+    const pulled = await post(second.credential, {
+      lastSeq: 0,
+      hlc: hlc(START + 5000, second.deviceId),
+      changes: [],
+    });
+
+    expect(deleted.statusCode).toBe(200);
+    expect((deleted.json() as SyncResponse).acknowledged).toEqual(['c-2']);
+    expect((pulled.json() as SyncResponse).rows).toEqual([
+      expect.objectContaining({
+        kind: 'list',
+        id: 'l-1',
+        deletedHlc: hlc(START),
+        mergedInto: null,
+      }),
+    ]);
+  });
+
   it('answers a replay with the same acknowledgement and no second effect', async () => {
     const { pair, post, store } = await harness();
     const { credential } = await pair();

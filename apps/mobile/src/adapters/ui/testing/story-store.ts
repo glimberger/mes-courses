@@ -159,6 +159,7 @@ export const buildStoryStore = async (scenario: StoryScenario) => {
     ids,
     clock: new FakeClock(),
     localDataEraser: eraserOf(unitOfWork, ids, seed),
+    firstListName: seed.firstListName,
   });
   // Settles when a use case held pending is called: `prepare` may be waiting on it for ever.
   let pendingCalled!: () => void;

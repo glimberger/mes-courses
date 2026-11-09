@@ -32,6 +32,7 @@ const buildStore = () => {
       ids,
       clock: new FakeClock(),
       localDataEraser: eraserOf(unitOfWork, ids, seed),
+      firstListName: seed.firstListName,
     }),
     errorReporter: new RecordingErrorReporter(),
   });

@@ -220,6 +220,19 @@ export const sqlitePulledRowsApplier = (
                 survivorId: survivor,
               });
             }
+          } else if (
+            row.mergedInto === null &&
+            (await exists(db, 'SELECT 1 FROM shopping_list WHERE id = ?', [
+              row.id,
+            ]))
+          ) {
+            // A deletion wins over any pending local edit (012 R3). The caller has already moved
+            // the current list away from it (R4).
+            await write(db, 'DELETE FROM list_item WHERE list_id = ?', [
+              row.id,
+            ]);
+            await write(db, 'DELETE FROM shopping_list WHERE id = ?', [row.id]);
+            effects.deletedLists.push(row.id);
           }
           continue;
         }

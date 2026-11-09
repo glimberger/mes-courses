@@ -354,10 +354,14 @@ export class InMemoryRepositories implements Repositories {
   /**
    * Applies only what the screens react to, and reports it: a deleted article goes with its
    * items, a list item with `present = false` goes, and merges are reported (the loser article
-   * goes). The SQLite applier, with its own tests, applies everything.
+   * goes). Lists are created, renamed and deleted (with their items), minding the pending local
+   * changes, as the current list rule depends on them (012). The SQLite applier, with its own
+   * tests, applies everything.
    */
   pulledRows: PulledRowsApplier = {
-    apply: async (rows) => {
+    apply: async (rows, pendingFields) => {
+      const pendingOnList = (id: string, field: string) =>
+        pendingFields.has(`list:${id}:${field}`);
       const effects: RemoteEffects = {
         deletedArticles: [],
         deletedLists: [],
@@ -382,6 +386,21 @@ export class InMemoryRepositories implements Repositories {
           if (this.state.articles.has(row.id)) {
             effects.deletedArticles.push(row.id);
             dropArticle(row.id);
+          }
+        } else if (row.kind === 'list' && row.deletedHlc !== null) {
+          if (this.state.lists.has(row.id)) {
+            await this.items.removeAllForList(row.id as ListId);
+            await this.lists.remove(row.id as ListId);
+            effects.deletedLists.push(row.id);
+          }
+        } else if (row.kind === 'list') {
+          const name = row.fields.name?.value;
+          if (name === undefined) continue;
+          if (!this.state.lists.has(row.id)) {
+            if (pendingOnList(row.id, 'deleted')) continue;
+            await this.lists.add({ id: row.id as ListId, name });
+          } else if (!pendingOnList(row.id, 'name')) {
+            await this.lists.rename(row.id as ListId, name);
           }
         } else if (
           row.kind === 'listItem' &&

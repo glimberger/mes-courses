@@ -68,6 +68,7 @@ const buildStore = () => {
     ids,
     clock: new FakeClock(),
     localDataEraser: eraserOf(unitOfWork, ids, seed),
+    firstListName: seed.firstListName,
   });
   const getLists = jest.fn<Promise<ListSummary[]>, []>();
   const getCurrentList = jest.fn<Promise<CurrentListView>, []>();

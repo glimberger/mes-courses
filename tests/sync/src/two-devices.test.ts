@@ -410,4 +410,133 @@ describe('two devices and one server (003 US2)', () => {
     ]);
     await expectIdentical(a, b);
   });
+
+  describe('a list renamed or deleted on another device (012 US3)', () => {
+    const listNames = async (device: Device) =>
+      (await device.stack.useCases.getLists()).map((l) => l.name).sort();
+
+    const createList = async (device: Device, name: string) => {
+      tick();
+      const created = await device.stack.useCases.createList(name);
+      if (!created.ok) throw new Error(`Could not create ${name}`);
+      return created.value.listId;
+    };
+
+    const deleteList = async (device: Device, listId: string) => {
+      tick();
+      const deleted = await device.stack.useCases.deleteList(
+        listId as never,
+        'Ma liste',
+      );
+      if (!deleted.ok) throw new Error('Could not delete the list');
+    };
+
+    it('US3-1 a list renamed on A shows its new name on B', async () => {
+      const { a, b } = await pairedPair();
+      const barbecue = await createList(a, 'Barbecue');
+      await converge(a, b);
+
+      tick();
+      const renamed = await a.stack.useCases.renameList(barbecue, 'Grillades');
+      expect(renamed.ok).toBe(true);
+      await converge(a, b);
+
+      expect(await listNames(b)).toEqual(['Grillades', 'Ma liste']);
+      await expectIdentical(a, b);
+    });
+
+    it('US3-2 a list deleted on A goes from B, its articles stay in the catalog, and no later sync brings it back', async () => {
+      const { a, b } = await pairedPair();
+      const barbecue = await createList(a, 'Barbecue');
+      await addArticle(a, 'Saucisses', null, barbecue);
+      await converge(a, b);
+
+      await deleteList(a, barbecue);
+      await converge(a, b);
+      await converge(b, a);
+
+      expect(await listNames(b)).toEqual(['Ma liste']);
+      expect(await listNames(a)).toEqual(['Ma liste']);
+      const catalog = await b.stack.useCases.getCatalog(
+        (await currentListId(b)) as never,
+      );
+      expect(
+        catalog.sections.flatMap((s) => s.articles.map((x) => x.name)),
+      ).toContain('Saucisses');
+      await expectIdentical(a, b);
+    });
+
+    it("US3-3 deleting B's current list on A makes the first remaining list by name current on B", async () => {
+      const { a, b } = await pairedPair();
+      const zoo = await createList(a, 'Zoo');
+      const barbecue = await createList(a, 'Barbecue');
+      await converge(a, b);
+      await b.stack.useCases.setCurrentList(zoo);
+      const maListe = await currentListId(a);
+
+      await deleteList(a, zoo);
+      await converge(a, b);
+
+      expect(await currentListId(b)).toBe(barbecue);
+      expect(await currentListId(a)).toBe(maListe);
+      await expectIdentical(a, b);
+    });
+
+    it('US3-4 A deletes a list while B, offline, renames it and edits its items: deleted on both, with no error', async () => {
+      const { a, b } = await pairedPair();
+      const barbecue = await createList(a, 'Barbecue');
+      await addArticle(a, 'Chips', null, barbecue);
+      await converge(a, b);
+      await b.stack.useCases.setCurrentList(barbecue);
+      const chips = await articleIdOf(b, 'Chips');
+      b.online = false;
+
+      await deleteList(a, barbecue);
+      await converge(a);
+      tick();
+      await b.stack.useCases.renameList(barbecue, 'Grillades');
+      tick();
+      await b.stack.useCases.toggleItemInCart(barbecue, chips);
+      tick();
+      await b.stack.useCases.changeItemQuantity(barbecue, chips, {
+        amount: 2,
+        unit: null,
+      });
+      b.online = true;
+      await converge(b, a);
+
+      expect(await listNames(a)).toEqual(['Ma liste']);
+      expect(await listNames(b)).toEqual(['Ma liste']);
+      expect((await b.stack.useCases.getSyncInfo()).pendingCount).toBe(0);
+      await expectIdentical(a, b);
+    });
+
+    it('US3-5 A deletes the last list and gets "Ma liste" back: B ends with that one list, current', async () => {
+      const { a, b } = await pairedPair();
+
+      await deleteList(a, await currentListId(a));
+      await converge(a, b);
+
+      expect(await listNames(b)).toEqual(['Ma liste']);
+      expect(await currentListId(b)).toBe(await currentListId(a));
+      await expectIdentical(a, b);
+    });
+
+    it('US3-5 both delete the last list offline: the two new "Ma liste" become one after the 003 name merge', async () => {
+      const { a, b } = await pairedPair();
+      a.online = false;
+      b.online = false;
+
+      await deleteList(a, await currentListId(a));
+      await deleteList(b, await currentListId(b));
+      a.online = true;
+      b.online = true;
+      await converge(a, b);
+
+      expect(await listNames(a)).toEqual(['Ma liste']);
+      expect(await listNames(b)).toEqual(['Ma liste']);
+      expect(await currentListId(b)).toBe(await currentListId(a));
+      await expectIdentical(a, b);
+    });
+  });
 });

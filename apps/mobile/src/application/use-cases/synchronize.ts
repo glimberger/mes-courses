@@ -4,10 +4,12 @@ import {
   nextHlc,
   receiveHlc,
   type Change,
+  type ServerRow,
   type SyncRequest,
   type SyncResponse,
 } from '@mes-courses/sync-core';
 
+import type { ListId, ShoppingList } from '../../domain/shopping-list';
 import type { Clock } from '../ports/clock';
 import type { CredentialStore } from '../ports/credential-store';
 import type { IdGenerator } from '../ports/id-generator';
@@ -15,6 +17,7 @@ import type { PendingChange } from '../ports/change-recorder';
 import type { RemoteEffects } from '../ports/pulled-rows';
 import type { Connection, SyncServer } from '../ports/sync-server';
 import type { Repositories, UnitOfWork } from '../ports/unit-of-work';
+import { resolveCurrentList } from './resolve-current-list';
 
 /** Why a device is signed out by the server (data-model.md, connection state). */
 export type SignedOutReason = 'revoked' | 'accountDeleted';
@@ -107,6 +110,57 @@ const snapshotChanges = async (
   return changes;
 };
 
+/**
+ * Before a batch that deletes the current list is applied, moves the current list off it and
+ * removes it (012 research R4), since `app_state` must refer to a stored list. Repeats while the
+ * new current list is deleted by the same batch too. Live lists of the batch not stored yet count
+ * as remaining, unless deleted here and still waiting to be sent.
+ *
+ * @returns the lists removed here, which the applier will no longer find, and the pulled list to
+ * make current once the batch is stored, if any.
+ */
+const moveCurrentListOffDeleted = async (
+  repos: Repositories,
+  ids: IdGenerator,
+  rows: ServerRow[],
+  pending: Set<string>,
+  firstListName: string,
+): Promise<{ removed: string[]; makeCurrent: ListId | null }> => {
+  const lists = rows.filter((row) => row.kind === 'list');
+  const deleted = new Set(
+    lists
+      .filter((row) => row.deletedHlc !== null && row.mergedInto === null)
+      .map((row) => row.id),
+  );
+  const removed: string[] = [];
+  let makeCurrent: ListId | null = null;
+  if (deleted.size === 0) return { removed, makeCurrent };
+
+  const incoming: ShoppingList[] = [];
+  for (const row of lists) {
+    const name = row.fields.name?.value;
+    if (
+      row.deletedHlc === null &&
+      name !== undefined &&
+      !pending.has(`list:${row.id}:deleted`) &&
+      !(await repos.lists.findById(row.id as ListId))
+    ) {
+      incoming.push({ id: row.id as ListId, name });
+    }
+  }
+  for (;;) {
+    const current = await repos.appState.currentListId();
+    if (current === null || !deleted.has(current)) break;
+    makeCurrent = await resolveCurrentList(repos, ids, {
+      removing: current,
+      incoming,
+      firstListName,
+    });
+    removed.push(current);
+  }
+  return { removed, makeCurrent };
+};
+
 export const createSynchronize =
   ({
     unitOfWork,
@@ -114,12 +168,15 @@ export const createSynchronize =
     credentials,
     clock,
     ids,
+    firstListName,
   }: {
     unitOfWork: UnitOfWork;
     syncServer: SyncServer;
     credentials: CredentialStore;
     clock: Clock;
     ids: IdGenerator;
+    /** The name of the list created when a pull deletes the last one (from the UI adapter, X). */
+    firstListName: string;
   }) =>
   async (): Promise<SyncResult> => {
     const effects = noEffects();
@@ -208,12 +265,23 @@ export const createSynchronize =
           const waiting = await repos.changes.pending(Number.MAX_SAFE_INTEGER, {
             includeHeld: true,
           });
-          const applied = await repos.pulledRows.apply(
+          const pending = pendingKeys(waiting);
+          const { removed, makeCurrent } = await moveCurrentListOffDeleted(
+            repos,
+            ids,
             response.rows,
-            pendingKeys(waiting),
+            pending,
+            firstListName,
           );
+          const applied = await repos.pulledRows.apply(response.rows, pending);
+          if (makeCurrent !== null) {
+            await repos.appState.setCurrentListId(makeCurrent);
+          }
           effects.deletedArticles.push(...applied.effects.deletedArticles);
-          effects.deletedLists.push(...applied.effects.deletedLists);
+          effects.deletedLists.push(
+            ...removed,
+            ...applied.effects.deletedLists,
+          );
           effects.removedItems.push(...applied.effects.removedItems);
           effects.merges.push(...applied.effects.merges);
         }

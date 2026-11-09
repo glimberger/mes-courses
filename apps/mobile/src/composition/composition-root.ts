@@ -115,6 +115,7 @@ export const composeApp = async (
       adminServer: createAdminServer({ appVersion }),
       credentials: new SecureStoreCredentialStore(),
       localDataEraser: sqliteLocalDataEraser({ db, unitOfWork, ids, seed }),
+      firstListName: seed.firstListName,
       // Expo inlines `EXPO_PUBLIC_` variables only when read as written here.
       allowInsecure:
         __DEV__ && process.env.EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL === '1',

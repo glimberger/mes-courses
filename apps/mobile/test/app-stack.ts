@@ -85,6 +85,7 @@ export const buildTestAppStack = async ({
       ids,
       seed,
     }),
+    firstListName: seed.firstListName,
     // The test server listens on 127.0.0.1 without TLS.
     allowInsecure: serverUrl.startsWith('http://'),
   });

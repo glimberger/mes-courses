@@ -297,6 +297,8 @@ export const createUseCases = (ports: {
   adminServer: AdminServer;
   credentials: CredentialStore;
   localDataEraser: LocalDataEraser;
+  /** The list a pull creates when it deletes the last one (`seed.firstListName`, 012 R4). */
+  firstListName: string;
   /** Accepts `http://` server addresses; development builds only. */
   allowInsecure?: boolean;
 }): UseCases => ({

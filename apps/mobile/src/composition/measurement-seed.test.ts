@@ -30,6 +30,7 @@ const freshStore = async () => {
     ids,
     clock: new FakeClock(),
     localDataEraser: eraserOf(unitOfWork, ids, seed),
+    firstListName: seed.firstListName,
   });
   await useCases.initializeStore(seed);
   return { unitOfWork, useCases };

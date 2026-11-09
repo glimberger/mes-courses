@@ -70,7 +70,14 @@ describe('synchronize', () => {
   let syncServer: SyncServer;
 
   const synchronize = () =>
-    createSynchronize({ unitOfWork, syncServer, credentials, clock, ids })();
+    createSynchronize({
+      unitOfWork,
+      syncServer,
+      credentials,
+      clock,
+      ids,
+      firstListName: 'Ma liste',
+    })();
   const state = () => unitOfWork.run((repos) => repos.syncState.get());
   const pendingCount = () => unitOfWork.run((repos) => repos.changes.count());
   const connect = async (overrides: { snapshotDone?: boolean } = {}) => {
@@ -396,6 +403,235 @@ describe('synchronize', () => {
 
       expect(result.effects).toEqual(NO_EFFECTS);
       expect(result.pulledRows).toBe(0);
+    });
+  });
+
+  describe('lists renamed or deleted on another device (012 US3)', () => {
+    const deletedRow = (id: string, name: string, seq: number): ServerRow => ({
+      ...listRow(id, name, seq),
+      deletedHlc: serverHlc(600),
+    });
+    /** Local lists, the first one current, with one item on each. */
+    const seedLists = (...lists: [string, string][]) =>
+      unitOfWork.run(async (repos) => {
+        await repos.categories.add({
+          id: 'c-1' as CategoryId,
+          name: 'Fruits',
+          position: 0,
+        });
+        await repos.articles.add({
+          id: 'a-1' as ArticleId,
+          name: 'Pommes',
+          categoryId: 'c-1' as CategoryId,
+        });
+        for (const [id, name] of lists) {
+          await repos.lists.add({ id: id as ListId, name });
+          await repos.items.save({
+            listId: id as ListId,
+            articleId: 'a-1' as ArticleId,
+            inCart: false,
+            quantity: null,
+          });
+        }
+        await repos.appState.setCurrentListId(lists[0]?.[0] as ListId);
+      });
+    const pull = (...rows: ServerRow[]) => {
+      handler = (request) => ok(respond(request, { rows, seq: 9 }));
+    };
+    const current = () =>
+      unitOfWork.run((repos) => repos.appState.currentListId());
+    const listNames = () =>
+      unitOfWork.run(async (repos) =>
+        (await repos.lists.all()).map((l) => [l.id, l.name]),
+      );
+
+    it('FR-010 US3-3 a pull deleting the current list makes the first remaining list by name current, silently', async () => {
+      await connect();
+      await seedLists(['l-1', 'Ma liste'], ['l-3', 'Zoo'], ['l-2', 'barbecue']);
+      pull(deletedRow('l-1', 'Ma liste', 9));
+
+      const result = await synchronize();
+
+      expect(result.outcome).toEqual({ type: 'saved' });
+      expect(await current()).toBe('l-2');
+      expect(await listNames()).toEqual([
+        ['l-3', 'Zoo'],
+        ['l-2', 'barbecue'],
+      ]);
+      expect(result.effects.deletedLists).toEqual(['l-1']);
+      expect(await pendingCount()).toBe(0);
+    });
+
+    it('FR-010 a pull deleting every list creates "Ma liste", records it and makes it current', async () => {
+      await connect();
+      await seedLists(['l-1', 'Ma liste'], ['l-2', 'Barbecue']);
+      pull(deletedRow('l-1', 'Ma liste', 8), deletedRow('l-2', 'Barbecue', 9));
+
+      const result = await synchronize();
+
+      const lists = await listNames();
+      expect(lists).toEqual([[expect.any(String), 'Ma liste']]);
+      const [created] = lists[0] ?? [];
+      expect(created).not.toBe('l-1');
+      expect(await current()).toBe(created);
+      expect(
+        await unitOfWork.run((repos) => repos.changes.pending(10)),
+      ).toEqual([
+        expect.objectContaining({
+          kind: 'list',
+          id: created,
+          fields: { name: 'Ma liste' },
+        }),
+      ]);
+      expect([...result.effects.deletedLists].sort()).toEqual(['l-1', 'l-2']);
+    });
+
+    it('creates no default list when the same batch brings a live list, which becomes current', async () => {
+      await connect();
+      await seedLists(['l-1', 'Ma liste']);
+      pull(deletedRow('l-1', 'Ma liste', 8), listRow('l-9', 'Fête', 9));
+
+      const result = await synchronize();
+
+      expect(await listNames()).toEqual([['l-9', 'Fête']]);
+      expect(await current()).toBe('l-9');
+      expect(await pendingCount()).toBe(0);
+      expect(result.effects.deletedLists).toEqual(['l-1']);
+    });
+
+    it('a pulled list deleted here and waiting to be sent does not count as remaining', async () => {
+      await connect();
+      await seedLists(['l-1', 'Ma liste']);
+      await record('list', 'l-9', { deleted: true });
+      handler = (request) =>
+        ok(
+          respond(request, {
+            acknowledged: [],
+            rows: [deletedRow('l-1', 'Ma liste', 8), listRow('l-9', 'Fête', 9)],
+            seq: 9,
+          }),
+        );
+
+      await synchronize();
+
+      const lists = await listNames();
+      expect(lists).toEqual([[expect.any(String), 'Ma liste']]);
+      expect(await current()).toBe(lists[0]?.[0]);
+    });
+
+    it('FR-010 a pull deleting the current list and the first one after it lands on the next', async () => {
+      await connect();
+      await seedLists(
+        ['l-1', 'Ma liste'],
+        ['l-2', 'Barbecue'],
+        ['l-3', 'Courses'],
+      );
+      pull(deletedRow('l-1', 'Ma liste', 8), deletedRow('l-2', 'Barbecue', 9));
+
+      await synchronize();
+
+      expect(await current()).toBe('l-3');
+      expect(await listNames()).toEqual([['l-3', 'Courses']]);
+    });
+
+    it('US3-2 a pull deleting another list leaves the current list', async () => {
+      await connect();
+      await seedLists(['l-1', 'Ma liste'], ['l-2', 'Barbecue']);
+      pull(deletedRow('l-2', 'Barbecue', 9));
+
+      const result = await synchronize();
+
+      expect(await current()).toBe('l-1');
+      expect(await listNames()).toEqual([['l-1', 'Ma liste']]);
+      expect(result.effects.deletedLists).toEqual(['l-2']);
+    });
+
+    it('US3-1 a pulled rename updates the name, unless a local rename is pending', async () => {
+      await connect();
+      await seedLists(['l-1', 'Ma liste'], ['l-2', 'Barbecue']);
+      await unitOfWork.run((repos) =>
+        repos.lists.rename('l-1' as ListId, 'À moi'),
+      );
+      handler = (request) =>
+        ok(
+          respond(request, {
+            acknowledged: [],
+            rows: [
+              listRow('l-1', 'Du serveur', 8),
+              listRow('l-2', 'Grillades', 9),
+            ],
+            seq: 9,
+          }),
+        );
+      await record('list', 'l-1', { name: 'À moi' });
+
+      await synchronize();
+
+      expect(await listNames()).toEqual([
+        ['l-1', 'À moi'],
+        ['l-2', 'Grillades'],
+      ]);
+    });
+
+    it('FR-009 US3-4 a deletion beats a pending local rename of the list and edits of its items', async () => {
+      await connect();
+      await seedLists(['l-1', 'Ma liste'], ['l-2', 'Barbecue']);
+      await record('list', 'l-2', { name: 'Grillades' });
+      await record('listItem', 'l-2:a-1', { inCart: true });
+      handler = (request) =>
+        ok(
+          respond(request, {
+            acknowledged: [],
+            rows: [deletedRow('l-2', 'Barbecue', 9)],
+            seq: 9,
+          }),
+        );
+
+      const result = await synchronize();
+
+      expect(await listNames()).toEqual([['l-1', 'Ma liste']]);
+      expect(result.effects.deletedLists).toEqual(['l-2']);
+    });
+
+    it('SC-003 after a snapshot, the tombstone the server sends back beats the minimum-HLC create', async () => {
+      await connect({ snapshotDone: false });
+      await seedLists(['l-1', 'Ma liste'], ['l-2', 'Barbecue']);
+      pull(deletedRow('l-2', 'Barbecue', 9));
+
+      await synchronize();
+
+      expect(
+        sentChanges()
+          .filter((c) => c.kind === 'list')
+          .map((c) => c.id),
+      ).toEqual(['l-1', 'l-2']);
+      expect(await listNames()).toEqual([['l-1', 'Ma liste']]);
+      expect((await state()).snapshotDone).toBe(true);
+    });
+
+    it('VII a local deletion stays queued offline and leaves the outbox only once acknowledged', async () => {
+      await connect();
+      await seedLists(['l-1', 'Ma liste'], ['l-2', 'Barbecue']);
+      await record('list', 'l-2', { deleted: true });
+      handler = () => err({ type: 'Offline' });
+
+      expect((await synchronize()).outcome).toEqual({ type: 'waiting' });
+      expect(await pendingCount()).toBe(1);
+
+      handler = (request) => ok(respond(request, { acknowledged: [] }));
+      expect((await synchronize()).outcome).toEqual({ type: 'waiting' });
+      expect(await pendingCount()).toBe(1);
+
+      handler = (request) => ok(respond(request));
+      expect((await synchronize()).outcome).toEqual({ type: 'saved' });
+      expect(await pendingCount()).toBe(0);
+      expect(sentChanges().at(-1)).toEqual(
+        expect.objectContaining({
+          kind: 'list',
+          id: 'l-2',
+          fields: { deleted: true },
+        }),
+      );
     });
   });
 
