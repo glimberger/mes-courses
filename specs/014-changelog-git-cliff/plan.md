@@ -24,7 +24,7 @@
 
 **Performance Goals**: fast suite stays in seconds; fixture-repo tests run a local `git cliff` over a few commits
 
-**Constraints**: hooks always run; `.github/workflows/` is edited by the maintainer only (agent guardrails), so the `release.yml` change is a hand-off, see Workflow change below; `changelog.json` is a stable contract for #203 and #204; Prettier must pass on both generated files
+**Constraints**: hooks always run; `.github/workflows/` is edited by the maintainer only (agent guardrails), so the `release.yml` change is a hand-off through the PR description (T011), see Workflow change below; `changelog.json` is a stable contract for #203 and #204; Prettier must pass on both generated files
 
 **Scale/Scope**: one maintainer, one section per release, history of three tags
 
@@ -42,7 +42,7 @@
 | VI Hexagonal | Pass. Domain `changelog.ts` is pure; port `ChangelogGenerator` in `application/ports`; adapters `adapters/changelog/git-cliff-generator.ts` and the extended `adapters/git/release-repository.ts`; wiring in `composition/release.ts`. `pnpm test:architecture` covers it. |
 | VII Offline first, VIII Error tracking | N/A. Touches no app data. Every failure ends with a message and exit code 1. |
 | XI Monorepo | Pass. Stays in `apps/delivery`; `apps/mobile` only receives a data file, no import. |
-| Quality Gates | `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test:architecture`, `pnpm test:scripts`, `shellcheck`, `actionlint`. The bump-PR detector `release-bump.sh` already allows `CHANGELOG.md` and `changelog.json` (constitution 2.7.0), so no CI change is needed for the new files. |
+| Quality Gates | `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test:architecture`, `pnpm test:scripts`, `shellcheck`, `actionlint`. The bump-PR detector `release-bump.sh` matches only the bare names `CHANGELOG.md` and `changelog.json`, not `apps/mobile/src/changelog/changelog.json`, so task T014 makes it accept the full path (test first in `release-bump.test.sh`, shellcheck clean; `.github/scripts/` is not guarded); without it the bump PR would not be recognised and its CI jobs would run. |
 
 No violation, so no Complexity Tracking entry.
 
@@ -83,7 +83,8 @@ apps/delivery/src/
 ├── adapters/git/release-repository.ts (+ test)         # commitBump writes and commits the two files
 └── composition/release.ts (+ test)                     # wires generator and clock
 .github/scripts/release-notes.sh (+ .test.sh)           # prints the section of a version from CHANGELOG.md
-.github/workflows/release.yml                           # --notes-file instead of --generate-notes (maintainer)
+.github/scripts/release-bump.sh (+ .test.sh)            # accepts apps/mobile/src/changelog/changelog.json (T014)
+# .github/workflows/release.yml: not edited here; diff in the PR description for the maintainer (T011)
 docs/procedures/releases.md, README.md, docs/adr/0014-*.md, docs/adr/README.md
 package.json                                            # test:scripts gains release-notes.test.sh
 ```
@@ -92,4 +93,4 @@ package.json                                            # test:scripts gains rel
 
 ## Workflow change (hand-off)
 
-`.github/workflows/` is outside what agents may edit. The implementation PR contains the script and its test; the one-line change in `release.yml` (job `publish`: write the notes with `sh .github/scripts/release-notes.sh "${TAG#v}" > "$RUNNER_TEMP/notes.md"` and use `--notes-file` in place of `--generate-notes`) is applied by the maintainer and merged with the PR, as was done for #166. Until then the workflow still works (generated notes). `actionlint` must pass.
+`.github/workflows/` is outside what agents may edit (`docs/agent-guardrails.md`), so no task edits `release.yml`. The implementation PR contains the notes script and its test (T010); the `release.yml` change (job `publish`: write the notes with `sh .github/scripts/release-notes.sh "${TAG#v}" > "$RUNNER_TEMP/notes.md"` in a step running with `set -e`, and use `--notes-file` in place of `--generate-notes`) is delivered as an exact, actionlint-clean diff in the PR description (T011). The maintainer applies and merges it, as was done for #166; the 'GitHub Release body' acceptance criterion stays open until then. Until then the workflow still works (generated notes).
