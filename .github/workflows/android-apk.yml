@@ -15,7 +15,7 @@ on:
         type: string
         required: true
       server-url:
-        description: The server address the app pre-fills on its sign-in screen
+        description: The fixed sync server address of the app (EXPO_PUBLIC_DEFAULT_SERVER_URL); the build fails without it
         type: string
         required: true
     secrets:
@@ -38,6 +38,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      - name: Require the sync server address
+        env:
+          SERVER_URL: ${{ inputs.server-url }}
+        run: |
+          if [ -z "${SERVER_URL//[[:space:]]/}" ]; then
+            echo "::error::server-url (EXPO_PUBLIC_DEFAULT_SERVER_URL) is empty: the app cannot be built without its sync server address"
+            exit 1
+          fi
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/.ghcup /opt/ghc /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium
