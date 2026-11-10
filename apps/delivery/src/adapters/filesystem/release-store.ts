@@ -1,4 +1,5 @@
 import {
+  mkdir,
   readFile,
   readdir,
   readlink,
@@ -6,6 +7,7 @@ import {
   rm,
   stat,
   symlink,
+  writeFile,
 } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -26,9 +28,15 @@ export const createFileReleaseStore = (
     join(base(environment), 'releases', commit);
 
   return {
-    async install(environment, commit, archive, sha256) {
+    async install(environment, commit, archive, sha256, info) {
       const folder = releasePath(environment, commit);
       await verifyAndUnpack(archive, sha256, folder);
+      const server = join(folder, 'apps/server');
+      await mkdir(server, { recursive: true });
+      await writeFile(
+        join(server, 'build-info.json'),
+        `${JSON.stringify(info, null, 2)}\n`,
+      );
       return folder;
     },
 

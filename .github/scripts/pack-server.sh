@@ -1,19 +1,30 @@
 #!/bin/sh
-# Usage: pack-server.sh <version> <commit> <sequence> [output folder]
+# Usage: pack-server.sh <commit> [output folder]
 # Builds server-<commit>.tar.gz from a built workspace (research R3): production dependencies
-# only, no native addon, build-info.json next to the server's package.json.
-# Run after `pnpm build`. It writes build-info.json in apps/server; run it on a CI checkout or a
-# throwaway copy.
+# only, no native addon. Run it after `pnpm build`.
+#
+# Nothing environment-specific goes in the archive (ADR-0015): staging delivers it and production
+# promotes the same bytes. In particular there is no build-info.json (version, commit, sequence):
+# the agent writes it on the Pi from the manifest entry it installs. The environment itself
+# (port, data folder, Sentry environment) comes from the systemd unit at run time.
 set -eu
 
-if [ "$#" -lt 3 ]; then
-  echo "usage: pack-server.sh <version> <commit> <sequence> [output folder]" >&2
+if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+  echo "usage: pack-server.sh <commit> [output folder]" >&2
   exit 1
 fi
-version=$1
-commit=$2
-sequence=$3
-output=${4:-.}
+commit=$1
+output=${2:-.}
+case "$commit" in
+  *[!0-9a-f]* | '')
+    echo "pack-server.sh: the commit must be 40 lowercase hex characters, got '$commit'" >&2
+    exit 1
+    ;;
+esac
+if [ "${#commit}" -ne 40 ]; then
+  echo "pack-server.sh: the commit must be 40 lowercase hex characters, got '$commit'" >&2
+  exit 1
+fi
 
 root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd "$root"
@@ -32,12 +43,9 @@ rm -rf "$deployed"/server/node_modules/.pnpm/oxc-parser@* "$deployed"/server/nod
 find "$deployed/server/node_modules" -type l ! -exec test -e {} \; -exec rm -f {} +
 sh .github/scripts/server-native-check.sh "$deployed/server/node_modules"
 
-printf '{\n  "version": "%s",\n  "commit": "%s",\n  "sequence": %s\n}\n' \
-  "$version" "$commit" "$sequence" >apps/server/build-info.json
-
 staging="$deployed/artifact"
 mkdir -p "$staging/apps/server" "$output"
-cp -R apps/server/dist apps/server/package.json apps/server/build-info.json "$staging/apps/server/"
+cp -R apps/server/dist apps/server/package.json "$staging/apps/server/"
 mv "$deployed/server/node_modules" "$staging/apps/server/node_modules"
 cp package.json "$staging/"
 archive="$output/server-$commit.tar.gz"

@@ -57,6 +57,18 @@ const setup = (state: InstanceState = running) => {
 };
 
 describe('deployServer', () => {
+  it('gives the release store the build info of the manifest entry', async () => {
+    const { deps } = setup();
+    await deployServer(deps, 'staging', entry, running);
+    expect((deps.releases as InMemoryReleaseStore).buildInfos).toEqual([
+      {
+        version: entry.version,
+        commit: entry.commit,
+        sequence: entry.sequence,
+      },
+    ]);
+  });
+
   it('goes through install, switch, validation and opening in order', async () => {
     const { deps, recorder } = setup();
 

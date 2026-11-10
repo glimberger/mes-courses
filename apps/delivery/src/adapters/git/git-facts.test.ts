@@ -77,4 +77,51 @@ describe('git facts', () => {
       createGitFacts(runner, '/repo').appVersionAt(COMMIT),
     ).rejects.toThrow(/boom/);
   });
+
+  it('asks git whether a commit is an ancestor of another', async () => {
+    const { calls, runner } = scripted([{ exitCode: 0 }, { exitCode: 1 }]);
+    const facts = createGitFacts(runner, '/repo');
+    expect(await facts.isAncestor('a', COMMIT)).toBe(true);
+    expect(await facts.isAncestor('c', COMMIT)).toBe(false);
+    expect(calls[0]?.args).toEqual([
+      'merge-base',
+      '--is-ancestor',
+      'a',
+      COMMIT,
+    ]);
+  });
+
+  it('fails when git cannot tell the ancestry', async () => {
+    const { runner } = scripted([{ exitCode: 128, stderr: 'bad object' }]);
+    await expect(
+      createGitFacts(runner, '/repo').isAncestor('a', COMMIT),
+    ).rejects.toThrow(/bad object/);
+  });
+
+  it.each([
+    ['server=true\napp=false\n', true],
+    ['server=false\napp=true\n', false],
+  ])(
+    'reads %p from the delivery targets as server changed: %p',
+    async (stdout, expected) => {
+      const { calls, runner } = scripted([{ exitCode: 0, stdout }]);
+      const changed = await createGitFacts(
+        runner,
+        '/repo',
+      ).serverChangedBetween('a', COMMIT);
+      expect(changed).toBe(expected);
+      expect(calls[0]?.command).toBe('sh');
+      expect(calls[0]?.args.slice(-2)).toEqual(['a', COMMIT]);
+      expect(calls[0]?.args[1]).toContain('delivery-targets.sh');
+    },
+  );
+
+  it('fails when the diff cannot be read', async () => {
+    const { runner } = scripted([
+      { exitCode: 128, stderr: 'unknown revision' },
+    ]);
+    await expect(
+      createGitFacts(runner, '/repo').serverChangedBetween('a', COMMIT),
+    ).rejects.toThrow(/unknown revision/);
+  });
 });
