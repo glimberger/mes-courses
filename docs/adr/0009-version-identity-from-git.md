@@ -6,7 +6,9 @@
 - **Supersedes**: none
 - **Related**: [005 research](../../specs/005-continuous-delivery/research.md) R7;
   [ADR-0006](0006-pull-based-continuous-delivery.md),
-  [ADR-0007](0007-android-fdroid-distribution.md)
+  [ADR-0007](0007-android-fdroid-distribution.md);
+  [ADR-0015](0015-production-reuses-the-staging-server-artifact.md) (the agent writes
+  `build-info.json` at install, it is no longer in the artifact)
 
 ## Context
 

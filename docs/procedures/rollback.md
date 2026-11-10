@@ -15,6 +15,12 @@ The agent is `/opt/mes-courses/agent/runtime/bin/node /opt/mes-courses/agent/cur
 | `main.js forget-failure <env> <sha>` | Clears the failed mark of a commit so it can be delivered again       |
 | `main.js deploy-file <env> <tar>`    | Deploys a server tarball from the disk, for the rollback tests        |
 
+The release a rollback puts back keeps the `build-info.json` the agent wrote when it installed it,
+so its version and sequence are the ones of its own manifest entry, whichever channel the archive
+came from ([ADR-0015](../adr/0015-production-reuses-the-staging-server-artifact.md)). A production
+deployment failing on the archive that staging already validated points at the Pi (disk, runtime,
+production data), not at the build: see the report before fixing forward.
+
 A failed commit is not retried: fix it forward with a new commit, or run `forget-failure` when the
 cause was the Pi and not the code. The five latest database copies are in
 `/var/lib/mes-courses/<env>/backups/`.

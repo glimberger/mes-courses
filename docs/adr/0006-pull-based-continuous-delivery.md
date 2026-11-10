@@ -6,7 +6,9 @@
 - **Supersedes**: none
 - **Related**: [005 research](../../specs/005-continuous-delivery/research.md) R1 to R10, R15,
   R16; constitution Principles I, VI, VII, VIII and XI, Quality Gates;
-  [ADR-0007](0007-android-fdroid-distribution.md)
+  [ADR-0007](0007-android-fdroid-distribution.md);
+  [ADR-0015](0015-production-reuses-the-staging-server-artifact.md) (production no longer builds
+  the server: it promotes the staging archive)
 
 ## Context
 

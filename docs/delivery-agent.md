@@ -57,7 +57,10 @@ A deployment skips a commit that already failed here, or whose sequence is not n
 one in service.
 
 1. **Install** (the service is untouched): check the free disk space, download the asset, verify
-   its SHA-256, unpack it into `/opt/mes-courses/<env>/releases/<commit>/`, and build the Node
+   its SHA-256, unpack it into `/opt/mes-courses/<env>/releases/<commit>/`, write
+   `apps/server/build-info.json` there from the manifest entry (`version`, `commit`, `sequence`:
+   the archive does not carry it, so the same archive serves staging and production, see
+   [ADR-0015](adr/0015-production-reuses-the-staging-server-artifact.md)), and build the Node
    runtime with Nix. A failure here counts as a failed version: it is reported and not retried.
 2. **Switch.** Record the deployment as in flight, stop the service, copy the database into
    `/var/lib/mes-courses/<env>/backups/` (the five latest copies are kept), point `current` at
