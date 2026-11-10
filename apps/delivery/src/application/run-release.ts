@@ -13,7 +13,10 @@ import {
 } from '../domain/release-plan';
 import { compareSemver } from '../domain/semver';
 import { evaluateRelease, REQUIRED_WORKFLOWS } from '../domain/release-rules';
+import type { ChangelogSection } from '../domain/changelog';
+import type { ChangelogGenerator } from './ports/changelog-generator';
 import type { ChannelSource } from './ports/channel-source';
+import type { Clock } from './ports/clock';
 import type { Output } from './ports/output';
 import type { Prompter } from './ports/prompter';
 import type { ReleasePullRequests } from './ports/release-pull-requests';
@@ -29,6 +32,10 @@ export type ReleaseDeps = {
   prompter: Prompter;
   output: Output;
   sleep: Sleep;
+  /** The section of the version being released, written by the bump commit. */
+  changelog: ChangelogGenerator;
+  /** Dates the changelog section. */
+  clock: Clock;
 };
 
 export type ReleaseRequest = {
@@ -55,7 +62,11 @@ const PROMOTE = '`pnpm release promote`';
 
 /** Everything that changes the repository or GitHub goes through here, so a dry run cannot leak. */
 type Steps = {
-  commitBump(version: string, branch: string): Promise<void>;
+  commitBump(
+    version: string,
+    branch: string,
+    section: ChangelogSection,
+  ): Promise<void>;
   openPullRequest(branch: string, title: string): Promise<BumpPullRequest>;
   enableAutoMerge(pr: BumpPullRequest): Promise<void>;
   tag(tag: string, sha: string | null): Promise<void>;
@@ -63,7 +74,8 @@ type Steps = {
 };
 
 const realSteps = (deps: ReleaseDeps): Steps => ({
-  commitBump: (version, branch) => deps.repository.commitBump(version, branch),
+  commitBump: (version, branch, section) =>
+    deps.repository.commitBump(version, branch, section),
   openPullRequest: (branch, title) => deps.pullRequests.open(branch, title),
   enableAutoMerge: (pr) => deps.pullRequests.enableAutoMerge(pr),
   async tag(tag, sha) {
@@ -106,6 +118,10 @@ const NEXT_STEP: Partial<Record<ReleaseStep['step'], ReleaseStep>> = {
   'wait-merge': { step: 'wait-runs' },
   'wait-runs': { step: 'tag' },
 };
+
+/** The UTC day of `clock`, `YYYY-MM-DD`. */
+const today = (clock: Clock): string =>
+  new Date(clock.nowMs()).toISOString().slice(0, 10);
 
 const stopped = (message: string): ReleaseResult => ({
   outcome: 'stopped',
@@ -389,7 +405,9 @@ const execute = async (
         return stopped(
           `origin/main changed while preparing the release (was ${current}). Check it, then ${RESUME}`,
         );
-      await steps.commitBump(version, branch);
+      // Before the branch exists: a generator failure stops the run with nothing to undo.
+      const section = await deps.changelog.generate(version, today(deps.clock));
+      await steps.commitBump(version, branch, section);
       const pr = await steps.openPullRequest(
         branch,
         `chore(release): bump the app version to ${version}`,

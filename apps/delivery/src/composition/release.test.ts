@@ -1,5 +1,7 @@
 import { ScriptedCommandRunner } from '../application/testing/in-memory-doubles';
+import { Recorder } from '../application/testing/recorder';
 import {
+  createReleaseChangelog,
   deriveGithubAccess,
   exitCodeOf,
   parseReleaseArgs,
@@ -116,5 +118,35 @@ describe('deriveGithubAccess', () => {
         GITHUB_TOKEN: 't',
       }),
     ).resolves.toEqual({ repository: 'a/b', token: 't' });
+  });
+});
+
+describe('createReleaseChangelog', () => {
+  it('runs git-cliff at the repository root with its cliff.toml', async () => {
+    const recorder = new Recorder();
+    const runner = new ScriptedCommandRunner(recorder);
+    runner.results.push({ stdout: '[]' });
+    const { changelog } = createReleaseChangelog(runner, '/repo');
+    await expect(changelog.generate('1.3.0', '2026-11-10')).resolves.toEqual({
+      version: '1.3.0',
+      date: '2026-11-10',
+      features: [],
+      fixes: [],
+      performances: [],
+      breaking: [],
+    });
+    expect(recorder.calls).toEqual([
+      'CommandRunner.run git-cliff --offline --config /repo/cliff.toml --context --unreleased --tag v1.3.0',
+    ]);
+  });
+
+  it('dates the section with the system clock', () => {
+    const before = Date.now();
+    const { clock } = createReleaseChangelog(
+      new ScriptedCommandRunner(),
+      '/repo',
+    );
+    expect(clock.nowMs()).toBeGreaterThanOrEqual(before);
+    expect(clock.nowMs()).toBeLessThanOrEqual(Date.now());
   });
 });

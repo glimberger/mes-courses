@@ -4,17 +4,34 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import type { CommandRunner } from '../../application/ports/command-runner';
+import type { ChangelogSection } from '../../domain/changelog';
 import { createCommandRunner } from '../process/command-runner';
 import { createGitReleaseRepository } from './release-repository';
 
 const CONFIG = (version: string) =>
   `export default {\n  name: 'app',\n  version: '${version}',\n};\n`;
+
+const CHANGELOG_PATH = 'CHANGELOG.md';
+const DATA_PATH = 'apps/mobile/src/changelog/changelog.json';
+
+const section = (
+  version: string,
+  text = 'add dark mode',
+): ChangelogSection => ({
+  version,
+  date: '2026-11-10',
+  features: [{ text, pr: 190 }],
+  fixes: [],
+  performances: [],
+  breaking: [],
+});
 
 let dir: string;
 let work: string;
@@ -93,7 +110,7 @@ describe('git release repository', () => {
   });
 
   it('commits the bump on chore/release-X.Y.Z, pushes it and returns to main', async () => {
-    await repo().commitBump('1.3.0', 'chore/release-1.3.0');
+    await repo().commitBump('1.3.0', 'chore/release-1.3.0', section('1.3.0'));
     expect(git(work, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('main');
     expect(git(work, 'branch', '--list', 'chore/release-1.3.0')).toBe('');
     expect(readFileSync(join(work, 'apps/mobile/app.config.ts'), 'utf8')).toBe(
@@ -108,10 +125,84 @@ describe('git release repository', () => {
     expect(git(origin, 'rev-list', '--count', 'chore/release-1.3.0')).toBe('2');
   });
 
+  it('puts the changelog section in both files of the bump commit, created when missing (US1.1)', async () => {
+    await repo().commitBump('1.3.0', 'chore/release-1.3.0', section('1.3.0'));
+    expect(git(origin, 'rev-list', '--count', 'chore/release-1.3.0')).toBe('2');
+    expect(
+      git(
+        origin,
+        'show',
+        '--name-only',
+        '--format=',
+        'chore/release-1.3.0',
+      ).split('\n'),
+    ).toEqual([CHANGELOG_PATH, 'apps/mobile/app.config.ts', DATA_PATH]);
+    expect(git(origin, 'show', `chore/release-1.3.0:${CHANGELOG_PATH}`)).toBe(
+      [
+        '# Changelog',
+        '',
+        '## [1.3.0] - 2026-11-10',
+        '',
+        '### Nouveautés',
+        '',
+        '- add dark mode ([#190](https://github.com/glimberger/mes-courses/pull/190))',
+      ].join('\n'),
+    );
+    expect(
+      JSON.parse(git(origin, 'show', `chore/release-1.3.0:${DATA_PATH}`)),
+    ).toEqual([section('1.3.0')]);
+    // main keeps its tree: the files only exist on the bump branch.
+    expect(git(work, 'status', '--porcelain')).toBe('');
+    expect(git(work, 'ls-files', CHANGELOG_PATH, DATA_PATH)).toBe('');
+  });
+
+  it('adds the section above the older ones and replaces a section of the same version (US1.3)', async () => {
+    mkdirSync(join(work, 'apps/mobile/src/changelog'), { recursive: true });
+    writeFileSync(
+      join(work, CHANGELOG_PATH),
+      [
+        '# Changelog',
+        '',
+        '## [1.3.0] - 2026-11-01',
+        '',
+        'No user-facing changes.',
+        '',
+        '## [1.2.0] - 2026-10-01',
+        '',
+        'No user-facing changes.',
+        '',
+      ].join('\n'),
+    );
+    writeFileSync(
+      join(work, DATA_PATH),
+      `${JSON.stringify([section('1.3.0', 'stale'), section('1.2.0', 'older')], null, 2)}\n`,
+    );
+    git(work, 'add', '-A');
+    git(work, 'commit', '-q', '-m', 'docs: changelog so far');
+    git(work, 'push', '-q', 'origin', 'main');
+    await repo().fetch();
+
+    await repo().commitBump('1.3.0', 'chore/release-1.3.0', section('1.3.0'));
+
+    const markdown = git(
+      origin,
+      'show',
+      `chore/release-1.3.0:${CHANGELOG_PATH}`,
+    );
+    expect(markdown.match(/^## \[1\.3\.0\]/gm)).toHaveLength(1);
+    expect(markdown).toContain('## [1.3.0] - 2026-11-10');
+    expect(markdown.indexOf('## [1.3.0]')).toBeLessThan(
+      markdown.indexOf('## [1.2.0]'),
+    );
+    expect(
+      JSON.parse(git(origin, 'show', `chore/release-1.3.0:${DATA_PATH}`)),
+    ).toEqual([section('1.3.0'), section('1.2.0', 'older')]);
+  });
+
   it('does nothing more when the bump branch is already on the remote', async () => {
-    await repo().commitBump('1.3.0', 'chore/release-1.3.0');
+    await repo().commitBump('1.3.0', 'chore/release-1.3.0', section('1.3.0'));
     const pushed = git(origin, 'rev-parse', 'chore/release-1.3.0');
-    await repo().commitBump('1.3.0', 'chore/release-1.3.0');
+    await repo().commitBump('1.3.0', 'chore/release-1.3.0', section('1.3.0'));
     expect(git(origin, 'rev-parse', 'chore/release-1.3.0')).toBe(pushed);
     expect(git(work, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('main');
   });
@@ -122,12 +213,28 @@ describe('git release repository', () => {
       mode: 0o755,
     });
     await expect(
-      repo().commitBump('1.3.0', 'chore/release-1.3.0'),
+      repo().commitBump('1.3.0', 'chore/release-1.3.0', section('1.3.0')),
     ).rejects.toThrow(/commit failed/);
     expect(git(work, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('main');
     expect(git(work, 'status', '--porcelain')).toBe('');
     expect(git(work, 'branch', '--list', 'chore/release-1.3.0')).toBe('');
     expect(await repo().isClean()).toBe(true);
+  });
+
+  it('leaves no changelog file behind on main when writing them fails', async () => {
+    // A dangling link where the data folder should be: CHANGELOG.md is written, changelog.json
+    // cannot be.
+    mkdirSync(join(work, 'apps/mobile/src'));
+    symlinkSync('missing', join(work, 'apps/mobile/src/changelog'));
+    git(work, 'add', '-A');
+    git(work, 'commit', '-q', '-m', 'chore: block the data folder');
+    git(work, 'push', '-q', 'origin', 'main');
+    await repo().fetch();
+    await expect(
+      repo().commitBump('1.3.0', 'chore/release-1.3.0', section('1.3.0')),
+    ).rejects.toThrow();
+    expect(git(work, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('main');
+    expect(git(work, 'status', '--porcelain')).toBe('');
   });
 
   it('gives the pushes the time the pre-push hook needs', async () => {
@@ -142,14 +249,14 @@ describe('git release repository', () => {
       },
     };
     const subject = createGitReleaseRepository(spy, work);
-    await subject.commitBump('1.3.0', 'chore/release-1.3.0');
+    await subject.commitBump('1.3.0', 'chore/release-1.3.0', section('1.3.0'));
     expect(limits.push).toBeGreaterThanOrEqual(5 * 60_000);
     expect(limits.status ?? 0).toBeLessThan(5 * 60_000);
   });
 
   it('reports whether a branch is on the remote', async () => {
     expect(await repo().remoteBranchExists('chore/release-1.3.0')).toBe(false);
-    await repo().commitBump('1.3.0', 'chore/release-1.3.0');
+    await repo().commitBump('1.3.0', 'chore/release-1.3.0', section('1.3.0'));
     expect(await repo().remoteBranchExists('chore/release-1.3.0')).toBe(true);
   });
 

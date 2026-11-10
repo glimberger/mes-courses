@@ -1,14 +1,53 @@
-import { readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 
 import type { CommandRunner } from '../../application/ports/command-runner';
 import type { ReleaseRepository } from '../../application/ports/release-repository';
+import {
+  serializeData,
+  upsertMarkdown,
+  upsertSection,
+  type ChangelogSection,
+} from '../../domain/changelog';
 import { readAppVersion, setAppVersion } from '../../domain/release-plan';
 
 const GIT_LIMIT_MS = 60_000;
 // A push runs the pre-push hook of the repository (whole-repo typecheck, tests, architecture).
 const PUSH_LIMIT_MS = 15 * 60_000;
 const CONFIG_PATH = 'apps/mobile/app.config.ts';
+const CHANGELOG_PATH = 'CHANGELOG.md';
+const DATA_PATH = 'apps/mobile/src/changelog/changelog.json';
+
+/** The text of `file`, or an empty string when it does not exist yet (first release). */
+const readOrEmpty = async (file: string): Promise<string> => {
+  try {
+    return await readFile(file, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return '';
+    throw error;
+  }
+};
+
+const parseData = (text: string): ChangelogSection[] => {
+  if (text.trim() === '') return [];
+  const data: unknown = JSON.parse(text);
+  if (!Array.isArray(data))
+    throw new Error(`${DATA_PATH} is not an array of sections`);
+  return data as ChangelogSection[];
+};
+
+/** Writes `section` into both changelog files of the tree at `cwd`. */
+const writeChangelog = async (cwd: string, section: ChangelogSection) => {
+  const markdown = join(cwd, CHANGELOG_PATH);
+  const data = join(cwd, DATA_PATH);
+  const sections = upsertSection(parseData(await readOrEmpty(data)), section);
+  await writeFile(
+    markdown,
+    upsertMarkdown(await readOrEmpty(markdown), section),
+  );
+  await mkdir(dirname(data), { recursive: true });
+  await writeFile(data, serializeData(sections));
+};
 
 const escapeRegExp = (text: string) =>
   text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -92,7 +131,7 @@ export const createGitReleaseRepository = (
       return { local: await localTag(tag), remote: await remoteTag(tag) };
     },
 
-    async commitBump(version, branch) {
+    async commitBump(version, branch, section) {
       // Already pushed by an earlier run: nothing to redo.
       if (await remoteBranchExists(branch)) return;
 
@@ -103,7 +142,8 @@ export const createGitReleaseRepository = (
           file,
           setAppVersion(await readFile(file, 'utf8'), version),
         );
-        await git('add', CONFIG_PATH);
+        await writeChangelog(cwd, section);
+        await git('add', CONFIG_PATH, CHANGELOG_PATH, DATA_PATH);
         await git(
           'commit',
           '-m',
@@ -111,8 +151,10 @@ export const createGitReleaseRepository = (
         );
         await git('push', '--set-upstream', 'origin', branch);
       } finally {
-        // A failed hook or push leaves the edit in the tree: drop it so that main stays clean.
+        // A failed hook or push leaves the edits in the tree: drop them so that main stays clean.
         await run(['reset', '--hard', 'HEAD']);
+        // A changelog file new to this branch stays untracked when it failed before `git add`.
+        await run(['clean', '-f', '--', CHANGELOG_PATH, DATA_PATH]);
         const back = await run(['switch', 'main']);
         if (back.exitCode === 0) await run(['branch', '-D', branch]);
       }

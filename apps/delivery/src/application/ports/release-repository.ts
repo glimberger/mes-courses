@@ -1,3 +1,5 @@
+import type { ChangelogSection } from '../../domain/changelog';
+
 export interface ReleaseRepository {
   currentBranch(): Promise<string>;
   /** True when there is no uncommitted change. */
@@ -14,8 +16,16 @@ export interface ReleaseRepository {
   tagCommit(
     tag: string,
   ): Promise<{ local: string | null; remote: string | null }>;
-  /** Branch `branch` from `origin/main`, bump commit to `version`, push; leaves the repository on `main`. */
-  commitBump(version: string, branch: string): Promise<void>;
+  /**
+   * Branch `branch` from `origin/main`, one commit that bumps the app version to `version` and
+   * writes `section` into `CHANGELOG.md` and `changelog.json` (replacing a section of the same
+   * version), push; leaves the repository on `main`. Does nothing when the branch is on the remote.
+   */
+  commitBump(
+    version: string,
+    branch: string,
+    section: ChangelogSection,
+  ): Promise<void>;
   /** Creates the annotated tag `tag` on `sha`. */
   createTag(tag: string, sha: string): Promise<void>;
   pushTag(tag: string): Promise<void>;
