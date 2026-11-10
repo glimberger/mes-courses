@@ -18,7 +18,8 @@ jobs:
   # only the `version` line of app.config.ts and the changelog files) skips the work of the four
   # required jobs below: they keep their names, so the ruleset is satisfied, and succeed at once.
   # The decision is made from the diff, never from the title alone; any other pull request, and
-  # every push to main, runs everything.
+  # every push to main, runs everything. When detect itself fails, the four jobs fail too (a skipped
+  # required job would count as passing).
   detect:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -48,7 +49,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect
     timeout-minutes: 15
+    if: ${{ !cancelled() }}
     steps:
+      - if: needs.detect.result != 'success'
+        run: |
+          echo "detect did not succeed, so the release bump decision is unknown"
+          exit 1
       - if: needs.detect.outputs.bump != 'true'
         uses: actions/checkout@v7
       - if: needs.detect.outputs.bump != 'true'
@@ -67,7 +73,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect
     timeout-minutes: 15
+    if: ${{ !cancelled() }}
     steps:
+      - if: needs.detect.result != 'success'
+        run: |
+          echo "detect did not succeed, so the release bump decision is unknown"
+          exit 1
       - if: needs.detect.outputs.bump != 'true'
         uses: actions/checkout@v7
       - if: needs.detect.outputs.bump != 'true'
@@ -90,7 +101,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect
     timeout-minutes: 15
+    if: ${{ !cancelled() }}
     steps:
+      - if: needs.detect.result != 'success'
+        run: |
+          echo "detect did not succeed, so the release bump decision is unknown"
+          exit 1
       - if: needs.detect.outputs.bump != 'true'
         uses: actions/checkout@v7
       - if: needs.detect.outputs.bump != 'true'
@@ -115,7 +131,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect
     timeout-minutes: 15
+    if: ${{ !cancelled() }}
     steps:
+      - if: needs.detect.result != 'success'
+        run: |
+          echo "detect did not succeed, so the release bump decision is unknown"
+          exit 1
       - if: needs.detect.outputs.bump != 'true'
         uses: actions/checkout@v7
       - if: needs.detect.outputs.bump != 'true'

@@ -6,12 +6,14 @@
 #   - the title starts with "chore(release): bump";
 #   - at least one file changed, and every one is apps/mobile/app.config.ts, CHANGELOG.md or
 #     changelog.json;
-#   - the only change in apps/mobile/app.config.ts is its `version: '...'` line.
+#   - the only change in apps/mobile/app.config.ts is its top-level (two-space indented) `version: '...'`
+#     line.
 # Any doubt (missing argument, git failure) gives "bump=false", so the full CI runs.
 # Used by .github/workflows/ci.yml and .github/scripts/app-changed.sh.
 
 config=apps/mobile/app.config.ts
-version_line="^[-+][[:space:]]*version:[[:space:]]*'[^']*',?[[:space:]]*$"
+# Anchored on the two-space indentation of the top-level key, so a nested `version:` does not count.
+version_line="^[-+]  version:[[:space:]]*'[^']*',?[[:space:]]*$"
 
 decide() {
   title=$1

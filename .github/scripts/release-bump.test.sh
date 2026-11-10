@@ -15,6 +15,11 @@ export default {
   name: 'Courses',
   version: '2.1.0',
   slug: 'courses',
+  plugins: [
+    {
+      version: '1.0.0',
+    },
+  ],
 };
 CFG
 echo "# Changelog" >"$work/CHANGELOG.md"
@@ -94,6 +99,11 @@ branch extra-version-line
 sed -i.bak "s/version: '2.1.0',/version: '2.2.0',\n  version: '2.3.0',/" "$work/apps/mobile/app.config.ts" && rm "$work/apps/mobile/app.config.ts.bak"
 finish
 expect "bump title, added second version line" bump=false "$title"
+
+branch nested-version
+sed -i.bak "s/      version: '1.0.0'/      version: '1.1.0'/" "$work/apps/mobile/app.config.ts" && rm "$work/apps/mobile/app.config.ts.bak"
+finish
+expect "bump title, only a nested version line changed" bump=false "$title"
 
 branch changelog-only
 echo "- note" >>"$work/CHANGELOG.md"
