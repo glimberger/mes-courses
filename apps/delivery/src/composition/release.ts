@@ -1,13 +1,17 @@
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { setTimeout as sleepFor } from 'node:timers/promises';
 
+import { createGitCliffGenerator } from '../adapters/changelog/git-cliff-generator';
 import { createGithubChannelSource } from '../adapters/github/channel-source';
 import { createGh } from '../adapters/github/gh';
 import { createGithubReleasePullRequests } from '../adapters/github/release-pull-requests';
 import { createGithubReleaseRuns } from '../adapters/github/release-runs';
 import { createGitReleaseRepository } from '../adapters/git/release-repository';
 import { createCommandRunner } from '../adapters/process/command-runner';
+import { createSystemClock } from '../adapters/system/clock';
 import { createTerminalPrompter } from '../adapters/terminal/prompter';
+import type { ChangelogGenerator } from '../application/ports/changelog-generator';
+import type { Clock } from '../application/ports/clock';
 import type { CommandRunner } from '../application/ports/command-runner';
 import {
   runRelease,
@@ -92,6 +96,15 @@ export const deriveGithubAccess = async (
   };
 };
 
+/** The changelog of the release: git-cliff run at `root` with its `cliff.toml`, dated today. */
+export const createReleaseChangelog = (
+  runner: CommandRunner,
+  root: string,
+): { changelog: ChangelogGenerator; clock: Clock } => ({
+  changelog: createGitCliffGenerator(runner, root, join(root, 'cliff.toml')),
+  clock: createSystemClock(),
+});
+
 const ROOT = resolve(__dirname, '../../../..');
 
 const main = async (argv: string[]): Promise<number> => {
@@ -114,6 +127,7 @@ const main = async (argv: string[]): Promise<number> => {
       prompter: createTerminalPrompter(process.stdin, process.stdout),
       output: { line: (text) => console.log(text) },
       sleep,
+      ...createReleaseChangelog(runner, ROOT),
     },
     command,
   );

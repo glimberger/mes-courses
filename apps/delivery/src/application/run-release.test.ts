@@ -3,7 +3,9 @@ import { REQUIRED_WORKFLOWS } from '../domain/release-rules';
 import type { BumpPullRequest, RunOutcome } from '../domain/release-plan';
 import { runRelease, type ReleaseDeps } from './run-release';
 import {
+  FakeClock,
   FakeSleep,
+  InMemoryChangelogGenerator,
   InMemoryChannelSource,
   InMemoryReleasePullRequests,
   InMemoryReleaseRepository,
@@ -58,6 +60,9 @@ const setup = (prompter = new ScriptedPrompter([], [true])) => {
   const output = new RecordedOutput();
   const source = new InMemoryChannelSource(recorder);
   const fakeSleep = new FakeSleep();
+  const changelog = new InMemoryChangelogGenerator(recorder);
+  // Late in the evening in UTC: the section date is the UTC day.
+  const clock = new FakeClock(Date.parse('2026-10-20T23:30:00.000Z'));
   /** The bump lands on origin/main during the first wait. */
   const landBump = () => {
     repository.appVersions.set('origin/main', '1.3.0');
@@ -71,6 +76,8 @@ const setup = (prompter = new ScriptedPrompter([], [true])) => {
     source,
     prompter,
     output,
+    changelog,
+    clock,
     sleep: async (ms) => {
       sleeps += 1;
       recorder.record('Sleep', ms);
@@ -94,6 +101,7 @@ const setup = (prompter = new ScriptedPrompter([], [true])) => {
     deps,
     source,
     landBump,
+    changelog,
   };
 };
 
@@ -128,6 +136,59 @@ describe('runRelease', () => {
         'Validate it there, then run `pnpm release promote` to release it to production.',
       ]),
     );
+  });
+
+  it('generates the changelog section before the bump commit and passes it on (US1.1)', async () => {
+    const { deps, recorder, repository, changelog } = setup();
+    changelog.section = {
+      ...changelog.section,
+      features: [{ text: 'add dark mode', pr: 190 }],
+    };
+
+    await runRelease(deps, {
+      target: { kind: 'bump', bump: 'minor' },
+      assumeYes: true,
+    });
+
+    expect(repository.bumpSections).toEqual([
+      {
+        version: '1.3.0',
+        date: '2026-10-20',
+        features: [{ text: 'add dark mode', pr: 190 }],
+        fixes: [],
+        performances: [],
+        breaking: [],
+      },
+    ]);
+    const generate = recorder.calls.indexOf(
+      'ChangelogGenerator.generate 1.3.0 2026-10-20',
+    );
+    expect(generate).toBeGreaterThanOrEqual(0);
+    expect(generate).toBeLessThan(
+      recorder.calls.indexOf(
+        'ReleaseRepository.commitBump 1.3.0 chore/release-1.3.0',
+      ),
+    );
+  });
+
+  it('stops before any branch, push or pull request when the changelog cannot be generated (US1.4)', async () => {
+    const { deps, recorder } = setup();
+    recorder.failNext(
+      'ChangelogGenerator.generate',
+      new Error('git-cliff is not installed'),
+    );
+
+    const result = await runRelease(deps, {
+      target: { kind: 'bump', bump: 'minor' },
+      assumeYes: true,
+    });
+
+    expect(result).toEqual({
+      outcome: 'stopped',
+      message:
+        'git-cliff is not installed\nRun the same command again to resume.',
+    });
+    expect(mutations(recorder.calls)).toEqual([]);
   });
 
   it('uses an explicit version without asking for the bump (scenario 1.2)', async () => {
@@ -432,12 +493,77 @@ describe('runRelease', () => {
       expect(output.lines[0]).toBe('1.2.0 -> 1.3.0');
       expect(output.lines.filter((l) => l.startsWith('would '))).toEqual([
         'would commit the bump to chore/release-1.3.0 and push it',
+        'would write to CHANGELOG.md:',
+        'would write to changelog.json:',
         'would open the pull request "chore(release): bump the app version to 1.3.0"',
         'would enable auto-merge (squash) on it',
         'would wait for the pull request to merge',
         `would wait for ${REQUIRED_WORKFLOWS.join(', ')} on the bump commit`,
         'would stop with 1.3.0 on staging, for `pnpm release promote`',
       ]);
+    });
+
+    it('prints the changelog section and its data, and writes nothing (US4.1, US4.2)', async () => {
+      const { deps, recorder, output, changelog } = setup(
+        new ScriptedPrompter(),
+      );
+      changelog.section = {
+        ...changelog.section,
+        features: [{ text: 'add dark mode', pr: 190 }],
+      };
+
+      await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: false,
+        dryRun: true,
+      });
+
+      const markdown = output.lines.indexOf('would write to CHANGELOG.md:');
+      const data = output.lines.indexOf('would write to changelog.json:');
+      expect(markdown).toBeGreaterThan(-1);
+      expect(data).toBe(markdown + 2);
+      expect(output.lines[markdown + 1]).toBe(
+        [
+          '## [1.3.0] - 2026-10-20',
+          '',
+          '### Nouveautés',
+          '',
+          '- add dark mode ([#190](https://github.com/glimberger/mes-courses/pull/190))',
+        ].join('\n'),
+      );
+      expect(JSON.parse(output.lines[data + 1] ?? '')).toEqual({
+        version: '1.3.0',
+        date: '2026-10-20',
+        features: [{ text: 'add dark mode', pr: 190 }],
+        fixes: [],
+        performances: [],
+        breaking: [],
+      });
+      expect(recorder.calls).toContain(
+        'ChangelogGenerator.generate 1.3.0 2026-10-20',
+      );
+      expect(mutations(recorder.calls)).toEqual([]);
+    });
+
+    it('reports a generator failure in a dry run too (US4.2)', async () => {
+      const { deps, recorder } = setup(new ScriptedPrompter());
+      recorder.failNext(
+        'ChangelogGenerator.generate',
+        new Error('git-cliff is not installed'),
+      );
+
+      const result = await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: false,
+        dryRun: true,
+      });
+
+      expect(result).toEqual({
+        outcome: 'stopped',
+        message:
+          'git-cliff is not installed\nRun the same command again to resume.',
+      });
+      expect(mutations(recorder.calls)).toEqual([]);
     });
 
     it('still refuses a bad checkout', async () => {
@@ -1126,6 +1252,8 @@ const world = () => {
     source: new InMemoryChannelSource(),
     prompter: new ScriptedPrompter(),
     output: new RecordedOutput(),
+    changelog: new InMemoryChangelogGenerator(),
+    clock: new FakeClock(),
     async sleep() {
       // Auto-merge lands the bump during the wait.
       if (state.pr?.autoMerge) {

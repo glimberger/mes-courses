@@ -1,4 +1,5 @@
 import {
+  InMemoryChangelogGenerator,
   InMemoryReleasePullRequests,
   InMemoryReleaseRepository,
   InMemoryReleaseRuns,
@@ -40,6 +41,50 @@ describe('release doubles', () => {
       'ReleaseRepository.createTag v1.3.0 abc',
       'ReleaseRepository.pushTag v1.3.0',
     ]);
+  });
+
+  it('changelog generator records the call and returns its scripted section', async () => {
+    const recorder = new Recorder();
+    const changelog = new InMemoryChangelogGenerator(recorder);
+    changelog.section = {
+      version: 'ignored',
+      date: 'ignored',
+      features: [{ text: 'add dark mode', pr: 190 }],
+      fixes: [],
+      performances: [],
+      breaking: [],
+    };
+    expect(await changelog.generate('1.3.0', '2026-11-10')).toEqual({
+      version: '1.3.0',
+      date: '2026-11-10',
+      features: [{ text: 'add dark mode', pr: 190 }],
+      fixes: [],
+      performances: [],
+      breaking: [],
+    });
+    expect(recorder.calls).toEqual([
+      'ChangelogGenerator.generate 1.3.0 2026-11-10',
+    ]);
+  });
+
+  it('changelog generator gives an empty section by default and can be scripted to fail', async () => {
+    const recorder = new Recorder();
+    const changelog = new InMemoryChangelogGenerator(recorder);
+    expect(await changelog.generate('1.3.0', '2026-11-10')).toEqual({
+      version: '1.3.0',
+      date: '2026-11-10',
+      features: [],
+      fixes: [],
+      performances: [],
+      breaking: [],
+    });
+    recorder.failNext(
+      'ChangelogGenerator.generate',
+      new Error('git-cliff is not installed'),
+    );
+    await expect(changelog.generate('1.3.0', '2026-11-10')).rejects.toThrow(
+      'git-cliff is not installed',
+    );
   });
 
   it('fake sleep records durations without waiting', async () => {

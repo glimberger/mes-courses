@@ -231,7 +231,7 @@ is not documentation-only.
 
 A **release-bump pull request** changes nothing but the application's `version` value in
 `apps/mobile/app.config.ts`, the semantic version set before a release, and the changelog files
-(`CHANGELOG.md`, `changelog.json`). The CI workflow detects it from the diff
+(`CHANGELOG.md`, `apps/mobile/src/changelog/changelog.json`). The CI workflow detects it from the diff
 (`.github/scripts/release-bump.sh`) and its jobs then succeed at once. It is not
 documentation-only, but a version string changes no journey the device suite drives.
 
@@ -278,7 +278,8 @@ Continuous integration is blocking for every pull request:
 - A pull request MUST NOT be merged while any automatic CI job is failing, pending or skipped.
   A pull request that is not documentation-only MUST NOT be merged unless a run of the Android
   device suite in CI is green on its latest commit, unless it is a release-bump pull request:
-  its diff (for example `gh pr diff`) MUST show the `version` line as its only change, and the
+  its diff (for example `gh pr diff`) MUST show nothing but the `version` line and the changelog files (`CHANGELOG.md`,
+  `apps/mobile/src/changelog/changelog.json`), and the
   device suite still runs on the default branch once it is merged. The repository is private on a GitHub plan
   without branch protection, so GitHub cannot enforce these rules: whoever merges (the
   maintainer or an agent) checks the CI status of the pull request (for example with
@@ -327,4 +328,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 2.7.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-10-19
+**Version**: 2.7.1 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-11-10

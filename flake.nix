@@ -1,5 +1,5 @@
 {
-  description = "Mes courses: development shell (Node 24, pnpm, watchman)";
+  description = "Mes courses: development shell (Node 24, pnpm, watchman, git-cliff)";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
@@ -29,6 +29,7 @@
             pkgs.watchman
             pkgs.jq
             pkgs.actionlint
+            pkgs.git-cliff
           ];
         };
       });

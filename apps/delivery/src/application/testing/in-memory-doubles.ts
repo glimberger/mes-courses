@@ -27,6 +27,8 @@ import type { ReleasePullRequests } from '../ports/release-pull-requests';
 import type { ReleaseRepository } from '../ports/release-repository';
 import type { ReleaseRuns } from '../ports/release-runs';
 import type { Sleep } from '../ports/sleep';
+import type { ChangelogSection } from '../../domain/changelog';
+import type { ChangelogGenerator } from '../ports/changelog-generator';
 import { Recorder } from './recorder';
 
 /** Each double records `Port.method args` in the shared recorder and can be scripted to fail. */
@@ -370,8 +372,11 @@ export class InMemoryReleaseRepository implements ReleaseRepository {
     this.recorder.record('ReleaseRepository.tagCommit', tag);
     return this.tags.get(tag) ?? { local: null, remote: null };
   }
-  async commitBump(version: string, branch: string) {
+  /** The changelog section of each bump commit, in order. */
+  readonly bumpSections: ChangelogSection[] = [];
+  async commitBump(version: string, branch: string, section: ChangelogSection) {
     this.recorder.record('ReleaseRepository.commitBump', version, branch);
+    this.bumpSections.push(section);
   }
   async createTag(tag: string, commit: string) {
     this.recorder.record('ReleaseRepository.createTag', tag, commit);
@@ -388,6 +393,23 @@ export class InMemoryReleaseRepository implements ReleaseRepository {
   async releaseCommit(version: string) {
     this.recorder.record('ReleaseRepository.releaseCommit', version);
     return this.nextReleaseCommit();
+  }
+}
+
+export class InMemoryChangelogGenerator implements ChangelogGenerator {
+  /** The entries to return; its version and date are replaced by those asked for. */
+  section: ChangelogSection = {
+    version: '',
+    date: '',
+    features: [],
+    fixes: [],
+    performances: [],
+    breaking: [],
+  };
+  constructor(private readonly recorder = new Recorder()) {}
+  async generate(version: string, date: string) {
+    this.recorder.record('ChangelogGenerator.generate', version, date);
+    return { ...this.section, version, date };
   }
 }
 
