@@ -6,7 +6,9 @@ import {
 
 import type { AppearanceStore } from '../../../application/ports/appearance-store';
 import type { AppearanceSetting } from '../../../domain/appearance-setting';
+import type { AppInfo } from '../../../application/ports/app-info';
 import type { AppStore } from '../state/app-store';
+import { AppInfoProvider } from '../app-info-context';
 import { AppStoreProvider } from '../state/app-store-provider';
 import { ThemeProvider } from '../theme/theme-provider';
 import { AsScreen } from './as-screen';
@@ -27,6 +29,14 @@ export type AppStoryParameters = {
   appearance?: 'light' | 'dark';
   /** The appearance setting the story starts with; `system` when none is given. */
   appearanceSetting?: AppearanceSetting;
+  /** The build the story runs as; version 2.1.0, build 412, staging when none is given. */
+  appInfo?: AppInfo;
+};
+
+const STORY_APP_INFO: AppInfo = {
+  version: '2.1.0',
+  build: 412,
+  environment: 'staging',
 };
 
 // One object, so a story without a scenario keeps its store when the decorator renders again.
@@ -92,16 +102,18 @@ export const withAppProviders = (
         : storyAppearanceStore(parameters.appearanceSetting)
     }
   >
-    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      {parameters.withoutStore ? (
-        <Story />
-      ) : (
-        <WithStoryStore scenario={parameters.scenario ?? EMPTY_SCENARIO}>
-          <AsScreen params={parameters.routeParams}>
-            <Story />
-          </AsScreen>
-        </WithStoryStore>
-      )}
-    </SafeAreaProvider>
+    <AppInfoProvider value={parameters.appInfo ?? STORY_APP_INFO}>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        {parameters.withoutStore ? (
+          <Story />
+        ) : (
+          <WithStoryStore scenario={parameters.scenario ?? EMPTY_SCENARIO}>
+            <AsScreen params={parameters.routeParams}>
+              <Story />
+            </AsScreen>
+          </WithStoryStore>
+        )}
+      </SafeAreaProvider>
+    </AppInfoProvider>
   </ThemeProvider>
 );

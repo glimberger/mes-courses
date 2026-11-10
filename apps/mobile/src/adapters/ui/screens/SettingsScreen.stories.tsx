@@ -145,3 +145,11 @@ export const DarkAppearance: Story = {
     appearanceSetting: 'dark',
   },
 };
+
+/** A build without version, build number or environment: the row falls back to "Version 0.0.0". */
+export const UnknownBuild: Story = {
+  parameters: {
+    scenario: { seed: fixture, connected },
+    appInfo: { version: '0.0.0', build: null, environment: null },
+  },
+};
