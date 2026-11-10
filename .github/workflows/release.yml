@@ -56,10 +56,13 @@ jobs:
         if: always()
         run: sh .github/scripts/delivery-summary.sh gate "${{ job.status }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
+  # Takes the server archive that staging delivered for this commit instead of building it
+  # (ADR-0015): the same bytes run on both channels. The job stops the release, before anything
+  # is published, when the archive is missing or does not match; it never rebuilds the server.
   server-artifact:
     needs: gate
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
@@ -70,12 +73,28 @@ jobs:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
       - run: nix develop --command pnpm install --frozen-lockfile
-      - run: nix develop --command pnpm build
-      - name: Pack the server
+      - name: Take the staging server archive
+        id: staging
         env:
-          VERSION: ${{ needs.gate.outputs.version }}
-          SEQUENCE: ${{ needs.gate.outputs.sequence }}
-        run: nix develop --command sh .github/scripts/pack-server.sh "$VERSION" "$SHA" "$SEQUENCE" "$RUNNER_TEMP/out"
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          nix develop --command pnpm --filter @mes-courses/delivery --silent run ci fetch-staging-server \
+            --commit "$SHA" --out "$RUNNER_TEMP/out" > "$RUNNER_TEMP/staging.out"
+          cat "$RUNNER_TEMP/staging.out" >> "$GITHUB_OUTPUT"
+      - name: Check the archive is the one staging delivered
+        env:
+          EXPECTED_SHA256: ${{ steps.staging.outputs.sha256 }}
+          BUILT_COMMIT: ${{ steps.staging.outputs.built-commit }}
+          BUILT_VERSION: ${{ steps.staging.outputs.built-version }}
+        run: |
+          set -eu
+          sh .github/scripts/check-staging-server.sh "$RUNNER_TEMP/out/server-$SHA.tar.gz" "$EXPECTED_SHA256"
+          {
+            echo "### Server archive taken from staging"
+            echo "- built at \`$BUILT_COMMIT\` as \`$BUILT_VERSION\`, sha256 \`$EXPECTED_SHA256\`"
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         with:
           name: server-production

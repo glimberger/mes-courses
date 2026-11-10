@@ -35,7 +35,6 @@ No `NEEDS CLARIFICATION` remained. Decisions taken while building (PR #166):
 - **Lookup rule**: staging builds the server only when a commit changes it, so the staging entry names the last server change. It is reusable when it is the tagged commit or an ancestor with no server change since (`delivery-targets.sh` rules, one list for the plan and the lookup). Otherwise the release fails with a message; no rebuild.
 - **Nothing environment-specific in the archive**: only `build-info.json` (version, commit, sequence) was; `pack-server.sh` no longer writes it and the agent (1.1.0, now the `minAgentVersion`) writes it at install from the manifest entry.
 - **Wall-clock**: unchanged, the Android build (about 20 to 24 minutes) is the critical path; the gain is about one minute of runner time per release.
-- **Constraint**: `.github/workflows/` is maintainer-only; the edits are in [release-yml-handoff.md](release-yml-handoff.md) and must be applied with the merge, together with the `pack-server.sh` change (new arguments).
 
 ## Staging named after the app version
 
