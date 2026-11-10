@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-10
 
-**Status**: Draft
+**Status**: Implemented (the GitHub Release body, US3 and SC-003, waits for the maintainer to apply the `release.yml` change, see [the hand-off](release-yml-handoff.md))
 
 **Input**: User description: "Generate the changelog with git-cliff in the release bump: `cliff.toml` keeps `feat`, `fix`, `perf` and breaking changes and drops the noise types and scopes; git-cliff is in the Nix dev shell; `pnpm release` commits `CHANGELOG.md` and `apps/mobile/src/changelog/changelog.json` with the version change, in the bump pull request; `release.yml` uses the version's entry as the GitHub Release body; `--dry-run` prints what would be written; the existing tags are seeded once." (issue #202, part of epic #199). Builds on [009-yarn-release-command](../009-yarn-release-command/spec.md) and [010-release-staging-promote](../010-release-staging-promote/spec.md). Unblocks #203 and #204, which consume `changelog.json` in the app.
 

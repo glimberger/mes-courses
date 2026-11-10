@@ -32,11 +32,11 @@ Everything else is under [`docs/`](docs/README.md), which indexes it:
   the [store privacy details](docs/store-privacy-details.md), [privacy and security](docs/privacy-and-security.md)
   and the [delivery agent](docs/delivery-agent.md).
 - **Procedures** (runbooks): [`docs/procedures/`](docs/README.md#procedures), such as the Pi set-up,
-  releases, EAS builds, rollback and merging a pull request.
+  releases (with their changelog), EAS builds, rollback and merging a pull request.
 
 ## Prerequisites
 
-- [Nix](https://nixos.org/download) with flakes enabled. The dev shell provides Node.js 24, pnpm (the version comes from `packageManager`) and watchman. Optionally
+- [Nix](https://nixos.org/download) with flakes enabled. The dev shell provides Node.js 24, pnpm (the version comes from `packageManager`), watchman and git-cliff (the release changelog, see [Releases](docs/procedures/releases.md#the-changelog)). Optionally
   [`direnv`](https://direnv.net) with `nix-direnv`, so the shell loads when you enter the folder.
 - For device builds: Android Studio (Android) or Xcode (iOS, macOS only).
 - For the end-to-end journeys: an Android emulator named `Pixel_API_35` (or the name in
