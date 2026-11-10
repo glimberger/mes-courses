@@ -230,7 +230,9 @@ lockfile, the Nix flake, the shared TypeScript, lint and format configuration, t
 is not documentation-only.
 
 A **release-bump pull request** changes nothing but the application's `version` value in
-`apps/mobile/app.config.ts`, the semantic version set by hand before a release. It is not
+`apps/mobile/app.config.ts`, the semantic version set before a release, and the changelog files
+(`CHANGELOG.md`, `changelog.json`). The CI workflow detects it from the diff
+(`.github/scripts/release-bump.sh`) and its jobs then succeed at once. It is not
 documentation-only, but a version string changes no journey the device suite drives.
 
 Before any commit:
