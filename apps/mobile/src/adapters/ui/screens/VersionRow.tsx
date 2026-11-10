@@ -1,12 +1,21 @@
 import { SettingsRow } from '../components/SettingsRow';
 import { useAppInfo } from '../app-info-context';
 
-/** The bottom row of Settings: "Version X.Y.Z (build N)" and the environment, as plain text. */
-export const VersionRow = () => {
+/**
+ * The bottom row of Settings: "Version X.Y.Z (build N)" and the environment. Pressing it opens
+ * Nouveautés, when `onPress` is given.
+ */
+export const VersionRow = ({
+  onPress,
+}: {
+  onPress?: (() => void) | undefined;
+}) => {
   const { version, build, environment } = useAppInfo();
   return (
     <SettingsRow
       icon="info"
+      onPress={onPress}
+      chevron={onPress !== undefined}
       title={
         build === null
           ? `Version ${version}`

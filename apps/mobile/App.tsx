@@ -8,10 +8,12 @@ import {
 } from 'react-native-safe-area-context';
 
 import { ExpoAppInfo } from './src/adapters/app-info/expo-app-info';
+import { BundledChangelog } from './src/adapters/changelog/bundled-changelog';
 import { KvAppearanceStore } from './src/adapters/preferences/kv-appearance-store';
 import { DataFromNewerVersion } from './src/application/ports/data-from-newer-version';
 import { AppErrorBoundary } from './src/adapters/ui/components/app-error-boundary';
 import { AppInfoProvider } from './src/adapters/ui/app-info-context';
+import { ChangelogProvider } from './src/adapters/ui/changelog-context';
 import { Navigation } from './src/adapters/ui/navigation';
 import { ScreenTrackingReporter } from './src/adapters/ui/screen-tracking-reporter';
 import { StartupError } from './src/adapters/ui/screens/StartupError';
@@ -39,6 +41,7 @@ type Startup =
 const appearanceStore = new KvAppearanceStore();
 applyNativeScheme(appearanceStore.read());
 const appInfo = new ExpoAppInfo().read();
+const changelog = new BundledChangelog().read();
 
 /** The status bar icons follow the theme in use, not only the system scheme. */
 const ThemedStatusBar = () => (
@@ -118,7 +121,9 @@ export default function App() {
     <ThemeProvider appearanceStore={appearanceStore} syncNativeScheme>
       <ThemedStatusBar />
       <AppInfoProvider value={appInfo}>
-        {renderStartup(startup, reporter, restart)}
+        <ChangelogProvider value={changelog}>
+          {renderStartup(startup, reporter, restart)}
+        </ChangelogProvider>
       </AppInfoProvider>
     </ThemeProvider>
   );

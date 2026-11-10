@@ -16,6 +16,7 @@ import { TabBar } from './components/TabBar';
 import { UndoSnackbar } from './components/UndoSnackbar';
 import { AccountsScreen } from './screens/AccountsScreen';
 import { AddArticlesScreen } from './screens/AddArticlesScreen';
+import { ChangelogScreen } from './screens/ChangelogScreen';
 import { CatalogScreen } from './screens/CatalogScreen';
 import { ChoosePasswordScreen } from './screens/ChoosePasswordScreen';
 import { CreateArticleScreen } from './screens/CreateArticleScreen';
@@ -97,6 +98,7 @@ const SettingsNavigator = () => (
       component={ChoosePasswordScreen}
     />
     <SettingsStack.Screen name="Accounts" component={AccountsScreen} />
+    <SettingsStack.Screen name="Changelog" component={ChangelogScreen} />
   </SettingsStack.Navigator>
 );
 
