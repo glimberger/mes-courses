@@ -1,6 +1,7 @@
 import type { ChannelManifest } from '../domain/manifest';
 import { releaseGate } from './release-gate';
 import {
+  FakeSigner,
   InMemoryChannelSource,
   InMemoryGitFacts,
   InMemoryRunHistory,
@@ -61,11 +62,17 @@ const setup = () => {
     manifest: productionManifest('1.1.0'),
     signature: 'sig',
   });
+  const staging = stagingManifest(commit);
   source.channels.set('staging', {
-    manifest: stagingManifest(commit),
-    signature: 'sig',
+    manifest: staging,
+    signature: `signed:${staging}`,
   });
-  return { deps: { git, runs, source }, git, runs, source };
+  return {
+    deps: { git, runs, source, verifier: new FakeSigner() },
+    git,
+    runs,
+    source,
+  };
 };
 
 describe('releaseGate', () => {
@@ -98,9 +105,10 @@ describe('releaseGate', () => {
 
   it('fails when the staging server archive is for another commit', async () => {
     const { deps, source } = setup();
+    const other = stagingManifest('d'.repeat(40));
     source.channels.set('staging', {
-      manifest: stagingManifest('d'.repeat(40)),
-      signature: 'sig',
+      manifest: other,
+      signature: `signed:${other}`,
     });
     const failures = await releaseGate(deps, { tag: 'v1.2.0', commit });
     expect(failures).toHaveLength(1);

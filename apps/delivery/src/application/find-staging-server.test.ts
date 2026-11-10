@@ -8,6 +8,7 @@ import { Recorder } from './testing/recorder';
 import {
   InMemoryChannelSource,
   InMemoryGitFacts,
+  FakeSigner,
 } from './testing/in-memory-doubles';
 
 const TAG_COMMIT = 'c'.repeat(40);
@@ -35,14 +36,17 @@ const stagingManifest = (serverCommit: string, manifestCommit = TAG_COMMIT) =>
     fdroid: null,
   } satisfies ChannelManifest);
 
+const signed = (manifest: string) => ({
+  manifest,
+  signature: `signed:${manifest}`,
+});
+
 const setup = (serverCommit = TAG_COMMIT) => {
   const git = new InMemoryGitFacts();
   const source = new InMemoryChannelSource();
-  source.channels.set('staging', {
-    manifest: stagingManifest(serverCommit),
-    signature: 'sig',
-  });
-  return { git, source, deps: { git, source } };
+  const verifier = new FakeSigner();
+  source.channels.set('staging', signed(stagingManifest(serverCommit)));
+  return { git, source, deps: { git, source, verifier } };
 };
 
 describe('findStagingServer', () => {
@@ -67,9 +71,20 @@ describe('findStagingServer', () => {
     );
   });
 
+  it('refuses a manifest whose signature does not verify', async () => {
+    const { deps, source } = setup();
+    source.channels.set('staging', {
+      manifest: stagingManifest(TAG_COMMIT),
+      signature: 'forged',
+    });
+    await expect(findStagingServer(deps, TAG_COMMIT)).rejects.toThrow(
+      /signature does not verify/,
+    );
+  });
+
   it('refuses a manifest it cannot read', async () => {
     const { deps, source } = setup();
-    source.channels.set('staging', { manifest: '{}', signature: 'sig' });
+    source.channels.set('staging', signed('{}'));
     await expect(findStagingServer(deps, TAG_COMMIT)).rejects.toThrow(
       /Invalid manifest/,
     );
@@ -120,13 +135,10 @@ describe('fetchStagingServer', () => {
     const recorder = new Recorder();
     const git = new InMemoryGitFacts();
     const source = new InMemoryChannelSource(recorder);
-    source.channels.set('staging', {
-      manifest: stagingManifest(BUILT),
-      signature: 'sig',
-    });
+    source.channels.set('staging', signed(stagingManifest(BUILT)));
     git.ancestry.add(`${BUILT}..${TAG_COMMIT}`);
     await fetchStagingServer(
-      { git, source, hashFile: async () => SHA },
+      { git, source, verifier: new FakeSigner(), hashFile: async () => SHA },
       TAG_COMMIT,
       '/out',
     );
@@ -140,7 +152,12 @@ describe('fetchStagingServer', () => {
     const source = new InMemoryChannelSource(recorder);
     await expect(
       fetchStagingServer(
-        { git: new InMemoryGitFacts(), source, hashFile: async () => SHA },
+        {
+          git: new InMemoryGitFacts(),
+          source,
+          verifier: new FakeSigner(),
+          hashFile: async () => SHA,
+        },
         TAG_COMMIT,
         '/out',
       ),

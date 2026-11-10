@@ -62,9 +62,12 @@ commit; it never builds one.
 - A release can only promote what staging still holds: once a later server change has reached
   staging, an older tagged commit cannot be released. This matches the `promote` command, which
   always targets the version on `origin/main`.
-- The staging manifest is read through the authenticated GitHub API of this repository; its
-  signature is not verified in CI (the Pi verifies the production manifest, which the release
-  signs), so the trust in the archive is the trust in the repository's releases.
+- The staging manifest is read through the authenticated GitHub API of this repository, and its
+  signature is verified in CI against the committed `deploy/allowed_signers` (the same check as
+  the agent's) before its checksum is trusted, both by the release gate and by
+  `ci fetch-staging-server`. Production re-signs the archive under its own key, so without this
+  check anyone able to edit the `channel-staging` assets could have a swapped archive and
+  checksum laundered into a production release.
 - The agent must be updated by hand to 1.1.0 before the first delivery that uses archives
   without `build-info.json` ([updating the agent](../procedures/updating-the-agent.md)). Archives
   built before this change still hold a `build-info.json`, which the agent overwrites.

@@ -4,11 +4,13 @@ import { stagingServerFailure } from './find-staging-server';
 import type { ChannelSource } from './ports/channel-source';
 import type { GitFacts } from './ports/git-facts';
 import type { RunHistory } from './ports/run-history';
+import type { SignatureVerifier } from './ports/signature-verifier';
 
 export type ReleaseGateDeps = {
   git: GitFacts;
   runs: RunHistory;
   source: ChannelSource;
+  verifier: SignatureVerifier;
 };
 
 /**
@@ -18,7 +20,7 @@ export type ReleaseGateDeps = {
  * pass, so a broken channel never lets a lower version through.
  */
 export const releaseGate = async (
-  { git, runs, source }: ReleaseGateDeps,
+  { git, runs, source, verifier }: ReleaseGateDeps,
   input: { tag: string; commit: string },
 ): Promise<string[]> => {
   const [appVersion, onMain, successfulWorkflows, channel, stagingFailure] =
@@ -27,7 +29,7 @@ export const releaseGate = async (
       git.isOnMain(input.commit),
       runs.successfulWorkflows(input.commit),
       source.fetchChannel('production'),
-      stagingServerFailure({ git, source }, input.commit),
+      stagingServerFailure({ git, source, verifier }, input.commit),
     ]);
   const failures = evaluateRelease({
     tag: input.tag,

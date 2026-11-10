@@ -1,8 +1,13 @@
 import { parseManifest, type ServerEntry } from '../domain/manifest';
 import type { ChannelSource } from './ports/channel-source';
 import type { GitFacts } from './ports/git-facts';
+import type { SignatureVerifier } from './ports/signature-verifier';
 
-export type FindStagingServerDeps = { source: ChannelSource; git: GitFacts };
+export type FindStagingServerDeps = {
+  source: ChannelSource;
+  git: GitFacts;
+  verifier: SignatureVerifier;
+};
 
 export type FetchStagingServerDeps = FindStagingServerDeps & {
   hashFile(file: string): Promise<string>;
@@ -13,17 +18,23 @@ export type FetchStagingServerDeps = FindStagingServerDeps & {
  *
  * Staging builds the server only when a commit changes it (research R2), so the entry names the
  * commit that last changed the server, not necessarily the tagged one. It is reusable when it is
- * the tagged commit itself, or an ancestor of it with no server change in between. Anything else
- * throws, and there is no fallback: the release stops before it publishes anything.
+ * the tagged commit itself, or an ancestor of it with no server change in between. The manifest
+ * must carry a valid signature of the deploy key first: its checksum is what the archive is held
+ * to, and production re-signs those bytes under its own key. Anything else throws, and there is no fallback: the release stops before it publishes anything.
  */
 export const findStagingServer = async (
-  { source, git }: FindStagingServerDeps,
+  { source, git, verifier }: FindStagingServerDeps,
   commit: string,
 ): Promise<ServerEntry> => {
   const channel = await source.fetchChannel('staging');
   if (channel === null) {
     throw new Error(
       `The staging channel has no manifest, so there is no server archive to promote for ${commit}: deliver the commit to staging first`,
+    );
+  }
+  if (!(await verifier.verify(channel.manifest, channel.signature))) {
+    throw new Error(
+      `The staging manifest signature does not verify against the allowed signers, so its server archive cannot be trusted for ${commit}`,
     );
   }
   const entry = parseManifest(channel.manifest).server;

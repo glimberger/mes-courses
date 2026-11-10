@@ -11,7 +11,10 @@ import { createGithubRunHistory } from '../adapters/github/run-history';
 import { createGitFacts } from '../adapters/git/git-facts';
 import { waitForHealthyCommit } from '../adapters/http-health/health-probe';
 import { createCommandRunner } from '../adapters/process/command-runner';
-import { createSshSigner } from '../adapters/ssh-signature/ssh-signature';
+import {
+  createSshSigner,
+  createSshVerifier,
+} from '../adapters/ssh-signature/ssh-signature';
 import { createSystemClock } from '../adapters/system/clock';
 import type { Environment } from '../domain/manifest';
 import { readAppVersion } from '../domain/release-plan';
@@ -186,6 +189,8 @@ const required = (name: string): string => {
 };
 
 const ROOT = resolve(__dirname, '../../../..');
+/** The public key the Pi trusts, committed with the deploy files. */
+const ALLOWED_SIGNERS = resolve(ROOT, 'deploy/allowed_signers');
 
 /** `version` in `apps/mobile/app.config.ts`: staging delivers `X.Y.Z-staging.<n>` of it. */
 const appVersion = (): string =>
@@ -255,6 +260,7 @@ const runReleaseGate = async (args: ReleaseGateCommand) => {
         repository,
         token: required('GITHUB_TOKEN'),
       }),
+      verifier: createSshVerifier(ALLOWED_SIGNERS),
     },
     { tag: args.tag, commit: args.commit },
   );
@@ -277,6 +283,7 @@ const runFetchStagingServer = async (args: FetchStagingServerCommand) => {
         repository,
         token: required('GITHUB_TOKEN'),
       }),
+      verifier: createSshVerifier(ALLOWED_SIGNERS),
       hashFile: sha256Of,
     },
     args.commit,
