@@ -18,6 +18,8 @@ Questions were answered with the recommended option (no interactive session).
 - Q: Does the app keep reading or writing `sync_state.serverUrl` on a device already signed in? -> A: The stored value is never read to connect; the fixed URL always wins. Existing stored values are left in place and ignored (no migration, no data loss, no sign-out).
 - Q: What does a `serverId` mismatch mean now that the URL is fixed? -> A: Unchanged: if the fixed server answers with a `serverId` different from the stored one, the existing "server mismatch" outcome is reported and sync does not proceed.
 - Q: Is sign-in still possible offline or against an unreachable server? -> A: Behavior is unchanged from 004: sign-in needs the server; the existing unreachable-server message is shown.
+- Q: The issue lists `ChangeServerUrlDialog`, a "Modifier l'adresse" button and `required-stories.ts` entries to remove: do they exist? -> A: No. 004 already removed the dialog, the button and their stories from the UI (Settings has no such button). What remains of that feature is the `change-server-url` use case with its test, the `changeServerUrl` store action (`device-actions.ts`) with its two cases in `error-context.test.ts`, the `useCases` wiring and `tests/sync/src/change-server-url.test.ts`. FR-004 lists exactly these.
+- Q: With the stored URL ignored, what says a device is "connected"? -> A: The paired device id (`sync_state.deviceId`), plus the credential, as already required. A new sign-in no longer writes `sync_state.serverUrl`; existing values stay in the column, unread.
 - Q: Are insecure URLs treated differently? -> A: No change: release builds refuse `http://`; dev builds accept it only when `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL=1`. The check applies to the fixed URL at start-up.
 - Q: Is there a replacement for changing the address when the server moves? -> A: No in-app way. A new build with a new `EXPO_PUBLIC_DEFAULT_SERVER_URL` is the only way (the point of the feature).
 
@@ -96,11 +98,11 @@ A maintainer who forgets the variable learns it immediately.
 
 - **FR-001**: The sync server URL MUST come only from the build variable `EXPO_PUBLIC_DEFAULT_SERVER_URL`; no URL is hard-coded.
 - **FR-002**: The sign-in screen MUST ask only for e-mail and password, with no server address field.
-- **FR-003**: The Settings screen MUST NOT show the server address nor offer any way to change it.
-- **FR-004**: `ChangeServerUrlDialog`, the `change-server-url` use case, its store action (`device-actions.ts`), their tests and stories (including `required-stories.ts` entries and `tests/sync/src/change-server-url.test.ts`) MUST be removed, with lint, type-check, dependency-cruiser and the story-coverage test passing.
+- **FR-003**: The Settings screen MUST NOT show the server address (today the title of the "Serveur" row, which keeps "Dernière synchronisation" and "Synchroniser maintenant") nor offer any way to change it. The password-reset dialog and the choose-password screen also stop carrying the address.
+- **FR-004**: The `change-server-url` use case and its test, the `changeServerUrl` store action (`device-actions.ts`) and its cases in `error-context.test.ts`, its `use-cases.ts` wiring and `tests/sync/src/change-server-url.test.ts` MUST be removed (the dialog, the button and their stories no longer exist, see Clarifications), with lint, type-check, dependency-cruiser and the story-coverage test passing.
 - **FR-005**: The app MUST stop at start-up with a clear error naming the variable when it is missing, blank or invalid; the CI workflow MUST fail with a clear message when `server-url` is empty.
 - **FR-006**: The stored `sync_state.serverUrl` MUST NOT be read for connecting; the fixed URL always wins.
-- **FR-007**: The `serverId` guard MUST remain: a `serverId` differing from the stored one is reported as a server mismatch at connection time.
+- **FR-007**: The `serverId` guard MUST remain: a `serverId` differing from the stored one (checked on each sync answer in `synchronize.ts`) is reported as a server mismatch.
 - **FR-008**: Release builds MUST refuse `http://` URLs; dev builds MUST accept them only with `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL=1`.
 - **FR-009**: `docs/sync-server.md` and the README MUST describe a user flow without address typing and the variable as required.
 
@@ -122,5 +124,6 @@ A maintainer who forgets the variable learns it immediately.
 ## Assumptions
 
 - There is a single production server; changing it means shipping a new build.
+- The e2e "unreachable server" journey, which typed an address, now relies on an e2e build whose fixed URL points at nothing (`https://127.0.0.1:9`).
 - The legacy `serverUrl` column stays in the local database (no migration needed).
 - Behavior of authentication and sync other than address selection is unchanged.
