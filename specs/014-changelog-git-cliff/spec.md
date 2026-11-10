@@ -21,6 +21,10 @@ Questions were answered with the recommended option (no interactive session).
 - Q: What if a release has no entry to list (only dropped types)? -> A: The section is still written, with a single line "No user-facing changes.", so that the version has an entry and the GitHub Release body is never empty.
 - Q: Is the generated file edited by hand? -> A: No. Both files are generated and never hand-edited; a fix is made in `cliff.toml` or in the commit history source, then regenerated.
 - Q: What is the order of sections and of the seed? -> A: Newest version first. The seed covers `v1.2.0`, `v2.0.1` and `v2.1.0`; the seed is produced once by running git-cliff over the history and reviewed before commit.
+- Q: What is the shape of `changelog.json`? -> A: A JSON array of sections, newest first: `{ version, date, features[], fixes[], performances[], breaking[] }`, each entry `{ text, pr }` with `pr` a number or `null`; empty groups are empty arrays. The shape is a stable contract for #203 and #204 and is covered by a test.
+- Q: Does the `Release` workflow need git-cliff to get the body? -> A: No. It extracts the version's section from the committed `CHANGELOG.md` (between its heading and the next one) and passes it to `gh release create --notes-file`, replacing `--generate-notes`. This keeps the workflow independent of git-cliff.
+- Q: Where is the section date taken from, and what is a section heading? -> A: The date is the bump day (`YYYY-MM-DD`, from the release command's clock). The heading is `## [X.Y.Z] - YYYY-MM-DD`, so the extraction can match on the bare version.
+- Q: Does a filtering test need a real git-cliff? -> A: Filtering tests (FR-011) run git-cliff against a throwaway fixture repository inside the Nix dev shell; release-step unit tests in `apps/delivery` use a fake generator port (Hexagonal Architecture), so they stay fast and need no binary.
 - Q: Does the staging/production flow change? -> A: No. The changelog is part of the existing bump pull request; the tag, the `Deliver staging` run and `pnpm release promote` are unchanged.
 
 ## User Scenarios & Testing *(mandatory)*
