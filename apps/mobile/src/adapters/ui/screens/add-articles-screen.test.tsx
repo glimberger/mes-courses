@@ -76,7 +76,7 @@ const shownInOrder = (texts: string[]) =>
 describe('AddArticles', () => {
   it('003 FR-020 renders the sync status bar under the Appbar', async () => {
     await renderScreen({
-      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      connected: { lastSyncAt: null },
     });
 
     expect(await screen.findByTestId('sync-status-bar')).toBeOnTheScreen();
@@ -501,7 +501,6 @@ describe('AddArticles', () => {
     it('AC1 AC2 adds and removes an article with no error shown, reported or fetched', async () => {
       const { unitOfWork, errorReporter } = await renderScreen({
         connected: {
-          serverUrl: 'https://courses.example.fr',
           lastSyncAt: null,
         },
       });

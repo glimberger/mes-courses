@@ -9,7 +9,6 @@ import type { StoryScenario } from '../testing/story-store';
 import { waitForMenusToSettle } from '../testing/wait-for-menus';
 
 const connected = {
-  serverUrl: 'https://courses.example.fr',
   lastSyncAt: null,
 };
 

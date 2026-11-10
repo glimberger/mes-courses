@@ -21,7 +21,6 @@ export const NotSignedIn: Story = {
 };
 
 const connected = {
-  serverUrl: 'https://courses.example.fr',
   lastSyncAt: new Date(Date.now() - 5 * 60_000).toISOString(),
 };
 

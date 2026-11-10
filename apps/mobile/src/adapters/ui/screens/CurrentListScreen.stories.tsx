@@ -49,7 +49,7 @@ export const WithSyncStatus: Story = {
   parameters: {
     scenario: {
       seed: fixture,
-      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      connected: { lastSyncAt: null },
       syncServer: pullingSyncServer().syncServer,
     },
   },

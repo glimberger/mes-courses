@@ -25,7 +25,8 @@ describe('signIn', () => {
     ]);
     expect(await h.credentials.read()).toBe('credential-signed-in');
     expect(await h.syncState()).toMatchObject({
-      serverUrl: 'https://courses.example.fr',
+      // The address is fixed at build time and no longer stored (013).
+      serverUrl: null,
       serverId: 'server-1',
       deviceId: 'device-signed-in',
       accountId: 'account-1',
@@ -48,7 +49,7 @@ describe('signIn', () => {
 
     expect(outcome).toEqual(ok({ type: 'passwordChangeRequired' }));
     expect(await h.credentials.read()).toBeNull();
-    expect((await h.syncState()).serverUrl).toBeNull();
+    expect((await h.syncState()).deviceId).toBeNull();
   });
 
   it('004 US2-1 refuses http:// and a malformed address without any request', async () => {
@@ -108,7 +109,6 @@ describe('signIn', () => {
       const h = await signInHarness();
       await h.setSyncState({
         accountId: 'account-1',
-        serverUrl: 'https://old.example.fr',
         deviceId: 'old-device',
       });
       await h.unitOfWork.run((repos) =>
@@ -137,7 +137,6 @@ describe('signIn', () => {
       const h = await signInHarness();
       await h.setSyncState({
         accountId: 'account-2',
-        serverUrl: 'https://courses.example.fr',
         deviceId: 'old-device',
       });
       await h.unitOfWork.run((repos) =>
@@ -163,7 +162,6 @@ describe('signIn', () => {
       const h = await signInHarness();
       await h.setSyncState({
         accountId: null,
-        serverUrl: 'https://courses.example.fr',
         deviceId: 'old-device',
       });
       await h.unitOfWork.run((repos) =>
@@ -185,7 +183,7 @@ describe('signIn', () => {
       expect(
         await createSignIn(h.deps)('courses.example.fr', 'a@b.co', 'x', 'P'),
       ).toEqual(err({ type: 'StorageFailed' }));
-      expect((await h.syncState()).serverUrl).toBeNull();
+      expect((await h.syncState()).deviceId).toBeNull();
     });
   });
 });

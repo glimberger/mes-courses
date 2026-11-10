@@ -3,7 +3,6 @@ import type { UnitOfWork } from '../ports/unit-of-work';
 
 /** What the status bar and Settings show about the server. */
 export type SyncInfo = {
-  serverUrl: string | null;
   lastSyncAt: string | null;
   /** The changes waiting to be sent, held ones excluded. */
   pendingCount: number;
@@ -11,8 +10,9 @@ export type SyncInfo = {
 };
 
 /**
- * A server address with no stored credential is a phone restored from a backup: the connection is
- * lost, though its data is kept (FR-018b).
+ * A device is connected once paired (it has a device id; the stored address is never read, 013).
+ * A pairing with no stored credential is a phone restored from a backup: the connection is lost,
+ * though its data is kept (FR-018b).
  */
 export const createGetSyncInfo =
   ({
@@ -23,23 +23,17 @@ export const createGetSyncInfo =
     credentials: CredentialStore;
   }) =>
   async (): Promise<SyncInfo> => {
-    const { serverUrl, lastSyncAt, pendingCount } = await unitOfWork.run(
+    const { deviceId, lastSyncAt, pendingCount } = await unitOfWork.run(
       async (repos) => ({
         ...(await repos.syncState.get()),
         pendingCount: await repos.changes.count(),
       }),
     );
-    if (serverUrl === null) {
-      return {
-        serverUrl,
-        lastSyncAt,
-        pendingCount,
-        connection: 'notConnected',
-      };
+    if (deviceId === null) {
+      return { lastSyncAt, pendingCount, connection: 'notConnected' };
     }
     const credential = await credentials.read();
     return {
-      serverUrl,
       lastSyncAt,
       pendingCount,
       connection: credential === null ? 'signedOut' : 'connected',

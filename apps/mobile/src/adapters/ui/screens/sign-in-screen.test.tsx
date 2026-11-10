@@ -497,34 +497,6 @@ describe('ForgotPasswordDialog', () => {
       );
     });
 
-    it('keeps the last address ahead of the build address', async () => {
-      process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL =
-        'https://staging.courses.example.fr';
-
-      await renderWithStore(
-        <Navigation errorReporter={new RecordingErrorReporter()} />,
-        {
-          seed: fixture,
-          asScreen: false,
-          syncServer: reachable,
-          connected: {
-            serverUrl: 'https://courses.example.fr',
-            lastSyncAt: null,
-            withoutCredential: true,
-          },
-        },
-      );
-      await screen.findByText('Ma liste');
-      fireEvent.press(
-        await screen.findByRole('button', { name: 'Se reconnecter' }),
-      );
-      await screen.findByRole('header', { name: 'Connexion' });
-
-      expect(screen.getByLabelText('Adresse du serveur').props.value).toBe(
-        'courses.example.fr',
-      );
-    });
-
     it('pre-fills nothing when there is neither', async () => {
       delete process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL;
 

@@ -54,13 +54,12 @@ export type StoryScenario = {
   /** Use cases that reject with the given failure instead of an `Error`; they fail too. */
   failingWith?: Partial<Record<UseCaseName, 'storageFull'>>;
   /**
-   * Starts connected to this server: the fake `CredentialStore` holds a credential and the sync
-   * state holds the address and the last sync. Absent, the device was never connected.
+   * Starts connected: the fake `CredentialStore` holds a credential and the sync state holds the
+   * pairing and the last sync. Absent, the device was never connected.
    */
   connected?: {
-    serverUrl: string;
     lastSyncAt: string | null;
-    /** The address is kept but the credential is gone, as after a system restore (FR-018b). */
+    /** The pairing is kept but the credential is gone, as after a system restore (FR-018b). */
     withoutCredential?: boolean;
   };
   /** What the fake `SyncServer` answers, method by method; the others stay unreachable. */
@@ -136,7 +135,6 @@ export const buildStoryStore = async (scenario: StoryScenario) => {
     await unitOfWork.run(async (repos) => {
       await repos.syncState.save({
         ...(await repos.syncState.get()),
-        serverUrl: connected.serverUrl,
         serverId: 'story-server',
         deviceId: 'story-device',
         lastSyncAt: connected.lastSyncAt,

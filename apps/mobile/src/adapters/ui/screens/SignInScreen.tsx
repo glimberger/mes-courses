@@ -74,12 +74,9 @@ export const SignInScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const signIn = useAppStore((state) => state.signIn);
-  const lastServerUrl = useAppStore((state) => state.sync.serverUrl);
-  // The address used last comes first; a build made for one server (staging) suggests its own.
+  // A build made for one server suggests its own address.
   const [address, setAddress] = useState(
-    withoutScheme(
-      lastServerUrl ?? process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL ?? '',
-    ),
+    withoutScheme(process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL ?? ''),
   );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

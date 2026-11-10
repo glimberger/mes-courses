@@ -138,7 +138,6 @@ describe('SyncStatusBar', () => {
   it('FR-018b says no longer authorized for a server address with no credential', async () => {
     await renderWithStore(<SyncStatusBar />, {
       connected: {
-        serverUrl: 'https://courses.example.fr',
         lastSyncAt: null,
         withoutCredential: true,
       },

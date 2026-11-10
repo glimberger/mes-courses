@@ -170,7 +170,6 @@ describe('createStoryStore', () => {
 
   describe('synchronization (003)', () => {
     const connected = {
-      serverUrl: 'https://courses.example.fr',
       lastSyncAt: '2026-10-01T10:00:00.000Z',
     };
 

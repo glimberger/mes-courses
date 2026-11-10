@@ -133,7 +133,6 @@ const networks: [string, () => Network][] = [
       return {
         scenario: () => ({
           connected: {
-            serverUrl: 'https://courses.example.fr',
             lastSyncAt: null,
           },
           syncServer: server,
@@ -385,7 +384,6 @@ describe('a signed-in device reopened with no network (004 US2-6, FR-007)', () =
         seed,
         asScreen: false,
         connected: {
-          serverUrl: 'https://courses.example.fr',
           lastSyncAt: null,
         },
         syncServer: { sync: offline, listDevices: offline },

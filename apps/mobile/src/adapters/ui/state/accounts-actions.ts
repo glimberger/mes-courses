@@ -83,7 +83,6 @@ export const createAccountsActions = (kit: StoreKit): AccountsActions => {
         const failure = err<SyncFailure>({ type: 'ServerError' });
         return {
           sync: {
-            serverUrl: null,
             lastSyncAt: null,
             pendingCount: 0,
             connection: 'notConnected',

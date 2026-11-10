@@ -20,19 +20,18 @@ export type SignedInDeviceDeps = {
 /**
  * Keeps the device the server just authorized: applies the local copy rule (the data of another
  * account is erased before the credential is stored), then stores the credential and the
- * connection fields, resetting `lastSeq` and `snapshotDone`. The credential comes first: a
- * connection with no credential reads as disconnected (FR-018b), while a credential with no
- * connection is simply unused.
+ * connection fields (never the address, fixed at build time, 013), resetting `lastSeq` and
+ * `snapshotDone`. The credential comes first: a connection with no credential reads as
+ * disconnected (FR-018b), while a credential with no connection is simply unused.
  */
 export const storeSignedInDevice = async (
   { unitOfWork, credentials, localDataEraser }: SignedInDeviceDeps,
-  url: string,
   pairing: AccountPairing,
 ): Promise<Result<void, StorageFailed>> => {
   try {
     const copy = await unitOfWork.run((repos) => repos.syncState.get());
     if (
-      decideLocalCopy(copy.accountId, copy.serverUrl, pairing.accountId) ===
+      decideLocalCopy(copy.accountId, copy.deviceId, pairing.accountId) ===
       'erase'
     ) {
       await localDataEraser.erase();
@@ -42,7 +41,6 @@ export const storeSignedInDevice = async (
       const current = await repos.syncState.get();
       await repos.syncState.save({
         ...current,
-        serverUrl: url,
         serverId: pairing.serverId,
         deviceId: pairing.deviceId,
         accountId: pairing.accountId,

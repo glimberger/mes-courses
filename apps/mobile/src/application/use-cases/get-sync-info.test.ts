@@ -13,7 +13,7 @@ describe('getSyncInfo', () => {
     unitOfWork.run(async (repos) => {
       await repos.syncState.save({
         ...(await repos.syncState.get()),
-        serverUrl: 'https://courses.example.fr',
+        deviceId: 'device-1',
         lastSyncAt,
       });
     });
@@ -23,21 +23,31 @@ describe('getSyncInfo', () => {
     credentials = new InMemoryCredentialStore();
   });
 
-  it('reports notConnected when there is no serverUrl', async () => {
+  it('reports notConnected when the device was never paired', async () => {
     expect(await getSyncInfo()).toEqual({
-      serverUrl: null,
       lastSyncAt: null,
       pendingCount: 0,
       connection: 'notConnected',
     });
   });
 
-  it('reports connected with the address and the last sync', async () => {
+  it('013 reports notConnected without a device id, whatever address is stored', async () => {
+    await unitOfWork.run(async (repos) => {
+      await repos.syncState.save({
+        ...(await repos.syncState.get()),
+        serverUrl: 'https://courses.example.fr',
+      });
+    });
+    await credentials.write('secret');
+
+    expect((await getSyncInfo()).connection).toBe('notConnected');
+  });
+
+  it('reports connected with the last sync, and no address', async () => {
     await connect('2026-10-01T10:00:00.000Z');
     await credentials.write('secret');
 
     expect(await getSyncInfo()).toEqual({
-      serverUrl: 'https://courses.example.fr',
       lastSyncAt: '2026-10-01T10:00:00.000Z',
       pendingCount: 0,
       connection: 'connected',
@@ -48,7 +58,6 @@ describe('getSyncInfo', () => {
     await connect();
 
     expect(await getSyncInfo()).toEqual({
-      serverUrl: 'https://courses.example.fr',
       lastSyncAt: null,
       pendingCount: 0,
       connection: 'signedOut',

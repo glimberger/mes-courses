@@ -82,10 +82,6 @@ export const createSignIn =
       return ok({ type: 'passwordChangeRequired' });
     }
 
-    const stored = await storeSignedInDevice(
-      device,
-      url,
-      outcome.value.pairing,
-    );
+    const stored = await storeSignedInDevice(device, outcome.value.pairing);
     return stored.ok ? ok({ type: 'signedIn' }) : stored;
   };

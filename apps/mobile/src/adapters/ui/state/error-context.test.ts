@@ -190,7 +190,7 @@ describe('the context of every report the store makes', () => {
 });
 
 const url = 'https://courses.example.fr';
-const connected = { serverUrl: url, lastSyncAt: '2026-10-01T08:00:00.000Z' };
+const connected = { lastSyncAt: '2026-10-01T08:00:00.000Z' };
 const serverError = async () => err({ type: 'ServerError' as const });
 const untrusted = async () => err({ type: 'UntrustedServer' as const });
 

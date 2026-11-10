@@ -80,19 +80,18 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
   let inFlight: Promise<{ failed: boolean; slow?: boolean }> | null = null;
 
   /**
-   * Reads the address, the last sync and, unless `keepConnection`, the connection; a failed read
+   * Reads the last sync, the pending count and, unless `keepConnection`, the connection; a failed read
    * keeps what is shown.
    */
   const loadSyncInfo = async (keepConnection = false): Promise<boolean> => {
     try {
       const info = await useCases.getSyncInfo();
       setSync({
-        serverUrl: info.serverUrl,
         lastSyncAt: info.lastSyncAt,
         pendingCount: info.pendingCount,
         ...(!keepConnection && {
           connection: info.connection,
-          // A server address with no credential reads as a revoked device (003 FR-018b).
+          // A pairing with no credential reads as a revoked device (003 FR-018b).
           signedOutReason: info.connection === 'signedOut' ? 'revoked' : null,
         }),
       });

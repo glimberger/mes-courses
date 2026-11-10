@@ -95,6 +95,6 @@ export const createChooseInitialPassword =
           : error,
       );
     }
-    const stored = await storeSignedInDevice(device, url, chosen.value);
+    const stored = await storeSignedInDevice(device, chosen.value);
     return stored.ok ? ok(undefined) : stored;
   };

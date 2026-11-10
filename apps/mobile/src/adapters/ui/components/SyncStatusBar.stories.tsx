@@ -17,7 +17,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const connected = {
-  serverUrl: 'https://courses.example.fr',
   lastSyncAt: null,
 };
 
