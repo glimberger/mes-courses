@@ -8,7 +8,7 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Add `pkgs.git-cliff` to the dev shell packages in `/flake.nix` (header description too); confirm `nix develop --command git cliff --version` works and `flake.lock` is unchanged or only gains what nixpkgs needs
+- [x] T001 Add `pkgs.git-cliff` to the dev shell packages in `/flake.nix` (header description too); confirm `nix develop --command git cliff --version` works and `flake.lock` is unchanged or only gains what nixpkgs needs
 - [ ] T002 [P] Write ADR-0014 `docs/adr/0014-changelog-with-git-cliff.md` from `docs/adr/0000-template.md` (tool and dev-shell pinning, generated-never-edited, `changelog.json` contract, single run + TypeScript rendering) and add it to `docs/adr/README.md`
 
 ## Phase 2: Foundational (blocks all stories)
