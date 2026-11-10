@@ -1,0 +1,275 @@
+[
+  {
+    "version": "2.1.0",
+    "date": "2026-11-09",
+    "features": [
+      {
+        "text": "rename and delete a shopping list from the lists screen",
+        "pr": 193
+      }
+    ],
+    "fixes": [],
+    "performances": [],
+    "breaking": []
+  },
+  {
+    "version": "2.0.1",
+    "date": "2026-11-07",
+    "features": [
+      {
+        "text": "bottom tab navigation with nested stacks",
+        "pr": 177
+      },
+      {
+        "text": "Courses tab row menu, square checkbox and struck-through in-cart rows",
+        "pr": 178
+      },
+      {
+        "text": "Listes tab \"en cours\" chip and tap to make a list current",
+        "pr": 179
+      },
+      {
+        "text": "Articles tab for global catalog management",
+        "pr": 180
+      },
+      {
+        "text": "tap-to-add on the add-articles screen",
+        "pr": 181
+      }
+    ],
+    "fixes": [
+      {
+        "text": "mobile containment",
+        "pr": 160
+      },
+      {
+        "text": "keep the password field above the keyboard on Android",
+        "pr": 162
+      },
+      {
+        "text": "declare babel-preset-expo so the CI APK build resolves it",
+        "pr": 182
+      }
+    ],
+    "performances": [],
+    "breaking": []
+  },
+  {
+    "version": "1.2.0",
+    "date": "2026-10-19",
+    "features": [
+      {
+        "text": "add Result, name and quantity rules and entity types (T018-T024)",
+        "pr": 43
+      },
+      {
+        "text": "add driven ports, contract suites and in-memory fakes (T025-T029)",
+        "pr": 45
+      },
+      {
+        "text": "add the SQLite adapter, migrations and storage errors (T030-T035)",
+        "pr": 46
+      },
+      {
+        "text": "add the initializeStore use case (T036-T037)",
+        "pr": 47
+      },
+      {
+        "text": "add the Sentry and console error reporters and the crypto id generator (T038-T040)",
+        "pr": 48
+      },
+      {
+        "text": "add the theme, the screen state components and formatQuantity (T041-T046)",
+        "pr": 50
+      },
+      {
+        "text": "add the application store core, its write rules and NoticeSnackbar (T047-T053)",
+        "pr": 51
+      },
+      {
+        "text": "add the app shell, story store and composition root (T054-T064)",
+        "pr": 53
+      },
+      {
+        "text": "show and tick the current list, and finish shopping (T065-T083)",
+        "pr": 54
+      },
+      {
+        "text": "add articles to the list, change their quantity and remove them with undo (T084-T107)",
+        "pr": 56
+      },
+      {
+        "text": "manage several named lists and choose the current one (T108-T118)",
+        "pr": 57
+      },
+      {
+        "text": "create categories from the article form (T119-T127)",
+        "pr": 60
+      },
+      {
+        "text": "polish the shopping lists for release (T128-T143)",
+        "pr": 63
+      },
+      {
+        "text": "repositories, article row menu and CategoryPicker (T001-T009)",
+        "pr": 65
+      },
+      {
+        "text": "rename an article from the catalog (US1)",
+        "pr": 66
+      },
+      {
+        "text": "delete an article from the catalog with undo (US2)",
+        "pr": 67
+      },
+      {
+        "text": "change an article's category from the edit screen (US3)",
+        "pr": 68
+      },
+      {
+        "text": "sync-core HLC, merge, shared names and protocol types (T008-T013)",
+        "pr": 75
+      },
+      {
+        "text": "server ports, stores, migrations, crypto and error reporting (T014-T021)",
+        "pr": 77
+      },
+      {
+        "text": "server pairing, HTTP app and entry points (T022-T027)",
+        "pr": 79
+      },
+      {
+        "text": "app migration, ports, adapters and connectToServer",
+        "pr": 80
+      },
+      {
+        "text": "US1 single-device sync, settings screens and server merge-by-name",
+        "pr": 81
+      },
+      {
+        "text": "US2 multi-device convergence and remote-removal handling",
+        "pr": 82
+      },
+      {
+        "text": "US3 sync status bar, Synchroniser maintenant and focus after a pull",
+        "pr": 84
+      },
+      {
+        "text": "US4 device management, revocation and server address change",
+        "pr": 85
+      },
+      {
+        "text": "polish deployment, privacy, accessibility and offline checks",
+        "pr": 88
+      },
+      {
+        "text": "multi-user accounts",
+        "pr": 104
+      },
+      {
+        "text": "continuous delivery to staging and production on the Pi",
+        "pr": 109
+      },
+      {
+        "text": "add branded startup splash screen",
+        "pr": 124
+      },
+      {
+        "text": "basket-identity UI refresh",
+        "pr": 126
+      },
+      {
+        "text": "make the UI faithful to the mockups",
+        "pr": 128
+      },
+      {
+        "text": "let the user choose the app theme manually",
+        "pr": 136
+      }
+    ],
+    "fixes": [
+      {
+        "text": "turn off Sentry's Android ANR reports",
+        "pr": 49
+      },
+      {
+        "text": "skip the Sentry upload in local builds",
+        "pr": 55
+      },
+      {
+        "text": "ignore taps in QuantityDialog while a save runs",
+        "pr": 58
+      },
+      {
+        "text": "let the compiled server load sync-core on the Pi",
+        "pr": 89
+      },
+      {
+        "text": "treat 502-504 as unreachable and sync when the network returns",
+        "pr": 97
+      },
+      {
+        "text": "release follow-ups for server sync (T115-T117)",
+        "pr": 98
+      },
+      {
+        "text": "keep check output out of the exported `out` variable",
+        "pr": 87
+      },
+      {
+        "text": "close remaining guardrail gaps from third review round",
+        "pr": 100
+      },
+      {
+        "text": "leave oxc-parser out of the server artifact",
+        "pr": 110
+      },
+      {
+        "text": "point the agent unit at the bundle's real entry point",
+        "pr": 111
+      },
+      {
+        "text": "leave oxc-parser out of the agent artifact",
+        "pr": 112
+      },
+      {
+        "text": "move the staging instance to port 3002",
+        "pr": 114
+      },
+      {
+        "text": "keep a manifest unhandled while its F-Droid repository waits for a healthy server",
+        "pr": 115
+      },
+      {
+        "text": "load agent.env in the agent shell function so manual commands reach Sentry",
+        "pr": 121
+      },
+      {
+        "text": "never let a timer pass and a manual deploy-file work at the same time",
+        "pr": 122
+      },
+      {
+        "text": "size the sign-in brand image through its style",
+        "pr": 127
+      },
+      {
+        "text": "keep account row text readable under a wide badge",
+        "pr": 133
+      },
+      {
+        "text": "pin the sign-in button outside the scroll view and rename the hidden title",
+        "pr": 135
+      },
+      {
+        "text": "stop striking through the text of ticked list items",
+        "pr": 137
+      },
+      {
+        "text": "show the sign-in error above the button and unblock E2E Android",
+        "pr": 140
+      }
+    ],
+    "performances": [],
+    "breaking": []
+  }
+]
