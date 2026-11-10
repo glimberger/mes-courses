@@ -186,6 +186,7 @@ export const SettingsScreen = () => {
         }
         account={account}
         onManageAccounts={() => navigation.navigate('Accounts')}
+        onOpenChangelog={() => navigation.navigate('Changelog')}
         devices={devices}
         onRetryDevices={loadDevices}
         onRenameDevice={(device) => setDialog({ type: 'rename', device })}
@@ -233,6 +234,8 @@ export type SettingsViewProps = {
   account: AccountState;
   /** "Gérer les comptes" (administrators only). */
   onManageAccounts: () => void;
+  /** The version row: opens Nouveautés. */
+  onOpenChangelog: () => void;
   devices: DevicesState;
   onRetryDevices: () => void;
   onRenameDevice: (device: DeviceInfo) => void;
@@ -252,6 +255,7 @@ export const SettingsView = ({
   server,
   account,
   onManageAccounts,
+  onOpenChangelog,
   devices,
   onRetryDevices,
   onRenameDevice,
@@ -340,7 +344,7 @@ export const SettingsView = ({
         </>
       )}
       <Section title="À propos" dense>
-        <VersionRow />
+        <VersionRow onPress={onOpenChangelog} />
       </Section>
     </ScrollView>
   </View>

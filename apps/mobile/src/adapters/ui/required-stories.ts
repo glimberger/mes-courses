@@ -185,4 +185,7 @@ export const requiredStories: readonly string[] = [
   'Screens/Catalog/Error',
   'Screens/Catalog/RowMenu',
   'Screens/CreateArticle/CatalogOnly',
+  // Nouveautés screen (issue 203)
+  'Screens/Changelog/Default',
+  'Screens/Changelog/Empty',
 ];

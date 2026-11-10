@@ -42,6 +42,8 @@ export type SettingsStackParamList = {
     deviceName: string;
   };
   Accounts: undefined;
+  /** Nouveautés, opened from the version row. */
+  Changelog: undefined;
 };
 
 /** The bottom tabs, each holding the stack above (contracts/ui-screens.md#navigation). */
