@@ -48,3 +48,4 @@ plan creates, supersedes or relies on.
 | [0010](0010-two-instances-on-one-pi.md)        | Two instances of one systemd template unit       | Accepted           |
 | [0011](0011-stop-copy-validate-rollback.md)    | Stop, copy, validate, then open; rollback        | Accepted           |
 | [0012](0012-material-symbols-icons.md)         | Material Symbols Rounded as the icon set         | Accepted           |
+| [0014](0014-changelog-with-git-cliff.md)       | Changelog generated with git-cliff               | Proposed           |
