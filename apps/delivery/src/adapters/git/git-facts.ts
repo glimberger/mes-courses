@@ -23,6 +23,42 @@ export const createGitFacts = (
     );
   },
 
+  async isAncestor(base, head) {
+    const result = await runner.run(
+      'git',
+      ['merge-base', '--is-ancestor', base, head],
+      { cwd, timeoutMs: GIT_LIMIT_MS },
+    );
+    if (result.exitCode === 0) return true;
+    if (result.exitCode === 1) return false;
+    throw new Error(
+      `git merge-base failed (${result.exitCode}): ${result.stderr.trim()}`,
+    );
+  },
+
+  async serverChangedBetween(base, head) {
+    // The rules stay in delivery-targets.sh, the script of the staging plan: one list of the
+    // paths that affect the server, whoever asks. The commits are positional arguments, never
+    // part of the script text.
+    const result = await runner.run(
+      'sh',
+      [
+        '-c',
+        'files=$(git diff --name-only "$1" "$2") || exit 1; printf "%s\\n" "$files" | sh .github/scripts/delivery-targets.sh',
+        'sh',
+        base,
+        head,
+      ],
+      { cwd, timeoutMs: GIT_LIMIT_MS },
+    );
+    if (result.exitCode !== 0) {
+      throw new Error(
+        `git diff failed (${result.exitCode}): ${result.stderr.trim()}`,
+      );
+    }
+    return result.stdout.split('\n').includes('server=true');
+  },
+
   async appVersionAt(commit) {
     const head = await runner.run('git', ['rev-parse', 'HEAD'], {
       cwd,

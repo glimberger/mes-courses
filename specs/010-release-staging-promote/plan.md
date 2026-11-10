@@ -81,7 +81,9 @@ apps/delivery/src/
 docs/procedures/releases.md                    # the two-step procedure
 docs/README.md                                 # index
 specs/009-yarn-release-command/contracts/cli.md # the two commands, outputs, exit codes
-.github/workflows/deliver-staging.yml          # pack-server.sh version from `ci app-version` (applied by the maintainer, merged with #166)
+.github/workflows/deliver-staging.yml          # pack-server.sh version from `ci app-version` (applied by the maintainer, merged with #166); since #204: pack-server.sh <commit> only
+.github/workflows/release.yml                  # #204: server-artifact downloads and verifies the staging archive (hand-off)
+.github/scripts/check-staging-server.sh        # #204: checksum gate of the production release (+ .test.sh)
 ```
 
 **Structure Decision**: no new file in the code base; the feature extends the use case and the `ci` command of the delivery workspace.

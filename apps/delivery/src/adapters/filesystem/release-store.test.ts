@@ -31,6 +31,8 @@ beforeEach(() => {
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
+const info = { version: '1.2.0', commit: 'abc', sequence: 42 };
+
 const good = [
   { name: 'apps/server/dist/main.js', content: 'console.log(1)' },
   { name: 'node_modules/.bin/tool', link: '../pkg/bin/tool.js' },
@@ -41,7 +43,7 @@ describe('file release store', () => {
     const archive = join(dir, 'a.tar.gz');
     const sha = writeArchive(archive, good);
 
-    const folder = await store().install('staging', 'abc', archive, sha);
+    const folder = await store().install('staging', 'abc', archive, sha, info);
 
     expect(folder).toBe(join(root, 'staging/releases/abc'));
     expect(readFileSync(join(folder, 'apps/server/dist/main.js'), 'utf8')).toBe(
@@ -52,11 +54,43 @@ describe('file release store', () => {
     );
   });
 
+  it('writes build-info.json from the manifest entry, not from the archive', async () => {
+    const archive = join(dir, 'a.tar.gz');
+    const sha = writeArchive(archive, [
+      ...good,
+      {
+        name: 'apps/server/build-info.json',
+        content: '{"version":"1.2.0-staging.41","commit":"old","sequence":41}',
+      },
+    ]);
+
+    const folder = await store().install(
+      'production',
+      'abc',
+      archive,
+      sha,
+      info,
+    );
+
+    expect(
+      JSON.parse(
+        readFileSync(join(folder, 'apps/server/build-info.json'), 'utf8'),
+      ),
+    ).toEqual(info);
+  });
+
+  it('writes build-info.json even when the archive has no apps/server folder', async () => {
+    const archive = join(dir, 'a.tar.gz');
+    const sha = writeArchive(archive, [{ name: 'x', content: 'y' }]);
+    const folder = await store().install('staging', 'abc', archive, sha, info);
+    expect(existsSync(join(folder, 'apps/server/build-info.json'))).toBe(true);
+  });
+
   it('unpacks nothing when the checksum is wrong', async () => {
     const archive = join(dir, 'a.tar.gz');
     writeArchive(archive, good);
     await expect(
-      store().install('staging', 'abc', archive, '0'.repeat(64)),
+      store().install('staging', 'abc', archive, '0'.repeat(64), info),
     ).rejects.toThrow(/checksum/i);
     expect(existsSync(join(root, 'staging/releases/abc'))).toBe(false);
   });
@@ -74,7 +108,7 @@ describe('file release store', () => {
     const archive = join(dir, 'a.tar.gz');
     const sha = writeArchive(archive, members);
     await expect(
-      store().install('staging', 'abc', archive, sha),
+      store().install('staging', 'abc', archive, sha, info),
     ).rejects.toThrow(/unsafe/i);
     expect(existsSync(join(root, 'staging/releases/abc'))).toBe(false);
     expect(existsSync(join(dir, 'evil.txt'))).toBe(false);

@@ -26,5 +26,7 @@ pnpm --filter @mes-courses/server typecheck
 ## Build and deliver it
 
 `pnpm --filter @mes-courses/server build` compiles to `dist/`. In production the server is packed
-by `.github/scripts/pack-server.sh` and delivered to the Raspberry Pi by the delivery agent; see
-[the agent](../../docs/delivery-agent.md). `GET /v1/health` reports the delivered release.
+by `.github/scripts/pack-server.sh` (once, on staging: production promotes the same archive,
+[ADR-0015](../../docs/adr/0015-production-reuses-the-staging-server-artifact.md)) and delivered to
+the Raspberry Pi by the delivery agent; see [the agent](../../docs/delivery-agent.md). The agent
+writes `build-info.json` next to `package.json`; the archive does not carry it. `GET /v1/health` reports the delivered release.

@@ -91,6 +91,11 @@ export const deployServer = async (
       entry.commit,
       archive,
       entry.sha256,
+      {
+        version: entry.version,
+        commit: entry.commit,
+        sequence: entry.sequence,
+      },
     );
     await deps.releases.buildRuntime(
       environment,

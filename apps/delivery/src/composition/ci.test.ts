@@ -188,3 +188,29 @@ describe('parseCiArgs app-version', () => {
     ).toThrow(/Unknown option: --env/);
   });
 });
+
+describe('parseCiArgs fetch-staging-server', () => {
+  it('reads the commit and the output folder', () => {
+    expect(
+      parseCiArgs(
+        ['fetch-staging-server', '--commit', COMMIT, '--out', 'out'],
+        () => true,
+      ),
+    ).toEqual({ command: 'fetch-staging-server', commit: COMMIT, out: 'out' });
+  });
+
+  it('rejects a missing --out', () => {
+    expect(() =>
+      parseCiArgs(['fetch-staging-server', '--commit', COMMIT], () => true),
+    ).toThrow(/--out/);
+  });
+
+  it('rejects a commit that is not 40 hex characters', () => {
+    expect(() =>
+      parseCiArgs(
+        ['fetch-staging-server', '--commit', 'abc', '--out', 'out'],
+        () => true,
+      ),
+    ).toThrow(/40 lowercase hex/);
+  });
+});

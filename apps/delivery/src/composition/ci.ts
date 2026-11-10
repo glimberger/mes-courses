@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { createReadStream, existsSync, readFileSync } from 'node:fs';
+import { createReadStream, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { fetchStagingServer } from '../application/find-staging-server';
 import { releaseGate } from '../application/release-gate';
 import { writeManifest } from '../application/write-manifest';
 import { createGithubChannelPublisher } from '../adapters/github/channel-publisher';
@@ -10,7 +11,10 @@ import { createGithubRunHistory } from '../adapters/github/run-history';
 import { createGitFacts } from '../adapters/git/git-facts';
 import { waitForHealthyCommit } from '../adapters/http-health/health-probe';
 import { createCommandRunner } from '../adapters/process/command-runner';
-import { createSshSigner } from '../adapters/ssh-signature/ssh-signature';
+import {
+  createSshSigner,
+  createSshVerifier,
+} from '../adapters/ssh-signature/ssh-signature';
 import { createSystemClock } from '../adapters/system/clock';
 import type { Environment } from '../domain/manifest';
 import { readAppVersion } from '../domain/release-plan';
@@ -38,6 +42,16 @@ export type WaitHealthCommand = {
   timeoutSeconds: number;
 };
 
+/**
+ * Takes the staging server archive for `commit` (ADR-0015), checks it and saves it as
+ * `<out>/server-<commit>.tar.gz`. Prints `key=value` lines for `$GITHUB_OUTPUT`.
+ */
+export type FetchStagingServerCommand = {
+  command: 'fetch-staging-server';
+  commit: string;
+  out: string;
+};
+
 /** Prints the app version of the checkout, the version both environments are named after. */
 export type AppVersionCommand = { command: 'app-version' };
 
@@ -45,10 +59,12 @@ export type CiCommand =
   | WriteManifestCommand
   | ReleaseGateCommand
   | WaitHealthCommand
+  | FetchStagingServerCommand
   | AppVersionCommand;
 
 const OPTIONS = ['--env', '--commit', '--server', '--fdroid', '--version'];
-const COMMANDS = 'write-manifest, release-gate, wait-health or app-version';
+const COMMANDS =
+  'write-manifest, release-gate, wait-health, fetch-staging-server or app-version';
 
 const readOptions = (
   rest: string[],
@@ -101,6 +117,19 @@ const parseWaitHealthArgs = (rest: string[]): WaitHealthCommand => {
   };
 };
 
+const parseFetchStagingServerArgs = (
+  rest: string[],
+): FetchStagingServerCommand => {
+  const values = readOptions(rest, ['--commit', '--out']);
+  const out = values.get('--out');
+  if (out === undefined) throw new Error('--out is required');
+  return {
+    command: 'fetch-staging-server',
+    commit: requireCommit(values),
+    out,
+  };
+};
+
 /** Parses the CI command line; `exists` tells whether a file is there (injected for tests). */
 export const parseCiArgs = (
   argv: string[],
@@ -109,6 +138,9 @@ export const parseCiArgs = (
   const [command, ...rest] = argv;
   if (command === 'release-gate') return parseReleaseGateArgs(rest);
   if (command === 'wait-health') return parseWaitHealthArgs(rest);
+  if (command === 'fetch-staging-server') {
+    return parseFetchStagingServerArgs(rest);
+  }
   if (command === 'app-version') {
     readOptions(rest, []);
     return { command };
@@ -157,6 +189,8 @@ const required = (name: string): string => {
 };
 
 const ROOT = resolve(__dirname, '../../../..');
+/** The public key the Pi trusts, committed with the deploy files. */
+const ALLOWED_SIGNERS = resolve(ROOT, 'deploy/allowed_signers');
 
 /** `version` in `apps/mobile/app.config.ts`: staging delivers `X.Y.Z-staging.<n>` of it. */
 const appVersion = (): string =>
@@ -200,7 +234,8 @@ const runWriteManifest = async (args: WriteManifestCommand) => {
       ),
       version,
       nixpkgsRev: flake.nodes.nixpkgs.locked.rev,
-      minAgentVersion: '1.0.0',
+      // 1.1.0 writes build-info.json from the manifest: the archives no longer carry it (ADR-0015).
+      minAgentVersion: '1.1.0',
       run: {
         id: runId,
         url: `${process.env.GITHUB_SERVER_URL ?? 'https://github.com'}/${repository}/actions/runs/${runId}`,
@@ -225,6 +260,7 @@ const runReleaseGate = async (args: ReleaseGateCommand) => {
         repository,
         token: required('GITHUB_TOKEN'),
       }),
+      verifier: createSshVerifier(ALLOWED_SIGNERS),
     },
     { tag: args.tag, commit: args.commit },
   );
@@ -234,6 +270,29 @@ const runReleaseGate = async (args: ReleaseGateCommand) => {
     process.exit(1);
   }
   console.log(`The release ${args.tag} passes the gate`);
+};
+
+const runFetchStagingServer = async (args: FetchStagingServerCommand) => {
+  const repository = required('GITHUB_REPOSITORY');
+  const out = resolve(process.env.INIT_CWD ?? process.cwd(), args.out);
+  mkdirSync(out, { recursive: true });
+  const { entry, archive } = await fetchStagingServer(
+    {
+      git: createGitFacts(createCommandRunner(), ROOT),
+      source: createGithubChannelSource({
+        repository,
+        token: required('GITHUB_TOKEN'),
+      }),
+      verifier: createSshVerifier(ALLOWED_SIGNERS),
+      hashFile: sha256Of,
+    },
+    args.commit,
+    out,
+  );
+  console.log(`archive=${archive}`);
+  console.log(`sha256=${entry.sha256}`);
+  console.log(`built-commit=${entry.commit}`);
+  console.log(`built-version=${entry.version}`);
 };
 
 const runWaitHealth = async (args: WaitHealthCommand) => {
@@ -259,7 +318,9 @@ if (require.main === module) {
     );
     if (args.command === 'release-gate') await runReleaseGate(args);
     else if (args.command === 'wait-health') await runWaitHealth(args);
-    else if (args.command === 'app-version') console.log(appVersion());
+    else if (args.command === 'fetch-staging-server') {
+      await runFetchStagingServer(args);
+    } else if (args.command === 'app-version') console.log(appVersion());
     else await runWriteManifest(args);
   })().catch((error: unknown) => {
     console.error((error as Error).message);

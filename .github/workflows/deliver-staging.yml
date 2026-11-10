@@ -97,12 +97,9 @@ jobs:
       - run: nix develop --command pnpm install --frozen-lockfile
       - run: nix develop --command pnpm build
       - name: Pack the server
-        env:
-          SEQUENCE: ${{ needs.plan.outputs.sequence }}
-        # Named after the app version, like production: the release X.Y.Z is first X.Y.Z-staging.<n>.
-        run: |
-          base=$(nix develop --command pnpm --filter @mes-courses/delivery --silent run ci app-version)
-          nix develop --command sh .github/scripts/pack-server.sh "$base-staging.$SEQUENCE" "$SHA" "$SEQUENCE" "$RUNNER_TEMP/out"
+        # The archive holds nothing environment-specific (ADR-0015): production promotes these bytes.
+        # The version name and build-info.json come from the manifest, written by the agent.
+        run: nix develop --command sh .github/scripts/pack-server.sh "$SHA" "$RUNNER_TEMP/out"
       - uses: actions/upload-artifact@v7
         with:
           name: server-staging

@@ -1,15 +1,24 @@
 import type { Environment } from '../../domain/manifest';
 
+/**
+ * What a release reports about itself: `apps/server/build-info.json`. It is not part of the
+ * server archive, so the same archive runs on both channels (ADR-0015): the agent writes it
+ * from the manifest entry it installs.
+ */
+export type BuildInfo = { version: string; commit: string; sequence: number };
+
 export interface ReleaseStore {
   /**
-   * Checks the archive's SHA-256, then unpacks it into a fresh folder for `commit`. Nothing is
-   * unpacked when the checksum differs or a member path is unsafe. Returns the folder.
+   * Checks the archive's SHA-256, then unpacks it into a fresh folder for `commit` and writes
+   * `apps/server/build-info.json` from `info`. Nothing is unpacked when the checksum differs or a
+   * member path is unsafe. Returns the folder.
    */
   install(
     environment: Environment,
     commit: string,
     archive: string,
     sha256: string,
+    info: BuildInfo,
   ): Promise<string>;
   /** The folder of an installed release. */
   path(environment: Environment, commit: string): string;

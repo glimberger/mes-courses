@@ -61,11 +61,39 @@ Apple Developer Program.
    commit by hand with `git tag vX.Y.Z <sha> && git push origin vX.Y.Z`.
 
 5. `Release` checks the rules (the tag matches `version` in `app.config.ts`, the commit is on
-   `main` with a green `E2E Android` run, the version is new), builds the production server, the
-   APK, the F-Droid repository and the agent bundle, and publishes the release and the
-   `channel-production` manifest. The agent deploys it like a staging delivery, and the run waits
+   `main` with a green `E2E Android` run, the version is new, and staging holds a server archive to
+   reuse), takes the server archive staging delivered, builds the APK, the F-Droid repository and
+   the agent bundle, and publishes the release and the `channel-production` manifest. The agent deploys it like a staging delivery, and the run waits
    for the production health to report the commit.
 6. Install the update on the phones from the F-Droid client and check the lists are still there.
+
+### The production server is the staging server
+
+`Release` does not build the server: it takes the archive that `Deliver staging` built and the Pi
+ran on staging ([ADR-0015](../adr/0015-production-reuses-the-staging-server-artifact.md)). The
+`gate` and the `server-artifact` job look in the `channel-staging` manifest for the server entry
+of the tagged commit: the entry of that commit, or of an earlier one when no later commit changed
+the server (the version bump usually does not). They check the commit and the SHA-256 of the
+download, and the workflow compares the checksum again, so production runs the same bytes you
+validated on staging. Only the version name, the commit and the signature are written for
+production, by the `write-manifest` step; the agent writes `build-info.json` on the Pi.
+
+The release stops before anything is published, with a message, when:
+
+- staging has no manifest: deliver the commit to staging first;
+- the staging archive was built at a commit that is not an ancestor of the tag: staging has moved
+  past it (a later server change was delivered). Promote the version on `origin/main` instead;
+- the server changed since the staging archive: wait for `Deliver staging` to build it, then
+  tag again;
+- the asset is gone or its checksum differs from the manifest.
+
+The server is never rebuilt as a fallback. The Android build is still made for production, because
+the server URL and the app identity are fixed when it is built.
+
+**First release with ADR-0015.** The agent 1.1.0 writes `build-info.json` itself, and the manifests
+now require it. Update the agent on the Pi from the `delivery-1.1.0.tar.gz` asset
+([updating the agent](updating-the-agent.md)) before the first delivery that uses it: an older agent
+refuses the manifest (`needs agent 1.1.0 or newer`) and the instances stay on their version.
 
 If the health check times out (for example the agent was stopped), the run fails but the delivery
 is not lost: once the agent is back, _Re-run failed jobs_ on the same run, with no new tag.

@@ -13,7 +13,7 @@ import type { FdroidSite } from '../ports/fdroid-site';
 import type { GitFacts } from '../ports/git-facts';
 import type { HealthProbe, HealthResult } from '../ports/health-probe';
 import type { PortOverride } from '../ports/port-override';
-import type { ReleaseStore } from '../ports/release-store';
+import type { BuildInfo, ReleaseStore } from '../ports/release-store';
 import type { CheckInStatus, ReportLevel, Reporter } from '../ports/reporter';
 import type { RunHistory } from '../ports/run-history';
 import type { ServiceManager } from '../ports/service-manager';
@@ -101,13 +101,17 @@ export class InMemoryReleaseStore implements ReleaseStore {
     Environment,
     { commit: string; sequence: number | null }
   >();
+  /** The build info each install was given, in order. */
+  readonly buildInfos: BuildInfo[] = [];
   constructor(private readonly recorder = new Recorder()) {}
   async install(
     environment: Environment,
     commit: string,
     archive: string,
     sha256: string,
+    info: BuildInfo,
   ) {
+    this.buildInfos.push(info);
     this.recorder.record(
       'ReleaseStore.install',
       environment,
@@ -296,6 +300,16 @@ export class InMemoryGitFacts implements GitFacts {
     const version = this.appVersions.get(commit);
     if (version === undefined) throw new Error(`No app version at ${commit}`);
     return version;
+  }
+  /** `base..head` pairs where `base` is an ancestor of `head`. */
+  readonly ancestry = new Set<string>();
+  /** `base..head` pairs whose changes affect the server. */
+  readonly serverChanges = new Set<string>();
+  async isAncestor(base: string, head: string) {
+    return base === head || this.ancestry.has(`${base}..${head}`);
+  }
+  async serverChangedBetween(base: string, head: string) {
+    return this.serverChanges.has(`${base}..${head}`);
   }
 }
 

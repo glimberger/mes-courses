@@ -28,8 +28,16 @@ No `NEEDS CLARIFICATION` remained. Decisions taken while building (PR #166):
 - **Decision**: the release rules, the staging-moved-on note and the confirmation run for both `tag` and `push-tag` (a tag that exists locally only).
 - **Rationale**: review finding of PR #166; the same checks must hold whatever the starting state.
 
+## Production promotes the staging server archive (issue #204, ADR-0015)
+
+- **Decision**: `Release` no longer builds the server. Its `server-artifact` job runs `ci fetch-staging-server` (lookup in the staging manifest, download, SHA-256 check) and `check-staging-server.sh` (the checksum compared in the workflow); the `release-gate` runs the same lookup, so the release stops before the Android build. The asset is published under the production version through the unchanged `write-manifest` flow.
+- **Rationale**: the server validated on staging is the one production runs (byte-identical), and the release skips `pnpm build` and the packing (about 60 s of the 115 s job, measured on the last three releases).
+- **Lookup rule**: staging builds the server only when a commit changes it, so the staging entry names the last server change. It is reusable when it is the tagged commit or an ancestor with no server change since (`delivery-targets.sh` rules, one list for the plan and the lookup). Otherwise the release fails with a message; no rebuild.
+- **Nothing environment-specific in the archive**: only `build-info.json` (version, commit, sequence) was; `pack-server.sh` no longer writes it and the agent (1.1.0, now the `minAgentVersion`) writes it at install from the manifest entry.
+- **Wall-clock**: unchanged, the Android build (about 20 to 24 minutes) is the critical path; the gain is about one minute of runner time per release.
+
 ## Staging named after the app version
 
-- **Decision**: a `ci app-version` command prints the version of `apps/mobile/app.config.ts`; `ci write-manifest` defaults `--version` to it; `pack-server.sh` is given it by the workflow.
+- **Decision**: a `ci app-version` command prints the version of `apps/mobile/app.config.ts`; `ci write-manifest` defaults `--version` to it; `pack-server.sh` was given it by the workflow (no longer: see ADR-0015, the version name now comes from the manifest).
 - **Rationale**: production is named after the app version; staging must show it (FR-009). One reader of `app.config.ts` (`readAppVersion`) serves the release command and CI.
 - **Constraint**: `.github/workflows/` is maintainer-only; the workflow edit was applied by the maintainer and merged with #166, so the staging server reports the app version.
