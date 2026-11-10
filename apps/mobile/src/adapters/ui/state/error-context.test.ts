@@ -290,14 +290,6 @@ const syncCases: Record<string, SyncCase> = {
         'another password',
       ),
   },
-  '003 changeServerUrl, throwing': {
-    failing: 'changeServerUrl',
-    run: (state) => state.changeServerUrl('https://maison.example.fr'),
-  },
-  '003 changeServerUrl, an untrusted certificate': {
-    syncServer: { health: untrusted },
-    run: (state) => state.changeServerUrl('https://maison.example.fr'),
-  },
   '003 releaseHeldChanges, throwing': {
     failing: 'releaseHeldChanges',
     run: async (state) => {

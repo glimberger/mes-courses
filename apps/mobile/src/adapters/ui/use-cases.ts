@@ -44,10 +44,6 @@ import {
 import { createAcknowledgeSignedOut } from '../../application/use-cases/acknowledge-signed-out';
 import { createListAccounts } from '../../application/use-cases/list-accounts';
 import { createAddArticleToList } from '../../application/use-cases/add-article-to-list';
-import {
-  createChangeServerUrl,
-  type ChangeServerUrlError,
-} from '../../application/use-cases/change-server-url';
 import { createChangeItemQuantity } from '../../application/use-cases/change-item-quantity';
 import { createCreateArticle } from '../../application/use-cases/create-article';
 import { createGetArticleUsageCounts } from '../../application/use-cases/get-article-usage-counts';
@@ -257,7 +253,6 @@ export type UseCases = {
   deleteMyAccount: (
     password: string,
   ) => Promise<Result<void, DeleteMyAccountError>>;
-  changeServerUrl: (url: string) => Promise<Result<void, ChangeServerUrlError>>;
   getAccountSettings: () => Promise<AccountSettings>;
   listAccounts: () => Promise<
     Result<AccountSummary[], SyncFailure | Forbidden>
@@ -335,7 +330,6 @@ export const createUseCases = (ports: {
   signOut: createSignOut(ports),
   changePassword: createChangePassword(ports),
   deleteMyAccount: createDeleteMyAccount(ports),
-  changeServerUrl: createChangeServerUrl(ports),
   getAccountSettings: createGetAccountSettings(ports),
   listAccounts: createListAccounts(ports),
   inviteAccount: createInviteAccount(ports),
