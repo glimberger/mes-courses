@@ -34,10 +34,8 @@ describe('password reset scenarios (004 US4)', () => {
     await server.createAccount({ email: 'marie@example.org' });
     const phone = await newDevice();
 
-    const asked = await phone.useCases.requestPasswordReset(
-      server.url,
-      'Marie@Example.org',
-    );
+    const asked =
+      await phone.useCases.requestPasswordReset('Marie@Example.org');
     expect(asked).toEqual({ ok: true, value: undefined });
     const temporary = await nextTemporaryPassword(1);
     expect(server.mails()[0]).toMatchObject({ to: 'marie@example.org' });
@@ -45,30 +43,18 @@ describe('password reset scenarios (004 US4)', () => {
     // The current password still signs in.
     const tablet = await newDevice();
     expect(
-      (
-        await tablet.useCases.signIn(
-          server.url,
-          'marie@example.org',
-          PASSWORD,
-          'Tablette',
-        )
-      ).ok,
+      (await tablet.useCases.signIn('marie@example.org', PASSWORD, 'Tablette'))
+        .ok,
     ).toBe(true);
 
     // The temporary one asks for a new password, which replaces both.
     const forgot = await newDevice();
     expect(
-      await forgot.useCases.signIn(
-        server.url,
-        'marie@example.org',
-        temporary,
-        'Pixel',
-      ),
+      await forgot.useCases.signIn('marie@example.org', temporary, 'Pixel'),
     ).toEqual({ ok: true, value: { type: 'passwordChangeRequired' } });
     expect(
       (
         await forgot.useCases.chooseInitialPassword(
-          server.url,
           'marie@example.org',
           temporary,
           NEW_PASSWORD,
@@ -80,7 +66,6 @@ describe('password reset scenarios (004 US4)', () => {
 
     const later = await newDevice();
     const withOld = await later.useCases.signIn(
-      server.url,
       'marie@example.org',
       PASSWORD,
       'Autre',
@@ -90,24 +75,17 @@ describe('password reset scenarios (004 US4)', () => {
       error: { type: 'InvalidCredentials' },
     });
     expect(
-      (
-        await later.useCases.signIn(
-          server.url,
-          'marie@example.org',
-          NEW_PASSWORD,
-          'Autre',
-        )
-      ).ok,
+      (await later.useCases.signIn('marie@example.org', NEW_PASSWORD, 'Autre'))
+        .ok,
     ).toBe(true);
   });
 
   it('004 US4-1 makes the temporary password single-use', async () => {
     await server.createAccount({ email: 'marie@example.org' });
     const phone = await newDevice();
-    await phone.useCases.requestPasswordReset(server.url, 'marie@example.org');
+    await phone.useCases.requestPasswordReset('marie@example.org');
     const temporary = await nextTemporaryPassword(1);
     await phone.useCases.chooseInitialPassword(
-      server.url,
       'marie@example.org',
       temporary,
       NEW_PASSWORD,
@@ -117,7 +95,7 @@ describe('password reset scenarios (004 US4)', () => {
 
     const again = await (
       await newDevice()
-    ).useCases.signIn(server.url, 'marie@example.org', temporary, 'Tablette');
+    ).useCases.signIn('marie@example.org', temporary, 'Tablette');
 
     expect(again).toEqual({ ok: false, error: { type: 'InvalidCredentials' } });
   });
@@ -126,17 +104,11 @@ describe('password reset scenarios (004 US4)', () => {
     await server.createAccount({ email: 'marie@example.org' });
     const phone = await newDevice();
     for (let i = 0; i < 3; i++) {
-      await phone.useCases.requestPasswordReset(
-        server.url,
-        'marie@example.org',
-      );
+      await phone.useCases.requestPasswordReset('marie@example.org');
     }
 
     expect(
-      await phone.useCases.requestPasswordReset(
-        server.url,
-        'marie@example.org',
-      ),
+      await phone.useCases.requestPasswordReset('marie@example.org'),
     ).toEqual({
       ok: false,
       error: { type: 'TooManyAttempts', minutesToWait: 60 },
@@ -147,14 +119,10 @@ describe('password reset scenarios (004 US4)', () => {
     await server.createAccount({ email: 'marie@example.org' });
     const phone = await newDevice();
 
-    const known = await phone.useCases.requestPasswordReset(
-      server.url,
-      'marie@example.org',
-    );
-    const unknown = await phone.useCases.requestPasswordReset(
-      server.url,
-      'nobody@example.org',
-    );
+    const known =
+      await phone.useCases.requestPasswordReset('marie@example.org');
+    const unknown =
+      await phone.useCases.requestPasswordReset('nobody@example.org');
 
     expect(unknown).toEqual(known);
     await nextTemporaryPassword(1);
@@ -166,17 +134,15 @@ describe('password reset scenarios (004 US4)', () => {
     const { temporaryPassword: invitation } =
       await server.invite('marie@example.org');
     const phone = await newDevice();
-    await phone.useCases.requestPasswordReset(server.url, 'marie@example.org');
+    await phone.useCases.requestPasswordReset('marie@example.org');
     const fresh = await nextTemporaryPassword(1);
 
     const old = await phone.useCases.signIn(
-      server.url,
       'marie@example.org',
       invitation,
       'Pixel',
     );
     const current = await phone.useCases.signIn(
-      server.url,
       'marie@example.org',
       fresh,
       'Pixel',
@@ -196,10 +162,8 @@ describe('password reset scenarios (004 US4)', () => {
     await server.suspend(accountId);
     const phone = await newDevice();
 
-    const result = await phone.useCases.requestPasswordReset(
-      server.url,
-      'marie@example.org',
-    );
+    const result =
+      await phone.useCases.requestPasswordReset('marie@example.org');
 
     expect(result).toEqual({ ok: true, value: undefined });
     await new Promise((resolve) => setTimeout(resolve, 30));

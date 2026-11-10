@@ -73,14 +73,14 @@ describe('my account and my devices scenarios (004 US6)', () => {
     expect(await cycle(tablet)).toEqual({ type: 'saved' });
     const oldPassword = await (
       await newDevice()
-    ).useCases.signIn(server.url, EMAIL, PASSWORD, 'Autre');
+    ).useCases.signIn(EMAIL, PASSWORD, 'Autre');
     expect(oldPassword).toEqual({
       ok: false,
       error: { type: 'InvalidCredentials' },
     });
     const newer = await (
       await newDevice()
-    ).useCases.signIn(server.url, EMAIL, NEW_PASSWORD, 'Autre');
+    ).useCases.signIn(EMAIL, NEW_PASSWORD, 'Autre');
     expect(newer.ok).toBe(true);
   });
 
@@ -106,11 +106,7 @@ describe('my account and my devices scenarios (004 US6)', () => {
       ),
     ).toEqual({ ok: false, error: { type: 'InvalidCredentials' } });
     expect(
-      (
-        await (
-          await newDevice()
-        ).useCases.signIn(server.url, EMAIL, PASSWORD, 'X')
-      ).ok,
+      (await (await newDevice()).useCases.signIn(EMAIL, PASSWORD, 'X')).ok,
     ).toBe(true);
   });
 
@@ -193,9 +189,7 @@ describe('my account and my devices scenarios (004 US6)', () => {
     });
     // Nothing of the account is left to sign in to.
     expect(
-      await (
-        await newDevice()
-      ).useCases.signIn(server.url, EMAIL, PASSWORD, 'X'),
+      await (await newDevice()).useCases.signIn(EMAIL, PASSWORD, 'X'),
     ).toEqual({ ok: false, error: { type: 'InvalidCredentials' } });
   });
 
@@ -215,14 +209,7 @@ describe('my account and my devices scenarios (004 US6)', () => {
     await server.createAccount({ role: 'administrator', email: ADMIN_EMAIL });
     const adminPhone = await newDevice();
     expect(
-      (
-        await adminPhone.useCases.signIn(
-          server.url,
-          ADMIN_EMAIL,
-          PASSWORD,
-          'Admin',
-        )
-      ).ok,
+      (await adminPhone.useCases.signIn(ADMIN_EMAIL, PASSWORD, 'Admin')).ok,
     ).toBe(true);
 
     expect(await adminPhone.useCases.deleteMyAccount(PASSWORD)).toEqual({

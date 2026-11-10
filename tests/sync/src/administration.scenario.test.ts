@@ -29,7 +29,6 @@ describe('administration scenarios (004 US5)', () => {
     await server.createAccount({ role: 'administrator', email: ADMIN_EMAIL });
     const adminPhone = await newDevice();
     const signedIn = await adminPhone.useCases.signIn(
-      server.url,
       ADMIN_EMAIL,
       PASSWORD,
       'Admin',
@@ -145,16 +144,11 @@ describe('administration scenarios (004 US5)', () => {
     expect(newPassword).not.toBe(first.temporaryPassword);
     const old = await (
       await newDevice()
-    ).useCases.signIn(
-      server.url,
-      'paul@example.org',
-      first.temporaryPassword,
-      'Pixel',
-    );
+    ).useCases.signIn('paul@example.org', first.temporaryPassword, 'Pixel');
     expect(old.ok).toBe(false);
     const fresh = await (
       await newDevice()
-    ).useCases.signIn(server.url, 'paul@example.org', newPassword, 'Pixel');
+    ).useCases.signIn('paul@example.org', newPassword, 'Pixel');
     expect(fresh).toEqual({
       ok: true,
       value: { type: 'passwordChangeRequired' },

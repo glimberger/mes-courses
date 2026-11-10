@@ -14,10 +14,8 @@ import type {
   UntrustedServer,
   UpdateRequired,
 } from '../ports/sync-server';
-import { normalizeUrl } from './normalize-url';
 import {
   storeSignedInDevice,
-  type InvalidUrl,
   type SignedInDeviceDeps,
   type StorageFailed,
 } from './store-signed-in-device';
@@ -25,7 +23,6 @@ import {
 export type InvalidEmail = { type: 'InvalidEmail' };
 
 export type SignInError =
-  | InvalidUrl
   | InvalidEmail
   | InvalidCredentials
   | TemporaryPasswordExpired
@@ -40,7 +37,7 @@ export type SignInResult =
   { type: 'signedIn' } | { type: 'passwordChangeRequired' };
 
 /**
- * Signs this device in (US2-1): checks the server answers, asks it to sign in, and on success keeps
+ * Signs this device in (US2-1) at the fixed server address (013): checks the server answers, asks it to sign in, and on success keeps
  * the credential and the connection (see `storeSignedInDevice`). When the temporary password
  * matched, nothing is stored: the person must choose a password first. Any failure changes
  * nothing, the data on the device included.
@@ -49,22 +46,19 @@ export const createSignIn =
   ({
     syncServer,
     accountServer,
-    allowInsecure = false,
+    serverUrl: url,
     ...device
   }: SignedInDeviceDeps & {
     syncServer: SyncServer;
     accountServer: AccountServer;
-    /** Accepts `http://` addresses; set by the composition in development builds only. */
-    allowInsecure?: boolean;
+    /** The sync server address fixed at build time, already validated (013). */
+    serverUrl: string;
   }) =>
   async (
-    typedUrl: string,
     typedEmail: string,
     password: string,
     deviceName: string,
   ): Promise<Result<SignInResult, SignInError>> => {
-    const url = normalizeUrl(typedUrl, allowInsecure);
-    if (url === null) return err({ type: 'InvalidUrl' });
     const email = normalizeEmail(typedEmail);
     if (email === null) return err({ type: 'InvalidEmail' });
 

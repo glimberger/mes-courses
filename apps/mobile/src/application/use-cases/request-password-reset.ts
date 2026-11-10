@@ -8,12 +8,9 @@ import type {
   UntrustedServer,
   UpdateRequired,
 } from '../ports/sync-server';
-import { normalizeUrl } from './normalize-url';
 import type { InvalidEmail } from './sign-in';
-import type { InvalidUrl } from './store-signed-in-device';
 
 export type RequestPasswordResetError =
-  | InvalidUrl
   | InvalidEmail
   | TooManyAttempts
   | ServerUnreachable
@@ -21,25 +18,22 @@ export type RequestPasswordResetError =
   | UpdateRequired;
 
 /**
- * Asks the server for a new temporary password (US4-1). A malformed address is refused here,
+ * Asks the fixed server (013) for a new temporary password (US4-1). A malformed email is refused here,
  * without a request. Success is the same whether the account exists or not, so the person is
  * told nothing about which addresses have one (US4-3).
  */
 export const createRequestPasswordReset =
   ({
     accountServer,
-    allowInsecure = false,
+    serverUrl: url,
   }: {
     accountServer: AccountServer;
-    /** Accepts `http://` addresses; set by the composition in development builds only. */
-    allowInsecure?: boolean;
+    /** The sync server address fixed at build time, already validated (013). */
+    serverUrl: string;
   }) =>
   async (
-    typedUrl: string,
     typedEmail: string,
   ): Promise<Result<void, RequestPasswordResetError>> => {
-    const url = normalizeUrl(typedUrl, allowInsecure);
-    if (url === null) return err({ type: 'InvalidUrl' });
     const email = normalizeEmail(typedEmail);
     if (email === null) return err({ type: 'InvalidEmail' });
     return accountServer.requestPasswordReset(url, email);

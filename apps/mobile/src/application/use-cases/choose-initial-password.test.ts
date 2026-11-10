@@ -14,7 +14,6 @@ const choose = (
   } = {},
 ) =>
   createChooseInitialPassword(h.deps)(
-    'courses.example.fr',
     ' Marie@Example.org ',
     overrides.temp ?? TEMP,
     overrides.newPassword ?? NEW,

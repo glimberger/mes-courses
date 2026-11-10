@@ -5,9 +5,11 @@ const APP_DIR = '../../apps/mobile';
 const IOS_PROJECT = 'Mescourses';
 
 // The whole build chain (prebuild, then Gradle or Xcode) runs in one shell with this environment,
-// so that Sentry's build steps see SENTRY_DISABLE_AUTO_UPLOAD too.
+// so that Sentry's build steps see SENTRY_DISABLE_AUTO_UPLOAD too. The fixed sync server address
+// (013) is https on a closed port of the device: a release build refuses http, and signing in
+// there answers "unreachable" without any DNS query (research R6).
 const build = (commands, env = '-u STORYBOOK_ENABLED') =>
-  `cd ${APP_DIR} && env -u EXPO_PUBLIC_SENTRY_DSN ${env} DETOX_BUILD=1 SENTRY_DISABLE_AUTO_UPLOAD=true sh -c '${commands}'`;
+  `cd ${APP_DIR} && env -u EXPO_PUBLIC_SENTRY_DSN ${env} DETOX_BUILD=1 SENTRY_DISABLE_AUTO_UPLOAD=true EXPO_PUBLIC_DEFAULT_SERVER_URL=https://127.0.0.1:9 sh -c '${commands}'`;
 
 // The screenshot builds show the stories one by one (apps/mobile/index.ts, STORY_SHOTS). They
 // replace the release build at the same paths: `pnpm test:e2e:*` builds again before it runs.

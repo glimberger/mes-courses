@@ -223,13 +223,11 @@ export type UseCases = {
     Result<{ categoryId: CategoryId }, NameError | NameAlreadyUsed<Category>>
   >;
   signIn: (
-    url: string,
     email: string,
     password: string,
     deviceName: string,
   ) => Promise<Result<SignInResult, SignInError>>;
   chooseInitialPassword: (
-    url: string,
     email: string,
     temporaryPassword: string,
     newPassword: string,
@@ -237,7 +235,6 @@ export type UseCases = {
     deviceName: string,
   ) => Promise<Result<void, ChooseInitialPasswordError>>;
   requestPasswordReset: (
-    url: string,
     email: string,
   ) => Promise<Result<void, RequestPasswordResetError>>;
   synchronize: () => Promise<SyncResult>;

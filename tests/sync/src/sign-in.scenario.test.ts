@@ -25,7 +25,6 @@ describe('sign-in scenarios (004 US2)', () => {
     const phone = await newDevice();
 
     const first = await phone.useCases.signIn(
-      server.url,
       'Marie@Example.org',
       temporaryPassword,
       'Pixel',
@@ -39,7 +38,6 @@ describe('sign-in scenarios (004 US2)', () => {
     );
 
     const short = await phone.useCases.chooseInitialPassword(
-      server.url,
       'marie@example.org',
       temporaryPassword,
       'short',
@@ -52,7 +50,6 @@ describe('sign-in scenarios (004 US2)', () => {
     });
 
     const chosen = await phone.useCases.chooseInitialPassword(
-      server.url,
       'marie@example.org',
       temporaryPassword,
       PASSWORD,
@@ -64,19 +61,16 @@ describe('sign-in scenarios (004 US2)', () => {
 
     const tablet = await newDevice();
     const reuse = await tablet.useCases.signIn(
-      server.url,
       'marie@example.org',
       temporaryPassword,
       'Tablette',
     );
     const wrong = await tablet.useCases.signIn(
-      server.url,
       'marie@example.org',
       'not the password',
       'Tablette',
     );
     const unknown = await tablet.useCases.signIn(
-      server.url,
       'nobody@example.org',
       'not the password',
       'Tablette',
@@ -93,7 +87,6 @@ describe('sign-in scenarios (004 US2)', () => {
 
     expect(
       await phone.useCases.signIn(
-        server.url,
         'marie@example.org',
         temporaryPassword,
         'Pixel',

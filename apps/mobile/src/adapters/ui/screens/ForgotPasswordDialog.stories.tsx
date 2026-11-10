@@ -10,7 +10,6 @@ const meta = {
   title: 'Dialogs/ForgotPasswordDialog',
   component: ForgotPasswordDialog,
   args: {
-    address: 'courses.example.fr',
     initialEmail: 'marie@example.org',
     onClose: () => undefined,
   },

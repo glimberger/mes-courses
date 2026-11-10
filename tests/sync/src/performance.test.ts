@@ -114,7 +114,6 @@ describe('restoring and writing at size (003 SC-004, SC-005)', () => {
 
   const pair = async (stack: TestAppStack) => {
     const connected = await stack.useCases.signIn(
-      server.url,
       'seeder@example.org',
       'a long enough password',
       'Nouvelle tablette',

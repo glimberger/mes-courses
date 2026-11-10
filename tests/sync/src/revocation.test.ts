@@ -145,7 +145,7 @@ describe('device management against a real server (003 US4)', () => {
   it('004 FR-006 the sixth wrong password is answered TooManyAttempts', async () => {
     const stack = await newDevice();
     const attempt = () =>
-      stack.useCases.signIn(server.url, 'marie@example.org', 'wrong', 'Pixel');
+      stack.useCases.signIn('marie@example.org', 'wrong', 'Pixel');
 
     const results = [];
     for (let i = 0; i < 6; i += 1) results.push(await attempt());

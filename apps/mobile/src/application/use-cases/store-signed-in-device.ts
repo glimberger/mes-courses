@@ -5,9 +5,6 @@ import type { CredentialStore } from '../ports/credential-store';
 import type { LocalDataEraser } from '../ports/local-data-eraser';
 import type { UnitOfWork } from '../ports/unit-of-work';
 
-/** The address typed is not a usable server address. */
-export type InvalidUrl = { type: 'InvalidUrl' };
-
 /** The credential or the connection could not be saved on this device. */
 export type StorageFailed = { type: 'StorageFailed' };
 

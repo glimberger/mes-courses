@@ -5,8 +5,10 @@ import type {
   UntrustedServer,
 } from '../ports/sync-server';
 import type { UnitOfWork } from '../ports/unit-of-work';
-import type { InvalidUrl } from './store-signed-in-device';
 import { normalizeUrl } from './normalize-url';
+
+/** The address typed is not a usable server address. */
+export type InvalidUrl = { type: 'InvalidUrl' };
 
 /** The server at the new address is not the one this device is paired with. */
 export type ServerMismatch = { type: 'ServerMismatch' };

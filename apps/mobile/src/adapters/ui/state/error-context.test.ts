@@ -189,7 +189,6 @@ describe('the context of every report the store makes', () => {
   );
 });
 
-const url = 'https://courses.example.fr';
 const connected = { lastSyncAt: '2026-10-01T08:00:00.000Z' };
 const serverError = async () => err({ type: 'ServerError' as const });
 const untrusted = async () => err({ type: 'UntrustedServer' as const });
@@ -201,7 +200,7 @@ type SyncCase = {
   syncServer?: Partial<SyncServer>;
   /** What the fake account server answers instead of being unreachable. */
   accountServer?: Partial<AccountServer>;
-  /** Unset: the device starts paired with `url`. */
+  /** Unset: the device starts paired. */
   notConnected?: true;
   run: (state: AppState) => Promise<unknown>;
 };
@@ -229,13 +228,13 @@ const syncCases: Record<string, SyncCase> = {
     failing: 'signIn',
     notConnected: true,
     run: (state) =>
-      state.signIn(url, 'camille@example.org', 'secret', 'Tablette de Camille'),
+      state.signIn('camille@example.org', 'secret', 'Tablette de Camille'),
   },
   '004 signIn, an untrusted certificate': {
     notConnected: true,
     syncServer: { health: untrusted },
     run: (state) =>
-      state.signIn(url, 'camille@example.org', 'secret', 'Tablette de Camille'),
+      state.signIn('camille@example.org', 'secret', 'Tablette de Camille'),
   },
   '003 listDevices, throwing': {
     failing: 'listDevices',

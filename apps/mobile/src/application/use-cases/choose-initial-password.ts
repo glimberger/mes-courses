@@ -13,11 +13,9 @@ import type {
   UntrustedServer,
   UpdateRequired,
 } from '../ports/sync-server';
-import { normalizeUrl } from './normalize-url';
 import type { InvalidEmail } from './sign-in';
 import {
   storeSignedInDevice,
-  type InvalidUrl,
   type SignedInDeviceDeps,
   type StorageFailed,
 } from './store-signed-in-device';
@@ -33,7 +31,6 @@ export type PasswordRejected = {
 export type TemporaryPasswordInvalid = { type: 'TemporaryPasswordInvalid' };
 
 export type ChooseInitialPasswordError =
-  | InvalidUrl
   | InvalidEmail
   | PasswordsDiffer
   | PasswordRejected
@@ -54,22 +51,20 @@ export type ChooseInitialPasswordError =
 export const createChooseInitialPassword =
   ({
     accountServer,
-    allowInsecure = false,
+    serverUrl: url,
     ...device
   }: SignedInDeviceDeps & {
     accountServer: AccountServer;
-    allowInsecure?: boolean;
+    /** The sync server address fixed at build time, already validated (013). */
+    serverUrl: string;
   }) =>
   async (
-    typedUrl: string,
     typedEmail: string,
     temporaryPassword: string,
     newPassword: string,
     confirmation: string,
     deviceName: string,
   ): Promise<Result<void, ChooseInitialPasswordError>> => {
-    const url = normalizeUrl(typedUrl, allowInsecure);
-    if (url === null) return err({ type: 'InvalidUrl' });
     const email = normalizeEmail(typedEmail);
     if (email === null) return err({ type: 'InvalidEmail' });
     if (newPassword.normalize('NFC') !== confirmation.normalize('NFC')) {

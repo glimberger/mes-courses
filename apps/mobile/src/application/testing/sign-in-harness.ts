@@ -13,7 +13,9 @@ import { SequentialIdGenerator } from './sequential-id-generator';
 const seed = { categoryNames: ['Fruits'], firstListName: 'Courses' };
 const health = { serverId: 'server-1', apiVersion: 1, minAppVersion: '1.1.0' };
 
-export const signInHarness = async () => {
+export const signInHarness = async ({
+  serverUrl = 'https://courses.example.fr',
+}: { serverUrl?: string } = {}) => {
   const repositories = new InMemoryRepositories();
   const unitOfWork = new InMemoryUnitOfWork(repositories);
   const credentials = new InMemoryCredentialStore();
@@ -39,6 +41,7 @@ export const signInHarness = async () => {
     localDataEraser,
     syncServer,
     accountServer,
+    serverUrl,
   };
   const syncState = () => unitOfWork.run((repos) => repos.syncState.get());
   const lists = () => unitOfWork.run((repos) => repos.lists.count());

@@ -58,8 +58,7 @@ const renderSignIn = async (
   return rendered;
 };
 
-const fill = (address: string, email: string, password: string) => {
-  fireEvent.changeText(screen.getByLabelText('Adresse du serveur'), address);
+const fill = (email: string, password: string) => {
   fireEvent.changeText(screen.getByLabelText('Adresse e-mail'), email);
   fireEvent.changeText(screen.getByLabelText('Mot de passe'), password);
 };
@@ -84,10 +83,11 @@ describe('SignIn', () => {
     expectNoBottomInsetPadding();
   });
 
-  it('shows the four fields, the buttons and the device model', async () => {
+  it('013 US1-1 shows the three fields, the buttons and the device model, and no server address', async () => {
     await renderSignIn();
 
-    expect(screen.getByLabelText('Adresse du serveur')).toBeOnTheScreen();
+    expect(screen.queryByLabelText('Adresse du serveur')).not.toBeOnTheScreen();
+    expect(screen.queryByText(/courses\.example\.fr/)).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Adresse e-mail')).toBeOnTheScreen();
     expect(screen.getByLabelText('Mot de passe')).toBeOnTheScreen();
     expect(screen.getByLabelText('Nom de cet appareil').props.value).toBe(
@@ -98,10 +98,10 @@ describe('SignIn', () => {
     ).toBeOnTheScreen();
   });
 
-  it('004 US2-1 signs in, goes back to Settings and says so', async () => {
+  it('004 US2-1 013 US1-1 signs in at the fixed address, goes back to Settings and says so', async () => {
     const signIn = jest.fn(async () => signedIn);
     await renderSignIn({ signIn });
-    fill('courses.example.fr', 'Marie@Example.org', 'secret');
+    fill('Marie@Example.org', 'secret');
 
     submit();
 
@@ -121,7 +121,7 @@ describe('SignIn', () => {
     await renderSignIn({
       signIn: async () => ok({ type: 'passwordChangeRequired' }),
     });
-    fill('courses.example.fr', 'marie@example.org', 'ABCD-EFGH-JKMN-PQRS');
+    fill('marie@example.org', 'ABCD-EFGH-JKMN-PQRS');
 
     submit();
 
@@ -131,60 +131,42 @@ describe('SignIn', () => {
   });
 
   it.each([
-    [
-      'InvalidUrl',
-      'http://courses.example.fr',
-      'marie@example.org',
-      undefined,
-      'Saisissez une adresse comme courses.example.fr.',
-    ],
-    [
-      'InvalidEmail',
-      'courses.example.fr',
-      'nope',
-      undefined,
-      'Saisissez une adresse e-mail valide.',
-    ],
+    ['InvalidEmail', 'nope', undefined, 'Saisissez une adresse e-mail valide.'],
     [
       'InvalidCredentials',
-      'courses.example.fr',
       'marie@example.org',
       err({ type: 'InvalidCredentials' }),
       'Adresse e-mail ou mot de passe incorrect.',
     ],
     [
       'TemporaryPasswordExpired',
-      'courses.example.fr',
       'marie@example.org',
       err({ type: 'TemporaryPasswordExpired' }),
       'Ce mot de passe temporaire a expiré. Choisissez « Mot de passe oublié ? » pour en recevoir un nouveau.',
     ],
     [
       'AccountSuspended',
-      'courses.example.fr',
       'marie@example.org',
       err({ type: 'AccountSuspended' }),
       "Ce compte est suspendu. Contactez l'administrateur du serveur.",
     ],
     [
       'TooManyAttempts',
-      'courses.example.fr',
       'marie@example.org',
       err({ type: 'TooManyAttempts', minutesToWait: 7 }),
       "Trop d'essais. Réessayez dans 7 minutes.",
     ],
     [
       'ServerUnreachable',
-      'courses.example.fr',
       'marie@example.org',
       err({ type: 'ServerUnreachable' }),
       "Impossible de joindre le serveur. Vérifiez l'adresse et votre connexion.",
     ],
-  ] as [string, string, string, SignIn | undefined, string][])(
+  ] as [string, string, SignIn | undefined, string][])(
     'shows %s as "%s" and stays on the screen',
-    async (_type, address, email, result, message) => {
+    async (_type, email, result, message) => {
       await renderSignIn({ signIn: async () => result ?? signedIn });
-      fill(address, email, 'secret');
+      fill(email, 'secret');
 
       submit();
 
@@ -192,9 +174,7 @@ describe('SignIn', () => {
       expect(
         screen.getByRole('header', { name: 'Connexion' }),
       ).toBeOnTheScreen();
-      expect(screen.getByLabelText('Adresse du serveur').props.value).toBe(
-        address,
-      );
+      expect(screen.getByLabelText('Adresse e-mail').props.value).toBe(email);
     },
   );
 
@@ -205,7 +185,7 @@ describe('SignIn', () => {
         health: async () => err({ type: 'UntrustedServer' }),
       },
     );
-    fill('courses.example.fr', 'marie@example.org', 'secret');
+    fill('marie@example.org', 'secret');
 
     submit();
 
@@ -228,7 +208,7 @@ describe('SignIn', () => {
     const { errorReporter } = await renderSignIn({
       signIn: async () => err({ type: 'InvalidCredentials' }),
     });
-    fill('courses.example.fr', 'marie@example.org', 'secret');
+    fill('marie@example.org', 'secret');
 
     submit();
     await screen.findByText('Adresse e-mail ou mot de passe incorrect.');
@@ -245,7 +225,7 @@ describe('ChoosePassword', () => {
       signIn: async () => ok({ type: 'passwordChangeRequired' }),
       ...(choosePassword ? { choosePassword } : {}),
     });
-    fill('courses.example.fr', 'marie@example.org', 'ABCD-EFGH-JKMN-PQRS');
+    fill('marie@example.org', 'ABCD-EFGH-JKMN-PQRS');
     submit();
     await screen.findByRole('header', { name: 'Choisir votre mot de passe' });
     return rendered;
@@ -257,7 +237,7 @@ describe('ChoosePassword', () => {
       reachable,
       BOTTOM_INSET,
     );
-    fill('courses.example.fr', 'marie@example.org', 'ABCD-EFGH-JKMN-PQRS');
+    fill('marie@example.org', 'ABCD-EFGH-JKMN-PQRS');
     submit();
     await screen.findByRole('header', { name: 'Choisir votre mot de passe' });
 
@@ -322,7 +302,7 @@ describe('ChoosePassword', () => {
         includeHiddenElements: true,
       }),
     ).toHaveLength(1);
-    fill('courses.example.fr', 'marie@example.org', 'ABCD-EFGH-JKMN-PQRS');
+    fill('marie@example.org', 'ABCD-EFGH-JKMN-PQRS');
     submit();
     await screen.findByRole('header', { name: 'Choisir votre mot de passe' });
 
@@ -399,7 +379,7 @@ describe('ForgotPasswordDialog', () => {
     requestPasswordReset: AccountServer['requestPasswordReset'],
   ) => {
     await renderSignIn({ requestPasswordReset });
-    fill('courses.example.fr', 'Marie@Example.org', '');
+    fill('Marie@Example.org', '');
     fireEvent.press(
       screen.getByRole('button', { name: 'Mot de passe oublié ?' }),
     );
@@ -471,39 +451,9 @@ describe('ForgotPasswordDialog', () => {
         screen.queryAllByRole('header', { name: 'Mot de passe oublié' }),
       ).toHaveLength(0),
     );
-    expect(screen.getByLabelText('Adresse du serveur').props.value).toBe(
-      'courses.example.fr',
+    expect(screen.getAllByLabelText('Adresse e-mail')[0]?.props.value).toBe(
+      'Marie@Example.org',
     );
-  });
-
-  describe('default server address (EXPO_PUBLIC_DEFAULT_SERVER_URL)', () => {
-    const original = process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL;
-    afterEach(() => {
-      if (original === undefined) {
-        delete process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL;
-      } else {
-        process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL = original;
-      }
-    });
-
-    it('pre-fills the build address, without its scheme, when none was used before', async () => {
-      process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL =
-        'https://staging.courses.example.fr';
-
-      await renderSignIn();
-
-      expect(screen.getByLabelText('Adresse du serveur').props.value).toBe(
-        'staging.courses.example.fr',
-      );
-    });
-
-    it('pre-fills nothing when there is neither', async () => {
-      delete process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL;
-
-      await renderSignIn();
-
-      expect(screen.getByLabelText('Adresse du serveur').props.value).toBe('');
-    });
   });
 });
 
