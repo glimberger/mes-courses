@@ -53,7 +53,7 @@ No task of its own: the filtering behaviour (US2.1 to US2.5, SC-002) is delivere
 
 **Independent Test**: dry run on the in-memory doubles prints both blocks and records no write.
 
-- [ ] T012 [US4] In `apps/delivery/src/application/run-release.ts` make the dry-run `commitBump` step print `would write to CHANGELOG.md:` plus the markdown section, then `would write to changelog.json:` plus the section as JSON (contracts/cli.md), calling the generator (read-only) but never the repository; test first in `run-release.test.ts` (US4.1, US4.2: no branch, commit, push, PR; generator failure in dry run is also reported)
+- [x] T012 [US4] In `apps/delivery/src/application/run-release.ts` make the dry-run `commitBump` step print `would write to CHANGELOG.md:` plus the markdown section, then `would write to changelog.json:` plus the section as JSON (contracts/cli.md), calling the generator (read-only) but never the repository; test first in `run-release.test.ts` (US4.1, US4.2: no branch, commit, push, PR; generator failure in dry run is also reported)
 
 ## Phase 7: User Story 5 - The existing releases are seeded (P2)
 

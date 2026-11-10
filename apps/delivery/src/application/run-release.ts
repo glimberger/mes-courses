@@ -13,7 +13,10 @@ import {
 } from '../domain/release-plan';
 import { compareSemver } from '../domain/semver';
 import { evaluateRelease, REQUIRED_WORKFLOWS } from '../domain/release-rules';
-import type { ChangelogSection } from '../domain/changelog';
+import {
+  renderMarkdownSection,
+  type ChangelogSection,
+} from '../domain/changelog';
 import type { ChangelogGenerator } from './ports/changelog-generator';
 import type { ChannelSource } from './ports/channel-source';
 import type { Clock } from './ports/clock';
@@ -87,8 +90,12 @@ const realSteps = (deps: ReleaseDeps): Steps => ({
 });
 
 const wouldSteps = (output: Output): Steps => ({
-  async commitBump(_version, branch) {
+  async commitBump(_version, branch, section) {
     output.line(`would commit the bump to ${branch} and push it`);
+    output.line('would write to CHANGELOG.md:');
+    output.line(renderMarkdownSection(section).trimEnd());
+    output.line('would write to changelog.json:');
+    output.line(JSON.stringify(section, null, 2));
   },
   async openPullRequest(_branch, title) {
     output.line(`would open the pull request "${title}"`);

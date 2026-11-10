@@ -493,12 +493,77 @@ describe('runRelease', () => {
       expect(output.lines[0]).toBe('1.2.0 -> 1.3.0');
       expect(output.lines.filter((l) => l.startsWith('would '))).toEqual([
         'would commit the bump to chore/release-1.3.0 and push it',
+        'would write to CHANGELOG.md:',
+        'would write to changelog.json:',
         'would open the pull request "chore(release): bump the app version to 1.3.0"',
         'would enable auto-merge (squash) on it',
         'would wait for the pull request to merge',
         `would wait for ${REQUIRED_WORKFLOWS.join(', ')} on the bump commit`,
         'would stop with 1.3.0 on staging, for `pnpm release promote`',
       ]);
+    });
+
+    it('prints the changelog section and its data, and writes nothing (US4.1, US4.2)', async () => {
+      const { deps, recorder, output, changelog } = setup(
+        new ScriptedPrompter(),
+      );
+      changelog.section = {
+        ...changelog.section,
+        features: [{ text: 'add dark mode', pr: 190 }],
+      };
+
+      await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: false,
+        dryRun: true,
+      });
+
+      const markdown = output.lines.indexOf('would write to CHANGELOG.md:');
+      const data = output.lines.indexOf('would write to changelog.json:');
+      expect(markdown).toBeGreaterThan(-1);
+      expect(data).toBe(markdown + 2);
+      expect(output.lines[markdown + 1]).toBe(
+        [
+          '## [1.3.0] - 2026-10-20',
+          '',
+          '### Nouveautés',
+          '',
+          '- add dark mode ([#190](https://github.com/glimberger/mes-courses/pull/190))',
+        ].join('\n'),
+      );
+      expect(JSON.parse(output.lines[data + 1] ?? '')).toEqual({
+        version: '1.3.0',
+        date: '2026-10-20',
+        features: [{ text: 'add dark mode', pr: 190 }],
+        fixes: [],
+        performances: [],
+        breaking: [],
+      });
+      expect(recorder.calls).toContain(
+        'ChangelogGenerator.generate 1.3.0 2026-10-20',
+      );
+      expect(mutations(recorder.calls)).toEqual([]);
+    });
+
+    it('reports a generator failure in a dry run too (US4.2)', async () => {
+      const { deps, recorder } = setup(new ScriptedPrompter());
+      recorder.failNext(
+        'ChangelogGenerator.generate',
+        new Error('git-cliff is not installed'),
+      );
+
+      const result = await runRelease(deps, {
+        target: { kind: 'bump', bump: 'minor' },
+        assumeYes: false,
+        dryRun: true,
+      });
+
+      expect(result).toEqual({
+        outcome: 'stopped',
+        message:
+          'git-cliff is not installed\nRun the same command again to resume.',
+      });
+      expect(mutations(recorder.calls)).toEqual([]);
     });
 
     it('still refuses a bad checkout', async () => {
