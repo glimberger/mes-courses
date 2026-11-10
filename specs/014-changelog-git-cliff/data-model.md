@@ -40,7 +40,9 @@ Empty groups are `[]`. A section whose four groups are empty renders the single 
 ...
 ```
 
-Group order: breaking, features, fixes, performances; empty groups omitted. Link base: the repository URL read from git-cliff's context (`remote`) or the `origin` URL, to settle in the first Red step (see [contracts/changelog-data.md](contracts/changelog-data.md)).
+Group order: breaking, features, fixes, performances; empty groups omitted. Link base (settled at the first Red step): the constant `REPOSITORY_URL` (`https://github.com/glimberger/mes-courses`) of `domain/changelog.ts`. git-cliff 2.13's context has `remote: null` unless a `[remote.github]` is configured, and the `origin` URL is an SSH URL on the maintainer's machine; the repository is a single, fixed one (see [contracts/changelog-data.md](contracts/changelog-data.md)).
+
+Markdown escaping: in an entry, `\ * _ [ ] < >` are backslash-escaped outside code spans; code spans (backticks) are kept as written. `changelog.json` keeps the text as written.
 
 ## Operations (domain functions)
 
