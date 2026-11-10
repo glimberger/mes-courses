@@ -29,7 +29,7 @@ Paths are under `apps/mobile/` unless stated. Stories: US1 sign in with e-mail a
 
 **Purpose**: the validated fixed URL exists and is injectable.
 
-- [ ] T004 Test first in `src/composition/server-url.test.ts` (undefined, empty, blank and malformed values throw `ServerUrlNotConfigured` whose message names `EXPO_PUBLIC_DEFAULT_SERVER_URL`; `courses.example.fr` gives `https://courses.example.fr`; `http://127.0.0.1:3000` throws unless `allowInsecure`, then passes), then implement `src/composition/server-url.ts` exporting `fixedServerUrl(raw: string | undefined, allowInsecure: boolean): string` (uses `normalizeUrl` from `src/application/use-cases/normalize-url.ts`) and the `ServerUrlNotConfigured` error class
+- [x] T004 Test first in `src/composition/server-url.test.ts` (undefined, empty, blank and malformed values throw `ServerUrlNotConfigured` whose message names `EXPO_PUBLIC_DEFAULT_SERVER_URL`; `courses.example.fr` gives `https://courses.example.fr`; `http://127.0.0.1:3000` throws unless `allowInsecure`, then passes), then implement `src/composition/server-url.ts` exporting `fixedServerUrl(raw: string | undefined, allowInsecure: boolean): string` (uses `normalizeUrl` from `src/application/use-cases/normalize-url.ts`) and the `ServerUrlNotConfigured` error class
 
 **Checkpoint**: new module green, nothing wired yet.
 
