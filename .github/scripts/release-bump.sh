@@ -5,7 +5,7 @@
 # must hold:
 #   - the title starts with "chore(release): bump";
 #   - at least one file changed, and every one is apps/mobile/app.config.ts, CHANGELOG.md or
-#     changelog.json;
+#     apps/mobile/src/changelog/changelog.json (a bare changelog.json does not count);
 #   - the only change in apps/mobile/app.config.ts is its top-level (two-space indented) `version: '...'`
 #     line.
 # Any doubt (missing argument, git failure) gives "bump=false", so the full CI runs.
@@ -28,7 +28,7 @@ decide() {
   [ -n "$files" ] || return 1
   for file in $files; do
     case "$file" in
-      "$config" | CHANGELOG.md | changelog.json) ;;
+      "$config" | CHANGELOG.md | apps/mobile/src/changelog/changelog.json) ;;
       *) return 1 ;;
     esac
   done

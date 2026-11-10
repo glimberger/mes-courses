@@ -9,7 +9,7 @@ title="chore(release): bump the app version to 2.2.0"
 git_() { git -C "$work" -c user.name=t -c user.email=t@t -c commit.gpgsign=false "$@"; }
 
 git init -q "$work"
-mkdir -p "$work/apps/mobile" "$work/apps/other"
+mkdir -p "$work/apps/mobile/src/changelog" "$work/apps/other"
 cat >"$work/apps/mobile/app.config.ts" <<'CFG'
 export default {
   name: 'Courses',
@@ -23,7 +23,7 @@ export default {
 };
 CFG
 echo "# Changelog" >"$work/CHANGELOG.md"
-echo "[]" >"$work/changelog.json"
+echo "[]" >"$work/apps/mobile/src/changelog/changelog.json"
 echo "x" >"$work/apps/other/file.ts"
 git_ add -A
 git_ commit -q -m base
@@ -73,9 +73,14 @@ expect_app "app-changed: bump-like title only is app" app=true "feat: something"
 branch bump-full
 sed -i.bak "s/version: '2.1.0'/version: '2.2.0'/" "$work/apps/mobile/app.config.ts" && rm "$work/apps/mobile/app.config.ts.bak"
 echo "- 2.2.0" >>"$work/CHANGELOG.md"
-echo '[{"v":"2.2.0"}]' >"$work/changelog.json"
+echo '[{"v":"2.2.0"}]' >"$work/apps/mobile/src/changelog/changelog.json"
 finish
 expect "version, changelog and changelog.json" bump=true "$title"
+
+branch bare-changelog-data
+echo '[{"v":"2.2.0"}]' >"$work/changelog.json"
+finish
+expect "a bare changelog.json at the root is not the changelog data" bump=false "$title"
 
 branch other-file
 sed -i.bak "s/version: '2.1.0'/version: '2.2.0'/" "$work/apps/mobile/app.config.ts" && rm "$work/apps/mobile/app.config.ts.bak"
