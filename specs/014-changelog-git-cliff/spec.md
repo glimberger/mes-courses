@@ -116,7 +116,7 @@ On the first run, the changelog already has entries for the existing tags, so th
 - A commit subject containing characters that are special in markdown or JSON: rendered and encoded correctly.
 - The release is re-run after a stop (resume): the changelog is not duplicated; the section of the version is replaced, not appended.
 - The git-cliff version differs between a local machine and CI: prevented by one pinned version in the Nix dev shell.
-- A version already in `CHANGELOG.md` when releasing: refused as already released, as today.
+- A version already released: refused by its tag (an existing `vX.Y.Z` tag, local or remote), as today; `CHANGELOG.md` is not what decides. A section already in `CHANGELOG.md` for a version that is not released yet (no tag) is replaced, not appended.
 
 ## Requirements *(mandatory)*
 
@@ -158,3 +158,4 @@ On the first run, the changelog already has entries for the existing tags, so th
 - The pinned git-cliff version comes from the Nix dev shell; adding the dependency is decided by the user (issue #202), and CI gets it the same way as other tooling.
 - Release flow, tagging, staging and promotion are unchanged apart from the extra files in the bump commit.
 - Group titles are French, matching the French interface (Principle X); entry text stays English as in the commits.
+- Offline first and synchronization (Principle VII) do not apply: this is release tooling run by the maintainer, not application behavior; the app only receives a committed data file.
