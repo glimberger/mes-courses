@@ -1,0 +1,29 @@
+# git-cliff configuration of the changelog (feature 014, ADR-0014).
+#
+# Only the filtering and grouping live here: `pnpm release` runs `git-cliff --context` and renders
+# CHANGELOG.md and apps/mobile/src/changelog/changelog.json itself (apps/delivery, domain
+# changelog.ts), so the template below is never used. The specification of this file is
+# apps/delivery/src/adapters/changelog/git-cliff-generator.test.ts.
+
+[changelog]
+body = ""
+
+[git]
+conventional_commits = true
+# A commit that is not a Conventional Commit is left out, and does not stop the generation.
+filter_unconventional = true
+# A commit no parser gives a group to is left out.
+filter_commits = true
+# Release tags only: the channel-staging and channel-production tags are not releases.
+tag_pattern = "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+# The first parser that matches wins, so the order is the rule: a breaking change is kept whatever
+# its type or scope; then the noise scopes are dropped, even for a feat or a fix; then feat, fix
+# and perf get their group; everything else is dropped.
+commit_parsers = [
+  { field = "breaking", pattern = "true", group = "breaking" },
+  { message = "^[a-z]+\\((ci|e2e|test|delivery)\\)", skip = true },
+  { message = "^feat(\\([^)]*\\))?:", group = "features" },
+  { message = "^fix(\\([^)]*\\))?:", group = "fixes" },
+  { message = "^perf(\\([^)]*\\))?:", group = "performances" },
+  { message = ".*", skip = true },
+]
