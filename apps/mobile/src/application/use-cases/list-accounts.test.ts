@@ -19,6 +19,7 @@ describe('listAccounts', () => {
     const adminServer = new InMemoryAdminServer([summary('a@example.org')]);
 
     const result = await createListAccounts({
+      serverUrl: 'https://courses.example.fr',
       unitOfWork,
       credentials,
       adminServer,
@@ -33,7 +34,12 @@ describe('listAccounts', () => {
     adminServer.forbidden = true;
 
     expect(
-      await createListAccounts({ unitOfWork, credentials, adminServer })(),
+      await createListAccounts({
+        serverUrl: 'https://courses.example.fr',
+        unitOfWork,
+        credentials,
+        adminServer,
+      })(),
     ).toEqual({ ok: false, error: { type: 'Forbidden' } });
   });
 
@@ -43,7 +49,12 @@ describe('listAccounts', () => {
     adminServer.offline = true;
 
     expect(
-      await createListAccounts({ unitOfWork, credentials, adminServer })(),
+      await createListAccounts({
+        serverUrl: 'https://courses.example.fr',
+        unitOfWork,
+        credentials,
+        adminServer,
+      })(),
     ).toEqual({ ok: false, error: { type: 'Offline' } });
   });
 
@@ -53,6 +64,7 @@ describe('listAccounts', () => {
 
     expect(
       await createListAccounts({
+        serverUrl: 'https://courses.example.fr',
         unitOfWork,
         credentials,
         adminServer: new InMemoryAdminServer(),

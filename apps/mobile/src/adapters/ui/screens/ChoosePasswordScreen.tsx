@@ -90,7 +90,6 @@ export const ChoosePasswordScreen = () => {
     setSaving(true);
     setError(null);
     const outcome = await chooseInitialPassword(
-      params.url,
       params.email,
       params.temporaryPassword,
       newPassword,

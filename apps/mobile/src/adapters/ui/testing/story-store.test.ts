@@ -170,7 +170,6 @@ describe('createStoryStore', () => {
 
   describe('synchronization (003)', () => {
     const connected = {
-      serverUrl: 'https://courses.example.fr',
       lastSyncAt: '2026-10-01T10:00:00.000Z',
     };
 
@@ -251,7 +250,7 @@ describe('createStoryStore', () => {
 
       const outcome = await store
         .getState()
-        .signIn('courses.example.fr', 'a@b.co', 'secret', 'Pixel');
+        .signIn('a@b.co', 'secret', 'Pixel');
 
       expect(outcome.ok).toBe(true);
       expect(store.getState().sync.connection).toBe('connected');
@@ -263,7 +262,7 @@ describe('createStoryStore', () => {
         pending: ['signIn', 'synchronize'],
       });
 
-      expect(await isPending(store.getState().signIn('a', 'b', 'c', 'd'))).toBe(
+      expect(await isPending(store.getState().signIn('a', 'b', 'c'))).toBe(
         true,
       );
       expect(await isPending(store.getState().syncNow())).toBe(true);
@@ -274,7 +273,7 @@ describe('createStoryStore', () => {
         failing: ['signIn', 'synchronize'],
       });
 
-      const signIn = await store.getState().signIn('a', 'b', 'c', 'd');
+      const signIn = await store.getState().signIn('a', 'b', 'c');
       const cycle = await store.getState().syncNow();
 
       expect(signIn).toEqual(err({ type: 'WriteFailed' }));

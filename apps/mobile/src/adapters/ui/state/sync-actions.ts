@@ -31,7 +31,6 @@ export type SyncActions = DeviceActions & {
   ) => void;
   /** Signs this device in (US2-1). */
   signIn: (
-    url: string,
     email: string,
     password: string,
     deviceName: string,
@@ -43,7 +42,6 @@ export type SyncActions = DeviceActions & {
   >;
   /** Finishes the first sign-in with the password the person chose (US2-2). */
   chooseInitialPassword: (
-    url: string,
     email: string,
     temporaryPassword: string,
     newPassword: string,
@@ -80,19 +78,18 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
   let inFlight: Promise<{ failed: boolean; slow?: boolean }> | null = null;
 
   /**
-   * Reads the address, the last sync and, unless `keepConnection`, the connection; a failed read
+   * Reads the last sync, the pending count and, unless `keepConnection`, the connection; a failed read
    * keeps what is shown.
    */
   const loadSyncInfo = async (keepConnection = false): Promise<boolean> => {
     try {
       const info = await useCases.getSyncInfo();
       setSync({
-        serverUrl: info.serverUrl,
         lastSyncAt: info.lastSyncAt,
         pendingCount: info.pendingCount,
         ...(!keepConnection && {
           connection: info.connection,
-          // A server address with no credential reads as a revoked device (003 FR-018b).
+          // A pairing with no credential reads as a revoked device (003 FR-018b).
           signedOutReason: info.connection === 'signedOut' ? 'revoked' : null,
         }),
       });
@@ -330,9 +327,9 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
     onLocalWrite();
   };
 
-  const signIn: SyncActions['signIn'] = async (url, email, password, name) => {
+  const signIn: SyncActions['signIn'] = async (email, password, name) => {
     const outcome = await settle('signIn', 'SignIn', () =>
-      useCases.signIn(url, email, password, name),
+      useCases.signIn(email, password, name),
     );
     if (outcome.ok && outcome.value.type === 'signedIn') {
       await startSyncing('signedIn');
@@ -341,7 +338,6 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
   };
 
   const chooseInitialPassword: SyncActions['chooseInitialPassword'] = async (
-    url,
     email,
     temporaryPassword,
     newPassword,
@@ -350,7 +346,6 @@ export const createSyncActions = (kit: StoreKit): SyncActions => {
   ) => {
     const outcome = await settle('choosePassword', 'ChoosePassword', () =>
       useCases.chooseInitialPassword(
-        url,
         email,
         temporaryPassword,
         newPassword,

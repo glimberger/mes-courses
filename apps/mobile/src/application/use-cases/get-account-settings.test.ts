@@ -22,6 +22,7 @@ describe('getAccountSettings', () => {
     });
 
     const settings = await createGetAccountSettings({
+      serverUrl: 'https://courses.example.fr',
       unitOfWork,
       credentials,
       syncServer,
@@ -43,6 +44,7 @@ describe('getAccountSettings', () => {
     const { unitOfWork, credentials, syncServer } = await pairedDevice();
     const accountServer = new InMemoryAccountServer();
     const getAccountSettings = createGetAccountSettings({
+      serverUrl: 'https://courses.example.fr',
       unitOfWork,
       credentials,
       syncServer,
@@ -66,6 +68,7 @@ describe('getAccountSettings', () => {
     accountServer.offline = true;
 
     const settings = await createGetAccountSettings({
+      serverUrl: 'https://courses.example.fr',
       unitOfWork,
       credentials,
       syncServer,
@@ -87,6 +90,7 @@ describe('getAccountSettings', () => {
     });
 
     const settings = await createGetAccountSettings({
+      serverUrl: 'https://courses.example.fr',
       unitOfWork,
       credentials,
       syncServer,

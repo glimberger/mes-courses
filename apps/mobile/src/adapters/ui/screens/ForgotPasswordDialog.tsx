@@ -10,8 +10,6 @@ import { spacing } from '../theme/spacing';
 import { DeviceDialog } from './DeviceDialog';
 
 export type ForgotPasswordDialogProps = {
-  /** The server address typed in SignIn. */
-  address: string;
   /** The email typed in SignIn, prefilled. */
   initialEmail: string;
   onClose: () => void;
@@ -31,8 +29,6 @@ export const resetFailureText = (error: ResetFailure): string | null => {
   switch (error.type) {
     case 'InvalidEmail':
       return 'Saisissez une adresse e-mail valide.';
-    case 'InvalidUrl':
-      return 'Saisissez une adresse comme courses.example.fr.';
     case 'TooManyAttempts':
       return `Trop de demandes. Réessayez dans ${error.minutesToWait} ${
         error.minutesToWait === 1 ? 'minute' : 'minutes'
@@ -49,7 +45,6 @@ export const resetFailureText = (error: ResetFailure): string | null => {
 
 /** Asks for a new temporary password by email (US4-1, US4-3, US4-4). */
 export const ForgotPasswordDialog = ({
-  address,
   initialEmail,
   onClose,
 }: ForgotPasswordDialogProps) => {
@@ -68,7 +63,7 @@ export const ForgotPasswordDialog = ({
     sendingRef.current = true;
     setSending(true);
     setError(null);
-    const outcome = await requestPasswordReset(address, email);
+    const outcome = await requestPasswordReset(email);
     sendingRef.current = false;
     setSending(false);
     if (outcome.ok) {

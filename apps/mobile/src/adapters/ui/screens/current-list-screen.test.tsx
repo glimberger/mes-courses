@@ -96,7 +96,7 @@ describe('CurrentList', () => {
   it('003 FR-020 renders the sync status bar under the Appbar', async () => {
     await renderScreen({
       seed: fixture,
-      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      connected: { lastSyncAt: null },
     });
 
     expect(await screen.findByTestId('sync-status-bar')).toBeOnTheScreen();

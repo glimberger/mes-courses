@@ -2,11 +2,11 @@ import { signInDevice } from './testing/onboard';
 import { FakeClock, buildTestAppStack } from '@mes-courses/mobile/testing';
 import { startTestServer, type TestServer } from '@mes-courses/server/testing';
 
-const START = Date.parse('2026-10-06T10:00:00.000Z');
+const START = Date.parse('2026-11-10T10:00:00.000Z');
 
-describe('a server that changes address (003 spec edge case "domain name changes")', () => {
+describe('the sync server address fixed at build time (013 US3)', () => {
   let clock: FakeClock;
-  const servers: Array<{ close(): Promise<void> }> = [];
+  const servers: TestServer[] = [];
   let server: TestServer;
 
   beforeEach(async () => {
@@ -27,20 +27,14 @@ describe('a server that changes address (003 spec edge case "domain name changes
     return stack;
   };
 
-  it('switches to the new address, keeping its credential, and syncs', async () => {
+  it('US3-1 syncs a paired device whatever address it stored', async () => {
     const stack = await pairedDevice();
-    const credential = await stack.credentials.read();
-    const moved = await server.listenAlso();
-    servers.push(moved);
-
-    expect(await stack.useCases.changeServerUrl(moved.url)).toEqual({
-      ok: true,
-      value: undefined,
+    await stack.unitOfWork.run(async (repos) => {
+      await repos.syncState.save({
+        ...(await repos.syncState.get()),
+        serverUrl: 'https://junk.invalid',
+      });
     });
-
-    expect(await stack.credentials.read()).toBe(credential);
-    expect((await stack.useCases.getSyncInfo()).serverUrl).toBe(moved.url);
-    clock.advance(1_000);
     const { list } = await stack.useCases.getCurrentList();
     const [category] = await stack.useCases.getCategories();
     await stack.useCases.createArticleAndAddToList(
@@ -48,23 +42,27 @@ describe('a server that changes address (003 spec edge case "domain name changes
       { name: 'Pain', categoryId: category?.id as never },
       null,
     );
+
     clock.advance(1_000);
     expect((await stack.useCases.synchronize()).outcome.type).toBe('saved');
     expect((await stack.useCases.getSyncInfo()).pendingCount).toBe(0);
   });
 
-  it('refuses a server with another identity and changes nothing', async () => {
+  it('US3-2 reports the server mismatch when the fixed address leads to another server', async () => {
     const stack = await pairedDevice();
     const other = await startTestServer({ clock });
     servers.push(other);
-
-    expect(await stack.useCases.changeServerUrl(other.url)).toEqual({
-      ok: false,
-      error: { type: 'ServerMismatch' },
+    const rebuilt = await buildTestAppStack({
+      serverUrl: other.url,
+      clock,
+      database: stack.database,
+      credentials: stack.credentials,
     });
 
-    expect((await stack.useCases.getSyncInfo()).serverUrl).toBe(server.url);
     clock.advance(1_000);
-    expect((await stack.useCases.synchronize()).outcome.type).toBe('saved');
+    expect((await rebuilt.useCases.synchronize()).outcome).toEqual({
+      type: 'signedOut',
+      reason: 'revoked',
+    });
   });
 });

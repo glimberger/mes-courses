@@ -36,8 +36,6 @@ type SignInFailure = Extract<
 /** The French text of each way a sign-in can be refused (contracts/ui-screens.md). */
 export const signInErrorText = (error: SignInFailure): string | null => {
   switch (error.type) {
-    case 'InvalidUrl':
-      return 'Saisissez une adresse comme courses.example.fr.';
     case 'InvalidEmail':
       return 'Saisissez une adresse e-mail valide.';
     case 'InvalidCredentials':
@@ -66,21 +64,14 @@ export const signInErrorText = (error: SignInFailure): string | null => {
 const capped = (text: string) =>
   Array.from(text).slice(0, MAX_DEVICE_NAME).join('');
 
-/** The address as people say it: without the scheme. */
-const withoutScheme = (url: string) => url.replace(/^https?:\/\//, '');
-
-/** Signs this device in (US2-1): server address, email, password and device name. */
+/**
+ * Signs this device in (US2-1): email, password and device name. The server address is fixed at
+ * build time and never typed (013).
+ */
 export const SignInScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const signIn = useAppStore((state) => state.signIn);
-  const lastServerUrl = useAppStore((state) => state.sync.serverUrl);
-  // The address used last comes first; a build made for one server (staging) suggests its own.
-  const [address, setAddress] = useState(
-    withoutScheme(
-      lastServerUrl ?? process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL ?? '',
-    ),
-  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [deviceName, setDeviceName] = useState(capped(Device.modelName ?? ''));
@@ -93,7 +84,7 @@ export const SignInScreen = () => {
     setError(null);
     // A phone that reports no model still needs a name: the server refuses an empty one.
     const name = deviceName.trim() || 'Mon appareil';
-    const outcome = await signIn(address, email, password, name);
+    const outcome = await signIn(email, password, name);
     setSaving(false);
     if (!outcome.ok) {
       // The form stays as typed.
@@ -102,7 +93,6 @@ export const SignInScreen = () => {
     }
     if (outcome.value.type === 'passwordChangeRequired') {
       navigation.navigate('ChoosePassword', {
-        url: address,
         email,
         temporaryPassword: password,
         deviceName: name,
@@ -116,8 +106,6 @@ export const SignInScreen = () => {
     <>
       <SignInForm
         onBack={navigation.canGoBack() ? () => navigation.goBack() : null}
-        address={address}
-        onChangeAddress={setAddress}
         email={email}
         onChangeEmail={setEmail}
         password={password}
@@ -131,7 +119,6 @@ export const SignInScreen = () => {
       />
       {forgotten && (
         <ForgotPasswordDialog
-          address={address}
           initialEmail={email}
           onClose={() => setForgotten(false)}
         />
@@ -142,8 +129,6 @@ export const SignInScreen = () => {
 
 export type SignInFormProps = {
   onBack: (() => void) | null;
-  address: string;
-  onChangeAddress: (text: string) => void;
   email: string;
   onChangeEmail: (text: string) => void;
   password: string;
@@ -164,8 +149,6 @@ export type SignInFormProps = {
  */
 export const SignInForm = ({
   onBack,
-  address,
-  onChangeAddress,
   email,
   onChangeEmail,
   password,
@@ -211,18 +194,6 @@ export const SignInForm = ({
             <BrandImage onError={() => setBrandFailed(true)} />
           )}
         </View>
-        <TextInput
-          {...field}
-          label="Adresse du serveur"
-          accessibilityLabel="Adresse du serveur"
-          placeholder="courses.example.fr"
-          value={address}
-          onChangeText={onChangeAddress}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-          disabled={saving}
-        />
         <TextInput
           {...field}
           label="Adresse e-mail"

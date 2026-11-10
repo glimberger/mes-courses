@@ -18,7 +18,6 @@ const ancestors = (node: Node): Node[] => {
 };
 
 const connected = {
-  serverUrl: 'https://courses.example.fr',
   lastSyncAt: '2026-10-12T08:00:00.000Z',
 };
 

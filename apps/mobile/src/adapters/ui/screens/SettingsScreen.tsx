@@ -31,9 +31,6 @@ import { RenameDeviceDialog } from './RenameDeviceDialog';
 import { RevokeDeviceDialog } from './RevokeDeviceDialog';
 import { SignOutDialog } from './SignOutDialog';
 
-/** The address as people say it: without the scheme. */
-const withoutScheme = (url: string) => url.replace(/^https?:\/\//, '');
-
 /** What the Appareils section shows (contracts/ui-screens.md, Settings). */
 export type DevicesState =
   | { type: 'loading' }
@@ -69,9 +66,7 @@ const CONNECTION_NEEDED = 'Connexion au serveur nécessaire.';
 export const SettingsScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { connection, serverUrl, lastSyncAt, status } = useAppStore(
-    (state) => state.sync,
-  );
+  const { connection, lastSyncAt, status } = useAppStore((state) => state.sync);
   const syncNow = useAppStore((state) => state.syncNow);
   const listDevices = useAppStore((state) => state.listDevices);
   const getAccountSettings = useAppStore((state) => state.getAccountSettings);
@@ -83,7 +78,7 @@ export const SettingsScreen = () => {
   // Bumped to load the list again; the effect below loads it.
   const [reload, setReload] = useState(0);
 
-  const isConnected = connection !== 'notConnected' && serverUrl !== null;
+  const isConnected = connection !== 'notConnected';
   // Leaving the server drops its list, so a new pairing never shows the previous one.
   const [wasConnected, setWasConnected] = useState(isConnected);
   if (wasConnected !== isConnected) {
@@ -183,7 +178,6 @@ export const SettingsScreen = () => {
           !isConnected
             ? null
             : {
-                url: serverUrl,
                 lastSyncAt,
                 // A revoked or outdated app cannot sync, and a cycle already runs.
                 canSyncNow: connection === 'connected' && status !== 'sending',
@@ -230,9 +224,8 @@ export type SettingsViewProps = {
   onConnect: () => void;
   /** "Synchroniser maintenant": runs a cycle at once (US3-5). */
   onSyncNow: () => void;
-  /** The server this device is connected to, or null when it never was. */
+  /** The sync with the server, or null when the device never connected. */
   server: {
-    url: string;
     lastSyncAt: string | null;
     canSyncNow: boolean;
   } | null;
@@ -304,8 +297,7 @@ export const SettingsView = ({
           <Section title="Serveur">
             <SettingsRow
               icon="dns"
-              title={withoutScheme(server.url)}
-              subtitle={`Dernière synchronisation : ${formatLastSync(
+              title={`Dernière synchronisation : ${formatLastSync(
                 server.lastSyncAt,
                 new Date(),
               )}`}

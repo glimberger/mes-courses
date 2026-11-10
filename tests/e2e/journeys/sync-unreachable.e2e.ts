@@ -40,8 +40,8 @@ describe('signing in to a server that cannot be reached', () => {
   it('US4-6 says the server cannot be reached when nothing listens at the address', async () => {
     await element(by.label('Se connecter')).tap();
 
-    // Nothing listens on port 9 of the device, and no DNS query leaves it.
-    await typeInto('Adresse du serveur', '127.0.0.1:9');
+    // The build's fixed address is port 9 of the device (.detoxrc.js): nothing listens there, and
+    // no DNS query leaves it. There is no address to type (013).
     await typeInto('Adresse e-mail', 'marie@example.org');
     await typeInto('Mot de passe', 'any password');
     await element(by.label('Se connecter')).tap();

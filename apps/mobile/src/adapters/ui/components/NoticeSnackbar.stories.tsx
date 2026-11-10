@@ -60,7 +60,7 @@ export const PasswordChanged: Story = {
   parameters: {
     scenario: {
       seed: fixture,
-      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      connected: { lastSyncAt: null },
       accountServer: { changePassword: async () => ok(undefined) },
       prepare: changePassword,
     },
@@ -75,7 +75,7 @@ const pulling = (rows: ServerRow[]): StoryScenario => {
   send(rows);
   return {
     seed: fixture,
-    connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+    connected: { lastSyncAt: null },
     syncServer,
   };
 };

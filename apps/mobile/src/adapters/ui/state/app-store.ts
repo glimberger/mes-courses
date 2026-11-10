@@ -258,7 +258,6 @@ export const createAppStoreWith = <Actions extends object>(
         status: 'saved',
         pendingCount: 0,
         lastSyncAt: null,
-        serverUrl: null,
         redirects: {},
         remote: {
           cycle: 0,

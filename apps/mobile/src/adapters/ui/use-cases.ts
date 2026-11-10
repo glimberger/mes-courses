@@ -44,10 +44,6 @@ import {
 import { createAcknowledgeSignedOut } from '../../application/use-cases/acknowledge-signed-out';
 import { createListAccounts } from '../../application/use-cases/list-accounts';
 import { createAddArticleToList } from '../../application/use-cases/add-article-to-list';
-import {
-  createChangeServerUrl,
-  type ChangeServerUrlError,
-} from '../../application/use-cases/change-server-url';
 import { createChangeItemQuantity } from '../../application/use-cases/change-item-quantity';
 import { createCreateArticle } from '../../application/use-cases/create-article';
 import { createGetArticleUsageCounts } from '../../application/use-cases/get-article-usage-counts';
@@ -223,13 +219,11 @@ export type UseCases = {
     Result<{ categoryId: CategoryId }, NameError | NameAlreadyUsed<Category>>
   >;
   signIn: (
-    url: string,
     email: string,
     password: string,
     deviceName: string,
   ) => Promise<Result<SignInResult, SignInError>>;
   chooseInitialPassword: (
-    url: string,
     email: string,
     temporaryPassword: string,
     newPassword: string,
@@ -237,7 +231,6 @@ export type UseCases = {
     deviceName: string,
   ) => Promise<Result<void, ChooseInitialPasswordError>>;
   requestPasswordReset: (
-    url: string,
     email: string,
   ) => Promise<Result<void, RequestPasswordResetError>>;
   synchronize: () => Promise<SyncResult>;
@@ -260,7 +253,6 @@ export type UseCases = {
   deleteMyAccount: (
     password: string,
   ) => Promise<Result<void, DeleteMyAccountError>>;
-  changeServerUrl: (url: string) => Promise<Result<void, ChangeServerUrlError>>;
   getAccountSettings: () => Promise<AccountSettings>;
   listAccounts: () => Promise<
     Result<AccountSummary[], SyncFailure | Forbidden>
@@ -299,6 +291,8 @@ export const createUseCases = (ports: {
   localDataEraser: LocalDataEraser;
   /** The list a pull creates when it deletes the last one (`seed.firstListName`, 012 R4). */
   firstListName: string;
+  /** The sync server address fixed at build time (`EXPO_PUBLIC_DEFAULT_SERVER_URL`, 013). */
+  serverUrl: string;
   /** Accepts `http://` server addresses; development builds only. */
   allowInsecure?: boolean;
 }): UseCases => ({
@@ -336,7 +330,6 @@ export const createUseCases = (ports: {
   signOut: createSignOut(ports),
   changePassword: createChangePassword(ports),
   deleteMyAccount: createDeleteMyAccount(ports),
-  changeServerUrl: createChangeServerUrl(ports),
   getAccountSettings: createGetAccountSettings(ports),
   listAccounts: createListAccounts(ports),
   inviteAccount: createInviteAccount(ports),

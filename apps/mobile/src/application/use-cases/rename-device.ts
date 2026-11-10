@@ -14,6 +14,7 @@ export const createRenameDevice =
   (deps: {
     unitOfWork: UnitOfWork;
     credentials: CredentialStore;
+    serverUrl: string;
     syncServer: SyncServer;
   }) =>
   async (

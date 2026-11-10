@@ -3,7 +3,6 @@ import { fixture } from '../testing/fixtures';
 import { buildStoryStore, type StoryScenario } from '../testing/story-store';
 
 const connected = {
-  serverUrl: 'https://courses.example.fr',
   lastSyncAt: null,
 };
 

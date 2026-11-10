@@ -86,9 +86,7 @@ describe('no personal data in logs and reports (004 SC-008)', () => {
     });
     secrets.push(admin.deviceCredential);
     const adminApp = await newApp();
-    await adminApp
-      .state()
-      .signIn(server.url, ADMIN_EMAIL, PASSWORD, DEVICE_NAMES[2] ?? '');
+    await adminApp.state().signIn(ADMIN_EMAIL, PASSWORD, DEVICE_NAMES[2] ?? '');
 
     // Invitation, first sign-in with the temporary password.
     await adminApp.state().inviteAccount(MARIE);
@@ -102,7 +100,6 @@ describe('no personal data in logs and reports (004 SC-008)', () => {
     await marie
       .state()
       .chooseInitialPassword(
-        server.url,
         MARIE,
         temporary,
         PASSWORD,
@@ -112,25 +109,17 @@ describe('no personal data in logs and reports (004 SC-008)', () => {
 
     // Failed sign-ins, a wrong temporary password, a wrong current password.
     const stranger = await newApp();
-    await stranger
-      .state()
-      .signIn(server.url, MARIE, WRONG_PASSWORD, 'Intruder');
-    await stranger
-      .state()
-      .signIn(server.url, 'nobody@example.org', PASSWORD, 'Intruder');
+    await stranger.state().signIn(MARIE, WRONG_PASSWORD, 'Intruder');
+    await stranger.state().signIn('nobody@example.org', PASSWORD, 'Intruder');
 
     // Password change, then a reset request, a mail failure on each path.
     await marie.state().changePassword(PASSWORD, NEW_PASSWORD, NEW_PASSWORD);
     await marie
       .state()
       .changePassword(WRONG_PASSWORD, NEW_PASSWORD, NEW_PASSWORD);
-    await requestAndWait(() =>
-      stranger.state().requestPasswordReset(server.url, MARIE),
-    );
+    await requestAndWait(() => stranger.state().requestPasswordReset(MARIE));
     server.failMails(true);
-    await requestAndWait(() =>
-      stranger.state().requestPasswordReset(server.url, MARIE),
-    );
+    await requestAndWait(() => stranger.state().requestPasswordReset(MARIE));
     await adminApp.state().inviteAccount(PAUL);
 
     // A failed resend of credentials, then a deletion by the administrator.
@@ -207,16 +196,13 @@ describe('no personal data in logs and reports (004 SC-008)', () => {
 
   it('004 SC-008 normal refusals create no report', async () => {
     const wrongPassword = await newApp();
-    await wrongPassword
-      .state()
-      .signIn(server.url, 'ghost@example.org', PASSWORD, 'Pixel');
+    await wrongPassword.state().signIn('ghost@example.org', PASSWORD, 'Pixel');
     const account = await server.invite(MARIE);
     const expired = await newApp();
     clock.advance(8 * 24 * 60 * 60 * 1000);
     await expired
       .state()
       .chooseInitialPassword(
-        server.url,
         MARIE,
         account.temporaryPassword,
         PASSWORD,
@@ -225,11 +211,11 @@ describe('no personal data in logs and reports (004 SC-008)', () => {
       );
     await server.suspend(account.accountId);
     const suspended = await newApp();
-    await suspended.state().signIn(server.url, MARIE, PASSWORD, 'Pixel');
+    await suspended.state().signIn(MARIE, PASSWORD, 'Pixel');
     for (let attempt = 0; attempt < 12; attempt += 1) {
       await wrongPassword
         .state()
-        .signIn(server.url, 'ghost@example.org', WRONG_PASSWORD, 'Pixel');
+        .signIn('ghost@example.org', WRONG_PASSWORD, 'Pixel');
     }
     const gone = await server.createAccount({ email: 'gone@example.org' });
     await server.suspend(gone.accountId);

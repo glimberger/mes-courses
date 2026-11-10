@@ -61,7 +61,7 @@ const openCatalogMenu = async (name: string) => {
 
 /** A device paired with a server that lists two devices (003). */
 const connected: StoryScenario = {
-  connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+  connected: { lastSyncAt: null },
   syncServer: {
     listDevices: async () =>
       ok([

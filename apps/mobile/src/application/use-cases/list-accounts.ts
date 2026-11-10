@@ -12,6 +12,7 @@ export const createListAccounts =
   (deps: {
     unitOfWork: UnitOfWork;
     credentials: CredentialStore;
+    serverUrl: string;
     adminServer: AdminServer;
   }) =>
   async (): Promise<Result<AccountSummary[], SyncFailure | Forbidden>> => {

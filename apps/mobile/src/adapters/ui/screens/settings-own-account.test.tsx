@@ -9,7 +9,6 @@ import { renderWithStore } from '../testing/render-with-store';
 import type { StoryScenario } from '../testing/story-store';
 
 const connected = {
-  serverUrl: 'https://courses.example.fr',
   lastSyncAt: null,
 };
 
@@ -173,7 +172,7 @@ describe('Settings, my account (004 US6)', () => {
       expect(store.getState().sync.connection).toBe('notConnected');
       expect(
         await unitOfWork.run((repos) => repos.syncState.get()),
-      ).toMatchObject({ serverUrl: null });
+      ).toMatchObject({ deviceId: null });
     });
 
     it('US6-4 says how many changes will be lost and changes the button', async () => {

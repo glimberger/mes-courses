@@ -66,6 +66,7 @@ describe('synchronize', () => {
   let clock: FakeClock;
   let ids: SequentialIdGenerator;
   let requests: SyncRequest[];
+  let urls: string[];
   let handler: (request: SyncRequest) => Result<SyncResponse, SyncFailure>;
   let syncServer: SyncServer;
 
@@ -77,6 +78,7 @@ describe('synchronize', () => {
       clock,
       ids,
       firstListName: 'Ma liste',
+      serverUrl: 'https://courses.example.fr',
     })();
   const state = () => unitOfWork.run((repos) => repos.syncState.get());
   const pendingCount = () => unitOfWork.run((repos) => repos.changes.count());
@@ -84,7 +86,8 @@ describe('synchronize', () => {
     await unitOfWork.run(async (repos) => {
       await repos.syncState.save({
         ...(await repos.syncState.get()),
-        serverUrl: 'https://courses.example.fr',
+        // The legacy stored address, never read again (013 R4).
+        serverUrl: 'https://old.example.fr',
         serverId: 'server-1',
         deviceId: 'device-1',
         snapshotDone: overrides.snapshotDone ?? true,
@@ -108,17 +111,53 @@ describe('synchronize', () => {
     unitOfWork = new InMemoryUnitOfWork(repositories);
     credentials = new InMemoryCredentialStore();
     requests = [];
+    urls = [];
     handler = (request) => ok(respond(request));
     syncServer = {
-      sync: async (_conn, request) => {
+      sync: async (conn, request) => {
+        urls.push(conn.url);
         requests.push(structuredClone(request));
         return handler(request);
       },
     } as SyncServer;
   });
 
+  describe('the server address', () => {
+    it('013 sends the request to the fixed address, not the stored one', async () => {
+      await connect();
+
+      const result = await synchronize();
+
+      expect(result.outcome).toEqual({ type: 'saved' });
+      expect(urls).toEqual(['https://courses.example.fr']);
+    });
+
+    it('013 syncs a paired device whose stored address is empty', async () => {
+      await connect();
+      await unitOfWork.run(async (repos) => {
+        await repos.syncState.save({
+          ...(await repos.syncState.get()),
+          serverUrl: null,
+        });
+      });
+
+      const result = await synchronize();
+
+      expect(result.outcome).toEqual({ type: 'saved' });
+      expect(urls).toEqual(['https://courses.example.fr']);
+    });
+  });
+
   describe('when it cannot run', () => {
-    it('answers notConnected, with no request, when there is no serverUrl', async () => {
+    it('answers notConnected, with no request, when there is no deviceId', async () => {
+      await unitOfWork.run(async (repos) => {
+        await repos.syncState.save({
+          ...(await repos.syncState.get()),
+          serverUrl: 'https://courses.example.fr',
+        });
+      });
+      await credentials.write('secret-credential');
+
       const result = await synchronize();
 
       expect(result).toEqual({

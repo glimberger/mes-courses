@@ -33,6 +33,7 @@ const buildStore = () => {
       clock: new FakeClock(),
       localDataEraser: eraserOf(unitOfWork, ids, seed),
       firstListName: seed.firstListName,
+      serverUrl: 'https://courses.example.fr',
     }),
     errorReporter: new RecordingErrorReporter(),
   });

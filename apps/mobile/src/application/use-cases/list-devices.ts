@@ -13,6 +13,7 @@ export const createListDevices =
   (deps: {
     unitOfWork: UnitOfWork;
     credentials: CredentialStore;
+    serverUrl: string;
     syncServer: SyncServer;
   }) =>
   async (): Promise<Result<DeviceInfo[], SyncFailure>> => {

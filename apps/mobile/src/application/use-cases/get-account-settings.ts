@@ -23,6 +23,7 @@ export type AccountSettings = {
 export const createGetAccountSettings = (deps: {
   unitOfWork: UnitOfWork;
   credentials: CredentialStore;
+  serverUrl: string;
   syncServer: SyncServer;
   accountServer: AccountServer;
 }) => {

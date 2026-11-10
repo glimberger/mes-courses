@@ -18,6 +18,7 @@ export const createDeleteAccountAsAdmin =
   (deps: {
     unitOfWork: UnitOfWork;
     credentials: CredentialStore;
+    serverUrl: string;
     adminServer: AdminServer;
   }) =>
   async (id: string): Promise<Result<void, DeleteAccountAsAdminError>> => {

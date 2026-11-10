@@ -20,8 +20,6 @@ const refused = (error: Parameters<typeof signInErrorText>[0]): Story => ({
   render: () => (
     <SignInForm
       onBack={noop}
-      address="courses.example.fr"
-      onChangeAddress={noop}
       email="marie@example.org"
       onChangeEmail={noop}
       password="secret"

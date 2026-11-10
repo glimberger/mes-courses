@@ -13,6 +13,7 @@ export const createRevokeDevice =
   (deps: {
     unitOfWork: UnitOfWork;
     credentials: CredentialStore;
+    serverUrl: string;
     syncServer: SyncServer;
   }) =>
   async (id: string): Promise<Result<void, SyncFailure | DeviceNotFound>> => {

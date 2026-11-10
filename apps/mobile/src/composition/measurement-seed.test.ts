@@ -31,6 +31,7 @@ const freshStore = async () => {
     clock: new FakeClock(),
     localDataEraser: eraserOf(unitOfWork, ids, seed),
     firstListName: seed.firstListName,
+    serverUrl: 'https://courses.example.fr',
   });
   await useCases.initializeStore(seed);
   return { unitOfWork, useCases };

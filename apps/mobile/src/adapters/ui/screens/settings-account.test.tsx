@@ -8,7 +8,6 @@ import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
 
 const connected = {
-  serverUrl: 'https://courses.example.fr',
   lastSyncAt: null,
 };
 

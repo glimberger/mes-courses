@@ -27,7 +27,7 @@ const openSettings = async (scenario: StoryScenario = {}) => {
 describe('Settings', () => {
   it('003 FR-020 renders the sync status bar under the Appbar', async () => {
     await openSettings({
-      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      connected: { lastSyncAt: null },
     });
 
     expect(await screen.findByTestId('sync-status-bar')).toBeOnTheScreen();
@@ -36,7 +36,7 @@ describe('Settings', () => {
   it('003 US3-5 "Synchroniser maintenant" starts a cycle at once', async () => {
     const sync = jest.fn(async () => err({ type: 'Offline' as const }));
     await openSettings({
-      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      connected: { lastSyncAt: null },
       syncServer: { sync },
     });
     sync.mockClear();
@@ -50,7 +50,7 @@ describe('Settings', () => {
 
   it('003 US3-5 "Synchroniser maintenant" is disabled while sending or when the app cannot sync', async () => {
     const { store } = await openSettings({
-      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      connected: { lastSyncAt: null },
     });
     const button = async () =>
       screen.findByRole('button', { name: 'Synchroniser maintenant' });
@@ -84,7 +84,7 @@ describe('Settings', () => {
 
   it('003 US3-1 tapping the bar on another screen opens Settings', async () => {
     await renderApp({
-      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      connected: { lastSyncAt: null },
     });
 
     fireEvent.press(
@@ -146,15 +146,18 @@ describe('Settings', () => {
   });
 
   describe('when the device is connected', () => {
-    const connected = {
-      serverUrl: 'https://courses.example.fr',
-      lastSyncAt: null,
-    };
+    const connected = { lastSyncAt: null };
 
-    it('US4-8 shows the server address without the scheme', async () => {
+    it('013 US2-1 the "Serveur" section shows the last sync and the button, never the address', async () => {
       await openSettings({ connected });
 
-      expect(await screen.findByText('courses.example.fr')).toBeOnTheScreen();
+      expect(
+        await screen.findByText('Dernière synchronisation : Jamais'),
+      ).toBeOnTheScreen();
+      expect(
+        screen.getByRole('button', { name: 'Synchroniser maintenant' }),
+      ).toBeOnTheScreen();
+      expect(screen.queryByText(/courses\.example\.fr/)).toBeNull();
       expect(
         screen.queryByText(
           'Connectez-vous pour retrouver vos listes sur vos autres appareils.',
@@ -199,7 +202,7 @@ describe('Settings, appearance', () => {
 
   it('shows the choice once connected too', async () => {
     await openSettings({
-      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      connected: { lastSyncAt: null },
     });
 
     expect(await screen.findByText('Apparence')).toBeOnTheScreen();

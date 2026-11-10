@@ -308,7 +308,6 @@ describe('QuantityDialog', () => {
       const server = pullingSyncServer();
       const rendered = await renderDialog(request, {
         connected: {
-          serverUrl: 'https://courses.example.fr',
           lastSyncAt: null,
         },
         syncServer: server.syncServer,

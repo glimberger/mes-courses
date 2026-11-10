@@ -31,7 +31,7 @@ const buildStore = async () => {
   );
   const built = await buildStoryStore({
     seed: fixture,
-    connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+    connected: { lastSyncAt: null },
     syncServer: { sync },
   });
   await built.store.getState().loadCurrentList();

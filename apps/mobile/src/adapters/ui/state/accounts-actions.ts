@@ -24,7 +24,6 @@ export type AccountsActions = {
   >;
   /** Asks for a new temporary password by email (US4-1). */
   requestPasswordReset: (
-    url: string,
     email: string,
   ) => Promise<Result<void, RequestPasswordResetError | SyncFailure>>;
   /** Invites an address (US1-1 to US1-4). */
@@ -83,7 +82,6 @@ export const createAccountsActions = (kit: StoreKit): AccountsActions => {
         const failure = err<SyncFailure>({ type: 'ServerError' });
         return {
           sync: {
-            serverUrl: null,
             lastSyncAt: null,
             pendingCount: 0,
             connection: 'notConnected',
@@ -105,9 +103,9 @@ export const createAccountsActions = (kit: StoreKit): AccountsActions => {
     listAccounts: () =>
       call('listAccounts', 'Accounts', () => useCases.listAccounts()),
 
-    requestPasswordReset: (url, email) =>
+    requestPasswordReset: (email) =>
       call('requestPasswordReset', 'ForgotPassword', () =>
-        useCases.requestPasswordReset(url, email),
+        useCases.requestPasswordReset(email),
       ),
 
     inviteAccount: async (email) => {

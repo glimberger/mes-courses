@@ -23,7 +23,6 @@ export const signInDevice = async (
     emails.add(email);
     const { temporaryPassword } = await server.invite(email);
     return stack.useCases.chooseInitialPassword(
-      server.url,
       email,
       temporaryPassword,
       PASSWORD,
@@ -31,5 +30,5 @@ export const signInDevice = async (
       deviceName,
     );
   }
-  return stack.useCases.signIn(server.url, email, PASSWORD, deviceName);
+  return stack.useCases.signIn(email, PASSWORD, deviceName);
 };

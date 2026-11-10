@@ -3,11 +3,22 @@ import { signInHarness } from '../testing/sign-in-harness';
 import { createSignIn } from './sign-in';
 
 describe('signIn', () => {
+  it('013 US1-1 signs in at the fixed server address with the email and the password only', async () => {
+    const h = await signInHarness({ serverUrl: 'https://fixed.example.fr' });
+
+    expect(
+      await createSignIn(h.deps)('marie@example.org', 'secret', 'Pixel'),
+    ).toEqual(ok({ type: 'signedIn' }));
+    expect(h.calls).toEqual(['health https://fixed.example.fr']);
+    expect(h.accountServer.signInCalls.map((call) => call.url)).toEqual([
+      'https://fixed.example.fr',
+    ]);
+  });
+
   it('004 US2-1 signs in and keeps the credential and the connection, with the account', async () => {
     const h = await signInHarness();
 
     const outcome = await createSignIn(h.deps)(
-      ' Courses.Example.fr/ ',
       ' Marie@Example.org ',
       'secret',
       'Pixel de Léa',
@@ -25,7 +36,8 @@ describe('signIn', () => {
     ]);
     expect(await h.credentials.read()).toBe('credential-signed-in');
     expect(await h.syncState()).toMatchObject({
-      serverUrl: 'https://courses.example.fr',
+      // The address is fixed at build time and no longer stored (013).
+      serverUrl: null,
       serverId: 'server-1',
       deviceId: 'device-signed-in',
       accountId: 'account-1',
@@ -40,7 +52,6 @@ describe('signIn', () => {
     h.accountServer.signInResult = ok({ type: 'passwordChangeRequired' });
 
     const outcome = await createSignIn(h.deps)(
-      'courses.example.fr',
       'marie@example.org',
       'ABCD-EFGH-JKMN-PQRS',
       'Pixel',
@@ -48,23 +59,15 @@ describe('signIn', () => {
 
     expect(outcome).toEqual(ok({ type: 'passwordChangeRequired' }));
     expect(await h.credentials.read()).toBeNull();
-    expect((await h.syncState()).serverUrl).toBeNull();
+    expect((await h.syncState()).deviceId).toBeNull();
   });
 
-  it('004 US2-1 refuses http:// and a malformed address without any request', async () => {
+  it('004 US2-1 refuses a malformed email without any request', async () => {
     const h = await signInHarness();
 
-    expect(
-      await createSignIn(h.deps)(
-        'http://courses.example.fr',
-        'a@b.co',
-        'x',
-        'P',
-      ),
-    ).toEqual(err({ type: 'InvalidUrl' }));
-    expect(
-      await createSignIn(h.deps)('courses.example.fr', 'nope', 'x', 'P'),
-    ).toEqual(err({ type: 'InvalidEmail' }));
+    expect(await createSignIn(h.deps)('nope', 'x', 'P')).toEqual(
+      err({ type: 'InvalidEmail' }),
+    );
     expect(h.calls).toEqual([]);
     expect(h.accountServer.signInCalls).toEqual([]);
   });
@@ -73,9 +76,9 @@ describe('signIn', () => {
     const h = await signInHarness();
     h.setHealth(err({ type: 'UntrustedServer' }));
 
-    expect(
-      await createSignIn(h.deps)('courses.example.fr', 'a@b.co', 'x', 'P'),
-    ).toEqual(err({ type: 'UntrustedServer' }));
+    expect(await createSignIn(h.deps)('a@b.co', 'x', 'P')).toEqual(
+      err({ type: 'UntrustedServer' }),
+    );
     expect(h.accountServer.signInCalls).toEqual([]);
   });
 
@@ -91,12 +94,7 @@ describe('signIn', () => {
     h.accountServer.signInResult = err(failure);
     const before = await h.syncState();
 
-    const outcome = await createSignIn(h.deps)(
-      'courses.example.fr',
-      'a@b.co',
-      'x',
-      'P',
-    );
+    const outcome = await createSignIn(h.deps)('a@b.co', 'x', 'P');
 
     expect(outcome).toEqual(err(failure));
     expect(await h.credentials.read()).toBeNull();
@@ -108,7 +106,6 @@ describe('signIn', () => {
       const h = await signInHarness();
       await h.setSyncState({
         accountId: 'account-1',
-        serverUrl: 'https://old.example.fr',
         deviceId: 'old-device',
       });
       await h.unitOfWork.run((repos) =>
@@ -116,7 +113,7 @@ describe('signIn', () => {
       );
       const listsBefore = await h.lists();
 
-      await createSignIn(h.deps)('courses.example.fr', 'a@b.co', 'x', 'P');
+      await createSignIn(h.deps)('a@b.co', 'x', 'P');
 
       expect(await h.lists()).toBe(listsBefore);
       expect((await h.syncState()).deviceId).toBe('device-signed-in');
@@ -128,7 +125,7 @@ describe('signIn', () => {
         repos.lists.add({ id: 'list-x' as never, name: 'Mine' }),
       );
 
-      await createSignIn(h.deps)('courses.example.fr', 'a@b.co', 'x', 'P');
+      await createSignIn(h.deps)('a@b.co', 'x', 'P');
 
       expect(await h.lists()).toBe(1);
     });
@@ -137,7 +134,6 @@ describe('signIn', () => {
       const h = await signInHarness();
       await h.setSyncState({
         accountId: 'account-2',
-        serverUrl: 'https://courses.example.fr',
         deviceId: 'old-device',
       });
       await h.unitOfWork.run((repos) =>
@@ -150,7 +146,7 @@ describe('signIn', () => {
         return write(value);
       };
 
-      await createSignIn(h.deps)('courses.example.fr', 'a@b.co', 'x', 'P');
+      await createSignIn(h.deps)('a@b.co', 'x', 'P');
 
       // Only the seed remains, and it was in place before the credential was written.
       expect(events).toEqual(['write after 1 lists']);
@@ -163,14 +159,13 @@ describe('signIn', () => {
       const h = await signInHarness();
       await h.setSyncState({
         accountId: null,
-        serverUrl: 'https://courses.example.fr',
         deviceId: 'old-device',
       });
       await h.unitOfWork.run((repos) =>
         repos.lists.add({ id: 'list-x' as never, name: 'Unknown owner' }),
       );
 
-      await createSignIn(h.deps)('courses.example.fr', 'a@b.co', 'x', 'P');
+      await createSignIn(h.deps)('a@b.co', 'x', 'P');
 
       const names = await h.unitOfWork.run((repos) => repos.lists.all());
       expect(names.map((list) => list.name)).toEqual(['Courses']);
@@ -182,10 +177,10 @@ describe('signIn', () => {
         throw new Error('secure storage unavailable');
       };
 
-      expect(
-        await createSignIn(h.deps)('courses.example.fr', 'a@b.co', 'x', 'P'),
-      ).toEqual(err({ type: 'StorageFailed' }));
-      expect((await h.syncState()).serverUrl).toBeNull();
+      expect(await createSignIn(h.deps)('a@b.co', 'x', 'P')).toEqual(
+        err({ type: 'StorageFailed' }),
+      );
+      expect((await h.syncState()).deviceId).toBeNull();
     });
   });
 });

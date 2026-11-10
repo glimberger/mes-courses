@@ -14,7 +14,6 @@ const choose = (
   } = {},
 ) =>
   createChooseInitialPassword(h.deps)(
-    'courses.example.fr',
     ' Marie@Example.org ',
     overrides.temp ?? TEMP,
     overrides.newPassword ?? NEW,
@@ -39,7 +38,9 @@ describe('chooseInitialPassword', () => {
     ]);
     expect(await h.credentials.read()).toBe('credential-signed-in');
     expect(await h.syncState()).toMatchObject({
-      serverUrl: 'https://courses.example.fr',
+      // The address is fixed at build time and no longer stored (013).
+      serverUrl: null,
+      deviceId: 'device-signed-in',
       accountId: 'account-1',
       snapshotDone: false,
     });
@@ -90,14 +91,14 @@ describe('chooseInitialPassword', () => {
     h.accountServer.choosePasswordResult = err(failure);
 
     expect(await choose(h)).toEqual(err(failure));
-    expect((await h.syncState()).serverUrl).toBeNull();
+    expect((await h.syncState()).deviceId).toBeNull();
   });
 
   it("004 FR-017 erases another account's copy before storing the credential", async () => {
     const h = await signInHarness();
     await h.setSyncState({
       accountId: 'account-2',
-      serverUrl: 'https://courses.example.fr',
+      deviceId: 'old-device',
     });
     await h.unitOfWork.run((repos) =>
       repos.lists.add({ id: 'list-x' as never, name: 'Theirs' }),

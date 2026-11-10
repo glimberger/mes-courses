@@ -69,6 +69,7 @@ const buildStore = () => {
     clock: new FakeClock(),
     localDataEraser: eraserOf(unitOfWork, ids, seed),
     firstListName: seed.firstListName,
+    serverUrl: 'https://courses.example.fr',
   });
   const getLists = jest.fn<Promise<ListSummary[]>, []>();
   const getCurrentList = jest.fn<Promise<CurrentListView>, []>();

@@ -256,7 +256,7 @@ describe('EditArticleDialog', () => {
     const stamp = OTHER_DEVICE_HLC;
     const server = pullingSyncServer();
     const connectedScenario: StoryScenario = {
-      connected: { serverUrl: 'https://courses.example.fr', lastSyncAt: null },
+      connected: { lastSyncAt: null },
       syncServer: server.syncServer,
     };
     const articleRow = (deleted: boolean, name = 'Lait'): ServerRow => ({

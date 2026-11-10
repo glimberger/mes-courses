@@ -39,7 +39,14 @@ export const pairedDevice = async (overrides: Partial<SyncServer> = {}) => {
     ...overrides,
   } as unknown as SyncServer;
   const syncState = () => unitOfWork.run((repos) => repos.syncState.get());
-  return { unitOfWork, credentials, syncServer, calls, syncState };
+  return {
+    unitOfWork,
+    credentials,
+    serverUrl: conn.url,
+    syncServer,
+    calls,
+    syncState,
+  };
 };
 
 export const conn = {

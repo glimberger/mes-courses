@@ -58,7 +58,6 @@ export type SyncSlice = {
   /** The changes waiting to be sent, held ones excluded. */
   pendingCount: number;
   lastSyncAt: string | null;
-  serverUrl: string | null;
   /**
    * The merged id → its survivor, from the merges pulled during this session. Kept in memory
    * only: a write action maps the id it is given through it (FR-020a, research R10a).
