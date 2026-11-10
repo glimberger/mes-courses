@@ -219,6 +219,43 @@ describe('composeApp', () => {
     },
   );
 
+  describe('the http rule (013)', () => {
+    const insecureBefore = process.env.EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL;
+    const devBefore = (globalThis as { __DEV__?: boolean }).__DEV__;
+    afterEach(() => {
+      if (insecureBefore === undefined)
+        delete process.env.EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL;
+      else process.env.EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL = insecureBefore;
+      (globalThis as { __DEV__?: boolean }).__DEV__ = devBefore as boolean;
+    });
+
+    it('accepts http:// only in development with EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL=1', async () => {
+      process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL = 'http://127.0.0.1:3000';
+      process.env.EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL = '1';
+      (globalThis as { __DEV__?: boolean }).__DEV__ = true;
+
+      const composed = await composeApp(new RecordingErrorReporter());
+
+      await composed.close();
+    });
+
+    it.each([
+      { dev: false, flag: '1' },
+      { dev: true, flag: undefined },
+    ])('refuses http:// when %p', async ({ dev, flag }) => {
+      process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL = 'http://127.0.0.1:3000';
+      if (flag === undefined)
+        delete process.env.EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL;
+      else process.env.EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL = flag;
+      (globalThis as { __DEV__?: boolean }).__DEV__ = dev;
+
+      await expect(composeApp(new RecordingErrorReporter())).rejects.toThrow(
+        'EXPO_PUBLIC_DEFAULT_SERVER_URL',
+      );
+      expect(mockOpened).toEqual([]);
+    });
+  });
+
   it('closes the database it opened when the app is closed', async () => {
     const composed = await composeApp(new RecordingErrorReporter());
 

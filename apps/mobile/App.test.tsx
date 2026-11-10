@@ -11,6 +11,7 @@ import App from './App';
 import { DataFromNewerVersion } from './src/application/ports/data-from-newer-version';
 import { RecordingErrorReporter } from './src/application/testing/recording-error-reporter';
 import type { AppStore, Notice } from './src/adapters/ui/state/app-store';
+import { ServerUrlNotConfigured } from './src/composition/server-url';
 import { fixture } from './src/adapters/ui/testing/fixtures';
 import { createStoryStore } from './src/adapters/ui/testing/story-store';
 import {
@@ -79,6 +80,18 @@ describe('App startup', () => {
 
     expect(await screen.findByText(startupFailed)).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Réessayer' })).toBeOnTheScreen();
+    expect(mockReporter.reports).toEqual([
+      { error: failure, context: { operation: 'startup' } },
+    ]);
+  });
+
+  it('013 shows StartupError, and reports it once, when the sync server address is missing', async () => {
+    const failure = new ServerUrlNotConfigured();
+    compose.mockRejectedValueOnce(failure);
+
+    render(<App />);
+
+    expect(await screen.findByText(startupFailed)).toBeOnTheScreen();
     expect(mockReporter.reports).toEqual([
       { error: failure, context: { operation: 'startup' } },
     ]);
