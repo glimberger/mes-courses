@@ -21,7 +21,7 @@ sudo -u mes-courses-<env> env MES_COURSES_DB=/var/lib/mes-courses/<env>/mes-cour
 ```
 
 It refuses, and changes nothing, when the first account already has an address. `set-password` resets any account's password the same way. Everyone else is invited from the app
-(Réglages › Gérer les comptes) and signs in with the address and the temporary password they
+(Réglages › Gérer les comptes) and signs in with the email and the temporary password they
 receive by email (`MES_COURSES_SMTP_URL`, `MES_COURSES_MAIL_FROM`, `MES_COURSES_PUBLIC_URL`). A
 development build accepts `http://127.0.0.1:3000` (or the machine's LAN address) only when built
 with `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL=1`; release builds refuse `http://`.
@@ -29,8 +29,8 @@ with `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL=1`; release builds refuse `http://`.
 ## Signing in
 
 The administrator invites an address from the app (Réglages › Gérer les comptes). The person
-receives a temporary password by email (valid 7 days), enters it with the server address on the
-sign-in screen, then chooses their own password. A forgotten password is reset from the sign-in
+receives a temporary password by email (valid 7 days), enters it with their email on the
+sign-in screen (the server address is fixed in the build), then chooses their own password. A forgotten password is reset from the sign-in
 screen, by email; with no mail relay, `set-password` on the Pi does it.
 
 The diagram follows the server's use cases (`invite-account`, `sign-in`, `choose-password`,
@@ -46,7 +46,7 @@ flowchart TD
   mailok -- "no" --> undone["The account is deleted<br/>and the invitation is refused"]
   undone --> stop1(["End"])
   mailok -- "yes" --> mail["The person receives an email<br/>with the temporary password"]
-  mail --> signin["Sign-in screen:<br/>server address, email, password"]
+  mail --> signin["Sign-in screen:<br/>email, password"]
 
   signin --> which{"Which password<br/>was typed?"}
   which -- "current password" --> susp1{"Suspended?"}
@@ -88,6 +88,7 @@ flowchart TD
 | `MES_COURSES_MAIL_FROM`               | server                | The sender of those emails, an address the relay allows                                                        |
 | `MES_COURSES_PUBLIC_URL`              | server                | The public address of the server, written in the emails                                                        |
 | `MES_COURSES_DOMAIN`                  | Caddy                 | The public domain Caddy serves and gets a certificate for                                                      |
+| `EXPO_PUBLIC_DEFAULT_SERVER_URL`      | app, build time       | Required. The fixed sync server address; a build without it fails to start and names this variable             |
 | `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL` | app, development only | `1` lets a development build sign in to an `http://` server; ignored by release builds                         |
 
 **The relay sees every address and temporary password it sends.** Choose a provider whose logs and

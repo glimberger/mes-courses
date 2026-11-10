@@ -102,6 +102,8 @@ each story it lists ([quickstart §2](specs/001-shopping-lists/quickstart.md#2-r
 the text is French, colors come from the theme in light and dark mode, and at 200% system text
 the long names wrap without being cut. `pnpm start` brings the app back.
 
+`EXPO_PUBLIC_DEFAULT_SERVER_URL` is required: the fixed sync server address of the app, such as `courses.example.fr`. The app does not start without it. Add `EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL=1` to use an `http://` address in a development build.
+
 `EXPO_PUBLIC_SENTRY_DSN` is optional: it sends error reports to Sentry. Without it, errors go to
 the console only.
 

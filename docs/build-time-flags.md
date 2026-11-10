@@ -12,3 +12,5 @@ build that sets either one stops while reading its configuration and names it, a
 | `EXPO_PUBLIC_SENTRY_SMOKE_TEST=native` | Crashes the app in native code 10 seconds after startup                                                                                                                                                                  |
 
 For example, `EXPO_PUBLIC_SEED_ITEMS=200 eas build --profile staging` makes the measurement build.
+
+`EXPO_PUBLIC_DEFAULT_SERVER_URL` is not a test flag: it is the fixed sync server address, required by every build, `production` included. An app built without it stops at start-up and names it.
