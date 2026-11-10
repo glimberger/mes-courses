@@ -15,6 +15,7 @@ export const createSignOut =
   (deps: {
     unitOfWork: UnitOfWork;
     credentials: CredentialStore;
+    serverUrl: string;
     syncServer: SyncServer;
     localDataEraser: LocalDataEraser;
   }) =>

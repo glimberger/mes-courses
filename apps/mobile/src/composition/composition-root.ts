@@ -19,6 +19,7 @@ import { createAppStore, type AppStore } from '../adapters/ui/state/app-store';
 import { createSyncScheduler } from '../adapters/ui/state/sync-scheduler';
 import { createUseCases } from '../adapters/ui/use-cases';
 import { seedForMeasurement } from './measurement-seed';
+import { fixedServerUrl } from './server-url';
 
 /**
  * The error reporter of this opening of the app: Sentry when a DSN is set, in the environment of
@@ -88,8 +89,9 @@ const mutable = (reporter: ErrorReporter) => {
 };
 
 /**
- * Starts the app (research R18a): opens and prepares the database, builds the use cases on it,
- * seeds a store with no list, fills it for measurement if the build asks for it (research R11),
+ * Starts the app (research R18a): validates the sync server address fixed at build time (013,
+ * throws `ServerUrlNotConfigured` before anything opens), opens and prepares the database, builds
+ * the use cases on it, seeds a store with no list, fills it for measurement if the build asks for it (research R11),
  * then builds the store and starts the Sentry smoke test if the build asks for it. When a step
  * after the opening throws, the database is closed and the error rethrown, so a retry starts from
  * scratch. Once the app is closed, the failures of the writes and
@@ -100,6 +102,14 @@ const mutable = (reporter: ErrorReporter) => {
 export const composeApp = async (
   errorReporter: ErrorReporter,
 ): Promise<ComposedApp> => {
+  // Expo inlines `EXPO_PUBLIC_` variables only when read as written here.
+  const allowInsecure =
+    __DEV__ && process.env.EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL === '1';
+  // A build without its sync server address stops here, before the database opens (013).
+  const serverUrl = fixedServerUrl(
+    process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL,
+    allowInsecure,
+  );
   const db = await openDatabase();
   const ids = new CryptoIdGenerator();
   const clock = new SystemClock();
@@ -116,9 +126,8 @@ export const composeApp = async (
       credentials: new SecureStoreCredentialStore(),
       localDataEraser: sqliteLocalDataEraser({ db, unitOfWork, ids, seed }),
       firstListName: seed.firstListName,
-      // Expo inlines `EXPO_PUBLIC_` variables only when read as written here.
-      allowInsecure:
-        __DEV__ && process.env.EXPO_PUBLIC_ALLOW_INSECURE_SYNC_URL === '1',
+      serverUrl,
+      allowInsecure,
     });
     await useCases.initializeStore(seed);
     // Expo inlines `EXPO_PUBLIC_` variables only when read as written here.

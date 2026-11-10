@@ -16,6 +16,7 @@ describe('listDevices', () => {
     });
 
     const result = await createListDevices({
+      serverUrl: 'https://courses.example.fr',
       unitOfWork,
       credentials,
       syncServer,
@@ -37,7 +38,12 @@ describe('listDevices', () => {
     });
 
     expect(
-      await createListDevices({ unitOfWork, credentials, syncServer })(),
+      await createListDevices({
+        serverUrl: 'https://courses.example.fr',
+        unitOfWork,
+        credentials,
+        syncServer,
+      })(),
     ).toEqual(err({ type: 'ServerError' }));
   });
 });

@@ -7,7 +7,12 @@ const setup = async () => {
   const adminServer = new InMemoryAdminServer();
   return {
     adminServer,
-    invite: createInviteAccount({ unitOfWork, credentials, adminServer }),
+    invite: createInviteAccount({
+      serverUrl: 'https://courses.example.fr',
+      unitOfWork,
+      credentials,
+      adminServer,
+    }),
   };
 };
 

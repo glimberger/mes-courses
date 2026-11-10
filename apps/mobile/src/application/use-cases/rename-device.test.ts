@@ -7,6 +7,7 @@ describe('renameDevice', () => {
     const { unitOfWork, credentials, syncServer, calls } = await pairedDevice();
 
     const result = await createRenameDevice({
+      serverUrl: 'https://courses.example.fr',
       unitOfWork,
       credentials,
       syncServer,
@@ -20,7 +21,12 @@ describe('renameDevice', () => {
 
   it('returns 001 validateName errors and sends nothing', async () => {
     const { unitOfWork, credentials, syncServer, calls } = await pairedDevice();
-    const rename = createRenameDevice({ unitOfWork, credentials, syncServer });
+    const rename = createRenameDevice({
+      serverUrl: 'https://courses.example.fr',
+      unitOfWork,
+      credentials,
+      syncServer,
+    });
 
     expect(await rename('device-2', '   ')).toEqual(
       err({ type: 'NameRequired' }),
@@ -37,10 +43,12 @@ describe('renameDevice', () => {
     });
 
     expect(
-      await createRenameDevice({ unitOfWork, credentials, syncServer })(
-        'x',
-        'Name',
-      ),
+      await createRenameDevice({
+        serverUrl: 'https://courses.example.fr',
+        unitOfWork,
+        credentials,
+        syncServer,
+      })('x', 'Name'),
     ).toEqual(err({ type: 'NotFound' }));
   });
 });

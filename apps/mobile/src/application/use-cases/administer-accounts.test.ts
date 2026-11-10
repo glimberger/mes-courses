@@ -25,7 +25,12 @@ const setup = async () => {
     account('marie', 'active'),
     account('paul', 'invited'),
   ]);
-  const deps = { unitOfWork, credentials, adminServer };
+  const deps = {
+    unitOfWork,
+    credentials,
+    serverUrl: 'https://courses.example.fr',
+    adminServer,
+  };
   return {
     adminServer,
     suspend: createSuspendAccount(deps),
@@ -108,6 +113,7 @@ describe('administering accounts', () => {
     await credentials.clear();
     const adminServer = new InMemoryAdminServer([account('marie', 'active')]);
     const suspend = createSuspendAccount({
+      serverUrl: 'https://courses.example.fr',
       unitOfWork,
       credentials,
       adminServer,

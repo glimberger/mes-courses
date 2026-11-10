@@ -21,6 +21,7 @@ export const createInviteAccount =
   (deps: {
     unitOfWork: UnitOfWork;
     credentials: CredentialStore;
+    serverUrl: string;
     adminServer: AdminServer;
   }) =>
   async (

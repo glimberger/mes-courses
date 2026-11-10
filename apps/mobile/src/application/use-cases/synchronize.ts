@@ -199,6 +199,7 @@ export const createSynchronize =
     clock,
     ids,
     firstListName,
+    serverUrl,
   }: {
     unitOfWork: UnitOfWork;
     syncServer: SyncServer;
@@ -207,6 +208,8 @@ export const createSynchronize =
     ids: IdGenerator;
     /** The name of the list created when a pull deletes the last one (from the UI adapter, X). */
     firstListName: string;
+    /** The sync server address fixed at build time; `sync_state.serverUrl` is never read (013). */
+    serverUrl: string;
   }) =>
   async (): Promise<SyncResult> => {
     const effects = noEffects();
@@ -218,16 +221,16 @@ export const createSynchronize =
     });
 
     const first = await unitOfWork.run((repos) => repos.syncState.get());
-    if (first.serverUrl === null || first.deviceId === null) {
+    if (first.deviceId === null) {
       return finish({ type: 'notConnected' });
     }
     const credential = await credentials.read();
-    // A phone restored from a backup has the address but no credential (FR-018b).
+    // A phone restored from a backup has the pairing but no credential (FR-018b).
     if (credential === null) {
       return finish({ type: 'signedOut', reason: 'revoked' });
     }
     const conn: Connection = {
-      url: first.serverUrl,
+      url: serverUrl,
       deviceId: first.deviceId,
       credential,
     };

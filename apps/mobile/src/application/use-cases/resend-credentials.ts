@@ -19,6 +19,7 @@ export const createResendCredentials =
   (deps: {
     unitOfWork: UnitOfWork;
     credentials: CredentialStore;
+    serverUrl: string;
     adminServer: AdminServer;
   }) =>
   async (id: string): Promise<Result<void, ResendCredentialsError>> => {

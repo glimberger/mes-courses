@@ -299,6 +299,8 @@ export const createUseCases = (ports: {
   localDataEraser: LocalDataEraser;
   /** The list a pull creates when it deletes the last one (`seed.firstListName`, 012 R4). */
   firstListName: string;
+  /** The sync server address fixed at build time (`EXPO_PUBLIC_DEFAULT_SERVER_URL`, 013). */
+  serverUrl: string;
   /** Accepts `http://` server addresses; development builds only. */
   allowInsecure?: boolean;
 }): UseCases => ({

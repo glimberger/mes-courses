@@ -46,6 +46,7 @@ jest.mock('@sentry/react-native', () => ({
 }));
 
 let folder: string;
+const serverUrlBefore = process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL;
 
 /** The database the composition root opened at the given start, counted from 0. */
 const opened = (start: number): NodeSqlDatabase => {
@@ -63,9 +64,16 @@ beforeEach(() => {
   folder = mkdtempSync(join(tmpdir(), 'mes-courses-'));
   mockFile = join(folder, 'mes-courses.db');
   mockOpened.length = 0;
+  // A build always carries its fixed sync server address (013).
+  process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL = 'courses.example.fr';
 });
 
 afterEach(() => {
+  if (serverUrlBefore === undefined) {
+    delete process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL;
+  } else {
+    process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL = serverUrlBefore;
+  }
   for (const db of mockOpened) if (db.isOpen) db.close();
   rmSync(folder, { recursive: true, force: true });
 });
@@ -196,6 +204,20 @@ describe('composeApp', () => {
     await composed.close();
     expect(stop).toHaveBeenCalledTimes(1);
   });
+
+  it.each([undefined, '', '   '])(
+    '013 rejects naming EXPO_PUBLIC_DEFAULT_SERVER_URL, and opens no database, when it is %p',
+    async (value) => {
+      if (value === undefined)
+        delete process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL;
+      else process.env.EXPO_PUBLIC_DEFAULT_SERVER_URL = value;
+
+      await expect(composeApp(new RecordingErrorReporter())).rejects.toThrow(
+        'EXPO_PUBLIC_DEFAULT_SERVER_URL',
+      );
+      expect(mockOpened).toEqual([]);
+    },
+  );
 
   it('closes the database it opened when the app is closed', async () => {
     const composed = await composeApp(new RecordingErrorReporter());

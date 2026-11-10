@@ -7,6 +7,7 @@ describe('revokeDevice', () => {
     const { unitOfWork, credentials, syncServer, calls } = await pairedDevice();
 
     const result = await createRevokeDevice({
+      serverUrl: 'https://courses.example.fr',
       unitOfWork,
       credentials,
       syncServer,

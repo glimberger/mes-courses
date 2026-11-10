@@ -21,6 +21,7 @@ export const createDeleteMyAccount =
   (deps: {
     unitOfWork: UnitOfWork;
     credentials: CredentialStore;
+    serverUrl: string;
     accountServer: AccountServer;
     localDataEraser: LocalDataEraser;
   }) =>
