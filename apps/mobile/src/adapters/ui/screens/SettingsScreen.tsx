@@ -30,6 +30,7 @@ import { DeviceRow } from './DeviceRow';
 import { RenameDeviceDialog } from './RenameDeviceDialog';
 import { RevokeDeviceDialog } from './RevokeDeviceDialog';
 import { SignOutDialog } from './SignOutDialog';
+import { VersionRow } from './VersionRow';
 
 /** What the Appareils section shows (contracts/ui-screens.md, Settings). */
 export type DevicesState =
@@ -338,6 +339,9 @@ export const SettingsView = ({
           </Section>
         </>
       )}
+      <Section title="À propos" dense>
+        <VersionRow />
+      </Section>
     </ScrollView>
   </View>
 );

@@ -7,9 +7,11 @@ import {
   SafeAreaProvider,
 } from 'react-native-safe-area-context';
 
+import { ExpoAppInfo } from './src/adapters/app-info/expo-app-info';
 import { KvAppearanceStore } from './src/adapters/preferences/kv-appearance-store';
 import { DataFromNewerVersion } from './src/application/ports/data-from-newer-version';
 import { AppErrorBoundary } from './src/adapters/ui/components/app-error-boundary';
+import { AppInfoProvider } from './src/adapters/ui/app-info-context';
 import { Navigation } from './src/adapters/ui/navigation';
 import { ScreenTrackingReporter } from './src/adapters/ui/screen-tracking-reporter';
 import { StartupError } from './src/adapters/ui/screens/StartupError';
@@ -36,6 +38,7 @@ type Startup =
 // Read synchronously by the ThemeProvider on its first render, before the database opens.
 const appearanceStore = new KvAppearanceStore();
 applyNativeScheme(appearanceStore.read());
+const appInfo = new ExpoAppInfo().read();
 
 /** The status bar icons follow the theme in use, not only the system scheme. */
 const ThemedStatusBar = () => (
@@ -114,7 +117,9 @@ export default function App() {
   return (
     <ThemeProvider appearanceStore={appearanceStore} syncNativeScheme>
       <ThemedStatusBar />
-      {renderStartup(startup, reporter, restart)}
+      <AppInfoProvider value={appInfo}>
+        {renderStartup(startup, reporter, restart)}
+      </AppInfoProvider>
     </ThemeProvider>
   );
 }
