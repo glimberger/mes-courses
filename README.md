@@ -66,7 +66,9 @@ empty field as the mockups draw it (FR-009); drop it if Paper gains such a prop.
 Before each commit, Prettier formats the staged files and stages the result, ESLint checks
 them. Before each push, `pnpm typecheck`, `pnpm test` and `pnpm test:architecture` run in
 parallel on the whole repository (about 20 seconds), so uncommitted work in the tree can block
-a push. The E2E suites never run from a hook.
+a push. The E2E suites never run from a hook. The hooks enter the Nix dev shell by themselves
+(`scripts/dev-shell.sh`): they find their tools even when git runs outside a direnv shell, and add
+no cost when the dev shell is already loaded.
 
 ## Check
 

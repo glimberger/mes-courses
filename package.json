@@ -14,7 +14,7 @@
     "typecheck": "pnpm -r run typecheck",
     "test:architecture": "depcruise apps packages tests --config .dependency-cruiser.cjs",
     "test:hooks": "bash .claude/hooks/test.sh",
-    "test:scripts": "sh .github/scripts/delivery-targets.test.sh && sh .github/scripts/server-native-check.test.sh && sh .github/scripts/build-fdroid-repo.test.sh && sh .github/scripts/pack-agent.test.sh && sh .github/scripts/pack-server.test.sh && sh .github/scripts/check-staging-server.test.sh && sh .github/scripts/repo-address.test.sh && sh .github/scripts/delivery-summary.test.sh && sh .github/scripts/release-bump.test.sh && sh .github/scripts/release-notes.test.sh",
+    "test:scripts": "sh .github/scripts/delivery-targets.test.sh && sh .github/scripts/server-native-check.test.sh && sh .github/scripts/build-fdroid-repo.test.sh && sh .github/scripts/pack-agent.test.sh && sh .github/scripts/pack-server.test.sh && sh .github/scripts/check-staging-server.test.sh && sh .github/scripts/repo-address.test.sh && sh .github/scripts/delivery-summary.test.sh && sh .github/scripts/release-bump.test.sh && sh .github/scripts/release-notes.test.sh && sh scripts/dev-shell.test.sh",
     "release": "pnpm --filter @mes-courses/delivery run release",
     "build": "pnpm -r run build",
     "test:e2e:android": "pnpm --filter @mes-courses/e2e-tests run e2e:build:android && pnpm --filter @mes-courses/e2e-tests run e2e:test:android",
