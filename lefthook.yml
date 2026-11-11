@@ -6,24 +6,27 @@
 #
 # pre-push runs the whole-repository checks that CI also runs, in parallel. The Detox E2E suites
 # are too slow for a hook and stay in their own workflow.
+#
+# Every job goes through scripts/dev-shell.sh, which enters the Nix dev shell (flake.nix) when it
+# is not already loaded, so the hooks work whatever shell runs git (no direnv, new worktree...).
 pre-commit:
   jobs:
     - name: prettier
-      run: pnpm prettier --write --ignore-unknown {staged_files}
+      run: scripts/dev-shell.sh pnpm prettier --write --ignore-unknown {staged_files}
       stage_fixed: true
 
     - name: eslint
       glob: '*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}'
-      run: pnpm eslint --no-warn-ignored {staged_files}
+      run: scripts/dev-shell.sh pnpm eslint --no-warn-ignored {staged_files}
 
 pre-push:
   parallel: true
   jobs:
     - name: typecheck
-      run: pnpm typecheck
+      run: scripts/dev-shell.sh pnpm typecheck
 
     - name: test
-      run: pnpm test
+      run: scripts/dev-shell.sh pnpm test
 
     - name: architecture
-      run: pnpm test:architecture
+      run: scripts/dev-shell.sh pnpm test:architecture
