@@ -15,8 +15,9 @@ describe('Nouveautés', () => {
   it('opens from the version row of Settings, and back returns to Settings', async () => {
     await openTab('Réglages');
     // The version row is the last of Settings: it may sit below the fold. The row and the text inside
-    // it match, so the first one is tapped.
-    const versionRow = element(by.label(/^Version /)).atIndex(0);
+    // it match, so the first one is tapped. Detox matches a regex against the whole label (Android),
+    // so it ends with `.*`: "Version 2.1.0 (build 12)" is more than the prefix.
+    const versionRow = element(by.label(/^Version .*/)).atIndex(0);
     await waitFor(versionRow)
       .toBeVisible()
       .whileElement(by.type(SCROLL_VIEW))
