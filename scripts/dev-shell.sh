@@ -14,8 +14,10 @@ if [ "$#" -eq 0 ]; then
   exit 2
 fi
 
-# The dev shell is loaded when every tool the hooks need is on PATH.
-if command -v git-cliff >/dev/null 2>&1 && command -v pnpm >/dev/null 2>&1; then
+# The dev shell is loaded when a Nix shell is active (direnv, `nix develop` set IN_NIX_SHELL) and
+# the tools the hooks need are on PATH. Tools alone are not enough: a global pnpm or git-cliff
+# (Homebrew, say) would hide a missing flake Node.
+if [ -n "${IN_NIX_SHELL:-}" ] && command -v git-cliff >/dev/null 2>&1 && command -v pnpm >/dev/null 2>&1; then
   exec "$@"
 fi
 
