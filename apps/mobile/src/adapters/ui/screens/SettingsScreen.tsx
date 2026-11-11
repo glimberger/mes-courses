@@ -272,7 +272,12 @@ export const SettingsView = ({
       onBack={onBack ?? undefined}
     />
     <SyncStatusBar variant="strip" />
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+      // Named, so the end-to-end journeys can scroll it: the tabs stay mounted, so its type alone
+      // matches several scroll views.
+      accessibilityLabel="Contenu des réglages"
+      contentContainerStyle={styles.content}
+    >
       {server === null ? (
         <>
           <View style={styles.cards}>

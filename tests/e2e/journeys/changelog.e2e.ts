@@ -2,11 +2,6 @@ import { by, device, element, expect, waitFor } from 'detox';
 
 import { openTab } from '../support/app';
 
-const SCROLL_VIEW =
-  device.getPlatform() === 'android'
-    ? 'android.widget.ScrollView'
-    : 'RCTScrollView';
-
 describe('Nouveautés', () => {
   beforeAll(async () => {
     await device.launchApp({ delete: true, newInstance: true });
@@ -20,7 +15,7 @@ describe('Nouveautés', () => {
     const versionRow = element(by.label(/^Version .*/)).atIndex(0);
     await waitFor(versionRow)
       .toBeVisible()
-      .whileElement(by.type(SCROLL_VIEW))
+      .whileElement(by.label('Contenu des réglages'))
       .scroll(300, 'down');
     await versionRow.tap();
 
