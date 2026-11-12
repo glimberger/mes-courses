@@ -7,10 +7,13 @@ export type CommandResult = {
 };
 
 export interface CommandRunner {
-  /** Runs `command` with an argument array, never a shell string. */
+  /**
+   * Runs `command` with an argument array, never a shell string. `input` is written to its standard
+   * input (so a secret or a script never shows in `ps`); without it, stdin is closed.
+   */
   run(
     command: string,
     args: string[],
-    options?: { timeoutMs?: number; cwd?: string },
+    options?: { timeoutMs?: number; cwd?: string; input?: string },
   ): Promise<CommandResult>;
 }

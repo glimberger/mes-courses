@@ -315,8 +315,15 @@ export class InMemoryGitFacts implements GitFacts {
 
 export class ScriptedCommandRunner implements CommandRunner {
   readonly results: Partial<CommandResult>[] = [];
+  /** The standard input given to each call, in order (undefined when none). */
+  readonly inputs: (string | undefined)[] = [];
   constructor(private readonly recorder = new Recorder()) {}
-  async run(command: string, args: string[]): Promise<CommandResult> {
+  async run(
+    command: string,
+    args: string[],
+    options?: { input?: string },
+  ): Promise<CommandResult> {
+    this.inputs.push(options?.input);
     this.recorder.record('CommandRunner.run', command, ...args);
     return {
       exitCode: 0,

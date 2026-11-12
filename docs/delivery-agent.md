@@ -150,7 +150,10 @@ running. `set-password.js`, next to it, resets any account's password the same w
 
 ## Updating the agent
 
-The agent never updates itself. The bundle `delivery-<version>.tar.gz` is attached to each release
+The agent never updates itself, but one command on the maintainer's Mac does the update on the Pi
+over ssh: `pnpm agent:update [--version X.Y.Z] [--dry-run]` (details and what it guarantees in
+[Updating the agent](procedures/updating-the-agent.md)). Verify on the Pi afterwards with
+`main.js status`. By hand, the steps are as follows. The bundle `delivery-<version>.tar.gz` is attached to each release
 (`release.yml`). Download it with the read-only token, unpack it into
 `/opt/mes-courses/agent/releases/<version>/`, point `current` at it, rebuild the runtime with the
 revision in the bundle's `nixpkgs-rev`, and check with `main.js status`
