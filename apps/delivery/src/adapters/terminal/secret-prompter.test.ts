@@ -40,6 +40,22 @@ describe('terminal secret prompter', () => {
     await expect(answer).rejects.toThrow(/cancel/i);
   });
 
+  it('rejects on Ctrl-D', async () => {
+    const { input, prompter } = setup(true);
+    const answer = prompter.askSecret('Password: ');
+    input.write('ab\u0004');
+    await expect(answer).rejects.toThrow(/cancel/i);
+  });
+
+  it('ignores escape sequences, even split across chunks', async () => {
+    const { input, prompter } = setup(true);
+    const answer = prompter.askSecret('Password: ');
+    input.write('ab\u001b[D');
+    input.write('\u001b');
+    input.write('[3~c\r');
+    expect(await answer).toBe('abc');
+  });
+
   it('fails clearly without a terminal, without reading', async () => {
     const { prompter } = setup(false);
     await expect(prompter.askSecret('Password: ')).rejects.toThrow(

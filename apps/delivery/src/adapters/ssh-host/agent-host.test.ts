@@ -153,7 +153,7 @@ describe('ssh agent host with a sudo password', () => {
     expect(runner.inputs[1]).toBe('SCRIPT');
   });
 
-  it('asks once and sends the password before the script with sudo -S -p', async () => {
+  it('asks once and sends the password before the script with sudo -k -S -p', async () => {
     const { runner, calls, askPassword, host } = setup();
     runner.results.push(needsPassword);
     await host.currentVersion();
@@ -165,6 +165,7 @@ describe('ssh agent host with a sudo password', () => {
       'BatchMode=yes',
       'agent-pi',
       'sudo',
+      '-k',
       '-S',
       '-p',
       "''",

@@ -63,7 +63,8 @@ export const createSshAgentHost = (
   const call = async (operation: string, args: string[], timeoutMs: number) => {
     password ??= detectSudo();
     const secret = await password;
-    const sudo = secret === null ? ['-n'] : ['-S', '-p', "''"];
+    // -k makes sudo always read the password, so the first stdin line is never run by sh.
+    const sudo = secret === null ? ['-n'] : ['-k', '-S', '-p', "''"];
     const result = await runner.run(
       'ssh',
       [
