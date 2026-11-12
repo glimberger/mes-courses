@@ -39,6 +39,11 @@ export type RunResult = {
   environments: Partial<Record<Environment, { status: EnvironmentStatus }>>;
   /** A deployment broke an instance that could not be put back: the exit code says so. */
   degraded: boolean;
+  /**
+   * A manifest was refused as invalid, for the wrong channel or for a newer agent. It makes the
+   * monitor check-in `error`, so a persistent refusal is noticed; the exit code ignores it.
+   */
+  refused: boolean;
 };
 
 /** Signature mismatches are reported from this pass on (contract "Upload order"). */
@@ -51,10 +56,19 @@ const MISMATCHES_BEFORE_REPORT = 3;
 const handleEnvironment = async (
   deps: RunAgentDeps,
   environment: Environment,
-): Promise<{ status: EnvironmentStatus; degraded: boolean }> => {
-  const done = (status: EnvironmentStatus, degraded = false) => ({
+): Promise<{
+  status: EnvironmentStatus;
+  degraded: boolean;
+  refused: boolean;
+}> => {
+  const done = (
+    status: EnvironmentStatus,
+    degraded = false,
+    refused = false,
+  ) => ({
     status,
     degraded,
+    refused,
   });
   const context = { environment };
   let state: InstanceState;
@@ -146,7 +160,7 @@ const handleEnvironment = async (
   const refuse = async (message: string) => {
     await deps.stateStore.save(environment, state);
     deps.reporter.report('error', message, context);
-    return done('refused');
+    return done('refused', false, true);
   };
 
   let manifest;
@@ -209,13 +223,21 @@ export const runAgent = async (
   deps: RunAgentDeps,
   options: { only?: Environment } = {},
 ): Promise<RunResult> => {
-  const result: RunResult = { environments: {}, degraded: false };
+  const result: RunResult = {
+    environments: {},
+    degraded: false,
+    refused: false,
+  };
   const environments = options.only ? [options.only] : ENVIRONMENTS_IN_ORDER;
   for (const environment of environments) {
     try {
-      const { status, degraded } = await handleEnvironment(deps, environment);
+      const { status, degraded, refused } = await handleEnvironment(
+        deps,
+        environment,
+      );
       result.environments[environment] = { status };
       if (degraded) result.degraded = true;
+      if (refused) result.refused = true;
     } catch (error) {
       deps.reporter.report(
         'error',
@@ -225,6 +247,6 @@ export const runAgent = async (
       result.environments[environment] = { status: 'error' };
     }
   }
-  deps.reporter.checkIn(result.degraded ? 'error' : 'ok');
+  deps.reporter.checkIn(result.degraded || result.refused ? 'error' : 'ok');
   return result;
 };

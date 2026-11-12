@@ -77,7 +77,7 @@ The mail check, `Restart=always` and the hardening lines are kept as they are.
 
 | Command                                        | Effect                                                      | Exit code              |
 | ---------------------------------------------- | ----------------------------------------------------------- | ---------------------- |
-| `main.js run`                                  | One pass over staging, then production, then a monitor check-in | 0 unless `degraded` |
+| `main.js run`                                  | One pass over staging, then production, then a monitor check-in (`error` if `degraded` or a manifest was refused) | 0 unless `degraded` |
 | `main.js run --only <env>`                     | One pass over one environment                               | same                   |
 | `main.js status`                               | Prints both `InstanceState`s and the health of each instance | 0                      |
 | `main.js forget-failure <env> <sha>`           | Removes a commit from `failedCommits`, to retry it by hand  | 0, or 1 if unknown     |

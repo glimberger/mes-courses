@@ -1,7 +1,12 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-import { createHttpHealthProbe, waitForHealthyCommit } from './health-probe';
+import {
+  createHttpHealthProbe,
+  describeHealthTimeout,
+  probeHealthyCommit,
+  waitForHealthyCommit,
+} from './health-probe';
 
 let server: Server;
 let port: number;
@@ -117,5 +122,71 @@ describe('waitForHealthyCommit', () => {
       }),
     ).toBe('unavailable');
     expect(clock).toBeLessThanOrEqual(50_000);
+  });
+});
+
+describe('probeHealthyCommit', () => {
+  const fastClock = () => {
+    let clock = 0;
+    return {
+      pollMs: 20_000,
+      now: () => clock,
+      sleep: async (ms: number) => {
+        clock += ms;
+      },
+    };
+  };
+
+  it('returns the version and commit the server last reported', async () => {
+    respond = json({ release: { version: '2.1.0', commit: 'old' } });
+    const outcome = await probeHealthyCommit(
+      `http://127.0.0.1:${port}`,
+      'new',
+      50_000,
+      fastClock(),
+    );
+    expect(outcome).toEqual({
+      result: 'wrong-commit',
+      reported: { version: '2.1.0', commit: 'old' },
+    });
+  });
+
+  it('reports nothing when the server never answered', async () => {
+    const outcome = await probeHealthyCommit(
+      'http://127.0.0.1:1',
+      'new',
+      50_000,
+      { ...fastClock(), requestTimeoutMs: 200 },
+    );
+    expect(outcome.result).toBe('unavailable');
+    expect(outcome.reported).toBeUndefined();
+  });
+});
+
+describe('describeHealthTimeout', () => {
+  const base = { url: 'https://x.test', commit: 'new', timeoutSeconds: 600 };
+
+  it('names the version and commit the server reported, and the procedure', () => {
+    const message = describeHealthTimeout({
+      ...base,
+      outcome: {
+        result: 'wrong-commit',
+        reported: { version: '2.1.0', commit: 'old' },
+      },
+    });
+    expect(message).toContain('did not report commit new within 600 s');
+    expect(message).toContain('version 2.1.0');
+    expect(message).toContain('commit old');
+    expect(message).toContain('minAgentVersion');
+    expect(message).toContain('docs/procedures/updating-the-agent.md');
+  });
+
+  it('says the server did not answer when nothing was reported', () => {
+    const message = describeHealthTimeout({
+      ...base,
+      outcome: { result: 'unavailable' },
+    });
+    expect(message).toContain('(unavailable)');
+    expect(message).toContain('never answered');
   });
 });

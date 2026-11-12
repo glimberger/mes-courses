@@ -49,7 +49,10 @@ read the deployment in flight of a manual `deploy-file` as a crash and undo it.
 6. **Remember the result.** The manifest counts as handled only if nothing failed. A failed
    commit is never retried.
 7. **Check in to Sentry** (monitor `mes-courses-agent`): `ok`, or `error` if an instance was left
-   degraded. A missing check-in is how a stopped timer or a dead Pi is noticed.
+   degraded or a manifest was refused (invalid, wrong channel, `minAgentVersion`). A refusal
+   therefore keeps the monitor failing on every pass until it is fixed, which the alert rule
+   turns into an email within minutes (see [Sentry alerts](procedures/sentry-alerts.md)); the
+   exit code is unchanged. Signature mismatches before the third stay `ok`. A missing check-in is how a stopped timer or a dead Pi is noticed.
 
 ## Deploying a server release
 
@@ -152,6 +155,9 @@ The agent never updates itself. The bundle `delivery-<version>.tar.gz` is attach
 `/opt/mes-courses/agent/releases/<version>/`, point `current` at it, rebuild the runtime with the
 revision in the bundle's `nixpkgs-rev`, and check with `main.js status`
 ([quickstart §7](../specs/005-continuous-delivery/quickstart.md)).
+
+Update it before raising `minAgentVersion` in the manifest, never in the same release: see
+[Updating the agent](procedures/updating-the-agent.md).
 
 ## Where to look when something is wrong
 
