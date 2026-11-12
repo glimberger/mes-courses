@@ -42,6 +42,15 @@ describe('ssh agent host', () => {
       'agent-pi',
       'sudo',
       '-n',
+      'true',
+    ]);
+    expect(calls[1]).toEqual([
+      'ssh',
+      '-o',
+      'BatchMode=yes',
+      'agent-pi',
+      'sudo',
+      '-n',
       'sh',
       '-s',
       '--',
@@ -49,12 +58,12 @@ describe('ssh agent host', () => {
       '1.1.0',
       '42',
     ]);
-    expect(runner.inputs).toEqual(['SCRIPT']);
+    expect(runner.inputs).toEqual([undefined, 'SCRIPT']);
   });
 
   it('reads the current version, null when empty', async () => {
     const runner = new ScriptedCommandRunner();
-    runner.results.push({ stdout: '1.0.0\n' }, { stdout: '\n' });
+    runner.results.push({}, { stdout: '1.0.0\n' }, { stdout: '\n' });
     const host = createSshAgentHost(runner, 'agent-pi', 's');
     await expect(host.currentVersion()).resolves.toBe('1.0.0');
     await expect(host.currentVersion()).resolves.toBeNull();
@@ -62,7 +71,12 @@ describe('ssh agent host', () => {
 
   it('tells ready (0), not ready (10) and a failure (anything else)', async () => {
     const runner = new ScriptedCommandRunner();
-    runner.results.push({ exitCode: 0 }, { exitCode: 10 }, { exitCode: 255 });
+    runner.results.push(
+      {},
+      { exitCode: 0 },
+      { exitCode: 10 },
+      { exitCode: 255 },
+    );
     const host = createSshAgentHost(runner, 'agent-pi', 's');
     await expect(host.isReady('1.1.0')).resolves.toBe(true);
     await expect(host.isReady('1.1.0')).resolves.toBe(false);
@@ -72,6 +86,7 @@ describe('ssh agent host', () => {
   it('turns a failure and a timeout into errors naming the operation', async () => {
     const runner = new ScriptedCommandRunner();
     runner.results.push(
+      {},
       { exitCode: 1, stderr: 'no space left\n' },
       { exitCode: 137, timedOut: true },
     );
@@ -84,10 +99,144 @@ describe('ssh agent host', () => {
 
   it('returns the trimmed status', async () => {
     const runner = new ScriptedCommandRunner();
-    runner.results.push({ stdout: 'agent 1.1.0\n' });
+    runner.results.push({}, { stdout: 'agent 1.1.0\n' });
     await expect(
       createSshAgentHost(runner, 'agent-pi', 's').status(),
     ).resolves.toBe('agent 1.1.0');
+  });
+
+  it('keeps one pre-check per run, not one per operation', async () => {
+    const runner = new ScriptedCommandRunner();
+    const host = createSshAgentHost(runner, 'agent-pi', 'S');
+    await host.currentVersion();
+    await host.status();
+    expect(runner.inputs).toEqual([undefined, 'S', 'S']);
+  });
+
+  it('reports a pre-check failure other than a missing password as it is', async () => {
+    const runner = new ScriptedCommandRunner();
+    runner.results.push({
+      exitCode: 255,
+      stderr: 'Host key verification failed.\n',
+    });
+    const host = createSshAgentHost(runner, 'agent-pi', 'S');
+    await expect(host.currentVersion()).rejects.toThrow(
+      /255.*Host key verification failed/,
+    );
+  });
+});
+
+describe('ssh agent host with a sudo password', () => {
+  const PASSWORD = 'hunter2';
+  const needsPassword = {
+    exitCode: 1,
+    stderr: 'sudo: a password is required\n',
+  };
+  const setup = () => {
+    const runner = new ScriptedCommandRunner();
+    const calls: string[][] = [];
+    const run = runner.run.bind(runner);
+    runner.run = async (command, args, options) => {
+      calls.push([command, ...args]);
+      return run(command, args, options);
+    };
+    const askPassword = jest.fn(async () => PASSWORD);
+    const host = createSshAgentHost(runner, 'agent-pi', 'SCRIPT', askPassword);
+    return { runner, calls, askPassword, host };
+  };
+
+  it('does not ask when sudo -n true succeeds', async () => {
+    const { runner, calls, askPassword, host } = setup();
+    await host.currentVersion();
+    expect(askPassword).not.toHaveBeenCalled();
+    expect(calls[1]).toContain('-n');
+    expect(runner.inputs[1]).toBe('SCRIPT');
+  });
+
+  it('asks once and sends the password before the script with sudo -S -p', async () => {
+    const { runner, calls, askPassword, host } = setup();
+    runner.results.push(needsPassword);
+    await host.currentVersion();
+    await host.status();
+    expect(askPassword).toHaveBeenCalledTimes(1);
+    expect(calls[1]).toEqual([
+      'ssh',
+      '-o',
+      'BatchMode=yes',
+      'agent-pi',
+      'sudo',
+      '-S',
+      '-p',
+      "''",
+      'sh',
+      '-s',
+      '--',
+      'current',
+    ]);
+    expect(runner.inputs).toEqual([
+      undefined,
+      `${PASSWORD}\nSCRIPT`,
+      `${PASSWORD}\nSCRIPT`,
+    ]);
+  });
+
+  it('never puts the password in the ssh arguments', async () => {
+    const { runner, calls, host } = setup();
+    runner.results.push(needsPassword);
+    await host.install(release);
+    await host.isReady('1.1.0');
+    expect(JSON.stringify(calls)).not.toContain(PASSWORD);
+  });
+
+  it.each([
+    'sudo: 1 incorrect password attempt\n',
+    'Sorry, try again.\nsudo: 3 incorrect password attempts\n',
+    'sudo: no password was provided\n',
+  ])('says the password is incorrect on %p', async (stderr) => {
+    const { runner, host } = setup();
+    runner.results.push(needsPassword, { exitCode: 1, stderr });
+    const error = await host.currentVersion().catch((e: Error) => e);
+    expect((error as Error).message).toBe(
+      'the sudo password for agent-pi is incorrect',
+    );
+  });
+
+  it('says the password is incorrect when ready fails that way', async () => {
+    const { runner, host } = setup();
+    runner.results.push(needsPassword, {
+      exitCode: 1,
+      stderr: 'sudo: 1 incorrect password attempt\n',
+    });
+    await expect(host.isReady('1.1.0')).rejects.toThrow(/is incorrect/);
+  });
+
+  it('redacts the password that sh echoes in an error', async () => {
+    const { runner, host } = setup();
+    runner.results.push(needsPassword, {
+      exitCode: 127,
+      stderr: `sh: ${PASSWORD}: not found\n`,
+    });
+    const error = (await host.buildRuntime('1.1.0').catch((e) => e)) as Error;
+    expect(error.message).toMatch(/`build`.*127/);
+    expect(error.message).not.toContain(PASSWORD);
+  });
+
+  it('fails without another ssh call when no password can be asked', async () => {
+    const { runner, calls } = setup();
+    runner.results.push(needsPassword);
+    const host = createSshAgentHost(runner, 'agent-pi', 'S', async () => {
+      throw new Error('the sudo password needs a terminal');
+    });
+    await expect(host.currentVersion()).rejects.toThrow(/needs a terminal/);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('fails clearly when a password is needed and no provider is given', async () => {
+    const runner = new ScriptedCommandRunner();
+    runner.results.push(needsPassword);
+    const host = createSshAgentHost(runner, 'agent-pi', 'S');
+    await expect(host.currentVersion()).rejects.toThrow(/password/);
+    expect(runner.inputs).toHaveLength(1);
   });
 });
 

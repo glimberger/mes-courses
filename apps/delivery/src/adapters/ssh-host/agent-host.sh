@@ -1,7 +1,8 @@
 #!/bin/sh
 # The Pi side of `pnpm agent:update`. It is not installed anywhere: the Mac sends it over the
-# standard input of `ssh <host> sudo -n sh -s -- <operation> [arguments]`, so it runs as root and
-# the repository does not have to be checked out on the Pi.
+# standard input of `ssh <host> sudo -n sh -s -- <operation> [arguments]` (or `sudo -S -p '' sh -s`
+# with the sudo password as a first line, when the login needs one), so it runs as root and the
+# repository does not have to be checked out on the Pi.
 #
 #   current                       print the version `current` points at (nothing when none)
 #   ready <version>               exit 0 when releases/<version> is completely installed, 10 if not
