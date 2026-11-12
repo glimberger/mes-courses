@@ -32,8 +32,11 @@ and curl reads its header from a pipe). Then, in this order:
 A failure before step 3 leaves `current` untouched, and a folder left half-unpacked by an earlier
 run is not an install: it is unpacked again from scratch. Running it again with the installed
 version does nothing (it only prints the status). Previous release folders are kept: to go back,
-point `runtime` and `current` at the previous `releases/<version>/` and `releases/<version>/runtime`
-(a release installed by hand before this command has its runtime in `agent/runtime`).
+point `current` at the previous `releases/<version>/`. For a release installed by this command, also
+point `runtime` at its `releases/<version>/runtime`. A release installed by hand before this command
+has no runtime of its own: activation repointed `agent/runtime` (the hand-made `nix build --out-link`,
+which was its GC root) at the new release, so the old Node store path is no longer kept alive. Point
+back only `current` and keep the new `runtime`, which runs any release.
 
 Then check on the Pi: `main.js status` shows the new version, and `journalctl -u mes-courses-agent -n 50`
 shows a clean pass at the next timer run.
