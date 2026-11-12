@@ -1,3 +1,18 @@
+<!--
+Sync Impact Report
+- Version change: 2.7.1 -> 2.8.0 (MINOR: guidance materially changed, nothing removed)
+- Modified principles: IX. Explicit Screen States (the "Synchronization" bullet only; title
+  unchanged). The full sync status moves to the Réglages screen; other screens surface only
+  the problem states, in a compact shared component.
+- Added sections: none
+- Removed sections: none
+- Templates checked (.specify/templates: plan, spec, tasks, checklist, constitution): none
+  mentions the synchronization status, so no update is needed.
+- Migration note: the existing screens move to the new rule in issue #216.
+- Follow-up TODOs: specs/003-server-sync/spec.md FR-020 still requires the four-value status
+  on every screen showing user data; align it in issue #216 (out of scope here).
+-->
+
 # Mes Courses Constitution
 
 ## Core Principles
@@ -151,10 +166,14 @@ and each state is rendered by its dedicated component from the shared UI module 
 - **Error**: data could not be obtained; the error component says what failed in plain words and
   offers a recovery action when one exists. The error is reported (Principle VIII).
 - **Success**: the data is shown.
-- **Synchronization**: when the screen shows user data, which is synchronized with the server
-  (Principle VII), a synchronization status component shows whether local changes are pending,
-  in progress, done or failed. Being offline or unable to reach the server is a normal status,
-  not an error.
+- **Synchronization**: the full synchronization status (local changes pending, in progress, done
+  or failed) is required in one dedicated place, the Réglages screen. Every other screen that
+  shows user data synchronized with the server (Principle VII) is only required to surface the
+  states that need the user's attention: a synchronization failure, a device signed out or an
+  account deleted, an update required, an account suspended. These states are rendered by one
+  compact component from the shared UI module (Principle V), never re-implemented per screen.
+  Being offline, waiting or unable to reach the server is a normal status, not an error, and
+  is not surfaced outside the Réglages screen.
 
 The UI adapter models a screen's state as one explicit type in which these states are mutually
 exclusive, so a screen cannot render an undefined combination. Each state has at least one
@@ -328,4 +347,4 @@ This constitution supersedes other project practices. Where it conflicts with th
   request review verifies the Quality Gates. Any deviation MUST be justified in the plan's
   Complexity Tracking section; a deviation from Principle I is never accepted.
 
-**Version**: 2.7.1 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-11-10
+**Version**: 2.8.0 | **Ratified**: 2026-10-05 | **Last Amended**: 2026-11-12
