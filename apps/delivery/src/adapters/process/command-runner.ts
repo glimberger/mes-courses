@@ -11,8 +11,11 @@ export const createCommandRunner = (): CommandRunner => ({
     new Promise<CommandResult>((resolve) => {
       const child = spawn(command, args, {
         cwd: options.cwd,
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['pipe', 'pipe', 'pipe'],
       });
+      // stdin is closed at once when there is no input, as `ignore` did.
+      child.stdin.on('error', () => undefined);
+      child.stdin.end(options.input);
       let stdout = '';
       let stderr = '';
       let timedOut = false;

@@ -25,6 +25,15 @@ describe('command runner', () => {
     expect(result.stdout).toBe('$(echo hacked); ls\n');
   });
 
+  it('feeds the input to the standard input', async () => {
+    const result = await runner.run(
+      'node',
+      ['-e', 'process.stdin.pipe(process.stdout)'],
+      { input: 'secret-in-stdin' },
+    );
+    expect(result.stdout).toBe('secret-in-stdin');
+  });
+
   it('kills a command that exceeds its limit and says so', async () => {
     const result = await runner.run(
       'node',

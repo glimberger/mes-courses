@@ -7,6 +7,42 @@ no longer hold `build-info.json`, the agent writes it. Download the asset
 `/opt/mes-courses/agent/releases/<version>/`, point `current` at it, rebuild the runtime with the
 revision in the bundle's `nixpkgs-rev`, and check with `main.js status` ([005 quickstart](../../specs/005-continuous-delivery/quickstart.md) §7; `main.js` is the agent entry point run as root, see [Rollback](rollback.md)).
 
+## One command
+
+From the repository, on the maintainer's Mac:
+
+```sh
+pnpm agent:update --dry-run          # prints the plan, changes nothing
+pnpm agent:update                    # installs the agent of the latest release
+pnpm agent:update --version 2.3.0    # installs the agent of release v2.3.0
+```
+
+It drives the Pi over `ssh agent-pi` (`--host` or `AGENT_UPDATE_HOST` for another destination; the
+login needs `sudo` without a password, as the steps run as root). The release and its
+`delivery-<agent version>.tar.gz` asset are found with your `gh` session. On the Pi, the bundle is
+downloaded with the read-only token read from `/etc/mes-courses/agent.env`: the token never leaves
+the Pi, is not printed and is not on any command line (the script travels on ssh's standard input
+and curl reads its header from a pipe). Then, in this order:
+
+1. unpack into `/opt/mes-courses/agent/releases/<agent version>/`;
+2. build the Node runtime from the bundle's `nixpkgs-rev` into `releases/<agent version>/runtime`;
+3. only then point `runtime` and `current` at that release (two atomic renames);
+4. run `main.js status` and print it.
+
+A failure before step 3 leaves `current` untouched, and a folder left half-unpacked by an earlier
+run is not an install: it is unpacked again from scratch. Running it again with the installed
+version does nothing (it only prints the status). Previous release folders are kept: to go back,
+point `current` at the previous `releases/<version>/`. For a release installed by this command, also
+point `runtime` at its `releases/<version>/runtime`. A release installed by hand before this command
+has no runtime of its own: activation repointed `agent/runtime` (the hand-made `nix build --out-link`,
+which was its GC root) at the new release, so the old Node store path is no longer kept alive. Point
+back only `current` and keep the new `runtime`, which runs any release.
+
+Then check on the Pi: `main.js status` shows the new version, and `journalctl -u mes-courses-agent -n 50`
+shows a clean pass at the next timer run.
+
+The manual steps below are what the command does, for a Pi that cannot be reached over ssh.
+
 ## Update the agent before raising `minAgentVersion`
 
 A manifest carries `minAgentVersion`, and an agent that is older refuses the manifest and deploys

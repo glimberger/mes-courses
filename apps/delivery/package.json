@@ -7,7 +7,8 @@
     "test": "jest --passWithNoTests",
     "typecheck": "tsc --noEmit",
     "ci": "tsx src/composition/ci.ts",
-    "release": "tsx src/composition/release.ts"
+    "release": "tsx src/composition/release.ts",
+    "agent:update": "tsx src/composition/agent-update.ts"
   },
   "dependencies": {
     "@sentry/node": "^11.5.0"
