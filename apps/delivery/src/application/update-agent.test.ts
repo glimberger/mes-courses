@@ -122,12 +122,16 @@ describe('updateAgent', () => {
     expect(recorder.calls).toContain('Host.install 1.1.0');
   });
 
-  it('installs a ready version that current does not point at, without redoing the unpack', async () => {
+  it('activates a ready version that current does not point at, without redoing the unpack or the build', async () => {
     const { recorder, host, deps } = setup();
     host.ready = true;
     host.current = '1.0.0';
-    await updateAgent(deps, { dryRun: false });
-    expect(recorder.calls).toContain('Host.install 1.1.0');
+    await expect(updateAgent(deps, { dryRun: false })).resolves.toMatchObject({
+      outcome: 'installed',
+    });
+    const calls = recorder.calls.join('\n');
+    expect(calls).not.toMatch(/Host\.install|Host\.buildRuntime/);
+    expect(calls).toMatch(/Host\.activate 1\.1\.0/);
   });
 
   it('only plans on a dry run, and changes nothing', async () => {

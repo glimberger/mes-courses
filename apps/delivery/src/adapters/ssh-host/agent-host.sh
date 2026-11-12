@@ -74,6 +74,10 @@ main() {
       if [ "$(current_version)" = "$version" ]; then
         die "current already points at releases/$version: not replacing it in place"
       fi
+      # Nor the one `runtime` still points into (a rollback done in one of its two steps).
+      case "$(readlink "$root/runtime" || true)" in
+        "$dir" | "$dir"/*) die "runtime still points into releases/$version: not replacing it in place" ;;
+      esac
       mkdir -p "$root/releases"
       rm -rf "$dir"
       mkdir "$dir"

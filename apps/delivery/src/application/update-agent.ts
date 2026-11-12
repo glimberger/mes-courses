@@ -87,10 +87,16 @@ export const updateAgent = async (
   }
 
   try {
-    output.line(`Downloading and unpacking ${release.assetName}...`);
-    await host.install(release);
-    output.line('Building the Node runtime (this can take minutes)...');
-    await host.buildRuntime(target);
+    if (ready) {
+      output.line(
+        `Agent ${target} is already unpacked and built on the Pi: skipping the download and the build.`,
+      );
+    } else {
+      output.line(`Downloading and unpacking ${release.assetName}...`);
+      await host.install(release);
+      output.line('Building the Node runtime (this can take minutes)...');
+      await host.buildRuntime(target);
+    }
   } catch (error) {
     return {
       outcome: 'stopped',
