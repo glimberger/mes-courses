@@ -274,6 +274,52 @@ describe('runAgent', () => {
       expect(deployedCalls(recorder, 'staging')).toEqual([]);
     });
 
+    it('checks in error when a manifest is refused for its minAgentVersion', async () => {
+      const { deps, publish, reporter } = setup('1.0.0');
+      publish('staging', manifestFor('staging', { minAgentVersion: '1.1.0' }));
+
+      const result = await runAgent(deps, { only: 'staging' });
+
+      expect(result.refused).toBe(true);
+      expect(result.degraded).toBe(false);
+      expect(reporter.checkIns).toEqual(['error']);
+    });
+
+    it('checks in error when a manifest is for the wrong channel', async () => {
+      const { deps, publish, reporter } = setup();
+      publish('staging', manifestFor('production'));
+
+      await runAgent(deps, { only: 'staging' });
+
+      expect(reporter.checkIns).toEqual(['error']);
+    });
+
+    it('checks in error when a manifest does not parse', async () => {
+      const { deps, source, reporter } = setup();
+      const json = '{"not":"a manifest"}';
+      source.channels.set('staging', {
+        manifest: json,
+        signature: `signed:${json}`,
+      });
+
+      await runAgent(deps, { only: 'staging' });
+
+      expect(reporter.checkIns).toEqual(['error']);
+    });
+
+    it('checks in ok on an early signature mismatch', async () => {
+      const { deps, source, reporter } = setup();
+      source.channels.set('staging', {
+        manifest: JSON.stringify(manifestFor('staging')),
+        signature: 'forged',
+      });
+
+      const result = await runAgent(deps, { only: 'staging' });
+
+      expect(result.refused).toBe(false);
+      expect(reporter.checkIns).toEqual(['ok']);
+    });
+
     it('reports a token problem (401) as an error and deploys nothing', async () => {
       const { deps, recorder, reporter } = setup();
       recorder.failNext(

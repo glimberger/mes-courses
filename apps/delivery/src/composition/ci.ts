@@ -9,7 +9,10 @@ import { createGithubChannelPublisher } from '../adapters/github/channel-publish
 import { createGithubChannelSource } from '../adapters/github/channel-source';
 import { createGithubRunHistory } from '../adapters/github/run-history';
 import { createGitFacts } from '../adapters/git/git-facts';
-import { waitForHealthyCommit } from '../adapters/http-health/health-probe';
+import {
+  describeHealthTimeout,
+  probeHealthyCommit,
+} from '../adapters/http-health/health-probe';
 import { createCommandRunner } from '../adapters/process/command-runner';
 import {
   createSshSigner,
@@ -235,6 +238,9 @@ const runWriteManifest = async (args: WriteManifestCommand) => {
       version,
       nixpkgsRev: flake.nodes.nixpkgs.locked.rev,
       // 1.1.0 writes build-info.json from the manifest: the archives no longer carry it (ADR-0015).
+      // Raising this makes every installed older agent refuse the manifest. Install the new agent
+      // on the Pi BEFORE the change that raises it ships, and never raise it in the release that
+      // carries that agent: see docs/procedures/updating-the-agent.md.
       minAgentVersion: '1.1.0',
       run: {
         id: runId,
@@ -296,15 +302,20 @@ const runFetchStagingServer = async (args: FetchStagingServerCommand) => {
 };
 
 const runWaitHealth = async (args: WaitHealthCommand) => {
-  const result = await waitForHealthyCommit(
+  const outcome = await probeHealthyCommit(
     args.url,
     args.commit,
     args.timeoutSeconds * 1000,
     { pollMs: 20_000, requestTimeoutMs: 10_000 },
   );
-  if (result !== 'healthy') {
+  if (outcome.result !== 'healthy') {
     console.error(
-      `${args.url} did not report commit ${args.commit} within ${args.timeoutSeconds} s (${result}). The Pi's report says why.`,
+      describeHealthTimeout({
+        url: args.url,
+        commit: args.commit,
+        timeoutSeconds: args.timeoutSeconds,
+        outcome,
+      }),
     );
     process.exit(1);
   }
