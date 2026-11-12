@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.2.1] - 2026-11-12
+
+### Nouveautés
+
+- make the sync server URL fixed and remove it from the app UI ([#198](https://github.com/glimberger/mes-courses/pull/198))
+- show the app version, build number and environment in Settings ([#205](https://github.com/glimberger/mes-courses/pull/205))
+- generate the changelog with git-cliff in the release bump ([#207](https://github.com/glimberger/mes-courses/pull/207))
+- add a Nouveautés screen listing the released changes ([#208](https://github.com/glimberger/mes-courses/pull/208))
+
 ## [2.2.0] - 2026-11-11
 
 ### Nouveautés

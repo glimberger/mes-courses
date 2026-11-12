@@ -1,5 +1,30 @@
 [
   {
+    "version": "2.2.1",
+    "date": "2026-11-12",
+    "features": [
+      {
+        "text": "make the sync server URL fixed and remove it from the app UI",
+        "pr": 198
+      },
+      {
+        "text": "show the app version, build number and environment in Settings",
+        "pr": 205
+      },
+      {
+        "text": "generate the changelog with git-cliff in the release bump",
+        "pr": 207
+      },
+      {
+        "text": "add a Nouveautés screen listing the released changes",
+        "pr": 208
+      }
+    ],
+    "fixes": [],
+    "performances": [],
+    "breaking": []
+  },
+  {
     "version": "2.2.0",
     "date": "2026-11-11",
     "features": [
