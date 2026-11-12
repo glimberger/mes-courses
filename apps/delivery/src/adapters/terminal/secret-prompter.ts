@@ -23,6 +23,8 @@ export const createTerminalSecretPrompter = (
       let secret = '';
       const finish = (done: () => void) => {
         input.removeListener('data', onData);
+        input.removeListener('end', onEnd);
+        input.removeListener('error', onError);
         input.setRawMode?.(false);
         input.pause();
         output.write('\n');
@@ -40,9 +42,16 @@ export const createTerminalSecretPrompter = (
           else secret += char;
         }
       };
+      const onEnd = () =>
+        finish(() =>
+          reject(new Error('The input ended before a password was given')),
+        );
+      const onError = (error: Error) => finish(() => reject(error));
       input.setRawMode?.(true);
       input.resume();
       input.on('data', onData);
+      input.on('end', onEnd);
+      input.on('error', onError);
     });
   },
 });

@@ -46,4 +46,24 @@ describe('terminal secret prompter', () => {
       /needs a terminal/,
     );
   });
+
+  it('rejects and restores the terminal when the input ends', async () => {
+    const { input, prompter } = setup(true);
+    const setRawMode = jest.fn();
+    (input as unknown as { setRawMode: unknown }).setRawMode = setRawMode;
+    const answer = prompter.askSecret('Password: ');
+    input.end();
+    await expect(answer).rejects.toThrow(/input ended/i);
+    expect(setRawMode).toHaveBeenLastCalledWith(false);
+  });
+
+  it('rejects and restores the terminal when the input errors', async () => {
+    const { input, prompter } = setup(true);
+    const setRawMode = jest.fn();
+    (input as unknown as { setRawMode: unknown }).setRawMode = setRawMode;
+    const answer = prompter.askSecret('Password: ');
+    input.emit('error', new Error('boom'));
+    await expect(answer).rejects.toThrow(/boom/);
+    expect(setRawMode).toHaveBeenLastCalledWith(false);
+  });
 });

@@ -91,6 +91,7 @@ export const createSshAgentHost = (
         throw new Error(`the sudo password for ${host} is incorrect`);
       }
       // sh may echo the password it ran as a command ("sh: <password>: not found").
+      if (secret === '') return result;
       return { ...result, stderr: result.stderr.split(secret).join('***') };
     }
     return result;

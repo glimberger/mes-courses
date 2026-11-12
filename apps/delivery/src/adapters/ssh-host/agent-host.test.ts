@@ -221,6 +221,13 @@ describe('ssh agent host with a sudo password', () => {
     expect(error.message).not.toContain(PASSWORD);
   });
 
+  it('leaves stderr untouched when the password is empty', async () => {
+    const runner = new ScriptedCommandRunner();
+    runner.results.push(needsPassword, { exitCode: 1, stderr: 'boom\n' });
+    const host = createSshAgentHost(runner, 'agent-pi', 'S', async () => '');
+    await expect(host.buildRuntime('1.1.0')).rejects.toThrow(/: boom$/);
+  });
+
   it('fails without another ssh call when no password can be asked', async () => {
     const { runner, calls } = setup();
     runner.results.push(needsPassword);
