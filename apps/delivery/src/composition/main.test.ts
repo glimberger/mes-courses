@@ -64,13 +64,24 @@ describe('parseAgentArgs, status', () => {
 
 describe('exitCodeOf', () => {
   it('is 0 unless an instance is degraded', () => {
-    expect(exitCodeOf({ environments: {}, degraded: false })).toBe(0);
+    expect(
+      exitCodeOf({ environments: {}, degraded: false, refused: false }),
+    ).toBe(0);
     expect(
       exitCodeOf({
         environments: { staging: { status: 'failed' } },
         degraded: false,
+        refused: false,
       }),
     ).toBe(0);
-    expect(exitCodeOf({ environments: {}, degraded: true })).toBe(1);
+    expect(
+      exitCodeOf({ environments: {}, degraded: true, refused: false }),
+    ).toBe(1);
+  });
+
+  it('ignores a refused manifest', () => {
+    expect(
+      exitCodeOf({ environments: {}, degraded: false, refused: true }),
+    ).toBe(0);
   });
 });
