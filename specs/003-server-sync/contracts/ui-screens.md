@@ -19,7 +19,11 @@ CurrentList
 
 ## SyncStatusBar (new shared component, FR-020)
 
-It is rendered under the Appbar of CurrentList, AddArticles, Lists, EditArticle and Settings.
+> Amended by `specs/015-sync-status-line/spec.md` (constitution Principle IX v2.8.0): the full status is
+> rendered on the Réglages screen only; the problem states on every other screen are shown by the
+> shared `SyncStatusLine` above the tab bar. The text below describes the Réglages strip.
+
+It was rendered under the Appbar of CurrentList, AddArticles, Lists, EditArticle and Settings.
 It is hidden when `connection = notConnected`, because a device that was never connected has
 nothing to show (US4-1).
 

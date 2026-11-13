@@ -261,7 +261,7 @@ from another one and check it can no longer sync while it keeps working on its l
 
 **Status, errors, language, accessibility**
 
-- **FR-020**: Every screen showing user data MUST show a synchronization status with four values (saved, waiting with a count, sending, failed), through one shared component, as required by constitution Principle IX. Offline is a normal waiting status.
+- **FR-020**: The Réglages screen MUST show the full synchronization status (saved, waiting with a count, sending, failed, and the signed-out, update-required and suspended states). Every other screen showing user data MUST surface only the states that need the user's attention (failure, signed out, account deleted, update required, suspended), through one shared component (`SyncStatusLine`, see `specs/015-sync-status-line/spec.md`), as required by constitution Principle IX (v2.8.0). Offline and waiting are normal statuses and are not surfaced outside Réglages.
 - **FR-020a**: Changes received from the server MUST NOT overwrite what the user is typing in an
   open dialog or form; saving it records a new change, merged by FR-009 to FR-014, and an
   entity merged meanwhile (FR-012) is saved on the surviving one. When what the form edits was

@@ -69,7 +69,7 @@ Snackbar : `BrandSnackbar` / `UndoSnackbar` / `NoticeSnackbar` → `12-snackbar.
 - **Typographie / champs** : `NameField`, `PasswordField`, `SearchField`, `QuantityFields`.
 - **Lignes** : `ArticleRow`, `ListItemRow`, `ListSummaryRow`, `CategoryHeader`, `DeviceRow`, `SettingsRow`.
 - **Actions** : `Button`, `ScreenFab`, `AppbarIconAction`, `BackAction`, `Chip`, `CategoryPicker`, `BrandCheckbox`, `RadioItem`.
-- **Feedback** : `BrandSnackbar`, `UndoSnackbar`, `NoticeSnackbar`, `SyncStatusBar`, `SyncAnnouncer`, `IconCircle`.
+- **Feedback** : `BrandSnackbar`, `UndoSnackbar`, `NoticeSnackbar`, `SyncStatusBar`, `SyncStatusLine`, `SyncAnnouncer`, `IconCircle`.
 - **Marque** : `BrandImage`, `SplashMark`, `AppDialog`, `CreateNamedDialog`, `VisuallyHidden`, `app-error-boundary`.
 
 ## Tokens (rappel rapide)
