@@ -7,8 +7,8 @@ import { globSync } from 'glob';
 // bring back a Paper part the blocks replace. Tests and stories are not the app's UI.
 const UI_ROOT = path.resolve(__dirname, '..');
 
-/** Each rule: the pattern, and the one file (under components/) where it is allowed. */
-const RULES: { name: string; pattern: RegExp; allowedIn?: string }[] = [
+/** Each rule: the pattern, and the files (under components/) where it is allowed. */
+const RULES: { name: string; pattern: RegExp; allowedIn?: string[] }[] = [
   { name: 'Appbar.Header', pattern: /Appbar\.Header/ },
   { name: 'Checkbox.Android', pattern: /Checkbox\.Android/ },
   { name: 'elevation', pattern: /\belevation\s*[:=]/ },
@@ -16,19 +16,20 @@ const RULES: { name: string; pattern: RegExp; allowedIn?: string }[] = [
   {
     name: 'Paper Dialog',
     pattern: /<Dialog[\s>]\s*[a-z]/,
-    allowedIn: 'AppDialog.tsx',
+    allowedIn: ['AppDialog.tsx'],
   },
   {
     name: 'Paper Snackbar',
     pattern: /<Snackbar[\s>]\s*[a-z]/,
-    allowedIn: 'BrandSnackbar.tsx',
+    allowedIn: ['BrandSnackbar.tsx'],
   },
   {
     name: 'numberOfLines on Text',
     pattern: /numberOfLines=/,
     // Titles wrap everywhere but on a row that asks for an ellipsis (an email has no space to
-    // wrap at); the row decides it through `titleNumberOfLines`.
-    allowedIn: 'SettingsRow.tsx',
+    // wrap at); the row decides it through `titleNumberOfLines`. The sync status line is one
+    // ellipsized line by contract (015).
+    allowedIn: ['SettingsRow.tsx', 'SyncStatusLine.tsx'],
   },
 ];
 
@@ -45,7 +46,7 @@ describe('the mockup look is built in the shared blocks', () => {
     'no $name outside its shared block',
     ({ pattern, allowedIn }) => {
       const hits = sources()
-        .filter(({ file }) => !allowedIn || path.basename(file) !== allowedIn)
+        .filter(({ file }) => !allowedIn?.includes(path.basename(file)))
         .filter(({ text }) => pattern.test(text))
         .map(({ file }) => file);
       expect(hits).toEqual([]);

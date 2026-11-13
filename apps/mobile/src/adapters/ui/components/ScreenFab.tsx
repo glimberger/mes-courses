@@ -88,6 +88,12 @@ export const ABOVE_SCREEN_FAB = {
   bottom: TAB_BAR_HEIGHT + FAB_BOTTOM + FAB_HEIGHT + SNACKBAR_GAP,
 };
 
+/** An app-wide snackbar place moved up by the sync status line's height (0 without the line). */
+export const withSyncLine = (
+  place: { bottom: number },
+  lineHeight: number,
+): { bottom: number } => ({ bottom: place.bottom + lineHeight });
+
 /** The bottom padding a list needs so the FAB never covers its last row. */
 export const SCREEN_FAB_CLEARANCE = spacing.xl * 3;
 

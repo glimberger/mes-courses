@@ -181,6 +181,7 @@ Identique à #1 avec le scheme dark.
 | `IconCircle` | (custom — cercle coloré avec icône) |
 | `ScreenHeader` / `AppbarIconAction` | Top app bar / Icon button |
 | `SyncStatusBar` | (custom — barre d'état) |
+| `SyncStatusLine` | (custom — ligne d'état au-dessus de la barre d'onglets) |
 | `SplashMark` | (custom — image + progress) |
 
 ## Procédure recommandée dans Figma

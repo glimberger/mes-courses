@@ -9,7 +9,8 @@ import { Navigation } from '../navigation';
 import { fixture } from '../testing/fixtures';
 import { renderWithStore } from '../testing/render-with-store';
 import type { StoryScenario } from '../testing/story-store';
-import { ABOVE_SCREEN_FAB } from './ScreenFab';
+import { ABOVE_SCREEN_FAB, withSyncLine } from './ScreenFab';
+import { SYNC_LINE_HEIGHT, SyncLineOffsetProvider } from './SyncLineOffset';
 import { UndoSnackbar } from './UndoSnackbar';
 
 const lait = 'article-lait' as ArticleId;
@@ -70,11 +71,17 @@ const deleteLait: StoryScenario['prepare'] = async (store) => {
 
 const renderSnackbar = async (
   prepare: StoryScenario['prepare'] = removeLait,
+  lineHeight = 0,
 ) => {
-  const rendered = await renderWithStore(<UndoSnackbar />, {
-    seed: fixture,
-    prepare,
-  });
+  const rendered = await renderWithStore(
+    <SyncLineOffsetProvider value={lineHeight}>
+      <UndoSnackbar />
+    </SyncLineOffsetProvider>,
+    {
+      seed: fixture,
+      prepare,
+    },
+  );
   // Lets the snackbar read the screen reader setting.
   await act(async () => {
     jest.advanceTimersByTime(0);
@@ -274,6 +281,17 @@ describe('UndoSnackbar', () => {
 
     expect(screen.UNSAFE_getByType(Snackbar).props.wrapperStyle).toEqual(
       ABOVE_SCREEN_FAB,
+    );
+  });
+
+  it('015 US4 shows the height of the sync line higher when the line is shown', async () => {
+    await renderSnackbar(removeLait, SYNC_LINE_HEIGHT);
+
+    expect(screen.UNSAFE_getByType(Snackbar).props.wrapperStyle).toEqual({
+      bottom: ABOVE_SCREEN_FAB.bottom + 36,
+    });
+    expect(withSyncLine(ABOVE_SCREEN_FAB, 36).bottom).toBe(
+      ABOVE_SCREEN_FAB.bottom + 36,
     );
   });
 });

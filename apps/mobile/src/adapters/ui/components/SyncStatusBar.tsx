@@ -1,15 +1,14 @@
 import { StyleSheet, View } from 'react-native';
-import { Icon, Text, TouchableRipple, useTheme } from 'react-native-paper';
+import { Icon, Text, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 
 import type { AppNavigation } from '../routes';
 import type { SyncSlice } from '../state/store-kit';
 import { useAppStore } from '../state/use-app-store';
 import type { AppTheme } from '../theme/theme';
-import { shape } from '../theme/shape';
-import { spacing } from '../theme/spacing';
 import { typeOverrides } from '../theme/typography';
 import { Button } from './Button';
+import { reconnectLabel } from './SyncStatusLine';
 
 type Display = {
   icon: string;
@@ -37,12 +36,18 @@ const display = ({
         ? {
             icon: 'cloud_off',
             text: 'Ce compte a été supprimé.',
-            action: { label: 'Se connecter', target: 'reconnect' },
+            action: {
+              label: reconnectLabel(signedOutReason),
+              target: 'reconnect',
+            },
           }
         : {
             icon: 'cloud_off',
             text: "Cet appareil n'est plus autorisé. Reconnectez-vous.",
-            action: { label: 'Se reconnecter', target: 'reconnect' },
+            action: {
+              label: reconnectLabel(signedOutReason),
+              target: 'reconnect',
+            },
           };
     case 'suspended':
       // Not an error: the lists stay on the phone and keep working (Principle VII).
@@ -86,14 +91,11 @@ const display = ({
 };
 
 /**
- * The state of the synchronization, under the Appbar of every data screen (FR-020). Not a live
- * region: the failure and the recovery are announced by `SyncAnnouncer`, once for all the bars.
+ * The full state of the synchronization, as the strip of the Réglages screen (FR-020, 015). The
+ * other screens show only the problem states, through `SyncStatusLine` above the tab bar. Not a
+ * live region: the failure and the recovery are announced by `SyncAnnouncer`, once for all.
  */
-export const SyncStatusBar = ({
-  variant = 'bar',
-}: {
-  variant?: 'bar' | 'strip';
-}) => {
+export const SyncStatusBar = () => {
   const navigation = useNavigation<AppNavigation>();
   const sync = useAppStore((state) => state.sync);
   const retry = useAppStore((state) => state.retry);
@@ -102,39 +104,24 @@ export const SyncStatusBar = ({
   const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   if (shown === null) return null;
   const { icon, text, label, action } = shown;
-  const strip = variant === 'strip';
   return (
     <View
       testID="sync-status-bar"
-      style={[
-        styles.bar,
-        { backgroundColor: colors.surfaceContainer },
-        strip && styles.stripBar,
-      ]}
+      style={[styles.bar, { backgroundColor: colors.surfaceContainer }]}
     >
-      <TouchableRipple
-        accessibilityRole="button"
+      <View
+        accessible
         accessibilityLabel={label ?? text}
-        // `pop: true` pops back to the Settings root instead of pushing a second one over
-        // SignIn or Accounts, which the Réglages stack keeps while another tab is shown.
-        onPress={() =>
-          navigation.navigate('SettingsTab', { screen: 'Settings', pop: true })
-        }
-        style={styles.status}
+        style={[styles.status, styles.row]}
       >
-        <View style={[styles.row, strip && styles.stripRow]}>
-          <Icon source={icon} size={20} color={colors.onSurfaceVariant} />
-          <Text
-            variant="labelLarge"
-            style={[
-              { color: colors.onSurfaceVariant },
-              strip && styles.stripText,
-            ]}
-          >
-            {text}
-          </Text>
-        </View>
-      </TouchableRipple>
+        <Icon source={icon} size={20} color={colors.onSurfaceVariant} />
+        <Text
+          variant="labelLarge"
+          style={[{ color: colors.onSurfaceVariant }, styles.text]}
+        >
+          {text}
+        </Text>
+      </View>
       {action && (
         <Button
           mode="text"
@@ -155,24 +142,18 @@ export const SyncStatusBar = ({
   );
 };
 
+// The settings strip (`.sync-strip`): full width, 11 dp down, 20 dp at the sides.
 const styles = StyleSheet.create({
   bar: {
-    borderRadius: shape.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-  },
-  status: { flex: 1, minHeight: 48, justifyContent: 'center' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  // The settings strip (`.sync-strip`): full width, 11 dp down, 20 dp at the sides.
-  stripBar: {
-    borderRadius: 0,
     paddingVertical: 11,
     paddingHorizontal: 20,
   },
-  stripRow: { gap: 10 },
-  stripText: {
+  status: { flex: 1 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  text: {
     fontFamily: typeOverrides.syncStrip.fontFamily,
     fontSize: typeOverrides.syncStrip.fontSize,
   },

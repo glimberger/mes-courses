@@ -12,7 +12,6 @@ import { ListItemRow } from '../components/ListItemRow';
 import { SCREEN_FAB_CLEARANCE, ScreenFab } from '../components/ScreenFab';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenStateView } from '../components/ScreenStateView';
-import { SyncStatusBar } from '../components/SyncStatusBar';
 import type { AppNavigation } from '../routes';
 import { spacing } from '../theme/spacing';
 import type { AppState } from '../state/app-store';
@@ -273,7 +272,6 @@ export const CurrentListScreen = () => {
           </>
         }
       />
-      <SyncStatusBar />
       <ScreenStateView
         state={currentList}
         errorMessage="Impossible de charger la liste."

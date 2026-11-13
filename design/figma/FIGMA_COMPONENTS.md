@@ -94,7 +94,15 @@ Les captures Storybook sont générées par `story-shots.test.tsx` (voir
 - Storybook : `Components/SyncStatusBar`
 - Variants : `Saved`, `Waiting`, `Sending`, `Failed`, `SignedOutRevoked`,
   `SignedOutAccountDeleted`, `Suspended`, `UpdateRequired`
-- Rôle : barre d'état de synchronisation.
+- Rôle : barre d'état de synchronisation complète, écran Réglages uniquement.
+
+### SyncStatusLine
+- Fichier : `components/SyncStatusLine.tsx`
+- Storybook : `Components/SyncStatusLine`
+- Variants : `Failed`, `SignedOutRevoked`, `SignedOutAccountDeleted`, `UpdateRequired`,
+  `Suspended`, `FailedDark`
+- Rôle : ligne de 36 dp au-dessus de la barre d'onglets, qui signale les problèmes de
+  synchronisation sur tous les écrans sauf Réglages.
 
 ### UndoSnackbar
 - Fichier : `components/UndoSnackbar.tsx`
@@ -116,7 +124,7 @@ Actions : `Button`, `ScreenFab`, `AppbarIconAction`, `BackAction`, `Chip`,
 `CategoryPicker`, `BrandCheckbox`, `RadioItem`.
 
 Feedback : `BrandSnackbar`, `UndoSnackbar`, `NoticeSnackbar`, `SyncStatusBar`,
-`SyncAnnouncer`, `IconCircle`.
+`SyncStatusLine`, `SyncAnnouncer`, `IconCircle`.
 
 Marque / divers : `BrandImage`, `SplashMark`, `AppDialog`, `CreateNamedDialog`,
 `VisuallyHidden`, `app-error-boundary`.
@@ -141,6 +149,7 @@ composant React dans `apps/mobile/src/adapters/ui/screens/` et dispose souvent d
 | `BrandCheckbox` | Checkbox | Override couleur → primaryContainer + rayon shape/checkbox (7) ; si non modifiable, composer à la main (rectangle 24×24 radius 7 + icône check). |
 | `RadioItem` | Radio button | Aucun override particulier. |
 | `SyncStatusBar` | (custom) | Composer à la main : frame horizontale, fond surfaceContainer, radius shape/lg. |
+| `SyncStatusLine` | (custom) | Composer à la main : frame horizontale 36 dp, fond surfaceContainer, liseré haut surfaceContainerHigh et bas outlineVariant, icône 18 dp + texte 13 sp gras. |
 | `ListItemRow` | List item (two-line) | Override text style du nom → `titleMedium`, de la quantité → `quantity`. |
 | `ScreenHeader` / `AppbarIconAction` | Top app bar / Icon button | Si la barre contient un Chip (écran 1), composer la top app bar à la main. |
 | `BrandImage` / `SplashMark` | (custom) | Composer à la main : rectangle radius 40 + image + ombre brandTile. |

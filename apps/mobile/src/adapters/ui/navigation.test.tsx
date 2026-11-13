@@ -1,8 +1,17 @@
-import { Keyboard, Platform } from 'react-native';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { Keyboard, Platform, StyleSheet } from 'react-native';
+import { Snackbar } from 'react-native-paper';
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../application/testing/recording-error-reporter';
+import { ABOVE_SCREEN_FAB } from './components/ScreenFab';
 import { Navigation } from './navigation';
+import type { AppState } from './state/app-store';
 import { fixture } from './testing/fixtures';
 import { renderWithStore } from './testing/render-with-store';
 
@@ -95,6 +104,101 @@ describe('Navigation', () => {
     expect(errorReporter.screens).toEqual(['CurrentList', 'Lists', 'Settings']);
   });
 
+  describe('the sync status line', () => {
+    type Store = {
+      setState: (state: Partial<AppState>) => void;
+      getState: () => AppState;
+    };
+    const showSync = (store: Store, sync: Partial<AppState['sync']>) =>
+      act(() =>
+        store.setState({ sync: { ...store.getState().sync, ...sync } }),
+      );
+    const failSync = (store: Store) =>
+      showSync(store, { connection: 'connected', status: 'failed' });
+
+    it('015 US1 shows no line while nothing is wrong', async () => {
+      await renderNavigation();
+      await screen.findByText('Ma liste');
+
+      expect(screen.queryByTestId('sync-status-line')).toBeNull();
+    });
+
+    it('015 US1 shows the line above the tab bar on every tab in a problem state', async () => {
+      const { store } = await renderNavigation();
+      await screen.findByText('Ma liste');
+      await failSync(store);
+
+      for (const tab of ['Courses', 'Listes', 'Articles']) {
+        fireEvent.press(screen.getByRole('tab', { name: tab }));
+        expect(screen.getByTestId('sync-status-line')).toBeOnTheScreen();
+        expect(screen.getByRole('tab', { name: tab })).toBeOnTheScreen();
+      }
+    });
+
+    it('015 US1 removes the line when the state recovers', async () => {
+      const { store } = await renderNavigation();
+      await screen.findByText('Ma liste');
+      await failSync(store);
+      expect(screen.getByTestId('sync-status-line')).toBeOnTheScreen();
+
+      await showSync(store, { status: 'saved' });
+
+      expect(screen.queryByTestId('sync-status-line')).toBeNull();
+    });
+
+    it('015 US4 keeps the line in flow with the tab bar, so the screen area shrinks above it', async () => {
+      const { store } = await renderNavigation();
+      await screen.findByText('Ma liste');
+      await failSync(store);
+
+      const slot = screen.getByTestId('tab-bar-slot');
+      // The line and the tab bar share one slot, laid out in flow (not absolute)...
+      expect(within(slot).getByTestId('sync-status-line')).toBeOnTheScreen();
+      expect(
+        within(slot).getByRole('tab', { name: 'Courses' }),
+      ).toBeOnTheScreen();
+      expect(StyleSheet.flatten(slot.props.style)?.position).not.toBe(
+        'absolute',
+      );
+      // ...and the screen is outside it: the navigator gives it what the slot leaves.
+      expect(within(slot).queryByText('Ma liste')).toBeNull();
+    });
+
+    it('015 US2 hides the line on the Réglages root in every problem state', async () => {
+      const { store } = await renderNavigation();
+      await screen.findByText('Ma liste');
+      fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
+      await screen.findByText('Apparence');
+
+      for (const sync of [
+        { connection: 'connected', status: 'failed' },
+        { connection: 'signedOut', signedOutReason: 'revoked' },
+        { connection: 'signedOut', signedOutReason: 'accountDeleted' },
+        { connection: 'updateRequired' },
+        { connection: 'suspended' },
+      ] as const) {
+        await showSync(store, { status: 'saved', ...sync });
+        expect(screen.queryByTestId('sync-status-line')).toBeNull();
+      }
+    });
+
+    it('015 US2 shows the line on the other screens of Réglages, and again after leaving the root', async () => {
+      const { store } = await renderNavigation();
+      await screen.findByText('Ma liste');
+      await failSync(store);
+      fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
+      await screen.findByText('Apparence');
+      expect(screen.queryByTestId('sync-status-line')).toBeNull();
+
+      fireEvent.press(screen.getByText(/^Version/));
+      expect(await screen.findByText('Nouveautés')).toBeOnTheScreen();
+      expect(screen.getByTestId('sync-status-line')).toBeOnTheScreen();
+
+      fireEvent.press(screen.getByRole('tab', { name: 'Courses' }));
+      expect(screen.getByTestId('sync-status-line')).toBeOnTheScreen();
+    });
+  });
+
   describe('while the keyboard is open', () => {
     const listeners = new Map<string, Set<(event: unknown) => void>>();
     // The row menus of the current list read the keyboard's coordinates too.
@@ -136,6 +240,37 @@ describe('Navigation', () => {
       expect(screen.getByRole('tab', { name: 'Courses' })).toBeOnTheScreen();
     });
 
+    it('015 US4 hides the sync line with the tab bar on Android, and brings it back, the offset following', async () => {
+      jest.replaceProperty(Platform, 'OS', 'android');
+      const { store } = await renderNavigation();
+      await screen.findByText('Ma liste');
+      await act(() =>
+        store.setState({
+          sync: {
+            ...store.getState().sync,
+            connection: 'connected',
+            status: 'failed',
+          },
+          notice: { type: 'writeFailed' },
+        }),
+      );
+      const noticeBottom = () =>
+        screen
+          .UNSAFE_getAllByType(Snackbar)
+          .map((snackbar) => snackbar.props.wrapperStyle.bottom);
+      expect(screen.getByTestId('sync-status-line')).toBeOnTheScreen();
+      expect(noticeBottom()).toContain(ABOVE_SCREEN_FAB.bottom + 36);
+
+      emit('keyboardDidShow');
+      expect(screen.queryByTestId('sync-status-line')).toBeNull();
+      expect(noticeBottom()).not.toContain(ABOVE_SCREEN_FAB.bottom + 36);
+      expect(noticeBottom()).toContain(ABOVE_SCREEN_FAB.bottom);
+
+      emit('keyboardDidHide');
+      expect(screen.getByTestId('sync-status-line')).toBeOnTheScreen();
+      expect(noticeBottom()).toContain(ABOVE_SCREEN_FAB.bottom + 36);
+    });
+
     it('keeps the tab bar on iOS', async () => {
       jest.replaceProperty(Platform, 'OS', 'ios');
       await renderNavigation();
@@ -175,7 +310,7 @@ describe('Navigation', () => {
     expect(await screen.findByText('Ma liste')).toBeOnTheScreen();
   });
 
-  it('opens SignIn above the Settings root when the Réglages tab was never opened, so back lands on Settings', async () => {
+  it('015 US3 opens SignIn above the Settings root from the line when the Réglages tab was never opened, so back lands on Settings', async () => {
     const { store } = await renderNavigation();
     await screen.findByText('Ma liste');
     act(() =>
@@ -188,14 +323,14 @@ describe('Navigation', () => {
       }),
     );
 
-    fireEvent.press(screen.getByRole('button', { name: 'Se reconnecter' }));
+    fireEvent.press(screen.getByText('Se reconnecter'));
     await screen.findByLabelText('Adresse e-mail');
     fireEvent.press(screen.getByRole('button', { name: 'Retour' }));
 
     expect(await screen.findByText('Apparence')).toBeOnTheScreen();
   });
 
-  it('opens the Settings root from the sync status, past a SignIn left open in the Réglages tab', async () => {
+  it('015 US3 opens the Settings root from the line, past a SignIn left open in the Réglages tab', async () => {
     const { store } = await renderNavigation();
     await screen.findByText('Ma liste');
     act(() =>
@@ -207,16 +342,12 @@ describe('Navigation', () => {
         },
       }),
     );
-    fireEvent.press(screen.getByRole('button', { name: 'Se reconnecter' }));
+    fireEvent.press(screen.getByText('Se reconnecter'));
     await screen.findByLabelText('Adresse e-mail');
     fireEvent.press(screen.getByRole('tab', { name: 'Courses' }));
     await screen.findByText('Ma liste');
 
-    fireEvent.press(
-      screen.getByRole('button', {
-        name: "Cet appareil n'est plus autorisé. Reconnectez-vous.",
-      }),
-    );
+    fireEvent.press(screen.getByTestId('sync-status-line'));
 
     expect(await screen.findByText('Apparence')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Retour' })).toBeNull();

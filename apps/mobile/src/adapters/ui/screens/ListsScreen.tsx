@@ -10,7 +10,6 @@ import { ListSummaryRow } from '../components/ListSummaryRow';
 import { ScreenFab, SCREEN_FAB_CLEARANCE } from '../components/ScreenFab';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenStateView } from '../components/ScreenStateView';
-import { SyncStatusBar } from '../components/SyncStatusBar';
 import { spacing } from '../theme/spacing';
 import { useAppStore } from '../state/use-app-store';
 import { CreateListDialog } from './CreateListDialog';
@@ -151,7 +150,6 @@ export const ListsScreen = ({
           hasScreenBelow(navigation) ? () => navigation.goBack() : undefined
         }
       />
-      <SyncStatusBar />
       <ScreenStateView
         state={lists}
         errorMessage="Impossible de charger vos listes."

@@ -188,6 +188,7 @@ const views: Record<string, () => Promise<void>> = {
   },
   '003 SyncStatusBar': async () => {
     await openApp(connected);
+    await pressTab('Réglages');
     await screen.findByTestId('sync-status-bar');
   },
   '003 SyncStatusBar, disconnected by the server': async () => {
@@ -198,6 +199,7 @@ const views: Record<string, () => Promise<void>> = {
         sync: async () => err({ type: 'DeviceNotAuthorized' }),
       },
     });
+    await pressTab('Réglages');
     await screen.findByRole('button', { name: 'Se reconnecter' }, slow);
   },
   '003 SyncStatusBar, failed': async () => {
@@ -213,7 +215,29 @@ const views: Record<string, () => Promise<void>> = {
         await syncNow();
       },
     });
+    await pressTab('Réglages');
     await screen.findByRole('button', { name: 'Réessayer' }, slow);
+  },
+  '015 SyncStatusLine, failed': async () => {
+    await openApp({
+      ...connected,
+      syncServer: {
+        ...connected.syncServer,
+        sync: async () => err({ type: 'ServerError' }),
+      },
+      prepare: async ({ syncNow }) => {
+        await syncNow();
+        await syncNow();
+      },
+    });
+    // The line is a button with its full label, and its action another with its own.
+    await screen.findAllByRole(
+      'button',
+      { name: 'Échec de la synchronisation' },
+      slow,
+    );
+    // The line's button also holds the action: the action is the last match.
+    await screen.findAllByRole('button', { name: 'Réessayer' }, slow);
   },
   '003 Settings, never connected': async () => {
     await openSettings({});
@@ -307,7 +331,13 @@ type Side = 'height' | 'width';
 const ownSize = (node: ReactTestInstance, side: Side): number => {
   const style = StyleSheet.flatten(node.props.style) ?? {};
   const min = side === 'height' ? style.minHeight : style.minWidth;
-  return Math.max(Number(style[side] ?? 0), Number(min ?? 0));
+  const slop = (node.props.hitSlop ?? {}) as Record<string, number | undefined>;
+  const extra =
+    side === 'height'
+      ? (slop.top ?? 0) + (slop.bottom ?? 0)
+      : (slop.left ?? 0) + (slop.right ?? 0);
+  // A hit slop widens the target without moving the layout (a 36 dp line with a 48 dp target).
+  return Math.max(Number(style[side] ?? 0), Number(min ?? 0)) + extra;
 };
 
 /** The element's only child, leaving out components that draw nothing (Pressable's debug view). */

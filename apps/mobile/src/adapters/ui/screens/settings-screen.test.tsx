@@ -82,22 +82,6 @@ describe('Settings', () => {
     ).not.toBeOnTheScreen();
   });
 
-  it('003 US3-1 tapping the bar on another screen opens Settings', async () => {
-    await renderApp({
-      connected: { lastSyncAt: null },
-    });
-
-    fireEvent.press(
-      await screen
-        .findByTestId('sync-status-bar')
-        .then(() => screen.getByLabelText(/synchronis/i, { exact: false })),
-    );
-
-    expect(
-      await screen.findByRole('header', { name: 'Réglages' }),
-    ).toBeOnTheScreen();
-  });
-
   it('US4-1 adds a "Réglages" tab to the bar', async () => {
     await renderApp();
 

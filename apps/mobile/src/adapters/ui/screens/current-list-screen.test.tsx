@@ -93,13 +93,13 @@ describe('CurrentList', () => {
     ).toBeGreaterThanOrEqual(SCREEN_FAB_CLEARANCE);
   });
 
-  it('003 FR-020 renders the sync status bar under the Appbar', async () => {
+  it('003 FR-020 shows no sync status bar (the line of the tab bar says the problems)', async () => {
     await renderScreen({
       seed: fixture,
       connected: { lastSyncAt: null },
     });
 
-    expect(await screen.findByTestId('sync-status-bar')).toBeOnTheScreen();
+    expect(screen.queryByTestId('sync-status-bar')).not.toBeOnTheScreen();
   });
 
   it('US1-1 shows the list name in the Appbar and the items under their category headings, with their quantities', async () => {

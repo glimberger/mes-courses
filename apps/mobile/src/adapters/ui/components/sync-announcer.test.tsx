@@ -1,12 +1,18 @@
 import { AccessibilityInfo } from 'react-native';
-import { act } from '@testing-library/react-native';
+import { act, screen } from '@testing-library/react-native';
 
 import { renderWithStore } from '../testing/render-with-store';
 import type { AppState } from '../state/app-store';
 import { SyncAnnouncer } from './SyncAnnouncer';
 import { SyncStatusBar } from './SyncStatusBar';
+import { SyncStatusLine } from './SyncStatusLine';
 
 const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useNavigation: () => ({ navigate: jest.fn() }),
+}));
 
 beforeEach(() => announce.mockReset());
 afterAll(() => announce.mockRestore());
@@ -34,6 +40,15 @@ const renderAnnouncer = async () => {
 };
 
 describe('SyncAnnouncer (003 US3-6, FR-023)', () => {
+  it('announces that an update is required', async () => {
+    const { show } = await renderAnnouncer();
+    await show({ connection: 'updateRequired' });
+
+    expect(announce).toHaveBeenCalledWith(
+      "Mettez à jour l'application pour synchroniser.",
+    );
+  });
+
   it('announces entering failed once, then the first saved after the failure', async () => {
     const { show } = await renderAnnouncer();
     await show({ status: 'saved' });
@@ -57,5 +72,37 @@ describe('SyncAnnouncer (003 US3-6, FR-023)', () => {
     await show({ status: 'saved', pendingCount: 0 });
 
     expect(announce).not.toHaveBeenCalled();
+  });
+});
+
+describe('SyncAnnouncer with the sync status line (015 US5)', () => {
+  it('announces each transition once with the line mounted, and the line adds no live region', async () => {
+    const rendered = await renderWithStore(
+      <>
+        <SyncAnnouncer />
+        <SyncStatusLine />
+      </>,
+    );
+    const show = (sync: Partial<AppState['sync']>) =>
+      act(() =>
+        rendered.store.setState({
+          sync: {
+            ...rendered.store.getState().sync,
+            connection: 'connected',
+            ...sync,
+          },
+        }),
+      );
+    await show({ status: 'saved' });
+    await show({ status: 'failed' });
+
+    expect(screen.getByTestId('sync-status-line')).toBeOnTheScreen();
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenLastCalledWith('Échec de la synchronisation');
+
+    await show({ status: 'saved' });
+    expect(announce).toHaveBeenCalledTimes(2);
+    expect(announce).toHaveBeenLastCalledWith('Synchronisé');
+    expect(screen.queryByTestId('sync-status-line')).toBeNull();
   });
 });

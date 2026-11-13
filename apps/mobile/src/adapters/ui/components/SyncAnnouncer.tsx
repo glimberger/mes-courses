@@ -34,6 +34,10 @@ export const SyncAnnouncer = () => {
       AccessibilityInfo.announceForAccessibility(
         'Votre compte est suspendu. Vos listes restent sur cet appareil.',
       );
+    } else if (connection === 'updateRequired') {
+      AccessibilityInfo.announceForAccessibility(
+        "Mettez à jour l'application pour synchroniser.",
+      );
     } else if (connection === 'signedOut') {
       AccessibilityInfo.announceForAccessibility(
         reason === 'accountDeleted'

@@ -7,7 +7,8 @@ import {
   type BottomTabBarProps,
 } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { View } from 'react-native';
 
 import type { ErrorReporter } from '../../application/ports/error-reporter';
 import { ScreenErrorBoundary } from './components/app-error-boundary';
@@ -34,6 +35,12 @@ import {
   type SettingsStackParamList,
 } from './routes';
 import { SyncAnnouncer } from './components/SyncAnnouncer';
+import {
+  SYNC_LINE_HEIGHT,
+  SyncLineOffsetProvider,
+} from './components/SyncLineOffset';
+import { SyncStatusLine, syncLine } from './components/SyncStatusLine';
+import { useAppStore } from './state/use-app-store';
 import { useAndroidKeyboardShown } from './keyboard';
 import { useNavigationTheme } from './theme/navigation-theme';
 
@@ -115,27 +122,34 @@ const NAVIGATORS = {
  * history it had. On Android it gives way to the keyboard while the user types, as the stock
  * bar's `tabBarHideOnKeyboard` would.
  */
-const NavigationTabBar = ({ state, navigation }: BottomTabBarProps) => {
-  const keyboardShown = useAndroidKeyboardShown();
+const NavigationTabBar = ({
+  state,
+  navigation,
+  lineShown,
+  keyboardShown,
+}: BottomTabBarProps & { lineShown: boolean; keyboardShown: boolean }) => {
   const selected = state.routes[state.index];
   if (keyboardShown) return null;
   return (
-    <TabBar
-      tabs={TABS.map(({ name, label, icon }) => ({ key: name, label, icon }))}
-      selectedKey={selected?.name ?? TABS[0].name}
-      onSelect={(key) => {
-        const route = state.routes.find(({ name }) => name === key);
-        if (!route) return;
-        const event = navigation.emit({
-          type: 'tabPress',
-          target: route.key,
-          canPreventDefault: true,
-        });
-        if (route.key !== selected?.key && !event.defaultPrevented) {
-          navigation.navigate(route.name, route.params);
-        }
-      }}
-    />
+    <View testID="tab-bar-slot">
+      {lineShown && <SyncStatusLine />}
+      <TabBar
+        tabs={TABS.map(({ name, label, icon }) => ({ key: name, label, icon }))}
+        selectedKey={selected?.name ?? TABS[0].name}
+        onSelect={(key) => {
+          const route = state.routes.find(({ name }) => name === key);
+          if (!route) return;
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (route.key !== selected?.key && !event.defaultPrevented) {
+            navigation.navigate(route.name, route.params);
+          }
+        }}
+      />
+    </View>
   );
 };
 
@@ -153,13 +167,24 @@ export const Navigation = ({
 }) => {
   const navigationRef = useNavigationContainerRef<RootTabParamList>();
   const theme = useNavigationTheme();
+  const problem = useAppStore((state) => syncLine(state.sync) !== null);
+  // Réglages shows the full status itself, so the line gives way on its root only (015 R2). The
+  // Settings tab not opened yet has no nested route: the tab's own name stands for its root.
+  const [onSettingsRoot, setOnSettingsRoot] = useState(false);
+  const lineHidden = onSettingsRoot;
+  // The line leaves with the tab bar while the Android keyboard is open (015 US4-4).
+  const keyboardShown = useAndroidKeyboardShown();
+  const lineShown = problem && !lineHidden && !keyboardShown;
   const recordScreen = () => {
     const route = navigationRef.getCurrentRoute();
     if (route) errorReporter.setScreen(route.name);
+    // Typed as the nested screens only; the tab's own name shows before its stack is mounted.
+    const name: string | undefined = route?.name;
+    setOnSettingsRoot(name === 'Settings' || name === 'SettingsTab');
   };
 
   return (
-    <>
+    <SyncLineOffsetProvider value={lineShown ? SYNC_LINE_HEIGHT : 0}>
       <NavigationContainer
         ref={navigationRef}
         theme={theme}
@@ -170,7 +195,13 @@ export const Navigation = ({
           initialRouteName="CoursesTab"
           screenOptions={{ headerShown: false }}
           // Rendered as a component, not called as a function, so it may use hooks.
-          tabBar={(props) => <NavigationTabBar {...props} />}
+          tabBar={(props) => (
+            <NavigationTabBar
+              {...props}
+              lineShown={lineShown}
+              keyboardShown={keyboardShown}
+            />
+          )}
         >
           {TABS.map(({ name }) => (
             <Tab.Screen key={name} name={name} component={NAVIGATORS[name]} />
@@ -181,6 +212,6 @@ export const Navigation = ({
       <UndoSnackbar />
       <NoticeSnackbar />
       <SignedOutNotice />
-    </>
+    </SyncLineOffsetProvider>
   );
 };
