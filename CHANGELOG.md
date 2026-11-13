@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.3.0] - 2026-11-13
+
+### Nouveautés
+
+- show the sync banner on Réglages only and sync problems in a status line above the tab bar ([#226](https://github.com/glimberger/mes-courses/pull/226))
+
+### Corrections
+
+- prompt for the Pi's sudo password in agent:update and refuse to run as root ([#225](https://github.com/glimberger/mes-courses/pull/225))
+
 ## [2.2.0] - 2026-11-11
 
 ### Nouveautés

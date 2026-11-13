@@ -1,5 +1,23 @@
 [
   {
+    "version": "2.3.0",
+    "date": "2026-11-13",
+    "features": [
+      {
+        "text": "show the sync banner on Réglages only and sync problems in a status line above the tab bar",
+        "pr": 226
+      }
+    ],
+    "fixes": [
+      {
+        "text": "prompt for the Pi's sudo password in agent:update and refuse to run as root",
+        "pr": 225
+      }
+    ],
+    "performances": [],
+    "breaking": []
+  },
+  {
     "version": "2.2.0",
     "date": "2026-11-11",
     "features": [
