@@ -89,6 +89,18 @@ const adminServerOf = (
     : server;
 
 describe('Accounts', () => {
+  it('015 US2-1 shows no sync status bar (the line of the tab bar says the problems)', async () => {
+    await openAccounts(
+      new InMemoryAdminServer([
+        administrator,
+        account('account-2', 'lea@example.org'),
+      ]),
+    );
+    await screen.findByText('lea@example.org');
+
+    expect(screen.queryByTestId('sync-status-bar')).not.toBeOnTheScreen();
+  });
+
   it('004 US5-1 shows one row per account with its address, its state and its last synchronization', async () => {
     await openAccounts(
       new InMemoryAdminServer([

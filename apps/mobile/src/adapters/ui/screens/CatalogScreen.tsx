@@ -13,7 +13,6 @@ import { ScreenFab, SCREEN_FAB_CLEARANCE } from '../components/ScreenFab';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenStateView } from '../components/ScreenStateView';
 import { SearchField } from '../components/SearchField';
-import { SyncStatusBar } from '../components/SyncStatusBar';
 import { hasScreenBelow } from '../navigation-history';
 import type { RootStackParamList } from '../routes';
 import { useAppStoreApi } from '../state/app-store-provider';
@@ -188,7 +187,6 @@ export const CatalogScreen = ({
           hasScreenBelow(navigation) ? () => navigation.goBack() : undefined
         }
       />
-      <SyncStatusBar />
       <SearchField
         placeholder="Rechercher un article"
         value={query}

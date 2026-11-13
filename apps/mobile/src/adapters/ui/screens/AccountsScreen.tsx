@@ -14,7 +14,6 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsRow } from '../components/SettingsRow';
 import { StateLayout } from '../components/StateLayout';
-import { SyncStatusBar } from '../components/SyncStatusBar';
 import { useAppStore } from '../state/use-app-store';
 import { spacing } from '../theme/spacing';
 import {
@@ -120,7 +119,6 @@ export const AccountsScreen = () => {
           />
         }
       />
-      <SyncStatusBar />
       <AccountsView
         state={state}
         onRetry={load}

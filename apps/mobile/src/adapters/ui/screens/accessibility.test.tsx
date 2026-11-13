@@ -188,6 +188,7 @@ const views: Record<string, () => Promise<void>> = {
   },
   '003 SyncStatusBar': async () => {
     await openApp(connected);
+    await pressTab('Réglages');
     await screen.findByTestId('sync-status-bar');
   },
   '003 SyncStatusBar, disconnected by the server': async () => {
@@ -198,6 +199,7 @@ const views: Record<string, () => Promise<void>> = {
         sync: async () => err({ type: 'DeviceNotAuthorized' }),
       },
     });
+    await pressTab('Réglages');
     await screen.findByRole('button', { name: 'Se reconnecter' }, slow);
   },
   '003 SyncStatusBar, failed': async () => {
@@ -213,6 +215,7 @@ const views: Record<string, () => Promise<void>> = {
         await syncNow();
       },
     });
+    await pressTab('Réglages');
     await screen.findByRole('button', { name: 'Réessayer' }, slow);
   },
   '003 Settings, never connected': async () => {

@@ -137,6 +137,40 @@ describe('Navigation', () => {
 
       expect(screen.queryByTestId('sync-status-line')).toBeNull();
     });
+
+    it('015 US2 hides the line on the Réglages root in every problem state', async () => {
+      const { store } = await renderNavigation();
+      await screen.findByText('Ma liste');
+      fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
+      await screen.findByText('Apparence');
+
+      for (const sync of [
+        { connection: 'connected', status: 'failed' },
+        { connection: 'signedOut', signedOutReason: 'revoked' },
+        { connection: 'signedOut', signedOutReason: 'accountDeleted' },
+        { connection: 'updateRequired' },
+        { connection: 'suspended' },
+      ] as const) {
+        await showSync(store, { status: 'saved', ...sync });
+        expect(screen.queryByTestId('sync-status-line')).toBeNull();
+      }
+    });
+
+    it('015 US2 shows the line on the other screens of Réglages, and again after leaving the root', async () => {
+      const { store } = await renderNavigation();
+      await screen.findByText('Ma liste');
+      await failSync(store);
+      fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
+      await screen.findByText('Apparence');
+      expect(screen.queryByTestId('sync-status-line')).toBeNull();
+
+      fireEvent.press(screen.getByText(/^Version/));
+      expect(await screen.findByText('Nouveautés')).toBeOnTheScreen();
+      expect(screen.getByTestId('sync-status-line')).toBeOnTheScreen();
+
+      fireEvent.press(screen.getByRole('tab', { name: 'Courses' }));
+      expect(screen.getByTestId('sync-status-line')).toBeOnTheScreen();
+    });
   });
 
   describe('while the keyboard is open', () => {
@@ -217,60 +251,6 @@ describe('Navigation', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Retour' }));
 
     expect(await screen.findByText('Ma liste')).toBeOnTheScreen();
-  });
-
-  it('opens SignIn above the Settings root when the Réglages tab was never opened, so back lands on Settings', async () => {
-    const { store } = await renderNavigation();
-    await screen.findByText('Ma liste');
-    act(() =>
-      store.setState({
-        sync: {
-          ...store.getState().sync,
-          connection: 'signedOut',
-          signedOutReason: 'revoked',
-        },
-      }),
-    );
-
-    fireEvent.press(screen.getByRole('button', { name: 'Se reconnecter' }));
-    await screen.findByLabelText('Adresse e-mail');
-    fireEvent.press(screen.getByRole('button', { name: 'Retour' }));
-
-    expect(await screen.findByText('Apparence')).toBeOnTheScreen();
-  });
-
-  it('opens the Settings root from the sync status, past a SignIn left open in the Réglages tab', async () => {
-    const { store } = await renderNavigation();
-    await screen.findByText('Ma liste');
-    act(() =>
-      store.setState({
-        sync: {
-          ...store.getState().sync,
-          connection: 'signedOut',
-          signedOutReason: 'revoked',
-        },
-      }),
-    );
-    fireEvent.press(screen.getByRole('button', { name: 'Se reconnecter' }));
-    await screen.findByLabelText('Adresse e-mail');
-    fireEvent.press(screen.getByRole('tab', { name: 'Courses' }));
-    await screen.findByText('Ma liste');
-
-    fireEvent.press(
-      screen.getByRole('button', {
-        name: "Cet appareil n'est plus autorisé. Reconnectez-vous.",
-      }),
-    );
-
-    expect(await screen.findByText('Apparence')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Retour' })).toBeNull();
-    await waitFor(() =>
-      expect(
-        screen.queryAllByLabelText('Adresse e-mail', {
-          includeHiddenElements: true,
-        }),
-      ).toHaveLength(0),
-    );
   });
 
   it('keeps the search of the Articles tab apart from the one of AddArticles', async () => {

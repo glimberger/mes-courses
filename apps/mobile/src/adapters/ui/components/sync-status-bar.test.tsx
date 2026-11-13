@@ -172,9 +172,9 @@ describe('SyncStatusBar', () => {
   });
 });
 
-describe('SyncStatusBar as the settings strip', () => {
+describe('SyncStatusBar, the strip of Réglages (015 US2-4)', () => {
   const renderStrip = async () => {
-    const rendered = await renderWithStore(<SyncStatusBar variant="strip" />);
+    const rendered = await renderWithStore(<SyncStatusBar />);
     const show = (sync: Partial<AppState['sync']>) =>
       act(() =>
         rendered.store.setState({

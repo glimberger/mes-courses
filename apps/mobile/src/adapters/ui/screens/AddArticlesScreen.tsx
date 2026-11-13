@@ -16,7 +16,6 @@ import { EmptyCategoryCard } from '../components/EmptyCategoryCard';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenStateView } from '../components/ScreenStateView';
 import { SearchField } from '../components/SearchField';
-import { SyncStatusBar } from '../components/SyncStatusBar';
 import { hasScreenBelow } from '../navigation-history';
 import type { RootStackParamList } from '../routes';
 import { useAppStoreApi } from '../state/app-store-provider';
@@ -144,7 +143,6 @@ export const AddArticlesScreen = ({
           />
         }
       />
-      <SyncStatusBar />
       <SearchField
         placeholder="Rechercher un article"
         value={query}

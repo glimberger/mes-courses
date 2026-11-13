@@ -63,6 +63,13 @@ const search = (text: string) =>
   );
 
 describe('Catalog', () => {
+  it('015 US2-1 shows no sync status bar (the line of the tab bar says the problems)', async () => {
+    await renderScreen({ connected: { lastSyncAt: null } });
+    await screen.findByText('Beurre');
+
+    expect(screen.queryByTestId('sync-status-bar')).not.toBeOnTheScreen();
+  });
+
   it('AC1 groups the articles under their category headers, empty categories hidden', async () => {
     await renderScreen();
     await screen.findByText('Beurre');

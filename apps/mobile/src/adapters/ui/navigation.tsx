@@ -7,7 +7,7 @@ import {
   type BottomTabBarProps,
 } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import type { ErrorReporter } from '../../application/ports/error-reporter';
@@ -122,13 +122,17 @@ const NAVIGATORS = {
  * history it had. On Android it gives way to the keyboard while the user types, as the stock
  * bar's `tabBarHideOnKeyboard` would.
  */
-const NavigationTabBar = ({ state, navigation }: BottomTabBarProps) => {
+const NavigationTabBar = ({
+  state,
+  navigation,
+  lineHidden,
+}: BottomTabBarProps & { lineHidden: boolean }) => {
   const keyboardShown = useAndroidKeyboardShown();
   const selected = state.routes[state.index];
   if (keyboardShown) return null;
   return (
     <View>
-      <SyncStatusLine />
+      {!lineHidden && <SyncStatusLine />}
       <TabBar
         tabs={TABS.map(({ name, label, icon }) => ({ key: name, label, icon }))}
         selectedKey={selected?.name ?? TABS[0].name}
@@ -163,10 +167,18 @@ export const Navigation = ({
 }) => {
   const navigationRef = useNavigationContainerRef<RootTabParamList>();
   const theme = useNavigationTheme();
-  const lineShown = useAppStore((state) => syncLine(state.sync) !== null);
+  const problem = useAppStore((state) => syncLine(state.sync) !== null);
+  // Réglages shows the full status itself, so the line gives way on its root only (015 R2). The
+  // Settings tab not opened yet has no nested route: the tab's own name stands for its root.
+  const [onSettingsRoot, setOnSettingsRoot] = useState(false);
+  const lineHidden = onSettingsRoot;
+  const lineShown = problem && !lineHidden;
   const recordScreen = () => {
     const route = navigationRef.getCurrentRoute();
     if (route) errorReporter.setScreen(route.name);
+    // Typed as the nested screens only; the tab's own name shows before its stack is mounted.
+    const name: string | undefined = route?.name;
+    setOnSettingsRoot(name === 'Settings' || name === 'SettingsTab');
   };
 
   return (
@@ -181,7 +193,9 @@ export const Navigation = ({
           initialRouteName="CoursesTab"
           screenOptions={{ headerShown: false }}
           // Rendered as a component, not called as a function, so it may use hooks.
-          tabBar={(props) => <NavigationTabBar {...props} />}
+          tabBar={(props) => (
+            <NavigationTabBar {...props} lineHidden={lineHidden} />
+          )}
         >
           {TABS.map(({ name }) => (
             <Tab.Screen key={name} name={name} component={NAVIGATORS[name]} />
