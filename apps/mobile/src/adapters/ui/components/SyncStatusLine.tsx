@@ -18,6 +18,8 @@ export type SyncLine = {
 };
 
 // The line is 36 dp high: the slop brings the action's touch target to 48 dp.
+// The line itself gets the same 12 dp, so its target is 48 dp too.
+const LINE_HIT_SLOP = { top: 6, bottom: 6 };
 const ACTION_HIT_SLOP = { top: 7, bottom: 7, left: 12, right: 12 };
 
 const ACTION_LABELS = {
@@ -92,6 +94,9 @@ export const SyncStatusLine = () => {
   return (
     <Pressable
       testID="sync-status-line"
+      accessibilityRole="button"
+      accessibilityLabel={line.text}
+      hitSlop={LINE_HIT_SLOP}
       onPress={() =>
         navigation.navigate('SettingsTab', { screen: 'Settings', pop: true })
       }
@@ -115,6 +120,8 @@ export const SyncStatusLine = () => {
       {line.action && (
         <Pressable
           testID="sync-status-line-action"
+          accessibilityRole="button"
+          accessibilityLabel={ACTION_LABELS[line.action](sync)}
           hitSlop={ACTION_HIT_SLOP}
           style={styles.action}
           onPress={() =>

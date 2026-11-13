@@ -1,9 +1,10 @@
+import * as ReactNative from 'react-native';
 import { StyleSheet } from 'react-native';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 
 import { renderWithStore } from '../testing/render-with-store';
 import type { AppState } from '../state/app-store';
-import { lightTheme } from '../theme/theme';
+import { darkTheme, lightTheme } from '../theme/theme';
 import { SyncStatusLine, syncLine } from './SyncStatusLine';
 
 const mockNavigate = jest.fn();
@@ -239,5 +240,83 @@ describe('SyncStatusLine actions', () => {
       StyleSheet.flatten(screen.getByTestId('sync-status-line').props.style)
         .height,
     ).toBe(36);
+  });
+});
+
+describe('SyncStatusLine accessibility and separator', () => {
+  it('015 US5-1 is a button labeled with its full text', async () => {
+    const { show } = await renderLine();
+    await show({ connection: 'connected', status: 'failed' });
+
+    const line = screen.getByRole('button', {
+      name: 'Échec de la synchronisation',
+    });
+    expect(line).toBe(screen.getByTestId('sync-status-line'));
+  });
+
+  it.each([
+    ['signedOut', 'revoked', 'Appareil déconnecté'],
+    ['updateRequired', 'revoked', 'Mise à jour requise pour synchroniser'],
+    ['suspended', 'revoked', 'Compte suspendu · listes conservées'],
+  ] as const)(
+    '015 US5-1 labels the %s line',
+    async (connection, reason, text) => {
+      const { show } = await renderLine();
+      await show({ connection, signedOutReason: reason });
+
+      expect(screen.getByRole('button', { name: text })).toBeOnTheScreen();
+    },
+  );
+
+  it('015 US5-1 the action has its own label', async () => {
+    const { show } = await renderLine();
+    await show({ connection: 'connected', status: 'failed' });
+
+    // The line's own label is its text: the action is a separate button with its own.
+    const action = screen.getByTestId('sync-status-line-action');
+    expect(action.props.accessibilityRole).toBe('button');
+    expect(action.props.accessibilityLabel).toBe('Réessayer');
+  });
+
+  it('015 US5-2 sets no live region on the line or inside it', async () => {
+    const { show } = await renderLine();
+    await show({ connection: 'connected', status: 'failed' });
+
+    const live = screen.UNSAFE_root.findAll(
+      (node) =>
+        node.props.accessibilityLiveRegion !== undefined ||
+        node.props['aria-live'] !== undefined,
+    );
+    expect(live).toEqual([]);
+  });
+
+  it('015 US5-3 separates the line from the tab bar with 1 dp tokens', async () => {
+    const { show } = await renderLine();
+    await show({ connection: 'connected', status: 'failed' });
+
+    const style = StyleSheet.flatten(
+      screen.getByTestId('sync-status-line').props.style,
+    );
+    expect(style).toMatchObject({
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderTopColor: lightTheme.colors.surfaceContainerHigh,
+      borderBottomColor: lightTheme.colors.outlineVariant,
+      backgroundColor: lightTheme.colors.surfaceContainer,
+    });
+  });
+
+  it('015 US5-3 uses the dark theme tokens in the dark theme', async () => {
+    jest.spyOn(ReactNative, 'useColorScheme').mockReturnValue('dark');
+    const { show } = await renderLine();
+    await show({ connection: 'connected', status: 'failed' });
+
+    const style = StyleSheet.flatten(
+      screen.getByTestId('sync-status-line').props.style,
+    );
+    expect(style.borderBottomColor).toBe(darkTheme.colors.outlineVariant);
+    expect(style.borderTopColor).toBe(darkTheme.colors.surfaceContainerHigh);
+    expect(style.backgroundColor).toBe(darkTheme.colors.surfaceContainer);
+    jest.restoreAllMocks();
   });
 });

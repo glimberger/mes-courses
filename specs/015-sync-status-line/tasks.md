@@ -41,8 +41,8 @@
 
 ## Phase 6: User Story 5 - The line is accessible and distinct (P3)
 
-- [ ] T013 [US5] In `components/SyncStatusLine.tsx` and `components/sync-status-line.test.tsx`: the line is a button labeled with its full text ("Échec de la synchronisation"), the action has its own label, no `accessibilityLiveRegion` anywhere, the separator uses `surfaceContainerHigh` (1 dp top) and `outlineVariant` (1 dp bottom) from the theme in light and dark; and in `components/sync-announcer.test.tsx` the announcer still announces each transition once with the line mounted (US5-1 to US5-3). Depends on T003.
-- [ ] T014 [US5] Extend `screens/accessibility.test.tsx` with the app in a problem state (for example failed): the line is a labeled button with its action, and no accessibility violation is reported on a screen showing it. Depends on T008, T013.
+- [x] T013 [US5] In `components/SyncStatusLine.tsx` and `components/sync-status-line.test.tsx`: the line is a button labeled with its full text ("Échec de la synchronisation"), the action has its own label, no `accessibilityLiveRegion` anywhere, the separator uses `surfaceContainerHigh` (1 dp top) and `outlineVariant` (1 dp bottom) from the theme in light and dark; and in `components/sync-announcer.test.tsx` the announcer still announces each transition once with the line mounted (US5-1 to US5-3). Depends on T003.
+- [x] T014 [US5] Extend `screens/accessibility.test.tsx` with the app in a problem state (for example failed): the line is a labeled button with its action, and no accessibility violation is reported on a screen showing it. Depends on T008, T013.
 
 ## Phase 7: Polish and cross-cutting
 
