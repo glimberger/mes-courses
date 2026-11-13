@@ -1,4 +1,9 @@
-import { exitCodeOf, parseAgentUpdateArgs, UsageError } from './agent-update';
+import {
+  exitCodeOf,
+  parseAgentUpdateArgs,
+  refuseRoot,
+  UsageError,
+} from './agent-update';
 
 describe('parseAgentUpdateArgs', () => {
   it('defaults to the latest release on agent-pi', () => {
@@ -54,5 +59,15 @@ describe('parseAgentUpdateArgs', () => {
     expect(
       exitCodeOf({ outcome: 'stopped', message: 'x', repointed: false }),
     ).toBe(1);
+  });
+});
+
+describe('refuseRoot', () => {
+  it('refuses uid 0 with a message saying not to use sudo', () => {
+    expect(refuseRoot(0)).toMatch(/without sudo/);
+  });
+
+  it.each([501, undefined])('lets uid %p run', (uid) => {
+    expect(refuseRoot(uid)).toBeNull();
   });
 });

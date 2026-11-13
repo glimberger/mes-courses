@@ -18,7 +18,7 @@ pnpm agent:update --version 2.3.0    # installs the agent of release v2.3.0
 ```
 
 It drives the Pi over `ssh agent-pi` (`--host` or `AGENT_UPDATE_HOST` for another destination; the
-login needs `sudo` without a password, as the steps run as root). The release and its
+steps run as root through `sudo` on the Pi). The release and its
 `delivery-<agent version>.tar.gz` asset are found with your `gh` session. On the Pi, the bundle is
 downloaded with the read-only token read from `/etc/mes-courses/agent.env`: the token never leaves
 the Pi, is not printed and is not on any command line (the script travels on ssh's standard input
@@ -28,6 +28,13 @@ and curl reads its header from a pipe). Then, in this order:
 2. build the Node runtime from the bundle's `nixpkgs-rev` into `releases/<agent version>/runtime`;
 3. only then point `runtime` and `current` at that release (two atomic renames);
 4. run `main.js status` and print it.
+
+If the login needs a password for `sudo`, the command first checks with `sudo -n true`, then asks for
+that password once, hidden, on your terminal. It is kept in memory only and travels on ssh's
+standard input to `sudo -S`: it is never on a command line, in a log or in an error. A wrong
+password stops the command before any change; without a terminal it fails instead of waiting. With
+passwordless `sudo` nothing is asked. Run the command as your normal user, never with `sudo` (as
+root, ssh uses root's keys and `known_hosts`): it refuses to start as root.
 
 A failure before step 3 leaves `current` untouched, and a folder left half-unpacked by an earlier
 run is not an install: it is unpacked again from scratch. Running it again with the installed
