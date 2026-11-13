@@ -125,14 +125,14 @@ const NAVIGATORS = {
 const NavigationTabBar = ({
   state,
   navigation,
-  lineHidden,
-}: BottomTabBarProps & { lineHidden: boolean }) => {
-  const keyboardShown = useAndroidKeyboardShown();
+  lineShown,
+  keyboardShown,
+}: BottomTabBarProps & { lineShown: boolean; keyboardShown: boolean }) => {
   const selected = state.routes[state.index];
   if (keyboardShown) return null;
   return (
     <View testID="tab-bar-slot">
-      {!lineHidden && <SyncStatusLine />}
+      {lineShown && <SyncStatusLine />}
       <TabBar
         tabs={TABS.map(({ name, label, icon }) => ({ key: name, label, icon }))}
         selectedKey={selected?.name ?? TABS[0].name}
@@ -196,7 +196,11 @@ export const Navigation = ({
           screenOptions={{ headerShown: false }}
           // Rendered as a component, not called as a function, so it may use hooks.
           tabBar={(props) => (
-            <NavigationTabBar {...props} lineHidden={lineHidden} />
+            <NavigationTabBar
+              {...props}
+              lineShown={lineShown}
+              keyboardShown={keyboardShown}
+            />
           )}
         >
           {TABS.map(({ name }) => (

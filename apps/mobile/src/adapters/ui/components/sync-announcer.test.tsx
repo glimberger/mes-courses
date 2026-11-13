@@ -40,6 +40,15 @@ const renderAnnouncer = async () => {
 };
 
 describe('SyncAnnouncer (003 US3-6, FR-023)', () => {
+  it('announces that an update is required', async () => {
+    const { show } = await renderAnnouncer();
+    await show({ connection: 'updateRequired' });
+
+    expect(announce).toHaveBeenCalledWith(
+      "Mettez à jour l'application pour synchroniser.",
+    );
+  });
+
   it('announces entering failed once, then the first saved after the failure', async () => {
     const { show } = await renderAnnouncer();
     await show({ status: 'saved' });

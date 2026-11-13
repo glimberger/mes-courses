@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Icon, Text, useTheme } from 'react-native-paper';
 
 import type { AppNavigation } from '../routes';
@@ -18,16 +18,17 @@ export type SyncLine = {
 };
 
 // The line is 36 dp high: the slop brings the action's touch target to 48 dp.
-// The line itself gets the same 12 dp, so its target is 48 dp too.
-const LINE_HIT_SLOP = { top: 6, bottom: 6 };
+// The status part is 34 dp high (inside the borders): the same slop brings it to 48 dp too.
+const LINE_HIT_SLOP = { top: 7, bottom: 7 };
 const ACTION_HIT_SLOP = { top: 7, bottom: 7, left: 12, right: 12 };
+
+/** The label of the reconnect action, shared with the Réglages strip. */
+export const reconnectLabel = (reason: SyncSlice['signedOutReason']) =>
+  reason === 'accountDeleted' ? 'Se connecter' : 'Se reconnecter';
 
 const ACTION_LABELS = {
   retry: () => 'Réessayer',
-  reconnect: (slice: SyncSlice) =>
-    slice.signedOutReason === 'accountDeleted'
-      ? 'Se connecter'
-      : 'Se reconnecter',
+  reconnect: (slice: SyncSlice) => reconnectLabel(slice.signedOutReason),
 } as const;
 
 /** What the line shows for the slice, or null when there is no problem to show. */
@@ -92,14 +93,10 @@ export const SyncStatusLine = () => {
   const iconColor =
     line.tone === 'error' ? colors.error : colors.onSurfaceVariant;
   return (
-    <Pressable
-      testID="sync-status-line"
-      accessibilityRole="button"
-      accessibilityLabel={line.text}
-      hitSlop={LINE_HIT_SLOP}
-      onPress={() =>
-        navigation.navigate('SettingsTab', { screen: 'Settings', pop: true })
-      }
+    // Two siblings, not nested: a screen reader hides the children of an accessible parent, so
+    // the action would be out of its reach.
+    <View
+      testID="sync-status-line-bar"
       style={[
         styles.line,
         {
@@ -109,21 +106,32 @@ export const SyncStatusLine = () => {
         },
       ]}
     >
-      <Icon source={line.icon} size={18} color={iconColor} />
-      <Text
-        numberOfLines={1}
-        ellipsizeMode="tail"
-        style={[styles.text, { color: textColor }]}
+      <Pressable
+        testID="sync-status-line"
+        accessibilityRole="button"
+        accessibilityLabel={line.text}
+        hitSlop={LINE_HIT_SLOP}
+        onPress={() =>
+          navigation.navigate('SettingsTab', { screen: 'Settings', pop: true })
+        }
+        style={({ pressed }) => [styles.status, pressed && styles.pressed]}
       >
-        {line.text}
-      </Text>
+        <Icon source={line.icon} size={18} color={iconColor} />
+        <Text
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={[styles.text, { color: textColor }]}
+        >
+          {line.text}
+        </Text>
+      </Pressable>
       {line.action && (
         <Pressable
           testID="sync-status-line-action"
           accessibilityRole="button"
           accessibilityLabel={ACTION_LABELS[line.action](sync)}
           hitSlop={ACTION_HIT_SLOP}
-          style={styles.action}
+          style={({ pressed }) => [styles.action, pressed && styles.pressed]}
           onPress={() =>
             line.action === 'retry'
               ? void retry()
@@ -139,7 +147,7 @@ export const SyncStatusLine = () => {
           </Text>
         </Pressable>
       )}
-    </Pressable>
+    </View>
   );
 };
 
@@ -153,6 +161,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderBottomWidth: 1,
   },
+  status: {
+    height: SYNC_LINE_HEIGHT - 2,
+    flex: 1,
+    flexShrink: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  pressed: { opacity: 0.6 },
   action: {
     height: SYNC_LINE_HEIGHT - 2,
     justifyContent: 'center',

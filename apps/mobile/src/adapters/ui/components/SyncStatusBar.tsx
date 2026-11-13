@@ -8,6 +8,7 @@ import { useAppStore } from '../state/use-app-store';
 import type { AppTheme } from '../theme/theme';
 import { typeOverrides } from '../theme/typography';
 import { Button } from './Button';
+import { reconnectLabel } from './SyncStatusLine';
 
 type Display = {
   icon: string;
@@ -35,12 +36,18 @@ const display = ({
         ? {
             icon: 'cloud_off',
             text: 'Ce compte a été supprimé.',
-            action: { label: 'Se connecter', target: 'reconnect' },
+            action: {
+              label: reconnectLabel(signedOutReason),
+              target: 'reconnect',
+            },
           }
         : {
             icon: 'cloud_off',
             text: "Cet appareil n'est plus autorisé. Reconnectez-vous.",
-            action: { label: 'Se reconnecter', target: 'reconnect' },
+            action: {
+              label: reconnectLabel(signedOutReason),
+              target: 'reconnect',
+            },
           };
     case 'suspended':
       // Not an error: the lists stay on the phone and keep working (Principle VII).

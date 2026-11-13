@@ -1,6 +1,6 @@
 import * as ReactNative from 'react-native';
 import { StyleSheet } from 'react-native';
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 
 import { renderWithStore } from '../testing/render-with-store';
 import type { AppState } from '../state/app-store';
@@ -237,9 +237,24 @@ describe('SyncStatusLine actions', () => {
     const slop = action.props.hitSlop;
     expect(height + slop.top + slop.bottom).toBeGreaterThanOrEqual(48);
     expect(
-      StyleSheet.flatten(screen.getByTestId('sync-status-line').props.style)
+      StyleSheet.flatten(screen.getByTestId('sync-status-line-bar').props.style)
         .height,
     ).toBe(36);
+  });
+
+  it('review: the action is not nested in the accessible line, so a screen reader reaches it', async () => {
+    const { show } = await renderLine();
+    await show({ connection: 'connected', status: 'failed' });
+
+    const bar = screen.getByTestId('sync-status-line-bar');
+    expect(within(bar).getByTestId('sync-status-line')).toBeTruthy();
+    expect(within(bar).getByTestId('sync-status-line-action')).toBeTruthy();
+    // Neither one holds the other.
+    expect(
+      within(screen.getByTestId('sync-status-line')).queryByTestId(
+        'sync-status-line-action',
+      ),
+    ).toBeNull();
   });
 });
 
@@ -295,7 +310,7 @@ describe('SyncStatusLine accessibility and separator', () => {
     await show({ connection: 'connected', status: 'failed' });
 
     const style = StyleSheet.flatten(
-      screen.getByTestId('sync-status-line').props.style,
+      screen.getByTestId('sync-status-line-bar').props.style,
     );
     expect(style).toMatchObject({
       borderTopWidth: 1,
@@ -312,7 +327,7 @@ describe('SyncStatusLine accessibility and separator', () => {
     await show({ connection: 'connected', status: 'failed' });
 
     const style = StyleSheet.flatten(
-      screen.getByTestId('sync-status-line').props.style,
+      screen.getByTestId('sync-status-line-bar').props.style,
     );
     expect(style.borderBottomColor).toBe(darkTheme.colors.outlineVariant);
     expect(style.borderTopColor).toBe(darkTheme.colors.surfaceContainerHigh);
