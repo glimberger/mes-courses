@@ -175,6 +175,10 @@ describe('SC-003 the mockup type scale', () => {
         fontSize: 14,
         fontFamily: 'Nunito_700Bold',
       }),
+      syncLine: expect.objectContaining({
+        fontSize: 13,
+        fontFamily: 'Nunito_700Bold',
+      }),
       emptyCategory: expect.objectContaining({
         fontSize: 14,
         fontFamily: 'Nunito_600SemiBold',

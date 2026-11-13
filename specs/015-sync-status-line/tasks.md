@@ -8,8 +8,8 @@
 
 ## Phase 1: Foundational (blocking prerequisites)
 
-- [ ] T001 [P] Add a `syncLine` entry (13 sp, bold, same family as `syncStrip`) to `theme/typography.ts` `typeOverrides`, with its assertion in the existing typography test.
-- [ ] T002 [P] Create `components/SyncLineOffset.tsx`: a React context holding the line's current height (default 0), `SyncLineOffsetProvider`, `useSyncLineHeight()` and `SYNC_LINE_HEIGHT = 36`; test first in `components/sync-line-offset.test.tsx` (default 0, the provider's value is read).
+- [x] T001 [P] Add a `syncLine` entry (13 sp, bold, same family as `syncStrip`) to `theme/typography.ts` `typeOverrides`, with its assertion in the existing typography test.
+- [x] T002 [P] Create `components/SyncLineOffset.tsx`: a React context holding the line's current height (default 0), `SyncLineOffsetProvider`, `useSyncLineHeight()` and `SYNC_LINE_HEIGHT = 36`; test first in `components/sync-line-offset.test.tsx` (default 0, the provider's value is read).
 
 ## Phase 2: User Story 1 - A sync problem is visible on any screen (P1)
 

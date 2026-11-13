@@ -85,6 +85,7 @@ export const typeOverrides = {
   },
   snackbarMessage: { ...typeScale.bodyMedium, fontSize: 15, fontFamily: BOLD },
   syncStrip: { ...typeScale.bodySmall, fontSize: 14, fontFamily: BOLD },
+  syncLine: { ...typeScale.bodySmall, fontSize: 13, fontFamily: BOLD },
   emptyCategory: {
     ...typeScale.bodySmall,
     fontSize: 14,
