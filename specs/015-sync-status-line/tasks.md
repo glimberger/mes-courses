@@ -34,10 +34,10 @@
 
 ## Phase 5: User Story 4 - The line never hides content or controls (P2)
 
-- [ ] T009 [US4] Hide the line (the whole column) with the tab bar while the Android keyboard is shown and bring it back after: test first in `navigation.test.tsx` next to the existing keyboard tests; the provided height is 0 while hidden (US4-4). Depends on T005.
-- [ ] T010 [US4] Make `components/UndoSnackbar.tsx` add `useSyncLineHeight()` to its bottom offset (keep `ABOVE_SCREEN_FAB` and `ABOVE_UNDO_OFFER` as the no-line constants, add a small `withSyncLine` helper next to them in `components/ScreenFab.tsx`); tests first in `components/undo-snackbar.test.tsx`: unchanged place without the line, 36 dp higher with it (US4-1, US4-2). Depends on T002.
-- [ ] T011 [US4] Same for `components/NoticeSnackbar.tsx`, in both its places (`ABOVE_SCREEN_FAB` and `ABOVE_UNDO_OFFER`); tests first in `components/notice-snackbar.test.tsx` (the existing `172 + 60 + 8` assertion stays for no line). Depends on T010.
-- [ ] T012 [US4] Check the in-flow case of research R3 (floating button and last row of a list above the line): add a `navigation.test.tsx` case that the line and the tab bar share the tab bar slot so the screen area shrinks; if the device check of T018 shows the button or the last row hidden, make `SCREEN_FAB_CLEARANCE` and the FAB offset line-aware in `components/ScreenFab.tsx` with their tests instead. Depends on T004.
+- [x] T009 [US4] Hide the line (the whole column) with the tab bar while the Android keyboard is shown and bring it back after: test first in `navigation.test.tsx` next to the existing keyboard tests; the provided height is 0 while hidden (US4-4). Depends on T005.
+- [x] T010 [US4] Make `components/UndoSnackbar.tsx` add `useSyncLineHeight()` to its bottom offset (keep `ABOVE_SCREEN_FAB` and `ABOVE_UNDO_OFFER` as the no-line constants, add a small `withSyncLine` helper next to them in `components/ScreenFab.tsx`); tests first in `components/undo-snackbar.test.tsx`: unchanged place without the line, 36 dp higher with it (US4-1, US4-2). Depends on T002.
+- [x] T011 [US4] Same for `components/NoticeSnackbar.tsx`, in both its places (`ABOVE_SCREEN_FAB` and `ABOVE_UNDO_OFFER`); tests first in `components/notice-snackbar.test.tsx` (the existing `172 + 60 + 8` assertion stays for no line). Depends on T010.
+- [x] T012 [US4] Check the in-flow case of research R3 (floating button and last row of a list above the line): add a `navigation.test.tsx` case that the line and the tab bar share the tab bar slot so the screen area shrinks; if the device check of T018 shows the button or the last row hidden, make `SCREEN_FAB_CLEARANCE` and the FAB offset line-aware in `components/ScreenFab.tsx` with their tests instead. Depends on T004.
 
 ## Phase 6: User Story 5 - The line is accessible and distinct (P3)
 

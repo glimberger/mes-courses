@@ -131,7 +131,7 @@ const NavigationTabBar = ({
   const selected = state.routes[state.index];
   if (keyboardShown) return null;
   return (
-    <View>
+    <View testID="tab-bar-slot">
       {!lineHidden && <SyncStatusLine />}
       <TabBar
         tabs={TABS.map(({ name, label, icon }) => ({ key: name, label, icon }))}
@@ -172,7 +172,9 @@ export const Navigation = ({
   // Settings tab not opened yet has no nested route: the tab's own name stands for its root.
   const [onSettingsRoot, setOnSettingsRoot] = useState(false);
   const lineHidden = onSettingsRoot;
-  const lineShown = problem && !lineHidden;
+  // The line leaves with the tab bar while the Android keyboard is open (015 US4-4).
+  const keyboardShown = useAndroidKeyboardShown();
+  const lineShown = problem && !lineHidden && !keyboardShown;
   const recordScreen = () => {
     const route = navigationRef.getCurrentRoute();
     if (route) errorReporter.setScreen(route.name);

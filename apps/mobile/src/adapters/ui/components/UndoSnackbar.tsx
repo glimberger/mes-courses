@@ -6,7 +6,8 @@ import { useScreenReaderOn } from '../accessibility/screen-reader';
 import type { PendingUndo } from '../state/app-store';
 import { useAppStore } from '../state/use-app-store';
 import { BrandSnackbar } from './BrandSnackbar';
-import { ABOVE_SCREEN_FAB } from './ScreenFab';
+import { ABOVE_SCREEN_FAB, withSyncLine } from './ScreenFab';
+import { useSyncLineHeight } from './SyncLineOffset';
 
 /**
  * The room one undo offer takes: its 60 dp height (44 dp action button plus 8 dp padding above and
@@ -45,6 +46,7 @@ export const UndoSnackbar = () => {
   const undo = useAppStore((state) => state.undo);
   const dismissUndo = useAppStore((state) => state.dismissUndo);
   const screenReaderOn = useScreenReaderOn();
+  const lineHeight = useSyncLineHeight();
   // The last offer shown, kept while the snackbar fades out, and numbered so that an offer
   // replacing a visible one gets its own snackbar.
   const [shown, setShown] = useState<{ offer: PendingUndo; id: number } | null>(
@@ -96,7 +98,7 @@ export const UndoSnackbar = () => {
       action={{ label: 'Annuler', onPress: () => void undo() }}
       // Announced above on both platforms; a live region would read it a second time on Android.
       accessibilityLiveRegion="none"
-      wrapperStyle={ABOVE_SCREEN_FAB}
+      wrapperStyle={withSyncLine(ABOVE_SCREEN_FAB, lineHeight)}
     >
       {shown ? text(shown.offer) : ''}
     </BrandSnackbar>

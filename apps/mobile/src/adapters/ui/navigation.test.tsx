@@ -1,7 +1,15 @@
-import { Keyboard, Platform } from 'react-native';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { Keyboard, Platform, StyleSheet } from 'react-native';
+import { Snackbar } from 'react-native-paper';
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../application/testing/recording-error-reporter';
+import { ABOVE_SCREEN_FAB } from './components/ScreenFab';
 import { Navigation } from './navigation';
 import type { AppState } from './state/app-store';
 import { fixture } from './testing/fixtures';
@@ -138,6 +146,24 @@ describe('Navigation', () => {
       expect(screen.queryByTestId('sync-status-line')).toBeNull();
     });
 
+    it('015 US4 keeps the line in flow with the tab bar, so the screen area shrinks above it', async () => {
+      const { store } = await renderNavigation();
+      await screen.findByText('Ma liste');
+      await failSync(store);
+
+      const slot = screen.getByTestId('tab-bar-slot');
+      // The line and the tab bar share one slot, laid out in flow (not absolute)...
+      expect(within(slot).getByTestId('sync-status-line')).toBeOnTheScreen();
+      expect(
+        within(slot).getByRole('tab', { name: 'Courses' }),
+      ).toBeOnTheScreen();
+      expect(StyleSheet.flatten(slot.props.style)?.position).not.toBe(
+        'absolute',
+      );
+      // ...and the screen is outside it: the navigator gives it what the slot leaves.
+      expect(within(slot).queryByText('Ma liste')).toBeNull();
+    });
+
     it('015 US2 hides the line on the Réglages root in every problem state', async () => {
       const { store } = await renderNavigation();
       await screen.findByText('Ma liste');
@@ -212,6 +238,37 @@ describe('Navigation', () => {
 
       emit('keyboardDidHide');
       expect(screen.getByRole('tab', { name: 'Courses' })).toBeOnTheScreen();
+    });
+
+    it('015 US4 hides the sync line with the tab bar on Android, and brings it back, the offset following', async () => {
+      jest.replaceProperty(Platform, 'OS', 'android');
+      const { store } = await renderNavigation();
+      await screen.findByText('Ma liste');
+      await act(() =>
+        store.setState({
+          sync: {
+            ...store.getState().sync,
+            connection: 'connected',
+            status: 'failed',
+          },
+          notice: { type: 'writeFailed' },
+        }),
+      );
+      const noticeBottom = () =>
+        screen
+          .UNSAFE_getAllByType(Snackbar)
+          .map((snackbar) => snackbar.props.wrapperStyle.bottom);
+      expect(screen.getByTestId('sync-status-line')).toBeOnTheScreen();
+      expect(noticeBottom()).toContain(ABOVE_SCREEN_FAB.bottom + 36);
+
+      emit('keyboardDidShow');
+      expect(screen.queryByTestId('sync-status-line')).toBeNull();
+      expect(noticeBottom()).not.toContain(ABOVE_SCREEN_FAB.bottom + 36);
+      expect(noticeBottom()).toContain(ABOVE_SCREEN_FAB.bottom);
+
+      emit('keyboardDidHide');
+      expect(screen.getByTestId('sync-status-line')).toBeOnTheScreen();
+      expect(noticeBottom()).toContain(ABOVE_SCREEN_FAB.bottom + 36);
     });
 
     it('keeps the tab bar on iOS', async () => {

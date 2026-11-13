@@ -4,7 +4,8 @@ import { AccessibilityInfo } from 'react-native';
 import type { Notice } from '../state/app-store';
 import { useAppStore } from '../state/use-app-store';
 import { BrandSnackbar } from './BrandSnackbar';
-import { ABOVE_SCREEN_FAB } from './ScreenFab';
+import { ABOVE_SCREEN_FAB, withSyncLine } from './ScreenFab';
+import { useSyncLineHeight } from './SyncLineOffset';
 import { ABOVE_UNDO_OFFER } from './UndoSnackbar';
 
 const text = (notice: Notice): string => {
@@ -38,6 +39,7 @@ const text = (notice: Notice): string => {
 export const NoticeSnackbar = () => {
   const notice = useAppStore((state) => state.notice);
   const dismissNotice = useAppStore((state) => state.dismissNotice);
+  const lineHeight = useSyncLineHeight();
   const undoOffered = useAppStore((state) => state.pendingUndo !== null);
   // The last notice shown, kept while the snackbar fades out, and numbered so that a notice
   // replacing a visible one gets its own snackbar and its own hide delay.
@@ -61,7 +63,10 @@ export const NoticeSnackbar = () => {
       // Announced above on both platforms; a live region would read it a second time on Android.
       accessibilityLiveRegion="none"
       // Stacked above the undo offer, if one shows (a failed write leaves it).
-      wrapperStyle={undoOffered ? ABOVE_UNDO_OFFER : ABOVE_SCREEN_FAB}
+      wrapperStyle={withSyncLine(
+        undoOffered ? ABOVE_UNDO_OFFER : ABOVE_SCREEN_FAB,
+        lineHeight,
+      )}
     >
       {shown ? text(shown.notice) : ''}
     </BrandSnackbar>

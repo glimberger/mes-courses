@@ -7,6 +7,7 @@ import type { ListId } from '../../../domain/shopping-list';
 import type { Notice } from '../state/app-store';
 import { renderWithStore } from '../testing/render-with-store';
 import { ABOVE_SCREEN_FAB } from './ScreenFab';
+import { SYNC_LINE_HEIGHT, SyncLineOffsetProvider } from './SyncLineOffset';
 import { ABOVE_UNDO_OFFER } from './UndoSnackbar';
 import { NoticeSnackbar } from './NoticeSnackbar';
 
@@ -15,8 +16,12 @@ const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
 beforeEach(() => announce.mockReset());
 afterAll(() => announce.mockRestore());
 
-const renderSnackbar = async () => {
-  const rendered = await renderWithStore(<NoticeSnackbar />);
+const renderSnackbar = async (lineHeight = 0) => {
+  const rendered = await renderWithStore(
+    <SyncLineOffsetProvider value={lineHeight}>
+      <NoticeSnackbar />
+    </SyncLineOffsetProvider>,
+  );
   const show = (notice: Notice) =>
     act(() => rendered.store.setState({ notice }));
   return { ...rendered, show };
@@ -179,5 +184,33 @@ describe('NoticeSnackbar', () => {
 
   it('sits one 8 dp gap above the 60 dp undo offer, itself above the 172 dp tab bar and floating button zone', () => {
     expect(ABOVE_UNDO_OFFER.bottom).toBe(172 + 60 + 8);
+  });
+
+  it('015 US4 shifts both of its places up by the height of the sync line', async () => {
+    const { store, show } = await renderSnackbar(SYNC_LINE_HEIGHT);
+    show({ type: 'writeFailed' });
+    expect(screen.UNSAFE_getByType(Snackbar).props.wrapperStyle).toEqual({
+      bottom: ABOVE_SCREEN_FAB.bottom + 36,
+    });
+
+    act(() =>
+      store.setState({
+        pendingUndo: {
+          kind: 'removedItem',
+          removed: {
+            undoId: 'undo-1',
+            listId: 'list-1' as ListId,
+            articleId: 'article-1' as ArticleId,
+            inCart: false,
+            quantity: null,
+          },
+          name: 'Lait',
+        },
+      }),
+    );
+
+    expect(screen.UNSAFE_getByType(Snackbar).props.wrapperStyle).toEqual({
+      bottom: ABOVE_UNDO_OFFER.bottom + 36,
+    });
   });
 });
