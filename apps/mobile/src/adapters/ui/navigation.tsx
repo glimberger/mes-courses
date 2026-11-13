@@ -8,6 +8,7 @@ import {
 } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { ReactNode } from 'react';
+import { View } from 'react-native';
 
 import type { ErrorReporter } from '../../application/ports/error-reporter';
 import { ScreenErrorBoundary } from './components/app-error-boundary';
@@ -34,6 +35,12 @@ import {
   type SettingsStackParamList,
 } from './routes';
 import { SyncAnnouncer } from './components/SyncAnnouncer';
+import {
+  SYNC_LINE_HEIGHT,
+  SyncLineOffsetProvider,
+} from './components/SyncLineOffset';
+import { SyncStatusLine, syncLine } from './components/SyncStatusLine';
+import { useAppStore } from './state/use-app-store';
 import { useAndroidKeyboardShown } from './keyboard';
 import { useNavigationTheme } from './theme/navigation-theme';
 
@@ -120,22 +127,25 @@ const NavigationTabBar = ({ state, navigation }: BottomTabBarProps) => {
   const selected = state.routes[state.index];
   if (keyboardShown) return null;
   return (
-    <TabBar
-      tabs={TABS.map(({ name, label, icon }) => ({ key: name, label, icon }))}
-      selectedKey={selected?.name ?? TABS[0].name}
-      onSelect={(key) => {
-        const route = state.routes.find(({ name }) => name === key);
-        if (!route) return;
-        const event = navigation.emit({
-          type: 'tabPress',
-          target: route.key,
-          canPreventDefault: true,
-        });
-        if (route.key !== selected?.key && !event.defaultPrevented) {
-          navigation.navigate(route.name, route.params);
-        }
-      }}
-    />
+    <View>
+      <SyncStatusLine />
+      <TabBar
+        tabs={TABS.map(({ name, label, icon }) => ({ key: name, label, icon }))}
+        selectedKey={selected?.name ?? TABS[0].name}
+        onSelect={(key) => {
+          const route = state.routes.find(({ name }) => name === key);
+          if (!route) return;
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (route.key !== selected?.key && !event.defaultPrevented) {
+            navigation.navigate(route.name, route.params);
+          }
+        }}
+      />
+    </View>
   );
 };
 
@@ -153,13 +163,14 @@ export const Navigation = ({
 }) => {
   const navigationRef = useNavigationContainerRef<RootTabParamList>();
   const theme = useNavigationTheme();
+  const lineShown = useAppStore((state) => syncLine(state.sync) !== null);
   const recordScreen = () => {
     const route = navigationRef.getCurrentRoute();
     if (route) errorReporter.setScreen(route.name);
   };
 
   return (
-    <>
+    <SyncLineOffsetProvider value={lineShown ? SYNC_LINE_HEIGHT : 0}>
       <NavigationContainer
         ref={navigationRef}
         theme={theme}
@@ -181,6 +192,6 @@ export const Navigation = ({
       <UndoSnackbar />
       <NoticeSnackbar />
       <SignedOutNotice />
-    </>
+    </SyncLineOffsetProvider>
   );
 };

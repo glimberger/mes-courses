@@ -3,6 +3,7 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { RecordingErrorReporter } from '../../application/testing/recording-error-reporter';
 import { Navigation } from './navigation';
+import type { AppState } from './state/app-store';
 import { fixture } from './testing/fixtures';
 import { renderWithStore } from './testing/render-with-store';
 
@@ -93,6 +94,49 @@ describe('Navigation', () => {
     fireEvent.press(screen.getByRole('tab', { name: 'Réglages' }));
     await screen.findByText('Apparence');
     expect(errorReporter.screens).toEqual(['CurrentList', 'Lists', 'Settings']);
+  });
+
+  describe('the sync status line', () => {
+    type Store = {
+      setState: (state: Partial<AppState>) => void;
+      getState: () => AppState;
+    };
+    const showSync = (store: Store, sync: Partial<AppState['sync']>) =>
+      act(() =>
+        store.setState({ sync: { ...store.getState().sync, ...sync } }),
+      );
+    const failSync = (store: Store) =>
+      showSync(store, { connection: 'connected', status: 'failed' });
+
+    it('015 US1 shows no line while nothing is wrong', async () => {
+      await renderNavigation();
+      await screen.findByText('Ma liste');
+
+      expect(screen.queryByTestId('sync-status-line')).toBeNull();
+    });
+
+    it('015 US1 shows the line above the tab bar on every tab in a problem state', async () => {
+      const { store } = await renderNavigation();
+      await screen.findByText('Ma liste');
+      await failSync(store);
+
+      for (const tab of ['Courses', 'Listes', 'Articles']) {
+        fireEvent.press(screen.getByRole('tab', { name: tab }));
+        expect(screen.getByTestId('sync-status-line')).toBeOnTheScreen();
+        expect(screen.getByRole('tab', { name: tab })).toBeOnTheScreen();
+      }
+    });
+
+    it('015 US1 removes the line when the state recovers', async () => {
+      const { store } = await renderNavigation();
+      await screen.findByText('Ma liste');
+      await failSync(store);
+      expect(screen.getByTestId('sync-status-line')).toBeOnTheScreen();
+
+      await showSync(store, { status: 'saved' });
+
+      expect(screen.queryByTestId('sync-status-line')).toBeNull();
+    });
   });
 
   describe('while the keyboard is open', () => {

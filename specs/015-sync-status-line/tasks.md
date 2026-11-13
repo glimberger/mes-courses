@@ -15,8 +15,8 @@
 
 **Goal**: the line shows the five problem states, nothing otherwise. **Independent test**: render `SyncStatusLine` in each state of the `sync` slice (data-model.md mapping).
 
-- [ ] T003 [US1] Create `components/SyncStatusLine.tsx` with the pure `syncLine(slice)` mapping of data-model.md and the component (contract `contracts/ui-sync-status-line.md`: texts, 18 dp icons, error tone vs neutral tone for `suspended`, 36 dp, 13 sp bold one line ellipsized, `testID="sync-status-line"`), test first in `components/sync-status-line.test.tsx`: one test per problem state (text, icon, tone), nothing for `saved`, `waiting`, `sending` and `notConnected`, and the line disappears when the state recovers (scenarios US1-1 to US1-7). Depends on T001, T002.
-- [ ] T004 [US1] Mount the line in `navigation.tsx`: `NavigationTabBar` renders a column `[SyncStatusLine, TabBar]`; `Navigation` provides `SyncLineOffsetProvider` with 36 when the line is shown, else 0 (research R1, R3); tests first in `navigation.test.tsx`: the line is above the tab bar in a problem state, absent otherwise, on every tab. Depends on T002, T003.
+- [x] T003 [US1] Create `components/SyncStatusLine.tsx` with the pure `syncLine(slice)` mapping of data-model.md and the component (contract `contracts/ui-sync-status-line.md`: texts, 18 dp icons, error tone vs neutral tone for `suspended`, 36 dp, 13 sp bold one line ellipsized, `testID="sync-status-line"`), test first in `components/sync-status-line.test.tsx`: one test per problem state (text, icon, tone), nothing for `saved`, `waiting`, `sending` and `notConnected`, and the line disappears when the state recovers (scenarios US1-1 to US1-7). Depends on T001, T002.
+- [x] T004 [US1] Mount the line in `navigation.tsx`: `NavigationTabBar` renders a column `[SyncStatusLine, TabBar]`; `Navigation` provides `SyncLineOffsetProvider` with 36 when the line is shown, else 0 (research R1, R3); tests first in `navigation.test.tsx`: the line is above the tab bar in a problem state, absent otherwise, on every tab. Depends on T002, T003.
 
 **Checkpoint**: problem states visible app-wide (the old banner is still on the screens until Phase 3).
 

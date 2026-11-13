@@ -236,7 +236,10 @@ describe('Settings, devices (003 US4)', () => {
     const { store } = await openSettings({ syncServer: { sync } });
     await act(() => store.getState().syncNow());
 
-    expect(await screen.findByText('Compte supprimé')).toBeOnTheScreen();
+    // The dialog title; the status line says the same until it is hidden on Réglages (015 T005).
+    expect(
+      (await screen.findAllByText('Compte supprimé')).length,
+    ).toBeGreaterThan(0);
     expect(
       screen.getByText(
         'Ce compte a été supprimé. Les listes de ce compte vont être effacées de cet appareil.',
