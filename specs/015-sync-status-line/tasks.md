@@ -30,7 +30,7 @@
 
 ## Phase 4: User Story 3 - The line acts on the problem (P2)
 
-- [ ] T008 [US3] In `components/SyncStatusLine.tsx` wire the actions (research R4): "Réessayer" calls `retry()`, "Se reconnecter" / "Se connecter" call `navigate('SettingsTab', { screen: 'SignIn', initial: false })`, a tap on the line outside the action calls `navigate('SettingsTab', { screen: 'Settings', pop: true })`; the action has a 48 dp touch target while the line stays 36 dp; tests first in `components/sync-status-line.test.tsx` (US3-1 to US3-3), plus an integration case in `navigation.test.tsx` that reaching SignIn from the line keeps the Settings root under it. Depends on T003.
+- [x] T008 [US3] In `components/SyncStatusLine.tsx` wire the actions (research R4): "Réessayer" calls `retry()`, "Se reconnecter" / "Se connecter" call `navigate('SettingsTab', { screen: 'SignIn', initial: false })`, a tap on the line outside the action calls `navigate('SettingsTab', { screen: 'Settings', pop: true })`; the action has a 48 dp touch target while the line stays 36 dp; tests first in `components/sync-status-line.test.tsx` (US3-1 to US3-3), plus an integration case in `navigation.test.tsx` that reaching SignIn from the line keeps the Settings root under it. Depends on T003.
 
 ## Phase 5: User Story 4 - The line never hides content or controls (P2)
 

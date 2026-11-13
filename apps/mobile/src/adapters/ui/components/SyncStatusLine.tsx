@@ -1,6 +1,8 @@
-import { StyleSheet, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Pressable, StyleSheet } from 'react-native';
 import { Icon, Text, useTheme } from 'react-native-paper';
 
+import type { AppNavigation } from '../routes';
 import type { SyncSlice } from '../state/store-kit';
 import { useAppStore } from '../state/use-app-store';
 import type { AppTheme } from '../theme/theme';
@@ -14,6 +16,9 @@ export type SyncLine = {
   tone: 'error' | 'neutral';
   action?: 'retry' | 'reconnect';
 };
+
+// The line is 36 dp high: the slop brings the action's touch target to 48 dp.
+const ACTION_HIT_SLOP = { top: 7, bottom: 7, left: 12, right: 12 };
 
 const ACTION_LABELS = {
   retry: () => 'Réessayer',
@@ -75,7 +80,9 @@ export const syncLine = ({
  * Not a live region: `SyncAnnouncer` announces the transitions.
  */
 export const SyncStatusLine = () => {
+  const navigation = useNavigation<AppNavigation>();
   const sync = useAppStore((state) => state.sync);
+  const retry = useAppStore((state) => state.retry);
   const colors = (useTheme() as { colors: AppTheme['colors'] }).colors;
   const line = syncLine(sync);
   if (line === null) return null;
@@ -83,8 +90,11 @@ export const SyncStatusLine = () => {
   const iconColor =
     line.tone === 'error' ? colors.error : colors.onSurfaceVariant;
   return (
-    <View
+    <Pressable
       testID="sync-status-line"
+      onPress={() =>
+        navigation.navigate('SettingsTab', { screen: 'Settings', pop: true })
+      }
       style={[
         styles.line,
         {
@@ -103,14 +113,26 @@ export const SyncStatusLine = () => {
         {line.text}
       </Text>
       {line.action && (
-        <Text
+        <Pressable
           testID="sync-status-line-action"
-          style={[styles.text, { color: colors.primary }]}
+          hitSlop={ACTION_HIT_SLOP}
+          style={styles.action}
+          onPress={() =>
+            line.action === 'retry'
+              ? void retry()
+              : // `initial: false` keeps the Settings root under SignIn when the tab was never opened.
+                navigation.navigate('SettingsTab', {
+                  screen: 'SignIn',
+                  initial: false,
+                })
+          }
         >
-          {ACTION_LABELS[line.action](sync)}
-        </Text>
+          <Text style={[styles.text, { color: colors.primary }]}>
+            {ACTION_LABELS[line.action](sync)}
+          </Text>
+        </Pressable>
       )}
-    </View>
+    </Pressable>
   );
 };
 
@@ -123,6 +145,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderTopWidth: 1,
     borderBottomWidth: 1,
+  },
+  action: {
+    height: SYNC_LINE_HEIGHT - 2,
+    justifyContent: 'center',
+    marginLeft: 'auto',
   },
   text: {
     flexShrink: 1,

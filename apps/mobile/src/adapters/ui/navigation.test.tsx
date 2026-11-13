@@ -253,6 +253,56 @@ describe('Navigation', () => {
     expect(await screen.findByText('Ma liste')).toBeOnTheScreen();
   });
 
+  it('015 US3 opens SignIn above the Settings root from the line when the Réglages tab was never opened, so back lands on Settings', async () => {
+    const { store } = await renderNavigation();
+    await screen.findByText('Ma liste');
+    act(() =>
+      store.setState({
+        sync: {
+          ...store.getState().sync,
+          connection: 'signedOut',
+          signedOutReason: 'revoked',
+        },
+      }),
+    );
+
+    fireEvent.press(screen.getByText('Se reconnecter'));
+    await screen.findByLabelText('Adresse e-mail');
+    fireEvent.press(screen.getByRole('button', { name: 'Retour' }));
+
+    expect(await screen.findByText('Apparence')).toBeOnTheScreen();
+  });
+
+  it('015 US3 opens the Settings root from the line, past a SignIn left open in the Réglages tab', async () => {
+    const { store } = await renderNavigation();
+    await screen.findByText('Ma liste');
+    act(() =>
+      store.setState({
+        sync: {
+          ...store.getState().sync,
+          connection: 'signedOut',
+          signedOutReason: 'revoked',
+        },
+      }),
+    );
+    fireEvent.press(screen.getByText('Se reconnecter'));
+    await screen.findByLabelText('Adresse e-mail');
+    fireEvent.press(screen.getByRole('tab', { name: 'Courses' }));
+    await screen.findByText('Ma liste');
+
+    fireEvent.press(screen.getByTestId('sync-status-line'));
+
+    expect(await screen.findByText('Apparence')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Retour' })).toBeNull();
+    await waitFor(() =>
+      expect(
+        screen.queryAllByLabelText('Adresse e-mail', {
+          includeHiddenElements: true,
+        }),
+      ).toHaveLength(0),
+    );
+  });
+
   it('keeps the search of the Articles tab apart from the one of AddArticles', async () => {
     await renderNavigation();
     await screen.findByText('Ma liste');
