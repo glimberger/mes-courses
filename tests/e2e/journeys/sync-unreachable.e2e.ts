@@ -14,9 +14,11 @@ describe('signing in to a server that cannot be reached', () => {
     await device.launchApp({ delete: true, newInstance: true });
   });
 
-  it('US4-1 shows no sync status bar on a fresh install', async () => {
+  it('US4-1 shows no sync line and no sync banner on a fresh install', async () => {
     await expect(element(by.text('Ma liste'))).toBeVisible();
 
+    await expect(element(by.id('sync-status-line'))).not.toExist();
+    await expect(element(by.id('sync-status-bar'))).not.toExist();
     await expect(element(by.text('Synchronisé'))).not.toExist();
     await expect(element(by.text('Synchronisation…'))).not.toExist();
     await expect(
@@ -74,5 +76,18 @@ describe('signing in to a server that cannot be reached', () => {
     await element(by.label('Lait, pas dans le caddie')).tap();
 
     await expectRow('Lait, dans le caddie');
+  });
+
+  it('FR-020 shows no sync line and no banner on any tab while the status is only "waiting"', async () => {
+    // The unreachable server leaves the status "waiting", which is not a problem state: the line
+    // only shows the problems, and the banner is on Réglages alone.
+    for (const tab of ['Courses', 'Listes', 'Articles', 'Réglages'] as const) {
+      await openTab(tab);
+      await expect(element(by.id('sync-status-line'))).not.toExist();
+    }
+    for (const tab of ['Courses', 'Listes', 'Articles'] as const) {
+      await openTab(tab);
+      await expect(element(by.id('sync-status-bar'))).not.toExist();
+    }
   });
 });

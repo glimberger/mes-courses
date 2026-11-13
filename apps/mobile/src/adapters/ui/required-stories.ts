@@ -118,7 +118,13 @@ export const requiredStories: readonly string[] = [
   'Components/SyncStatusBar/Sending',
   'Components/SyncStatusBar/Failed',
   'Components/SyncStatusBar/UpdateRequired',
-  'Screens/CurrentList/WithSyncStatus',
+  'Screens/CurrentList/WithSyncLine',
+  'Components/SyncStatusLine/Failed',
+  'Components/SyncStatusLine/SignedOutRevoked',
+  'Components/SyncStatusLine/SignedOutAccountDeleted',
+  'Components/SyncStatusLine/UpdateRequired',
+  'Components/SyncStatusLine/Suspended',
+  'Components/SyncStatusLine/FailedDark',
   // 004 Multi-user accounts
   // User Story 1
   'Screens/Accounts/Loading',
